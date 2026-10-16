@@ -1,0 +1,14 @@
+name = "ptran"
+version = "0.1.0"
+defaultTargets = ["PTran", "PTranTest"]
+
+[[lean_lib]]
+name = "PTran"
+
+[[lean_lib]]
+name = "PTranTest"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
