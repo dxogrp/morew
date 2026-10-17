@@ -26,22 +26,30 @@ inductive ObjectiveSense where
 
 /-- Presentation data for one (nondependent) decision-variable binder. -/
 structure BinderView where
+  /-- The source-level name of the decision variable. -/
   name : Name
+  /-- The syntax of the decision variable's declared type. -/
   typeSyntax : Lean.Syntax
   deriving Inhabited
 
 /-- Presentation data for one named constraint. -/
 structure ConstraintView where
+  /-- The source-level label of the constraint. -/
   name : Name
+  /-- The syntax of the proposition defining the constraint. -/
   proposition : Lean.Syntax
   deriving Inhabited
 
 /-- The source-level view of a problem.  None of these fields affects the
 meaning of the corresponding `Problem`. -/
 structure ProblemView where
+  /-- Whether the problem was written as a minimization or maximization. -/
   sense : ObjectiveSense
+  /-- Presentation data for the problem's decision-variable binders. -/
   binders : Array BinderView
+  /-- The source syntax of the objective expression. -/
   objective : Lean.Syntax
+  /-- Presentation data for the problem's named constraints. -/
   constraints : Array ConstraintView := #[]
   deriving Inhabited
 
@@ -64,7 +72,7 @@ def getProblemView? (env : Environment) (declName : Name) : Option ProblemView :
   (problemViewExtension.getState env).find? declName
 
 /-- Register presentation metadata in any elaborator with environment access. -/
-def registerProblemView [Monad m] [MonadEnv m] (declName : Name)
+def registerProblemView [MonadEnv m] (declName : Name)
     (view : ProblemView) : m Unit :=
   modifyEnv fun env => addProblemView env declName view
 
@@ -73,22 +81,32 @@ end Syntax
 open Lean Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 open Syntax
 
+/-- Syntax category for an explicitly typed, nondependent problem binder. -/
 declare_syntax_cat problemBinder
+/-- Parse one or more decision-variable names sharing an explicit type. -/
 syntax (name := problemBinderStx) "(" ident+ " : " term ")" : problemBinder
 
+/-- Syntax category for a labeled problem constraint. -/
 declare_syntax_cat problemConstraint
+/-- Parse a constraint label followed by its proposition. -/
 syntax (name := problemConstraintStx) ident " : " term : problemConstraint
 
-/-- A problem with one or more explicitly typed, nondependent binders.  Named
-constraints are written as an indented, line-separated block. -/
+/-- An unconstrained minimization problem with one or more explicitly typed,
+nondependent decision-variable binders. -/
 syntax (name := minimizeProblemTerm)
   "problem " problemBinder+ ppLine "minimize " term : term
+/-- A constrained minimization problem with explicitly typed, nondependent
+decision-variable binders and an indented block of named constraints. -/
 syntax (name := minimizeConstrainedProblemTerm)
   "problem " problemBinder+ ppLine "minimize " term ppLine
   "subject " "to" ppLine
     ppIndent(many1Indent(problemConstraint)) : term
+/-- An unconstrained maximization problem with one or more explicitly typed,
+nondependent decision-variable binders. -/
 syntax (name := maximizeProblemTerm)
   "problem " problemBinder+ ppLine "maximize " term : term
+/-- A constrained maximization problem with explicitly typed, nondependent
+decision-variable binders and an indented block of named constraints. -/
 syntax (name := maximizeConstrainedProblemTerm)
   "problem " problemBinder+ ppLine "maximize " term ppLine
   "subject " "to" ppLine
@@ -230,6 +248,7 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
     }
   pure result
 
+/-- Elaborate an unconstrained minimization problem term. -/
 @[term_elab minimizeProblemTerm]
 def elabProblem : TermElab := fun stx expectedType? => do
   match stx with
@@ -237,6 +256,7 @@ def elabProblem : TermElab := fun stx expectedType? => do
       elaborateProblem stx binders .minimize objective #[] expectedType?
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate a constrained minimization problem term. -/
 @[term_elab minimizeConstrainedProblemTerm]
 def elabConstrainedMinProblem : TermElab := fun stx expectedType? => do
   match stx with
@@ -245,6 +265,7 @@ def elabConstrainedMinProblem : TermElab := fun stx expectedType? => do
       elaborateProblem stx binders .minimize objective constraints expectedType?
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate an unconstrained maximization problem term. -/
 @[term_elab maximizeProblemTerm]
 def elabMaxProblem : TermElab := fun stx expectedType? => do
   match stx with
@@ -252,6 +273,7 @@ def elabMaxProblem : TermElab := fun stx expectedType? => do
       elaborateProblem stx binders .maximize objective #[] expectedType?
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate a constrained maximization problem term. -/
 @[term_elab maximizeConstrainedProblemTerm]
 def elabConstrainedMaxProblem : TermElab := fun stx expectedType? => do
   match stx with
@@ -299,8 +321,10 @@ private def formatProblemView (view : PTran.Syntax.ProblemView) : CoreM Format :
       (Format.line ++ Format.joinSep constraintFormats.toList Format.line)
   pure result
 
+/-- Print the source-aligned mathematical presentation of a registered problem. -/
 syntax (name := printProblemCmd) "#printp " ident : command
 
+/-- Elaborate `#printp` by retrieving and formatting stored presentation metadata. -/
 @[command_elab printProblemCmd]
 def elabPrintProblem : CommandElab := fun stx => do
   let `(#printp $name:ident) := stx | throwUnsupportedSyntax
