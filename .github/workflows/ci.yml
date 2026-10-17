@@ -49,6 +49,10 @@ jobs:
           use-mathlib-cache: true
           use-github-cache: false
 
+      - name: Lint PTran
+        if: matrix.os == 'ubuntu-latest'
+        run: lake lint
+
       - name: Verify compiled modules with leanchecker
         if: matrix.os == 'ubuntu-latest'
         env:
