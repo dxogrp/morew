@@ -1,6 +1,8 @@
 name = "ptran"
 version = "0.1.0"
 defaultTargets = ["PTran", "PTranTest"]
+lintDriver = "batteries/runLinter"
+lintDriverArgs = ["PTran"]
 
 [[lean_lib]]
 name = "PTran"

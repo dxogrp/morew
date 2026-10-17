@@ -14,13 +14,20 @@ namespace PTran
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
+/-- Syntax category for one proof-producing reformulation step. -/
 declare_syntax_cat reformulationStep
 
+/-- Substitute a decision variable with a parameterization, optionally using
+an explicit feasible-surjection certificate. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
+/-- Introduce an epigraph variable for a minimization objective. -/
 syntax (name := epigraphStep) "epigraph " ident : reformulationStep
+/-- Introduce a hypograph variable for a maximization objective. -/
 syntax (name := hypographStep) "hypograph " ident : reformulationStep
 
+/-- Declare a transformed problem together with its global-equivalence
+certificate. -/
 syntax (name := reformulationCmd)
   "reformulation" ident "/" ident ":" ident ":=" "by" ppLine
     ppIndent(reformulationStep*) : command
@@ -334,6 +341,8 @@ private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
     certificate := nextCertificate
   }
 
+/-- Elaborate a reformulation declaration and emit the transformed problem and
+its composed global-equivalence certificate. -/
 @[command_elab reformulationCmd]
 def elabReformulation : CommandElab := fun stx => do
   let `(reformulation $certificateName:ident / $targetName:ident :
