@@ -80,9 +80,6 @@ global feasible-point maps and objective inequalities as convex ones. PTran
 does not provide numerical solving, local-optimum preservation, or an automatic
 equivalence/non-equivalence decision procedure.
 
-See [DESIGN.md](DESIGN.md) for the precise semantics, supported v1 syntax,
-nonconvex policy, and non-goals.
-
 ## Development
 
 The repository is pinned to Lean 4.33 and its matching mathlib release.
