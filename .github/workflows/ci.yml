@@ -30,6 +30,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Cache PTran build artifacts
+        uses: actions/cache@v5
+        with:
+          path: .lake/build
+          key: ptran-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            ptran-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+
       - name: Build Lean libraries
         uses: leanprover/lean-action@v1
         with:
@@ -39,7 +47,7 @@ jobs:
           test: false
           lint: false
           use-mathlib-cache: true
-          use-github-cache: true
+          use-github-cache: false
 
       - name: Verify compiled modules with leanchecker
         if: matrix.os == 'ubuntu-latest'
