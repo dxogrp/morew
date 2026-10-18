@@ -176,18 +176,6 @@ private def inferNewBinder (view : PTran.Syntax.ProblemView) (oldName : Name)
       throwErrorAt replacement
         "ambiguous substitution: expected exactly one new decision variable, found {candidates}"
 
-private def objectiveValueTypeSyntax (sourceName : Name) : CommandElabM Lean.Syntax :=
-  liftTermElabM do
-    let sourceType := (← getConstInfo sourceName).type
-    forallTelescopeReducing sourceType fun _ resultType => do
-      let resultType ← whnf resultType
-      unless resultType.getAppFn.isConstOf ``PTran.Problem &&
-          resultType.getAppNumArgs == 2 do
-        throwError "declaration `{sourceName}` does not have type `PTran.Problem _ _`"
-      let valueType := resultType.getArg! 1
-      let valueType ← whnf valueType
-      PTran.Syntax.preResolveTerm (← PrettyPrinter.delab valueType).raw
-
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
     (stx : Lean.Syntax) : Option Name := do
   let .ident (.synthetic start _ _) _ _ _ := stx | none
@@ -231,8 +219,13 @@ private def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) 
       throwErrorAt term "term contains unresolved metavariables"
     stabilizeExpressionSyntax expression
 
-private def exactProblemTypeSyntax (optimizationProblem : TSyntax `term) :
-    CommandElabM (TSyntax `term × TSyntax `term) :=
+private structure ProblemTypeSyntax where
+  domain : TSyntax `term
+  value : TSyntax `term
+  presentationValue : Lean.Syntax
+
+private def problemTypeSyntax (optimizationProblem : TSyntax `term) :
+    CommandElabM ProblemTypeSyntax :=
   runTermElabM fun _ => do
     let expression ← elabTerm optimizationProblem none
     synthesizeSyntheticMVarsNoPostponing
@@ -240,8 +233,13 @@ private def exactProblemTypeSyntax (optimizationProblem : TSyntax `term) :
     unless type.getAppFn.isConstOf ``PTran.Problem &&
         type.getAppNumArgs == 2 do
       throwErrorAt optimizationProblem "term does not have type `PTran.Problem _ _`"
-    pure (← exactExpressionSyntax type.getAppArgs[0]!,
-      ← exactExpressionSyntax type.getAppArgs[1]!)
+    let domain := type.getAppArgs[0]!
+    let value ← whnf type.getAppArgs[1]!
+    pure {
+      domain := ← exactExpressionSyntax domain
+      value := ← exactExpressionSyntax value
+      presentationValue := (← stabilizeExpressionSyntax value).raw
+    }
 
 private def simpOnly (expression : Expr) (lemmas : Array Name := #[])
     (unfold : Array Name := #[]) : MetaM Expr := do
@@ -592,6 +590,7 @@ private structure ReformState where
   semantic : TSyntax `term
   semanticDomainType : TSyntax `term
   semanticValueType : TSyntax `term
+  presentationValueType : Lean.Syntax
   equivalenceProof : TSyntax `term
   source : TSyntax `term
   sourceName : Name
@@ -726,7 +725,7 @@ private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
   let scopedBinderName ← withFreshMacroScope do
     MonadQuotation.addMacroScope binderName
 
-  let valueType ← objectiveValueTypeSyntax state.sourceName
+  let valueType : TSyntax `term := ⟨state.presentationValueType⟩
   let newBinder : PTran.Syntax.BinderView := {
     name := scopedBinderName
     typeSyntax := valueType
@@ -814,16 +813,16 @@ def elabReformulation : CommandElab := fun stx => do
 
   let sourceTerm : TSyntax `term :=
     ⟨(rootIdentFrom sourceIdent sourceName).raw⟩
-  let (semanticDomainType, semanticValueType) ←
-    exactProblemTypeSyntax sourceTerm
+  let problemTypes ← problemTypeSyntax sourceTerm
   let runner := globalEquivalenceRunner
   let initialCertificate ← liftMacroM <|
     runner.reflTerm sourceTerm
   let mut state : ReformState := {
     view := sourceView
     semantic := sourceTerm
-    semanticDomainType
-    semanticValueType
+    semanticDomainType := problemTypes.domain
+    semanticValueType := problemTypes.value
+    presentationValueType := problemTypes.presentationValue
     equivalenceProof := initialCertificate
     source := sourceTerm
     sourceName

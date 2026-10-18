@@ -479,6 +479,40 @@ example (u t : Nat) : bounded.feasible (u, t) ↔ Score.score u ≤ t := Iff.rfl
 end
 end SectionParameterResolution
 
+namespace InstantiatedValueTypeResolution
+
+class Choice (α : outParam Type) where
+  order : LinearOrder α
+  value : α
+
+set_option warn.classDefReducibility false in
+attribute [instance] Choice.order
+
+namespace Provider
+
+def source {α : Type} [Choice α] : Problem Unit α :=
+  problem (_x : Unit)
+    minimize Choice.value
+
+end Provider
+
+namespace Consumer
+
+section
+
+variable {β : Type} [Choice β]
+
+reformulation target : Provider.source := by
+  epigraph t
+
+example (t : β) : target.objective ((), t) = t := rfl
+
+example : GlobalEquivalence Provider.source target := target.equivalence
+
+end
+end Consumer
+end InstantiatedValueTypeResolution
+
 namespace AmbientCoercionResolution
 
 structure Box where
