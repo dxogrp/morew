@@ -29,8 +29,41 @@ syntax (name := hypographStep) "hypograph " ident : reformulationStep
 /-- Declare a transformed problem together with its global-equivalence
 certificate. -/
 syntax (name := reformulationCmd)
-  "reformulation" ident "/" ident ":" ident ":=" "by" ppLine
+  "reformulation" ident ":" ident ("certificate" ident)? ":=" "by" ppLine
     ppIndent(reformulationStep*) : command
+
+private def outputDeclName (ident : TSyntax `ident) : CommandElabM Name := do
+  let shortName := ident.getId
+  let view := extractMacroScopes shortName
+  let name := view.name
+  if name == `_root_ then
+    throwErrorAt ident
+      "invalid declaration name `_root_`, `_root_` is a prefix used to refer to the root namespace"
+  if (`_root_).isPrefixOf name then
+    pure { view with name := name.replacePrefix `_root_ Name.anonymous }.review
+  else
+    pure ((← getCurrNamespace) ++ shortName)
+
+private def ensureFreshOutput (ref : Syntax) (name : Name) : CommandElabM Unit :=
+  withRef ref do
+    checkIfShadowingStructureField name
+    checkNotAlreadyDeclared name
+
+private def withDeclarationTransaction (action : CommandElabM Unit) : CommandElabM Unit := do
+  let savedState ← get
+  set { savedState with messages := .empty }
+  try
+    action
+    let resultingState ← get
+    let messages := savedState.messages ++ resultingState.messages
+    if resultingState.messages.hasErrors then
+      set { savedState with messages }
+    else
+      set { resultingState with messages }
+  catch exception =>
+    let generatedMessages := (← get).messages
+    set { savedState with messages := savedState.messages ++ generatedMessages }
+    throw exception
 
 private def sameUserName (a b : Name) : Bool :=
   a.eraseMacroScopes == b.eraseMacroScopes
@@ -162,12 +195,12 @@ private def CertificateRunner.transTerm (runner : CertificateRunner)
   `($trans $left $right)
 
 private def CertificateRunner.liftEquivalence (runner : CertificateRunner)
-    (certificate : TSyntax `term) : MacroM (TSyntax `term) := do
+    (proofTerm : TSyntax `term) : MacroM (TSyntax `term) := do
   match runner.liftEquivalence? with
-  | none => pure certificate
+  | none => pure proofTerm
   | some liftName =>
       let lift := namedTerm liftName
-      `($lift $certificate)
+      `($lift $proofTerm)
 
 private def globalEquivalenceRunner : CertificateRunner where
   relation := ``PTran.GlobalEquivalence
@@ -177,7 +210,7 @@ private def globalEquivalenceRunner : CertificateRunner where
 private structure ReformState where
   view : PTran.Syntax.ProblemView
   semantic : TSyntax `term
-  certificate : TSyntax `term
+  equivalenceProof : TSyntax `term
   source : TSyntax `term
   sourceName : Name
   runner : CertificateRunner
@@ -230,7 +263,7 @@ private def applySubstitution (state : ReformState) (step : Lean.Syntax)
   }
 
   let stepCertificate ← match providedCertificate? with
-    | some certificate => pure certificate
+    | some proofTerm => pure proofTerm
     | none => do
         unless state.semantic.raw == state.source.raw do
           throwErrorAt step
@@ -270,14 +303,14 @@ private def applySubstitution (state : ReformState) (step : Lean.Syntax)
     PTran.pullbackEquivalence $current $mapTerm $stepCertificate)
   let primitive ← liftMacroM <|
     state.runner.liftEquivalence primitiveEquivalence
-  let previous := state.certificate
+  let previous := state.equivalenceProof
   let nextCertificate ← liftMacroM <|
     state.runner.transTerm previous primitive
   pure {
     state with
     view := newView
     semantic := nextSemantic
-    certificate := nextCertificate
+    equivalenceProof := nextCertificate
   }
 
 private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
@@ -331,23 +364,43 @@ private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
     | .maximize => `(PTran.hypographEquivalence $current)
   let primitive ← liftMacroM <|
     state.runner.liftEquivalence primitiveEquivalence
-  let previous := state.certificate
+  let previous := state.equivalenceProof
   let nextCertificate ← liftMacroM <|
     state.runner.transTerm previous primitive
   pure {
     state with
     view := newView
     semantic := nextSemantic
-    certificate := nextCertificate
+    equivalenceProof := nextCertificate
   }
 
 /-- Elaborate a reformulation declaration and emit the transformed problem and
 its composed global-equivalence certificate. -/
 @[command_elab reformulationCmd]
 def elabReformulation : CommandElab := fun stx => do
-  let `(reformulation $certificateName:ident / $targetName:ident :
-      $sourceIdent:ident := by $steps:reformulationStep*) := stx
+  let `(reformulation $targetName:ident : $sourceIdent:ident
+      $[certificate $aliasName:ident]? := by $steps:reformulationStep*) := stx
     | throwUnsupportedSyntax
+
+  let targetDeclName ← outputDeclName targetName
+  let certificateDeclName := targetDeclName ++ `equivalence
+  let aliasDeclName? ← aliasName.mapM outputDeclName
+  if let some aliasDeclName := aliasDeclName? then
+    if aliasDeclName == targetDeclName then
+      throwErrorAt aliasName.get!
+        "certificate alias names the same declaration as the reformulation target"
+    if aliasDeclName == certificateDeclName then
+      throwErrorAt aliasName.get!
+        "certificate alias names the same declaration as the canonical certificate"
+  ensureFreshOutput targetName targetDeclName
+  ensureFreshOutput targetName certificateDeclName
+  if let some aliasDeclName := aliasDeclName? then
+    ensureFreshOutput aliasName.get! aliasDeclName
+
+  let targetDeclIdent := targetName
+  let certificateDeclIdent : TSyntax `ident :=
+    ⟨mkIdentFrom targetName (targetName.getId ++ `equivalence)⟩
+  let aliasDeclIdent? := aliasName
 
   let sourceName ← resolveGlobalConstNoOverload sourceIdent
   let env ← getEnv
@@ -362,7 +415,7 @@ def elabReformulation : CommandElab := fun stx => do
   let mut state : ReformState := {
     view := sourceView
     semantic := sourceTerm
-    certificate := initialCertificate
+    equivalenceProof := initialCertificate
     source := sourceTerm
     sourceName
     runner
@@ -381,8 +434,7 @@ def elabReformulation : CommandElab := fun stx => do
 
   let targetTerm ← liftMacroM <| state.view.toTermSyntax
   let targetCommand ← liftMacroM `(
-    command| noncomputable def $targetName := $targetTerm)
-  elabCommand targetCommand
+    command| noncomputable def $targetDeclIdent := $targetTerm)
 
   let finalSemantic := state.semantic
   let finalPattern ← liftMacroM <|
@@ -392,9 +444,9 @@ def elabReformulation : CommandElab := fun stx => do
   let sourceSimp ← liftMacroM `(
     Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
   let targetSimp ← liftMacroM `(
-    Lean.Parser.Tactic.simpLemma| $targetName:term)
+    Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
   let normalizationEquivalence ← liftMacroM `(
-    PTran.pointwiseEquivalence $finalSemantic $targetName
+    PTran.pointwiseEquivalence $finalSemantic $targetDeclIdent
       (fun ($finalPattern : $finalType) => by
         simp only [$sourceSimp, $targetSimp, PTran.Problem.pullback,
           PTran.Problem.epigraph, PTran.Problem.hypograph, Real.log_exp,
@@ -407,14 +459,25 @@ def elabReformulation : CommandElab := fun stx => do
           rfl))
   let normalization ← liftMacroM <|
     state.runner.liftEquivalence normalizationEquivalence
-  let certificate ← liftMacroM <|
-    state.runner.transTerm state.certificate normalization
+  let equivalenceProof ← liftMacroM <|
+    state.runner.transTerm state.equivalenceProof normalization
   let relation ← liftMacroM <|
-    state.runner.relationTerm sourceTerm ⟨targetName.raw⟩
+    state.runner.relationTerm sourceTerm ⟨targetDeclIdent.raw⟩
   let certificateCommand ← liftMacroM `(command|
-    noncomputable def $certificateName :
+    noncomputable def $certificateDeclIdent :
         $relation := by
-      exact $certificate)
-  elabCommand certificateCommand
+      exact $equivalenceProof)
+  let aliasCommand? ← aliasDeclIdent?.mapM fun aliasDeclIdent =>
+    liftMacroM `(command|
+      noncomputable abbrev $aliasDeclIdent : $relation :=
+        $certificateDeclIdent)
+
+  withDeclarationTransaction do
+    elabCommand targetCommand
+    unless (← get).messages.hasErrors do
+      elabCommand certificateCommand
+      unless (← get).messages.hasErrors do
+        if let some aliasCommand := aliasCommand? then
+          elabCommand aliasCommand
 
 end PTran

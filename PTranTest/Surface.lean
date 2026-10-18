@@ -34,15 +34,15 @@ info: def PTranTest.Surface.original : Problem ℝ ℝ :=
 #guard_msgs in
 #print original
 
-reformulation certified / transformed : original := by
+reformulation transformed : original := by
   substitute x := Real.exp u
   epigraph t
 
-/-- info: PTranTest.Surface.certified : GlobalEquivalence original transformed -/
+/-- info: PTranTest.Surface.transformed.equivalence : GlobalEquivalence original transformed -/
 #guard_msgs in
-#check certified
+#check transformed.equivalence
 
-example : GlobalEquivalence original transformed := certified
+example : GlobalEquivalence original transformed := transformed.equivalence
 
 example (u t : ℝ) : transformed.objective (u, t) = t := rfl
 
@@ -76,10 +76,16 @@ info: problem (x y : ℝ)
 #guard_msgs in
 #printp boundedMaximum
 
-reformulation maximumCertified / boundedHypograph : boundedMaximum := by
+reformulation boundedHypograph : boundedMaximum
+    certificate maximumCertified := by
   hypograph t
 
 example : GlobalEquivalence boundedMaximum boundedHypograph := maximumCertified
+
+example : GlobalEquivalence boundedMaximum boundedHypograph :=
+  boundedHypograph.equivalence
+
+example : maximumCertified = boundedHypograph.equivalence := rfl
 
 example (x y t : ℝ) :
     boundedHypograph.feasible ((x, y), t) ↔
@@ -95,6 +101,34 @@ info: problem (x y t : ℝ)
 -/
 #guard_msgs in
 #printp boundedHypograph
+
+/-! Multi-step substitution and hypograph scripts compose for maximization. -/
+
+def logarithmicMaximum :=
+  problem (x : ℝ)
+    maximize (Real.log x)^2
+    subject to
+      positive : 0 < x
+
+reformulation transformedMaximum : logarithmicMaximum := by
+  substitute x := Real.exp u
+  hypograph t
+
+example : GlobalEquivalence logarithmicMaximum transformedMaximum :=
+  transformedMaximum.equivalence
+
+example (u t : ℝ) : transformedMaximum.objective (u, t) = t := rfl
+
+example (u t : ℝ) : transformedMaximum.feasible (u, t) ↔ t ≤ u ^ 2 := Iff.rfl
+
+/--
+info: problem (u t : ℝ)
+  maximize t
+  subject to
+    hypograph_t : t ≤ u ^ 2
+-/
+#guard_msgs in
+#printp transformedMaximum
 
 /-! Unconstrained and nonconvex problems need no special treatment. -/
 
@@ -124,10 +158,11 @@ def nonconvex :=
   problem (x : ℝ)
     minimize (x^2 - 1)^2
 
-reformulation nonconvexCertified / nonconvexEpigraph : nonconvex := by
+reformulation nonconvexEpigraph : nonconvex := by
   epigraph t
 
-example : GlobalEquivalence nonconvex nonconvexEpigraph := nonconvexCertified
+example : GlobalEquivalence nonconvex nonconvexEpigraph :=
+  nonconvexEpigraph.equivalence
 
 /--
 info: problem (x t : ℝ)
@@ -149,12 +184,49 @@ def identityCoverage :
   preimage point := point.1
   rightInverse _ := rfl
 
-reformulation identityCertified / identityTarget : identitySource := by
+reformulation identityTarget : identitySource := by
   substitute x := u using identityCoverage
 
-example : GlobalEquivalence identitySource identityTarget := identityCertified
+example : GlobalEquivalence identitySource identityTarget :=
+  identityTarget.equivalence
 
 example (u : ℝ) : identityTarget.objective u = u ^ 2 := rfl
+
+/-! Generated targets remain valid sources for chained reformulations. -/
+
+reformulation identityEpigraph : identityTarget := by
+  epigraph t
+
+example : GlobalEquivalence identityTarget identityEpigraph :=
+  identityEpigraph.equivalence
+
+example : GlobalEquivalence identitySource identityEpigraph :=
+  identityTarget.equivalence.trans identityEpigraph.equivalence
+
+/--
+info: problem (u : ℝ)
+  minimize u ^ 2
+-/
+#guard_msgs in
+#printp identityTarget
+
+/--
+info: problem (u t : ℝ)
+  minimize t
+  subject to
+    epigraph_t : u ^ 2 ≤ t
+-/
+#guard_msgs in
+#printp identityEpigraph
+
+/-! The removed certificate-first slash form no longer parses as a command. -/
+
+run_cmd do
+  let obsolete :=
+    "reformulation obsoleteCertificate / obsoleteTarget : original := by\n  epigraph t"
+  match Lean.Parser.runParserCategory (← Lean.getEnv) `command obsolete with
+  | .error _ => pure ()
+  | .ok _ => Lean.throwError "obsolete reformulation slash syntax was accepted"
 
 /-! Expected failures are local diagnostics, not claims of non-equivalence. -/
 
@@ -166,27 +238,27 @@ def negativeSource :=
 
 /-- error: no registered substitution rule matches this expression; provide `using` with a `FeasibleSurjection` certificate -/
 #guard_msgs in
-reformulation noCoverageCert / noCoverageTarget : negativeSource := by
+reformulation noCoverageTarget : negativeSource := by
   substitute x := u ^ 2
 
 /-- error: unknown decision variable `y` -/
 #guard_msgs in
-reformulation badVariableCert / badVariableTarget : negativeSource := by
+reformulation badVariableTarget : negativeSource := by
   substitute y := Real.exp u
 
 /-- error: decision variable `x` already exists -/
 #guard_msgs in
-reformulation collisionCert / collisionTarget : negativeSource := by
+reformulation collisionTarget : negativeSource := by
   epigraph x
 
 /-- error: `hypograph` is not valid for a minimization problem -/
 #guard_msgs in
-reformulation wrongHypographCert / wrongHypographTarget : negativeSource := by
+reformulation wrongHypographTarget : negativeSource := by
   hypograph t
 
 /-- error: `epigraph` is not valid for a maximization problem -/
 #guard_msgs in
-reformulation wrongEpigraphCert / wrongEpigraphTarget : boundedMaximum := by
+reformulation wrongEpigraphTarget : boundedMaximum := by
   epigraph t
 
 def generatedLabelCollision :=
@@ -197,8 +269,92 @@ def generatedLabelCollision :=
 
 /-- error: generated constraint name `epigraph_t` already exists -/
 #guard_msgs in
-reformulation labelCollisionCert / labelCollisionTarget : generatedLabelCollision := by
+reformulation labelCollisionTarget : generatedLabelCollision := by
   epigraph t
+
+/-! Generated declaration names are preflighted before anything is emitted. -/
+
+def occupiedTarget :=
+  problem (x : ℝ)
+    minimize x
+
+/-- error: `PTranTest.Surface.occupiedTarget` has already been declared -/
+#guard_msgs in
+reformulation occupiedTarget : identitySource := by
+  epigraph t
+
+run_cmd do
+  if (← Lean.getEnv).contains `PTranTest.Surface.occupiedTarget.equivalence then
+    Lean.throwError "a target-name collision emitted the canonical certificate"
+
+def dottedCollisionTarget.equivalence := 0
+
+/-- error: `PTranTest.Surface.dottedCollisionTarget.equivalence` has already been declared -/
+#guard_msgs in
+reformulation dottedCollisionTarget : identitySource := by
+  epigraph t
+
+run_cmd do
+  let env ← Lean.getEnv
+  if env.contains `PTranTest.Surface.dottedCollisionTarget then
+    Lean.throwError "a canonical-certificate collision emitted the target"
+  if (PTran.Syntax.getProblemView? env `PTranTest.Surface.dottedCollisionTarget).isSome then
+    Lean.throwError "a canonical-certificate collision emitted target metadata"
+
+def occupiedAlias := 0
+
+/-- error: `PTranTest.Surface.occupiedAlias` has already been declared -/
+#guard_msgs in
+reformulation aliasCollisionTarget : identitySource
+    certificate occupiedAlias := by
+  epigraph t
+
+run_cmd do
+  let env ← Lean.getEnv
+  if env.contains `PTranTest.Surface.aliasCollisionTarget ||
+      env.contains `PTranTest.Surface.aliasCollisionTarget.equivalence then
+    Lean.throwError "an alias collision emitted reformulation declarations"
+  if (PTran.Syntax.getProblemView? env `PTranTest.Surface.aliasCollisionTarget).isSome then
+    Lean.throwError "an alias collision emitted target metadata"
+
+/-- error: certificate alias names the same declaration as the reformulation target -/
+#guard_msgs in
+reformulation duplicateTargetAlias : identitySource
+    certificate duplicateTargetAlias := by
+  epigraph t
+
+/-- error: certificate alias names the same declaration as the canonical certificate -/
+#guard_msgs in
+reformulation duplicateCertificateAlias : identitySource
+    certificate duplicateCertificateAlias.equivalence := by
+  epigraph t
+
+run_cmd do
+  let env ← Lean.getEnv
+  if env.contains `PTranTest.Surface.duplicateTargetAlias ||
+      env.contains `PTranTest.Surface.duplicateTargetAlias.equivalence ||
+      env.contains `PTranTest.Surface.duplicateCertificateAlias ||
+      env.contains `PTranTest.Surface.duplicateCertificateAlias.equivalence then
+    Lean.throwError "duplicate output names emitted reformulation declarations"
+  if (PTran.Syntax.getProblemView? env `PTranTest.Surface.duplicateTargetAlias).isSome ||
+      (PTran.Syntax.getProblemView? env
+        `PTranTest.Surface.duplicateCertificateAlias).isSome then
+    Lean.throwError "duplicate output names emitted target metadata"
+
+/-! Failures while checking a generated certificate also roll back the target. -/
+
+/-- error: failed to synthesize instance of type class -/
+#guard_msgs (substring := true) in
+reformulation invalidCertificateTarget : identitySource := by
+  substitute x := u using 0
+
+run_cmd do
+  let env ← Lean.getEnv
+  if env.contains `PTranTest.Surface.invalidCertificateTarget ||
+      env.contains `PTranTest.Surface.invalidCertificateTarget.equivalence then
+    Lean.throwError "a certificate elaboration failure emitted reformulation declarations"
+  if (PTran.Syntax.getProblemView? env `PTranTest.Surface.invalidCertificateTarget).isSome then
+    Lean.throwError "a certificate elaboration failure emitted target metadata"
 
 def notAProblem := 1
 
