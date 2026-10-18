@@ -309,18 +309,47 @@ def elabConstrainedMaxProblem : TermElab := fun stx expectedType? => do
       elaborateProblem stx binders .maximize objective constraints expectedType?
   | _ => throwUnsupportedSyntax
 
-private partial def containsMissingSyntax : Lean.Syntax → Bool
-  | .missing => true
-  | .node _ _ args => args.any containsMissingSyntax
-  | _ => false
+private partial def isSourceName : Name → Bool
+  | .anonymous => false
+  | .str parent part =>
+      !part.contains '»' && (parent.isAnonymous || isSourceName parent)
+  | .num _ _ => false
+
+private def sourceNameString (description : String) (name : Name) : CoreM String := do
+  let name := name.eraseMacroScopes
+  unless isSourceName name do
+    throwError "problem presentation metadata contains unprintable {description}"
+  let tokens := Parser.getTokenTable (← getEnv)
+  pure <| Name.toStringWithSep "." true name
+    (isToken := fun candidate => (tokens.find? candidate).isSome)
+
+private partial def normalizeStoredSyntax (description : String) :
+    Lean.Syntax → CoreM Lean.Syntax
+  | .missing =>
+      throwError "problem presentation metadata contains unprintable {description} syntax"
+  | .ident info _ name preresolved => do
+      let name := name.eraseMacroScopes
+      let rawName ← sourceNameString s!"{description} syntax" name
+      pure <| .ident info rawName.toRawSubstring name preresolved
+  | stx@(.node info kind args) =>
+      if kind == Lean.hygieneInfoKind then
+        pure stx
+      else
+        return .node info kind (← args.mapM (normalizeStoredSyntax description))
+  | stx => pure stx
 
 private def syntaxFormat (description : String) (stx : Lean.Syntax) : CoreM Format := do
-  if containsMissingSyntax stx then
-    throwError "problem presentation metadata contains unprintable {description} syntax"
   try
-    PrettyPrinter.ppTerm ⟨stx⟩
+    PrettyPrinter.ppTerm ⟨← normalizeStoredSyntax description stx⟩
   catch _ =>
     throwError "problem presentation metadata contains unprintable {description} syntax"
+
+private def nameFormat (description : String) (name : Name)
+    (atomic := false) : CoreM Format := do
+  let name := name.eraseMacroScopes
+  if atomic && !name.isAtomic then
+    throwError "problem presentation metadata contains unprintable {description} name"
+  return Format.text (← sourceNameString s!"{description} name" name)
 
 private def ensureViewNamesDistinct (what : String) (names : Array Name) : CoreM Unit := do
   for i in [:names.size] do
@@ -353,9 +382,10 @@ private def formatProblemView (view : PTran.Syntax.ProblemView) : CoreM Format :
           binderGroups := binderGroups.push (#[binder.name], typeKey, typeFormat)
     | none =>
         binderGroups := binderGroups.push (#[binder.name], typeKey, typeFormat)
-  let binderFormats := binderGroups.map fun (names, _, typeFormat) =>
-    let nameFormats := names.toList.map fun name => format name
-    f!"({Format.joinSep nameFormats (Format.text " ")} : {typeFormat})"
+  let binderFormats ← binderGroups.mapM fun (names, _, typeFormat) => do
+    let nameFormats ← names.toList.mapM fun name =>
+      nameFormat "decision variable" name (atomic := true)
+    pure f!"({Format.joinSep nameFormats (Format.text " ")} : {typeFormat})"
   unless view.constraints.isEmpty do
     body := body ++ Format.line ++ "subject to"
     let mut constraintFormats : Array Format := #[]
@@ -363,7 +393,8 @@ private def formatProblemView (view : PTran.Syntax.ProblemView) : CoreM Format :
       let proposition ← syntaxFormat
         s!"proposition for constraint `{constraint.name.eraseMacroScopes}`"
         constraint.proposition
-      constraintFormats := constraintFormats.push f!"{constraint.name} : {proposition}"
+      let name ← nameFormat "constraint" constraint.name
+      constraintFormats := constraintFormats.push f!"{name} : {proposition}"
     body := body ++ Format.nest 2
       (Format.line ++ Format.joinSep constraintFormats.toList Format.line)
   pure <| f!"problem {Format.joinSep binderFormats.toList (Format.text " ")}" ++

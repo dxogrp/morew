@@ -48,6 +48,50 @@ info: problem (x : Nat)
 #guard_msgs in
 #printp aliasedProblem
 
+/-! Identifier escaping and hygiene are normalized in printer output. -/
+
+def quotedIdentifierProblem :=
+  problem («minimize» : Nat)
+    minimize «minimize»
+    subject to
+      «subject» : True
+
+/--
+info: problem («minimize» : Nat)
+  minimize «minimize»
+  subject to
+    «subject» : True
+-/
+#guard_msgs in
+#printp quotedIdentifierProblem
+
+macro "generatedProblemTerm" : term =>
+  `(problem (x : Nat) minimize x subject to c : True)
+
+def macroGeneratedProblem := generatedProblemTerm
+
+/--
+info: problem (x : Nat)
+  minimize x
+  subject to
+    c : True
+-/
+#guard_msgs in
+#printp macroGeneratedProblem
+
+/-! Adjacent binders with equal rendered types remain grouped. -/
+
+def adjacentEqualTypeBinders :=
+  problem (x : Nat) (y : Nat)
+    minimize x + y
+
+/--
+info: problem (x y : Nat)
+  minimize x + y
+-/
+#guard_msgs in
+#printp adjacentEqualTypeBinders
+
 /-! Structurally invalid presentation metadata is rejected explicitly. -/
 
 def malformedProblem : Problem Nat Nat where
@@ -116,5 +160,57 @@ run_cmd do
 /-- error: problem presentation metadata contains unprintable objective syntax -/
 #guard_msgs in
 #printp unprintableProblem
+
+def anonymousBinderProblem : Problem Nat Nat where
+  objective := id
+  feasible := fun _ => True
+
+run_cmd do
+  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousBinderProblem {
+    sense := .minimize
+    binders := #[{ name := .anonymous, typeSyntax := Lean.mkIdent `Nat }]
+    objective := Lean.Syntax.mkNumLit "0"
+  }
+
+/--
+error: problem presentation metadata contains unprintable decision variable name
+-/
+#guard_msgs in
+#printp anonymousBinderProblem
+
+def anonymousConstraintProblem : Problem Nat Nat where
+  objective := id
+  feasible := fun _ => True
+
+run_cmd do
+  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousConstraintProblem {
+    sense := .minimize
+    binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
+    objective := Lean.mkIdent `x
+    constraints := #[{ name := .anonymous, proposition := Lean.mkIdent `True }]
+  }
+
+/--
+error: problem presentation metadata contains unprintable constraint name
+-/
+#guard_msgs in
+#printp anonymousConstraintProblem
+
+def anonymousTermProblem : Problem Nat Nat where
+  objective := id
+  feasible := fun _ => True
+
+run_cmd do
+  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousTermProblem {
+    sense := .minimize
+    binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
+    objective := Lean.mkIdent .anonymous
+  }
+
+/--
+error: problem presentation metadata contains unprintable objective syntax
+-/
+#guard_msgs in
+#printp anonymousTermProblem
 
 end PTranTest.SyntaxEdge
