@@ -141,6 +141,25 @@ def ProblemView.replaceIdent (view : ProblemView) (oldName : Name)
       { constraint with
         proposition := Syntax.replaceIdent constraint.proposition oldName replacement } }
 
+/-- Attach the current global resolutions to identifiers without changing their
+source spelling.  Local variables still take precedence during elaboration,
+while global references retain the namespace and `open` context in which the
+problem or transformation was written. -/
+partial def preResolveTerm (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
+  match stx with
+  | .ident info rawValue value preResolved =>
+      if preResolved.any fun
+          | .decl _ _ => true
+          | _ => false then
+        pure stx
+      else
+        let declarations := (← resolveGlobalName value (enableLog := false)).map fun
+          (name, fields) => Lean.Syntax.Preresolved.decl name fields
+        pure <| .ident info rawValue value (preResolved ++ declarations)
+  | .node info kind args =>
+      pure <| .node info kind (← args.mapM preResolveTerm)
+  | _ => pure stx
+
 /-- Reconstruct the canonical `problem` term syntax represented by a view.
 Generated declaration commands can elaborate this term and then register the
 same view under the newly created declaration name. -/
@@ -240,6 +259,14 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
           (fun ($productPattern : $productType) => $feasible))
   let result ← elabTerm resultSyntax expectedType?
   if let some declName ← getDeclName? then
+    let binders ← binders.mapM fun binder => do
+      pure { binder with typeSyntax := ← PTran.Syntax.preResolveTerm binder.typeSyntax }
+    let objective ← PTran.Syntax.preResolveTerm objective.raw
+    let constraints ← constraints.mapM fun constraint => do
+      pure {
+        constraint with
+        proposition := ← PTran.Syntax.preResolveTerm constraint.proposition
+      }
     PTran.Syntax.registerProblemView declName {
       sense
       binders

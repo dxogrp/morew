@@ -44,6 +44,9 @@ private def outputDeclName (ident : TSyntax `ident) : CommandElabM Name := do
   else
     pure ((← getCurrNamespace) ++ shortName)
 
+private def rootIdentFrom (ref : Syntax) (name : Name) : TSyntax `ident :=
+  ⟨mkIdentFrom ref (`_root_ ++ name)⟩
+
 private def ensureFreshOutput (ref : Syntax) (name : Name) : CommandElabM Unit :=
   withRef ref do
     checkIfShadowingStructureField name
@@ -163,7 +166,41 @@ private def objectiveValueTypeSyntax (sourceName : Name) : CommandElabM Lean.Syn
       throwError "declaration `{sourceName}` does not have type `PTran.Problem _ _`"
     let valueType := type.getArg! 1
     let valueType ← whnf valueType
-    return (← PrettyPrinter.delab valueType).raw
+    PTran.Syntax.preResolveTerm (← PrettyPrinter.delab valueType).raw
+
+private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
+    (stx : Lean.Syntax) : Option Name := do
+  let .ident (.synthetic start _ _) _ _ _ := stx | none
+  match infos.get? start.byteIdx with
+  | some (.ofTermInfo info) =>
+      let .const name _ := info.expr | none
+      some name
+  | some (.ofDelabTermInfo info) =>
+      let .const name _ := info.toTermInfo.expr | none
+      some name
+  | _ => none
+
+private partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
+    (stx : Lean.Syntax) : Lean.Syntax :=
+  if let some name := annotatedConstName? infos stx then
+    mkCIdentFrom stx name
+  else
+    stx.setArgs <| stx.getArgs.map fun child => freezeConstantReferences infos child
+
+private def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
+  runTermElabM fun _ => do
+    let expression ← elabTerm term none
+    synthesizeSyntheticMVarsNoPostponing
+    let expression ← instantiateMVars expression
+    if expression.hasMVar then
+      throwErrorAt term "term contains unresolved metavariables"
+    withOptions (fun options =>
+        options.set `pp.fullNames true |>.set `pp.privateNames true
+          |>.set `pp.proofs true |>.set `pp.tagAppFns true
+          |>.set `pp.fieldNotation false) do
+      let (stable, infos) ← PrettyPrinter.delabCore expression {}
+        PrettyPrinter.Delaborator.delab
+      pure ⟨freezeConstantReferences infos stable.raw⟩
 
 /-- The command engine only needs the algebraic interface of a certificate
 relation.  Keeping these operations as data leaves the runner open to a future
@@ -226,6 +263,8 @@ private def ensureFreshBinder (view : PTran.Syntax.ProblemView) (name : Name)
 private def applySubstitution (state : ReformState) (step : Lean.Syntax)
     (oldIdent : TSyntax `ident) (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term)) : CommandElabM ReformState := do
+  let replacement : TSyntax `term :=
+    ⟨← liftTermElabM <| PTran.Syntax.preResolveTerm replacement.raw⟩
   let oldName := oldIdent.getId
   let some binderIndex := findBinderIndex state.view oldName
     | throwErrorAt oldIdent "unknown decision variable `{oldName.eraseMacroScopes}`"
@@ -397,10 +436,11 @@ def elabReformulation : CommandElab := fun stx => do
   if let some aliasDeclName := aliasDeclName? then
     ensureFreshOutput aliasName.get! aliasDeclName
 
-  let targetDeclIdent := targetName
-  let certificateDeclIdent : TSyntax `ident :=
-    ⟨mkIdentFrom targetName (targetName.getId ++ `equivalence)⟩
-  let aliasDeclIdent? := aliasName
+  let targetDeclIdent := rootIdentFrom targetName targetDeclName
+  let certificateDeclIdent := rootIdentFrom targetName certificateDeclName
+  let aliasDeclIdent? := match aliasName, aliasDeclName? with
+    | some ref, some name => some (rootIdentFrom ref name)
+    | _, _ => none
 
   let sourceName ← resolveGlobalConstNoOverload sourceIdent
   let env ← getEnv
@@ -408,7 +448,8 @@ def elabReformulation : CommandElab := fun stx => do
     | throwErrorAt sourceIdent
         "declaration `{sourceName}` has no registered problem presentation"
 
-  let sourceTerm : TSyntax `term := ⟨sourceIdent.raw⟩
+  let sourceTerm : TSyntax `term :=
+    ⟨(rootIdentFrom sourceIdent sourceName).raw⟩
   let runner := globalEquivalenceRunner
   let initialCertificate ← liftMacroM <|
     runner.reflTerm sourceTerm
@@ -432,47 +473,53 @@ def elabReformulation : CommandElab := fun stx => do
           applyObjectiveBound state step binder .maximize
       | _ => throwUnsupportedSyntax
 
-  let targetTerm ← liftMacroM <| state.view.toTermSyntax
-  let targetCommand ← liftMacroM `(
-    command| noncomputable def $targetDeclIdent := $targetTerm)
-
-  let finalSemantic := state.semantic
-  let finalPattern ← liftMacroM <|
-    mkProductPattern (state.view.binders.map fun binder => binder.name)
-  let finalType ← liftMacroM <|
-    mkProductType (state.view.binders.map fun binder => binder.typeSyntax)
-  let sourceSimp ← liftMacroM `(
-    Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
-  let targetSimp ← liftMacroM `(
-    Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
-  let normalizationEquivalence ← liftMacroM `(
-    PTran.pointwiseEquivalence $finalSemantic $targetDeclIdent
-      (fun ($finalPattern : $finalType) => by
-        simp only [$sourceSimp, $targetSimp, PTran.Problem.pullback,
-          PTran.Problem.epigraph, PTran.Problem.hypograph, Real.log_exp,
-          Real.exp_pos, true_and, and_true, and_assoc, eq_self, iff_self] <;>
-          rfl)
-      (fun ($finalPattern : $finalType) => by
-        simp only [$sourceSimp, $targetSimp, PTran.Problem.pullback,
-          PTran.Problem.epigraph, PTran.Problem.hypograph, Real.log_exp,
-          Real.exp_pos, true_and, and_true, and_assoc, eq_self, iff_self] <;>
-          rfl))
-  let normalization ← liftMacroM <|
-    state.runner.liftEquivalence normalizationEquivalence
-  let equivalenceProof ← liftMacroM <|
-    state.runner.transTerm state.equivalenceProof normalization
-  let relation ← liftMacroM <|
-    state.runner.relationTerm sourceTerm ⟨targetDeclIdent.raw⟩
-  let certificateCommand ← liftMacroM `(command|
-    noncomputable def $certificateDeclIdent :
-        $relation := by
-      exact $equivalenceProof)
-  let aliasCommand? ← aliasDeclIdent?.mapM fun aliasDeclIdent =>
-    liftMacroM `(command|
-      noncomputable abbrev $aliasDeclIdent : $relation :=
-        $certificateDeclIdent)
-
   withDeclarationTransaction do
+    let stableSemantic ← stabilizeTerm state.semantic
+    if (← get).messages.hasErrors then
+      return
+    let stableEquivalenceProof ← stabilizeTerm state.equivalenceProof
+    if (← get).messages.hasErrors then
+      return
+
+    let targetTerm ← liftMacroM <| state.view.toTermSyntax
+    let targetCommand ← liftMacroM `(
+      command| noncomputable def $targetDeclIdent := $targetTerm)
+
+    let finalPattern ← liftMacroM <|
+      mkProductPattern (state.view.binders.map fun binder => binder.name)
+    let finalType ← liftMacroM <|
+      mkProductType (state.view.binders.map fun binder => binder.typeSyntax)
+    let sourceSimp ← liftMacroM `(
+      Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
+    let targetSimp ← liftMacroM `(
+      Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
+    let normalizationEquivalence ← liftMacroM `(
+      PTran.pointwiseEquivalence $stableSemantic $targetDeclIdent
+        (fun ($finalPattern : $finalType) => by
+          simp only [$sourceSimp, $targetSimp, PTran.Problem.pullback,
+            PTran.Problem.epigraph, PTran.Problem.hypograph, Real.log_exp,
+            Real.exp_pos, true_and, and_true, and_assoc, eq_self, iff_self] <;>
+            rfl)
+        (fun ($finalPattern : $finalType) => by
+          simp only [$sourceSimp, $targetSimp, PTran.Problem.pullback,
+            PTran.Problem.epigraph, PTran.Problem.hypograph, Real.log_exp,
+            Real.exp_pos, true_and, and_true, and_assoc, eq_self, iff_self] <;>
+            rfl))
+    let normalization ← liftMacroM <|
+      state.runner.liftEquivalence normalizationEquivalence
+    let equivalenceProof ← liftMacroM <|
+      state.runner.transTerm stableEquivalenceProof normalization
+    let relation ← liftMacroM <|
+      state.runner.relationTerm sourceTerm ⟨targetDeclIdent.raw⟩
+    let certificateCommand ← liftMacroM `(command|
+      noncomputable def $certificateDeclIdent :
+          $relation := by
+        exact $equivalenceProof)
+    let aliasCommand? ← aliasDeclIdent?.mapM fun aliasDeclIdent =>
+      liftMacroM `(command|
+        noncomputable abbrev $aliasDeclIdent : $relation :=
+          $certificateDeclIdent)
+
     elabCommand targetCommand
     unless (← get).messages.hasErrors do
       elabCommand certificateCommand
