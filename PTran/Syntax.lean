@@ -167,7 +167,7 @@ def ProblemView.toTermSyntax (view : ProblemView) : MacroM (TSyntax `term) := do
   if view.binders.isEmpty then
     Macro.throwError "a problem requires at least one decision variable"
   let binders ← view.binders.mapM fun (binder : BinderView) => do
-    let name : TSyntax `ident := Lean.mkIdent binder.name.eraseMacroScopes
+    let name : TSyntax `ident := Lean.mkIdent binder.name
     let typeSyntax : TSyntax `term := ⟨binder.typeSyntax⟩
     `(problemBinder| ($name : $typeSyntax))
   let constraints ← view.constraints.mapM fun (constraint : ConstraintView) => do
