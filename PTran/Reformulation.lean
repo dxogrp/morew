@@ -23,10 +23,14 @@ declare_syntax_cat reformulationStep
 an explicit feasible-surjection certificate. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
-/-- Introduce an epigraph variable for a minimization objective. -/
-syntax (name := epigraphStep) "epigraph " ident : reformulationStep
-/-- Introduce a hypograph variable for a maximization objective. -/
-syntax (name := hypographStep) "hypograph " ident : reformulationStep
+/-- Introduce an epigraph variable for a minimization objective, optionally
+choosing the generated constraint's presentation label. -/
+syntax (name := epigraphStep)
+  "epigraph " ident (" as " ident)? : reformulationStep
+/-- Introduce a hypograph variable for a maximization objective, optionally
+choosing the generated constraint's presentation label. -/
+syntax (name := hypographStep)
+  "hypograph " ident (" as " ident)? : reformulationStep
 
 /-- Declare a transformed problem together with its global-equivalence
 certificate. -/
@@ -710,7 +714,8 @@ private def applySubstitution (state : ReformState) (step : Lean.Syntax)
   }
 
 private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
-    (binder : TSyntax `ident) (expectedSense : PTran.Syntax.ObjectiveSense) :
+    (binder : TSyntax `ident) (explicitLabel? : Option (TSyntax `ident))
+    (expectedSense : PTran.Syntax.ObjectiveSense) :
     CommandElabM ReformState := do
   unless state.view.sense == expectedSense do
     let expected := match expectedSense with
@@ -722,6 +727,21 @@ private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
     throwErrorAt step "`{expected}` is not valid for a {actual} problem"
   let binderName := binder.getId
   ensureFreshBinder state.view binderName binder
+  let generatedName := Name.mkSimple <| match expectedSense with
+    | .minimize => s!"epigraph_{binderName.eraseMacroScopes}"
+    | .maximize => s!"hypograph_{binderName.eraseMacroScopes}"
+  let constraintName := match explicitLabel? with
+    | some label => label.getId.eraseMacroScopes
+    | none => generatedName
+  if state.view.constraints.any fun constraint =>
+      sameUserName constraint.name constraintName then
+    match explicitLabel? with
+    | some label =>
+        throwErrorAt label
+          "constraint name `{constraintName}` already exists"
+    | none =>
+        throwErrorAt binder
+          "generated constraint name `{generatedName}` already exists; use `as <label>` to choose a different constraint label"
   let scopedBinderName ← withFreshMacroScope do
     MonadQuotation.addMacroScope binderName
 
@@ -735,15 +755,8 @@ private def applyObjectiveBound (state : ReformState) (step : Lean.Syntax)
   let proposition ← liftMacroM <| match expectedSense with
     | .minimize => `($oldObjective ≤ $boundName)
     | .maximize => `($boundName ≤ $oldObjective)
-  let baseName := Name.mkSimple <| match expectedSense with
-    | .minimize => s!"epigraph_{binderName.eraseMacroScopes}"
-    | .maximize => s!"hypograph_{binderName.eraseMacroScopes}"
-  if state.view.constraints.any fun constraint =>
-      sameUserName constraint.name baseName then
-    throwErrorAt binder
-      "generated constraint name `{baseName}` already exists"
   let constraint : PTran.Syntax.ConstraintView := {
-    name := baseName
+    name := constraintName
     proposition
   }
   let newView : PTran.Syntax.ProblemView := {
@@ -834,10 +847,10 @@ def elabReformulation : CommandElab := fun stx => do
       | `(reformulationStep| substitute $oldName:ident := $replacement:term
           $[using $provided:term]?) =>
           applySubstitution state step oldName replacement provided
-      | `(reformulationStep| epigraph $binder:ident) =>
-          applyObjectiveBound state step binder .minimize
-      | `(reformulationStep| hypograph $binder:ident) =>
-          applyObjectiveBound state step binder .maximize
+      | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
+          applyObjectiveBound state step binder label .minimize
+      | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
+          applyObjectiveBound state step binder label .maximize
       | _ => throwUnsupportedSyntax
 
   withDeclarationTransaction do

@@ -767,7 +767,7 @@ def generatedLabelCollision :=
     subject to
       epigraph_t : x ≤ x
 
-/-- error: generated constraint name `epigraph_t` already exists -/
+/-- error: generated constraint name `epigraph_t` already exists; use `as <label>` to choose a different constraint label -/
 #guard_msgs in
 reformulation labelCollisionTarget : generatedLabelCollision := by
   epigraph t
