@@ -19,10 +19,10 @@ def original :=
       positive : 0 < x
 
 /--
-info: minimize (Real.log x) ^ 2
-over (x : ℝ)
-subject to
-  positive : 0 < x
+info: problem (x : ℝ)
+  minimize (Real.log x) ^ 2
+  subject to
+    positive : 0 < x
 -/
 #guard_msgs in
 #printp original
@@ -49,10 +49,10 @@ example (u t : ℝ) : transformed.objective (u, t) = t := rfl
 example (u t : ℝ) : transformed.feasible (u, t) ↔ u ^ 2 ≤ t := Iff.rfl
 
 /--
-info: minimize t
-over (u t : ℝ)
-subject to
-  epigraph_t : u ^ 2 ≤ t
+info: problem (u t : ℝ)
+  minimize t
+  subject to
+    epigraph_t : u ^ 2 ≤ t
 -/
 #guard_msgs in
 #printp transformed
@@ -67,11 +67,11 @@ def boundedMaximum :=
       upper : x ≤ 1
 
 /--
-info: maximize x ^ 2 - y ^ 2
-over (x y : ℝ)
-subject to
-  lower : -1 ≤ x
-  upper : x ≤ 1
+info: problem (x y : ℝ)
+  maximize x ^ 2 - y ^ 2
+  subject to
+    lower : -1 ≤ x
+    upper : x ≤ 1
 -/
 #guard_msgs in
 #printp boundedMaximum
@@ -86,12 +86,12 @@ example (x y t : ℝ) :
       -1 ≤ x ∧ x ≤ 1 ∧ t ≤ x ^ 2 - y ^ 2 := Iff.rfl
 
 /--
-info: maximize t
-over (x y t : ℝ)
-subject to
-  lower : -1 ≤ x
-  upper : x ≤ 1
-  hypograph_t : t ≤ x ^ 2 - y ^ 2
+info: problem (x y t : ℝ)
+  maximize t
+  subject to
+    lower : -1 ≤ x
+    upper : x ≤ 1
+    hypograph_t : t ≤ x ^ 2 - y ^ 2
 -/
 #guard_msgs in
 #printp boundedHypograph
@@ -103,11 +103,22 @@ def unconstrained :=
     minimize x
 
 /--
-info: minimize x
-over (x : ℝ)
+info: problem (x : ℝ)
+  minimize x
 -/
 #guard_msgs in
 #printp unconstrained
+
+def mixedBinders :=
+  problem (n : Nat) (x y : ℝ)
+    minimize n + x + y
+
+/--
+info: problem (n : Nat) (x y : ℝ)
+  minimize n + x + y
+-/
+#guard_msgs in
+#printp mixedBinders
 
 def nonconvex :=
   problem (x : ℝ)
@@ -119,10 +130,10 @@ reformulation nonconvexCertified / nonconvexEpigraph : nonconvex := by
 example : GlobalEquivalence nonconvex nonconvexEpigraph := nonconvexCertified
 
 /--
-info: minimize t
-over (x t : ℝ)
-subject to
-  epigraph_t : (x ^ 2 - 1) ^ 2 ≤ t
+info: problem (x t : ℝ)
+  minimize t
+  subject to
+    epigraph_t : (x ^ 2 - 1) ^ 2 ≤ t
 -/
 #guard_msgs in
 #printp nonconvexEpigraph

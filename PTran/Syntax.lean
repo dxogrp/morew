@@ -282,20 +282,40 @@ def elabConstrainedMaxProblem : TermElab := fun stx expectedType? => do
       elaborateProblem stx binders .maximize objective constraints expectedType?
   | _ => throwUnsupportedSyntax
 
-private def syntaxFormat (stx : Lean.Syntax) : CoreM Format := do
+private partial def containsMissingSyntax : Lean.Syntax → Bool
+  | .missing => true
+  | .node _ _ args => args.any containsMissingSyntax
+  | _ => false
+
+private def syntaxFormat (description : String) (stx : Lean.Syntax) : CoreM Format := do
+  if containsMissingSyntax stx then
+    throwError "problem presentation metadata contains unprintable {description} syntax"
   try
     PrettyPrinter.ppTerm ⟨stx⟩
   catch _ =>
-    pure stx.prettyPrint
+    throwError "problem presentation metadata contains unprintable {description} syntax"
+
+private def ensureViewNamesDistinct (what : String) (names : Array Name) : CoreM Unit := do
+  for i in [:names.size] do
+    for j in [0:i] do
+      if names[i]!.eraseMacroScopes == names[j]!.eraseMacroScopes then
+        throwError
+          "problem presentation metadata contains duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
 private def formatProblemView (view : PTran.Syntax.ProblemView) : CoreM Format := do
-  let objective ← syntaxFormat view.objective
-  let mut result := match view.sense with
+  if view.binders.isEmpty then
+    throwError "problem presentation metadata contains no decision-variable binders"
+  ensureViewNamesDistinct "decision variable" (view.binders.map (·.name))
+  ensureViewNamesDistinct "constraint" (view.constraints.map (·.name))
+
+  let objective ← syntaxFormat "objective" view.objective
+  let mut body := match view.sense with
     | .minimize => f!"minimize {objective}"
     | .maximize => f!"maximize {objective}"
   let mut binderGroups : Array (Array Name × String × Format) := #[]
   for binder in view.binders do
-    let typeFormat ← syntaxFormat binder.typeSyntax
+    let typeFormat ← syntaxFormat s!"type for decision variable `{binder.name.eraseMacroScopes}`"
+      binder.typeSyntax
     let typeKey := typeFormat.pretty
     match binderGroups.back? with
     | some (names, previousKey, previousFormat) =>
@@ -309,17 +329,18 @@ private def formatProblemView (view : PTran.Syntax.ProblemView) : CoreM Format :
   let binderFormats := binderGroups.map fun (names, _, typeFormat) =>
     let nameFormats := names.toList.map fun name => format name
     f!"({Format.joinSep nameFormats (Format.text " ")} : {typeFormat})"
-  result := result ++ Format.line ++
-    f!"over {Format.joinSep binderFormats.toList (Format.text " ")}"
   unless view.constraints.isEmpty do
-    result := result ++ Format.line ++ "subject to"
+    body := body ++ Format.line ++ "subject to"
     let mut constraintFormats : Array Format := #[]
     for constraint in view.constraints do
-      let proposition ← syntaxFormat constraint.proposition
+      let proposition ← syntaxFormat
+        s!"proposition for constraint `{constraint.name.eraseMacroScopes}`"
+        constraint.proposition
       constraintFormats := constraintFormats.push f!"{constraint.name} : {proposition}"
-    result := result ++ Format.nest 2
+    body := body ++ Format.nest 2
       (Format.line ++ Format.joinSep constraintFormats.toList Format.line)
-  pure result
+  pure <| f!"problem {Format.joinSep binderFormats.toList (Format.text " ")}" ++
+    Format.nest 2 (Format.line ++ body)
 
 /-- Print the source-aligned mathematical presentation of a registered problem. -/
 syntax (name := printProblemCmd) "#printp " ident : command
