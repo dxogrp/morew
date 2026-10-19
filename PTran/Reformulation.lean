@@ -180,7 +180,8 @@ private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) :
           | _ => false then
         result
       else
-        result.insert value.eraseMacroScopes
+        -- Candidate locals must retain the scopes used by the replacement.
+        result.insert value
   | _ => stx.getArgs.foldl (fun result child => collectIdents child result) result
 
 private def newBinderCandidates (view : PTran.Syntax.ProblemView) (oldName : Name)
@@ -190,7 +191,7 @@ private def newBinderCandidates (view : PTran.Syntax.ProblemView) (oldName : Nam
   let env ← getEnv
   let candidates := (collectIdents replacement).toList.filter fun name =>
     !name.isAnonymous && !sameUserName name oldName &&
-      !localNames.contains name && !env.contains name
+      !localNames.contains name.eraseMacroScopes && !env.contains name
   pure candidates.toArray
 
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
