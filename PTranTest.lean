@@ -1,6 +1,10 @@
+import PTranTest.CompositionalRunner
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ObjectiveBoundLabels
+import PTranTest.RunnerFailures
+import PTranTest.RunnerInternals
+import PTranTest.SubstitutionContext
 import PTranTest.Surface
 import PTranTest.SyntaxEdge
 import PTranTest.Transform

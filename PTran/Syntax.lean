@@ -220,9 +220,9 @@ private def ensureDistinct (what : String) (names : Array Name) (refs : Array Le
     MacroM Unit := do
   for i in [:names.size] do
     for j in [0:i] do
-      if names[i]! == names[j]! then
+      if names[i]!.eraseMacroScopes == names[j]!.eraseMacroScopes then
         Macro.throwErrorAt refs[i]!
-          s!"duplicate {what} name `{names[i]!}`"
+          s!"duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
 private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Syntax)
     (sense : PTran.Syntax.ObjectiveSense) (objective : TSyntax `term)
