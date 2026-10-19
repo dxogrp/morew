@@ -1,5 +1,15 @@
 import PTran.Core
 import PTran.Elab.Reformulation
+import PTran.Elab.Reformulation.Names
+import PTran.Elab.Reformulation.Presentation
+import PTran.Elab.Reformulation.Runner
 import PTran.Reformulation
+import PTran.Reformulation.Command
+import PTran.Reformulation.ObjectiveBound
+import PTran.Reformulation.Presentation
+import PTran.Reformulation.State
+import PTran.Reformulation.StepRunner
+import PTran.Reformulation.Substitution
+import PTran.Reformulation.Syntax
 import PTran.Syntax
 import PTran.Transform
