@@ -764,6 +764,22 @@ private def constraintIsTypedTrue (view : PTran.Syntax.ProblemView)
     let expression ← instantiateMVars expression
     isDefEq expression (mkConst ``True)
 
+private def normalizationSimpLemmas (sourceTerm : TSyntax `term)
+    (unfoldDeclarations : Array Name) :
+    MacroM (Array (TSyntax `Lean.Parser.Tactic.simpLemma)) := do
+  let sourceLemma ← `(
+    Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
+  let mut lemmas := #[sourceLemma]
+  for declaration in unfoldDeclarations do
+    lemmas := lemmas.push (← `(
+      Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
+  for declaration in #[``PTran.Problem.pullback, ``PTran.Problem.epigraph,
+      ``PTran.Problem.hypograph, ``Real.log_exp, ``Real.exp_pos,
+      ``true_and, ``and_true, ``and_assoc, ``eq_self, ``iff_self] do
+    lemmas := lemmas.push (← `(
+      Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
+  pure lemmas
+
 private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))
@@ -839,9 +855,9 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
           | throwErrorAt step
               "the registered exponential rule requires the current constraint `0 < {oldName.eraseMacroScopes}`; provide `using` for a more general feasible domain"
         let current := state.semantic
-        let source := state.source
-        let sourceSimp ← liftMacroM `(
-          Lean.Parser.Tactic.simpLemma| $source:term)
+        -- Earlier steps may have removed positivity constraints through aliases.
+        let normalizationLemmas ← liftMacroM <|
+          normalizationSimpLemmas state.source state.normalizationUnfolds
         let pointIdent : TSyntax `ident := ⟨mkIdent `point⟩
         let pointTerm : TSyntax `term := ⟨pointIdent.raw⟩
         let sourcePoint ← liftMacroM `(($pointTerm).1)
@@ -872,10 +888,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
             preimage := fun $pointIdent => $preimage
             rightInverse := fun $pointIdent => by
               have $feasibleIdent : ($canonicalFeasible) ($pointTerm).1 := by
-                simpa only [$sourceSimp, PTran.Problem.pullback,
-                  PTran.Problem.epigraph, PTran.Problem.hypograph,
-                  Real.log_exp, Real.exp_pos, true_and, and_true,
-                  and_assoc] using ($pointTerm).2
+                simpa only [$[$normalizationLemmas],*] using ($pointTerm).2
               have positive : 0 < $selectedSource := by
                 exact $positiveEvidence
               simp only [Real.exp_log positive]
@@ -1016,22 +1029,6 @@ private def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
     materialize := fun allocation =>
       materializeObjectiveBound state binder expectedSense allocation
   }
-
-private def normalizationSimpLemmas (sourceTerm : TSyntax `term)
-    (unfoldDeclarations : Array Name) :
-    MacroM (Array (TSyntax `Lean.Parser.Tactic.simpLemma)) := do
-  let sourceLemma ← `(
-    Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
-  let mut lemmas := #[sourceLemma]
-  for declaration in unfoldDeclarations do
-    lemmas := lemmas.push (← `(
-      Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
-  for declaration in #[``PTran.Problem.pullback, ``PTran.Problem.epigraph,
-      ``PTran.Problem.hypograph, ``Real.log_exp, ``Real.exp_pos,
-      ``true_and, ``and_true, ``and_assoc, ``eq_self, ``iff_self] do
-    lemmas := lemmas.push (← `(
-      Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
-  pure lemmas
 
 private def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
     (semantic canonical : Expr) (unfoldDeclarations : Array Name) :

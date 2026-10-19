@@ -202,6 +202,35 @@ run_cmd do
 
 end ElaboratedRecognition
 
+/-! A later automatic substitution reuses the normalization needed to remove
+an earlier aliased positivity constraint. -/
+
+namespace SuccessiveAliasedSubstitutions
+
+def IsPositive (x : ℝ) : Prop := 0 < x
+
+def source :=
+  problem (x y : ℝ)
+    minimize Real.log x + Real.log y
+    subject to
+      positive_x : IsPositive x
+      positive_y : 0 < y
+
+reformulation target : source := by
+  substitute x := Real.exp u
+  substitute y := Real.exp v
+  epigraph t as sum_bound
+
+example : GlobalEquivalence source target := target.equivalence
+
+example (u v t : ℝ) : target.objective ((u, v), t) = t := rfl
+
+example (u v t : ℝ) :
+    target.feasible ((u, v), t) ↔ u + v ≤ t :=
+  Iff.rfl
+
+end SuccessiveAliasedSubstitutions
+
 /-! Binder inference counts free identifiers in the elaborated replacement,
 not identifiers bound inside a lambda. -/
 
