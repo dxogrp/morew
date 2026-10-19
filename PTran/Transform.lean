@@ -154,16 +154,18 @@ end HypographRepresentation
 
 namespace Problem
 
+set_option linter.unusedVariables.funArgs false in
 /-- Replace one factor of a problem's feasible predicate by an exact
 auxiliary-variable lift.
 
 The decomposition identifies the selected source predicate while leaving all
 other feasibility conditions in `remainder`.  Presentation details such as
 constraint labels are intentionally absent from this semantic constructor. -/
+@[nolint unusedArguments]
 def liftConstraint {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V) (remainder : X → Prop)
     (lift : ExactConstraintLift.{u, w} source)
-    (_decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x) :
+    (decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x) :
     Problem (X × lift.Auxiliary) V where
   objective point := p.objective point.1
   feasible point := remainder point.1 ∧ lift.target point.1 point.2

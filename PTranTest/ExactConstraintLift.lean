@@ -55,7 +55,7 @@ def liftedSquareBoundProblem : Problem ((ℤ × ℤ) × ℤ) ℤ :=
   squareBoundProblem.liftConstraint
     (fun point => point.1 ≤ 10)
     squareEpigraphLift
-    (fun _ => Iff.rfl)
+    (decomposition := fun _ => Iff.rfl)
 
 def squareBoundEquivalence :
     GlobalEquivalence squareBoundProblem liftedSquareBoundProblem :=
