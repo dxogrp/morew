@@ -1,5 +1,3 @@
-import PTran.Elab.Reformulation.Names
-import PTran.Elab.Reformulation.Presentation
 import PTran.Elab.Reformulation.Runner
 
 /-!
