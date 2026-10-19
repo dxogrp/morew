@@ -164,14 +164,6 @@ private partial def mkProductProjection (point : TSyntax `term)
     let initial ← `(($point).1)
     mkProductProjection initial index (count - 1)
 
-private partial def mkConstraintConjunctionSyntax :
-    List (TSyntax `term) → MacroM (TSyntax `term)
-  | [] => `(True)
-  | [proposition] => pure proposition
-  | proposition :: rest => do
-      let tail ← mkConstraintConjunctionSyntax rest
-      `($proposition ∧ $tail)
-
 private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) : NameSet :=
   match stx with
   | .ident _ _ value preResolved =>
@@ -746,19 +738,15 @@ private structure PositiveConstraintMatch where
 private def findPositiveConstraint (state : ReformState)
     (binderIndex : Nat) : CommandElabM (Option PositiveConstraintMatch) :=
   withTypedPresentation state fun presentation =>
-  withPresentationBinders presentation fun _ _binders => do
-    let view := state.view
-    let binder : TSyntax `term := ⟨mkIdent view.binders[binderIndex]!.name⟩
+  withPresentationBinders presentation fun _ binders => do
+    let point ← packPoint binders
+    let binder : TSyntax `term := ⟨mkIdent presentation.binders[binderIndex]!.name⟩
     let expectedSyntax ← liftMacroM `(0 < $binder)
     let expected ← elabTerm expectedSyntax (some (mkSort Level.zero))
     synthesizeSyntheticMVarsNoPostponing
     let expected ← instantiateMVars expected
-    for index in [:view.constraints.size] do
-      let proposition : TSyntax `term :=
-        ⟨view.constraints[index]!.proposition⟩
-      let candidate ← elabTerm proposition (some (mkSort Level.zero))
-      synthesizeSyntheticMVarsNoPostponing
-      let candidate ← instantiateMVars candidate
+    for index in [:presentation.constraints.size] do
+      let candidate ← simpOnly <| mkApp presentation.constraints[index]!.predicate point
       if ← isDefEq candidate expected then
         let unfold? := match candidate.getAppFn, expected.getAppFn with
           | .const candidateName _, .const expectedName _ =>
@@ -770,13 +758,8 @@ private def findPositiveConstraint (state : ReformState)
 private def constraintIsTypedTrue (state : ReformState)
     (index : Nat) : CommandElabM Bool :=
   withTypedPresentation state fun presentation =>
-  withPresentationBinders presentation fun _ _ => do
-    let view := state.view
-    let proposition : TSyntax `term := ⟨view.constraints[index]!.proposition⟩
-    let expression ← elabTerm proposition (some (mkSort Level.zero))
-    synthesizeSyntheticMVarsNoPostponing
-    let expression ← instantiateMVars expression
-    isDefEq expression (mkConst ``True)
+    withLocalDeclD `point presentation.domainType fun point =>
+      isDefEq (mkApp presentation.constraints[index]!.predicate point) (mkConst ``True)
 
 private def normalizationSimpLemmas (sourceTerm : TSyntax `term)
     (unfoldDeclarations : Array Name) :
@@ -885,13 +868,15 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
           else
             preimageComponents := preimageComponents.push component
         let preimage ← liftMacroM <| mkProduct preimageComponents
-        let oldPattern ← liftMacroM <|
-          mkProductPattern (state.view.binders.map fun binder => binder.name)
-        let constraintBody ← liftMacroM <| mkConstraintConjunctionSyntax
-          (state.view.constraints.toList.map fun constraint =>
-            (⟨constraint.proposition⟩ : TSyntax `term))
-        let canonicalFeasible ← liftMacroM `(
-          fun ($oldPattern : $domainType) => $constraintBody)
+        let canonicalFeasible ← withTypedPresentation state fun presentation => do
+          let feasible ← mkFeasibleFunction presentation.domainType
+            (presentation.constraints.map (·.predicate))
+          -- Anonymous section instances get fresh names on each elaboration.
+          -- Abstract them so the certificate can infer them in its own context.
+          let instances ← (← getLCtx).getFVars.filterM fun fvar =>
+            return (← fvar.fvarId!.getDecl).binderInfo.isInstImplicit
+          let feasible ← mkLambdaFVars instances (← simpOnly feasible) (usedOnly := true)
+          exactExpressionSyntax feasible
         let feasibleIdent : TSyntax `ident := ⟨mkIdent `normalizedFeasible⟩
         let feasible : TSyntax `term := ⟨feasibleIdent.raw⟩
         let positiveEvidence ← liftMacroM <|
