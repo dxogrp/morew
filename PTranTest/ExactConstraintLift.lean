@@ -51,19 +51,23 @@ def squareBoundProblem : Problem (ℤ × ℤ) ℤ where
   objective point := point.1 + point.2
   feasible point := point.1 ≤ 10 ∧ point.1 ^ 2 ≤ point.2
 
+def squareBoundDecomposition :
+    ConstraintDecomposition squareBoundProblem
+      (fun point : ℤ × ℤ => point.1 ^ 2 ≤ point.2) where
+  remainder point := point.1 ≤ 10
+  feasible_iff _ := Iff.rfl
+
 def liftedSquareBoundProblem : Problem ((ℤ × ℤ) × ℤ) ℤ :=
   squareBoundProblem.liftConstraint
-    (fun point => point.1 ≤ 10)
     squareEpigraphLift
-    (decomposition := fun _ => Iff.rfl)
+    (decomposition := squareBoundDecomposition)
 
 def squareBoundEquivalence :
     GlobalEquivalence squareBoundProblem liftedSquareBoundProblem :=
   exactConstraintLiftEquivalence
     squareBoundProblem
-    (fun point => point.1 ≤ 10)
     squareEpigraphLift
-    (fun _ => Iff.rfl)
+    squareBoundDecomposition
 
 def squareBoundPoint : FeasiblePoint squareBoundProblem :=
   ⟨(2, 4), by
@@ -159,19 +163,22 @@ def impossibleProblem : Problem ℤ ℤ where
   objective x := x
   feasible _ := True ∧ False
 
+def impossibleDecomposition :
+    ConstraintDecomposition impossibleProblem (fun _ : ℤ => False) where
+  remainder _ := True
+  feasible_iff _ := Iff.rfl
+
 def liftedImpossibleProblem : Problem (ℤ × Unit) ℤ :=
   impossibleProblem.liftConstraint
-    (fun _ => True)
     impossibleLift
-    (fun _ => Iff.rfl)
+    impossibleDecomposition
 
 def impossibleEquivalence :
     GlobalEquivalence impossibleProblem liftedImpossibleProblem :=
   exactConstraintLiftEquivalence
     impossibleProblem
-    (fun _ => True)
     impossibleLift
-    (fun _ => Iff.rfl)
+    impossibleDecomposition
 
 example :
     impossibleProblem.HasFeasiblePoint ↔
@@ -198,18 +205,22 @@ def nonconvexLift : ExactConstraintLift (fun x : ℝ => x ^ 2 = 1) :=
     fun x => by
       simp only [pow_two]
 
+def nonconvexDecomposition :
+    ConstraintDecomposition nonconvexProblem
+      (fun x : ℝ => x ^ 2 = 1) where
+  remainder _ := True
+  feasible_iff _ := Iff.rfl
+
 def liftedNonconvexProblem :=
   nonconvexProblem.liftConstraint
-    (fun _ => True)
     nonconvexLift
-    (fun _ => Iff.rfl)
+    nonconvexDecomposition
 
 example : GlobalEquivalence nonconvexProblem liftedNonconvexProblem :=
   exactConstraintLiftEquivalence
     nonconvexProblem
-    (fun _ => True)
     nonconvexLift
-    (fun _ => Iff.rfl)
+    nonconvexDecomposition
 
 /-! Independently certified lifts compose through transitivity. -/
 
@@ -223,19 +234,23 @@ def firstSequentialLift : ExactConstraintLift (fun x : ℤ => x = 0) :=
     fun x =>
       ⟨fun h : x = 0 => h.symm, fun h : 0 = x => h.symm⟩
 
+def firstSequentialDecomposition :
+    ConstraintDecomposition twoConstraintProblem
+      (fun x : ℤ => x = 0) where
+  remainder x := x ≤ 0
+  feasible_iff _ := Iff.rfl
+
 def afterFirstLift : Problem (ℤ × Unit) ℤ :=
   twoConstraintProblem.liftConstraint
-    (fun x => x ≤ 0)
     firstSequentialLift
-    (fun _ => Iff.rfl)
+    firstSequentialDecomposition
 
 def firstSequentialEquivalence :
     GlobalEquivalence twoConstraintProblem afterFirstLift :=
   exactConstraintLiftEquivalence
     twoConstraintProblem
-    (fun x => x ≤ 0)
     firstSequentialLift
-    (fun _ => Iff.rfl)
+    firstSequentialDecomposition
 
 def secondSequentialLift :
     ExactConstraintLift (fun point : ℤ × Unit => 0 = point.1) :=
@@ -244,19 +259,23 @@ def secondSequentialLift :
     fun point =>
       ⟨fun h : 0 = point.1 => h.symm, fun h : point.1 = 0 => h.symm⟩
 
+def secondSequentialDecomposition :
+    ConstraintDecomposition afterFirstLift
+      (fun point : ℤ × Unit => 0 = point.1) where
+  remainder point := point.1 ≤ 0
+  feasible_iff _ := Iff.rfl
+
 def afterSecondLift : Problem ((ℤ × Unit) × Unit) ℤ :=
   afterFirstLift.liftConstraint
-    (fun point => point.1 ≤ 0)
     secondSequentialLift
-    (fun _ => Iff.rfl)
+    secondSequentialDecomposition
 
 def secondSequentialEquivalence :
     GlobalEquivalence afterFirstLift afterSecondLift :=
   exactConstraintLiftEquivalence
     afterFirstLift
-    (fun point => point.1 ≤ 0)
     secondSequentialLift
-    (fun _ => Iff.rfl)
+    secondSequentialDecomposition
 
 example : GlobalEquivalence twoConstraintProblem afterSecondLift :=
   firstSequentialEquivalence.trans secondSequentialEquivalence

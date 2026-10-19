@@ -152,43 +152,53 @@ def toExactConstraintLift
 
 end HypographRepresentation
 
+/-- An exact decomposition of a problem's feasible predicate into the source
+constraint selected for replacement and the remainder left unchanged. -/
+structure ConstraintDecomposition {X : Type u} {V : Type v}
+    (p : Problem X V) (source : X → Prop) where
+  /-- The part of the feasible predicate left unchanged by the lift. -/
+  remainder : X → Prop
+  /-- The remainder and selected source constraint exactly recover the
+  original feasible predicate. -/
+  feasible_iff : ∀ x, p.feasible x ↔ remainder x ∧ source x
+
 namespace Problem
 
-set_option linter.unusedVariables.funArgs false in
 /-- Replace one factor of a problem's feasible predicate by an exact
 auxiliary-variable lift.
 
 The decomposition identifies the selected source predicate while leaving all
 other feasibility conditions in `remainder`.  Presentation details such as
 constraint labels are intentionally absent from this semantic constructor. -/
-@[nolint unusedArguments]
 def liftConstraint {X : Type u} {V : Type v} {source : X → Prop}
-    (p : Problem X V) (remainder : X → Prop)
+    (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
-    (decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x) :
+    (decomposition : ConstraintDecomposition p source) :
     Problem (X × lift.Auxiliary) V where
   objective point := p.objective point.1
-  feasible point := remainder point.1 ∧ lift.target point.1 point.2
+  feasible point :=
+    decomposition.remainder point.1 ∧ lift.target point.1 point.2
 
 @[simp]
 theorem liftConstraint_objective
     {X : Type u} {V : Type v} {source : X → Prop}
-    (p : Problem X V) (remainder : X → Prop)
+    (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
-    (decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x)
+    (decomposition : ConstraintDecomposition p source)
     (point : X × lift.Auxiliary) :
-    (p.liftConstraint remainder lift decomposition).objective point =
+    (p.liftConstraint lift decomposition).objective point =
       p.objective point.1 := rfl
 
 @[simp]
 theorem liftConstraint_feasible
     {X : Type u} {V : Type v} {source : X → Prop}
-    (p : Problem X V) (remainder : X → Prop)
+    (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
-    (decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x)
+    (decomposition : ConstraintDecomposition p source)
     (point : X × lift.Auxiliary) :
-    (p.liftConstraint remainder lift decomposition).feasible point ↔
-      remainder point.1 ∧ lift.target point.1 point.2 := Iff.rfl
+    (p.liftConstraint lift decomposition).feasible point ↔
+      decomposition.remainder point.1 ∧
+        lift.target point.1 point.2 := Iff.rfl
 
 /-- Pull an optimization problem back along a map of decision spaces. -/
 def pullback {X : Type u} {Y : Type v} {V : Type w}
@@ -283,14 +293,14 @@ The forward map uses classical choice only to select an auxiliary witness.
 The certificate does not require that witness to be unique or computable. -/
 noncomputable def exactConstraintLiftEquivalence
     {X : Type u} {V : Type v} {source : X → Prop} [Preorder V]
-    (p : Problem X V) (remainder : X → Prop)
+    (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
-    (decomposition : ∀ x, p.feasible x ↔ remainder x ∧ source x) :
-    GlobalEquivalence p (p.liftConstraint remainder lift decomposition) where
+    (decomposition : ConstraintDecomposition p source) :
+    GlobalEquivalence p (p.liftConstraint lift decomposition) where
   forward := {
     map := fun x => by
-      have hparts : remainder x.1 ∧ source x.1 :=
-        (decomposition x.1).mp x.2
+      have hparts : decomposition.remainder x.1 ∧ source x.1 :=
+        (decomposition.feasible_iff x.1).mp x.2
       have hexists : ∃ a, lift.target x.1 a :=
         (lift.source_iff_exists x.1).mp hparts.2
       exact ⟨(x.1, Classical.choose hexists), hparts.1,
@@ -301,7 +311,8 @@ noncomputable def exactConstraintLiftEquivalence
       have hsource : source point.1.1 :=
         (lift.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
       exact ⟨point.1.1,
-        (decomposition point.1.1).mpr ⟨point.2.1, hsource⟩⟩
+        (decomposition.feasible_iff point.1.1).mpr
+          ⟨point.2.1, hsource⟩⟩
     objective_le := fun _ => le_rfl }
 
 /-- Pullback along a feasibly surjective map is a global equivalence. -/
