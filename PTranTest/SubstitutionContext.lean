@@ -134,6 +134,103 @@ example (u t : ℝ) : bounded.feasible (u, t) ↔ u ≤ t := Iff.rfl
 
 end MacroGeneratedSubstitution
 
+namespace NestedPositivityAliases
+
+def Positive (x : ℝ) : Prop := 0 < x
+def InDomain (x : ℝ) : Prop := Positive x
+
+def source :=
+  problem (x y : ℝ)
+    minimize Real.log x + Real.log y
+    subject to
+      positive_x : InDomain x
+      retained : True
+      positive_y : (show Prop from InDomain y)
+
+def coverage :
+    FeasibleSurjection source
+      (fun point : ℝ × ℝ => (Real.exp point.1, point.2)) where
+  preimage point := (Real.log point.1.1, point.1.2)
+  rightInverse point := Prod.ext (Real.exp_log point.2.1) rfl
+
+reformulation manualTarget : source := by
+  substitute x := Real.exp u using coverage
+  epigraph t as sum_bound
+  substitute y := Real.exp v
+
+example : GlobalEquivalence source manualTarget := manualTarget.equivalence
+
+example (u v t : ℝ) : manualTarget.objective ((u, v), t) = t := rfl
+
+example (u v t : ℝ) :
+    manualTarget.feasible ((u, v), t) ↔ True ∧ u + v ≤ t := Iff.rfl
+
+reformulation automaticTarget : source := by
+  substitute y := Real.exp v
+  substitute x := Real.exp u
+  epigraph t as sum_bound
+
+example : GlobalEquivalence source automaticTarget :=
+  automaticTarget.equivalence
+
+example (u v t : ℝ) : automaticTarget.objective ((u, v), t) = t := rfl
+
+example (u v t : ℝ) :
+    automaticTarget.feasible ((u, v), t) ↔ True ∧ u + v ≤ t := Iff.rfl
+
+end NestedPositivityAliases
+
+namespace AnonymousSectionInstance
+
+class Marker where
+  marker : Nat
+
+def Positive [Marker] (x : ℝ) : Prop := 0 < x
+def InDomain [Marker] (x : ℝ) : Prop := Positive x
+
+section
+
+variable [Marker]
+
+def source :=
+  problem (x y : ℝ)
+    minimize Real.log x + Real.log y
+    subject to
+      positive_x : InDomain x
+      positive_y : InDomain y
+      retained : True
+
+def coverage :
+    FeasibleSurjection source
+      (fun point : ℝ × ℝ => (Real.exp point.1, point.2)) where
+  preimage point := (Real.log point.1.1, point.1.2)
+  rightInverse point := Prod.ext (Real.exp_log point.2.1) rfl
+
+reformulation manualTarget : source := by
+  substitute x := Real.exp u using coverage
+  epigraph t as positive_x
+  substitute y := Real.exp v
+
+example : GlobalEquivalence source manualTarget := manualTarget.equivalence
+
+example (u v t : ℝ) :
+    manualTarget.feasible ((u, v), t) ↔ True ∧ u + v ≤ t := Iff.rfl
+
+reformulation automaticTarget : source := by
+  substitute x := Real.exp u
+  epigraph t as positive_x
+  substitute y := Real.exp v
+  epigraph s as positive_y
+
+example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
+
+example (u v t s : ℝ) :
+    automaticTarget.feasible (((u, v), t), s) ↔
+      True ∧ u + v ≤ t ∧ t ≤ s := Iff.rfl
+
+end
+end AnonymousSectionInstance
+
 namespace AmbientBinderType
 
 def source :=

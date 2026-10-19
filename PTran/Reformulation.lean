@@ -638,7 +638,7 @@ private structure ReformState where
   simplifyExpLogTerms : Bool := false
   hasSubstitution : Bool := false
   removedConstraintNames : NameSet := {}
-  normalizationUnfolds : Array Name := #[]
+  normalizationLemmas : Array (TSyntax `term) := #[]
 
 /-- A handler describes one uncommitted primitive step.  Certificate
 composition and state mutation are deliberately centralized in
@@ -651,7 +651,7 @@ private structure SurfaceStepResult where
   simplifyExpLogTerms : Bool
   hasSubstitution : Bool
   removedConstraintNames : NameSet
-  normalizationUnfolds : Array Name
+  normalizationLemmas : Array (TSyntax `term)
   status : PTran.Elab.Reformulation.StepStatus := .continue
   companions : Array PTran.Elab.Reformulation.CompanionRequest := #[]
 
@@ -733,7 +733,7 @@ private def replacementIsRealExpOf (state : ReformState)
 
 private structure PositiveConstraintMatch where
   index : Nat
-  unfold? : Option Name
+  normalization? : Option (TSyntax `term)
 
 private def findPositiveConstraint (state : ReformState)
     (binderIndex : Nat) : CommandElabM (Option PositiveConstraintMatch) :=
@@ -748,11 +748,16 @@ private def findPositiveConstraint (state : ReformState)
     for index in [:presentation.constraints.size] do
       let candidate ← simpOnly <| mkApp presentation.constraints[index]!.predicate point
       if ← isDefEq candidate expected then
-        let unfold? := match candidate.getAppFn, expected.getAppFn with
-          | .const candidateName _, .const expectedName _ =>
-              if candidateName == expectedName then none else some candidateName
-          | _, _ => none
-        return some { index, unfold? }
+        let normalization? ← if candidate == expected then pure none else do
+          -- Preserve the full definitional equivalence, including nested aliases,
+          -- as a checked rewrite instead of remembering only a head declaration.
+          let equivalence := mkApp2 (mkConst ``Iff) candidate expected
+          let proof := mkExpectedPropHint (mkApp (mkConst ``Iff.rfl) expected) equivalence
+          -- Close over section parameters too, including anonymous instances.
+          let proof ← mkLambdaFVars (← getLCtx).getFVars proof (usedOnly := true)
+          check proof
+          pure <| some (← exactExpressionSyntax proof)
+        return some { index, normalization? }
     pure none
 
 private def constraintIsTypedTrue (state : ReformState)
@@ -762,14 +767,14 @@ private def constraintIsTypedTrue (state : ReformState)
       isDefEq (mkApp presentation.constraints[index]!.predicate point) (mkConst ``True)
 
 private def normalizationSimpLemmas (sourceTerm : TSyntax `term)
-    (unfoldDeclarations : Array Name) :
+    (predicateLemmas : Array (TSyntax `term)) :
     MacroM (Array (TSyntax `Lean.Parser.Tactic.simpLemma)) := do
   let sourceLemma ← `(
     Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
   let mut lemmas := #[sourceLemma]
-  for declaration in unfoldDeclarations do
+  for proof in predicateLemmas do
     lemmas := lemmas.push (← `(
-      Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
+      Lean.Parser.Tactic.simpLemma| $proof:term))
   for declaration in #[``PTran.Problem.pullback, ``PTran.Problem.epigraph,
       ``PTran.Problem.hypograph, ``Real.log_exp, ``Real.exp_pos,
       ``true_and, ``and_true, ``and_assoc, ``eq_self, ``iff_self] do
@@ -802,13 +807,9 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     else
       pure none
   let positiveIndex? := positiveMatch?.map (·.index)
-  let normalizationUnfolds := match positiveMatch?.bind (·.unfold?) with
-    | some name =>
-        if state.normalizationUnfolds.contains name then
-          state.normalizationUnfolds
-        else
-          state.normalizationUnfolds.push name
-    | none => state.normalizationUnfolds
+  let normalizationLemmas := match positiveMatch?.bind (·.normalization?) with
+    | some proof => state.normalizationLemmas.push proof
+    | none => state.normalizationLemmas
 
   let binderNames := newBinders.map fun binder => binder.name
   let domainType := state.semanticDomainType
@@ -853,7 +854,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
         let current := state.semantic
         -- Earlier steps may have removed positivity constraints through aliases.
         let normalizationLemmas ← liftMacroM <|
-          normalizationSimpLemmas state.source state.normalizationUnfolds
+          normalizationSimpLemmas state.source state.normalizationLemmas
         let pointIdent : TSyntax `ident := ⟨mkIdent `point⟩
         let pointTerm : TSyntax `term := ⟨pointIdent.raw⟩
         let sourcePoint ← liftMacroM `(($pointTerm).1)
@@ -906,7 +907,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     simplifyExpLogTerms := true
     hasSubstitution := true
     removedConstraintNames
-    normalizationUnfolds
+    normalizationLemmas
   }
 
 private def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
@@ -985,7 +986,7 @@ private def materializeObjectiveBound (state : ReformState)
     simplifyExpLogTerms := state.simplifyExpLogTerms
     hasSubstitution := state.hasSubstitution
     removedConstraintNames := state.removedConstraintNames
-    normalizationUnfolds := state.normalizationUnfolds
+    normalizationLemmas := state.normalizationLemmas
   }
 
 private def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
@@ -1029,7 +1030,7 @@ private def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
   }
 
 private def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
-    (semantic canonical : Expr) (unfoldDeclarations : Array Name) :
+    (semantic canonical : Expr) (predicateLemmas : Array (TSyntax `term)) :
     TermElabM PTran.Elab.Reformulation.PointwiseNormalization := do
   let semanticType ← whnf (← inferType semantic)
   let canonicalType ← whnf (← inferType canonical)
@@ -1055,7 +1056,7 @@ private def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
     mkForallFVars #[point] <| mkApp2 (mkConst ``Iff)
       (mkApp semanticFeasible point) (mkApp canonicalFeasible point)
   let simpLemmas ← liftMacroM <|
-    normalizationSimpLemmas sourceTerm unfoldDeclarations
+    normalizationSimpLemmas sourceTerm predicateLemmas
   let proofSyntax ← liftMacroM `(
     fun _ => by
       simp only [$[$simpLemmas],*] <;> rfl)
@@ -1178,7 +1179,7 @@ private def validateTypedPrimitive (state : ReformState)
       typedPresentationFromExpression nextCanonical result.view
     let normalization ←
       checkedPointwiseNormalization state.source next nextCanonical
-        result.normalizationUnfolds
+        result.normalizationLemmas
     let presentationDelta ← presentationDeltaBetween currentPresentation
       nextPresentation normalization.objectiveEquality normalization.feasibleIff
     let updatedPresentation ← match currentPresentation.applyDelta presentationDelta with
@@ -1284,7 +1285,7 @@ private def commitSurfaceStep (state : ReformState)
     simplifyExpLogTerms := surface.simplifyExpLogTerms
     hasSubstitution := surface.hasSubstitution
     removedConstraintNames := surface.removedConstraintNames
-    normalizationUnfolds := surface.normalizationUnfolds
+    normalizationLemmas := surface.normalizationLemmas
   }
 
 private def emitCompanionDeclaration
@@ -1426,7 +1427,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       command| noncomputable def $targetDeclIdent := $targetTerm)
 
     let normalizationLemmas ← liftMacroM <|
-      normalizationSimpLemmas sourceTerm state.normalizationUnfolds
+      normalizationSimpLemmas sourceTerm state.normalizationLemmas
     let targetSimp ← liftMacroM `(
       Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
     let normalizationLemmas := normalizationLemmas.push targetSimp
