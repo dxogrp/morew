@@ -1,7 +1,4 @@
 import PTran.Core
-import Mathlib.Algebra.Order.Ring.Unbundled.Basic
-import Mathlib.Data.Int.Order.Basic
-import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Real.Basic
 
 /-!
