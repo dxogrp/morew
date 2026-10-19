@@ -4,5 +4,8 @@ import PTran.Elab.Reformulation.Names
 import PTran.Elab.Reformulation.Presentation
 import PTran.Elab.Reformulation.Runner
 import PTran.Reformulation
+import PTran.Reformulation.Presentation
+import PTran.Reformulation.State
+import PTran.Reformulation.Syntax
 import PTran.Syntax
 import PTran.Transform
