@@ -682,25 +682,28 @@ private abbrev SurfaceMaterializerM :=
 private def findBinderIndex (view : PTran.Syntax.ProblemView) (name : Name) : Option Nat :=
   view.binders.findIdx? fun binder => sameUserName binder.name name
 
-private def withPresentationBinders [Inhabited α] (view : PTran.Syntax.ProblemView)
+private def withTypedPresentation (state : ReformState)
+    (action : PTran.Elab.Reformulation.PresentationState → TermElabM α) :
+    CommandElabM α :=
+  runTermElabM fun sectionFVars =>
+    action <| state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
+
+private def withPresentationBinders [Inhabited α]
+    (presentation : PTran.Elab.Reformulation.PresentationState)
     (action : Array Expr → Array Expr → TermElabM α) : TermElabM α := do
-  let binderTypes ← view.binders.mapM fun binder => do
-    let typeSyntax : TSyntax `term := ⟨binder.typeSyntax⟩
-    let type ← elabTerm typeSyntax none
-    synthesizeSyntheticMVarsNoPostponing
-    instantiateMVars type
+  let binderTypes := presentation.binders.map (·.type)
   let declarations := binderTypes.mapIdx fun index type =>
-    (view.binders[index]!.name, type)
+    (presentation.binders[index]!.name, type)
   withLocalDeclsDND declarations fun binders => action binderTypes binders
 
-private def inferNewBinder (view : PTran.Syntax.ProblemView) (oldName : Name)
+private def inferNewBinder (state : ReformState) (oldName : Name)
     (binderIndex : Nat) (replacement : TSyntax `term) : CommandElabM Name := do
-  let candidates ← newBinderCandidates view oldName replacement.raw
+  let candidates ← newBinderCandidates state.view oldName replacement.raw
   if candidates.isEmpty then
     throwErrorAt replacement
       "cannot determine the new decision variable; the substitution expression must contain one new identifier"
-  let usedCandidates ← runTermElabM fun _ =>
-    withPresentationBinders view fun binderTypes _ => do
+  let usedCandidates ← withTypedPresentation state fun presentation =>
+    withPresentationBinders presentation fun binderTypes _ => do
       let candidateDeclarations := candidates.map fun name =>
         (name, binderTypes[binderIndex]!)
       withLocalDeclsDND candidateDeclarations fun candidateFVars => do
@@ -720,23 +723,31 @@ private def inferNewBinder (view : PTran.Syntax.ProblemView) (oldName : Name)
       throwErrorAt replacement
         "ambiguous substitution: expected exactly one new decision variable, found {names}"
 
-private def replacementIsRealExpOf (view : PTran.Syntax.ProblemView)
-    (binderIndex : Nat) (replacement : TSyntax `term) : CommandElabM Bool :=
-  runTermElabM fun _ => withPresentationBinders view fun binderTypes binders => do
-    let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
-    synthesizeSyntheticMVarsNoPostponing
-    let expression ← instantiateMVars expression
-    let arguments := expression.getAppArgs
-    pure <| expression.getAppFn.isConstOf ``Real.exp && arguments.size == 1 &&
-      arguments[0]!.fvarId? == binders[binderIndex]!.fvarId?
+private def replacementIsRealExpOf (state : ReformState)
+    (binderIndex : Nat) (newName : Name) (replacement : TSyntax `term) :
+    CommandElabM Bool :=
+  withTypedPresentation state fun presentation => do
+    let oldBinder := presentation.binders[binderIndex]!
+    let presentation := { presentation with
+      binders := presentation.binders.set! binderIndex { oldBinder with name := newName }
+    }
+    withPresentationBinders presentation fun binderTypes binders => do
+      let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
+      synthesizeSyntheticMVarsNoPostponing
+      let expression ← instantiateMVars expression
+      let arguments := expression.getAppArgs
+      pure <| expression.getAppFn.isConstOf ``Real.exp && arguments.size == 1 &&
+        arguments[0]!.fvarId? == binders[binderIndex]!.fvarId?
 
 private structure PositiveConstraintMatch where
   index : Nat
   unfold? : Option Name
 
-private def findPositiveConstraint (view : PTran.Syntax.ProblemView)
+private def findPositiveConstraint (state : ReformState)
     (binderIndex : Nat) : CommandElabM (Option PositiveConstraintMatch) :=
-  runTermElabM fun _ => withPresentationBinders view fun _ _binders => do
+  withTypedPresentation state fun presentation =>
+  withPresentationBinders presentation fun _ _binders => do
+    let view := state.view
     let binder : TSyntax `term := ⟨mkIdent view.binders[binderIndex]!.name⟩
     let expectedSyntax ← liftMacroM `(0 < $binder)
     let expected ← elabTerm expectedSyntax (some (mkSort Level.zero))
@@ -756,9 +767,11 @@ private def findPositiveConstraint (view : PTran.Syntax.ProblemView)
         return some { index, unfold? }
     pure none
 
-private def constraintIsTypedTrue (view : PTran.Syntax.ProblemView)
+private def constraintIsTypedTrue (state : ReformState)
     (index : Nat) : CommandElabM Bool :=
-  runTermElabM fun _ => withPresentationBinders view fun _ _ => do
+  withTypedPresentation state fun presentation =>
+  withPresentationBinders presentation fun _ _ => do
+    let view := state.view
     let proposition : TSyntax `term := ⟨view.constraints[index]!.proposition⟩
     let expression ← elabTerm proposition (some (mkSort Level.zero))
     synthesizeSyntheticMVarsNoPostponing
@@ -798,12 +811,11 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let newBinders := state.view.binders.set! binderIndex {
     oldBinder with name := scopedNewName
   }
-  let renamedView := { state.view with binders := newBinders }
-  let isRegisteredExp ← replacementIsRealExpOf renamedView binderIndex replacement
+  let isRegisteredExp ← replacementIsRealExpOf state binderIndex scopedNewName replacement
   if (← get).messages.hasErrors then
     throwAbortCommand
   let positiveMatch? ← if isRegisteredExp then
-      findPositiveConstraint state.view binderIndex
+      findPositiveConstraint state binderIndex
     else
       pure none
   let positiveIndex? := positiveMatch?.map (·.index)
@@ -829,7 +841,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let mut removedConstraintNames := state.removedConstraintNames
   for index in [:state.view.constraints.size] do
     let constraint := state.view.constraints[index]!
-    let wasPresentedAsTrue ← constraintIsTypedTrue state.view index
+    let wasPresentedAsTrue ← constraintIsTypedTrue state index
     let proposition ← liftMacroM <|
       simplifyExpLog (replaceIdent constraint.proposition oldBinder.name replacement)
     let provedTrue := isTrueSyntax proposition || positiveIndex? == some index
@@ -921,7 +933,7 @@ private def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
   let oldName := oldIdent.getId
   let some binderIndex := findBinderIndex state.view oldName
     | throwErrorAt oldIdent "unknown decision variable `{oldName.eraseMacroScopes}`"
-  let newName ← inferNewBinder state.view oldName binderIndex replacement
+  let newName ← inferNewBinder state oldName binderIndex replacement
   let request : PTran.Elab.Reformulation.NameRequest := {
     id := 0
     kind := .inferredDecisionBinder
