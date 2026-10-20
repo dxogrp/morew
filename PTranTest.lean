@@ -1,6 +1,7 @@
 import PTranTest.Affine
 import PTranTest.AffineContext
 import PTranTest.AffineFailures
+import PTranTest.AffineReviewRegressions
 import PTranTest.AffineRows
 import PTranTest.AffineSemantic
 import PTranTest.AffineState
