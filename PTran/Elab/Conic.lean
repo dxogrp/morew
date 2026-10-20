@@ -1,6 +1,7 @@
 import PTran.Conic
 import PTran.Elab.Affine
 import PTran.Elab.Affine.State
+import PTran.Elab.Conic.Space
 import PTran.Elab.Reformulation.Presentation
 
 /-!
@@ -113,11 +114,8 @@ private partial def withPredicateLets (point body : Expr)
   else
     action body
 
-private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
+private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
-  let predicate ← instantiateMVars predicate
-  if ← hasUnresolved predicate then
-    return .error (← rowError predicate "unresolved metavariables in predicate" label?)
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type
     | return .error (← rowError predicate "expected a predicate on the decision space" label?)
@@ -155,29 +153,53 @@ private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
         return .error (← rowError error.expression m!"right-hand side: {error.reason}" label?)
       let .ok right := right
         | return .error (← rowError body "failed to recognize the right-hand side" label?)
-      let difference ← if equality || greaterEqual then
-          mkAppM ``subtractMaps #[left.map, right.map]
-        else
-          mkAppM ``subtractMaps #[right.map, left.map]
-      let constructor := if equality then
-          ``PTran.Conic.Constraint.eqZero
-        else ``PTran.Conic.Constraint.nonnegative
-      let constraint ← instantiateMVars (← mkAppM constructor #[difference])
-      let theoremName := if equality then ``normalizeEq else ``normalizeLE
-      let proofArguments := if greaterEqual then
-          #[right.map, left.map, rhs, lhs, right.pointwiseEquality, left.pointwiseEquality]
-        else
-          #[left.map, right.map, lhs, rhs, left.pointwiseEquality, right.pointwiseEquality]
-      let pointwiseIff ← instantiateMVars (← mkAppM theoremName proofArguments)
-      if constraint.hasMVar || pointwiseIff.hasMVar then
-        return .error (← rowError body "row construction left unresolved metavariables" label?)
-      let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
-      let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-      checkWithKernel constraint
-      checkWithKernel pointwiseIff
-      unless ← isDefEq (← inferType pointwiseIff) expected do
-        return .error (← rowError body "row equivalence did not match the input predicate" label?)
+      let (constraint, pointwiseIff) ← Space.withCanonicalSpaces domain target do
+        let difference ← if equality || greaterEqual then
+            mkAppM ``subtractMaps #[left.map, right.map]
+          else
+            mkAppM ``subtractMaps #[right.map, left.map]
+        let constructor := if equality then
+            ``PTran.Conic.Constraint.eqZero
+          else ``PTran.Conic.Constraint.nonnegative
+        let constraint ← instantiateMVars (← mkAppM constructor #[difference])
+        let theoremName := if equality then ``normalizeEq else ``normalizeLE
+        let proofArguments := if greaterEqual then
+            #[right.map, left.map, rhs, lhs, right.pointwiseEquality, left.pointwiseEquality]
+          else
+            #[left.map, right.map, lhs, rhs, left.pointwiseEquality, right.pointwiseEquality]
+        let pointwiseIff ← instantiateMVars (← mkAppM theoremName proofArguments)
+        if constraint.hasMVar || pointwiseIff.hasMVar then
+          throwError "row construction left unresolved metavariables"
+        let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
+        let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+        checkWithKernel constraint
+        checkWithKernel pointwiseIff
+        unless ← isDefEq (← inferType pointwiseIff) expected do
+          throwError "row equivalence did not match the input predicate"
+        return (constraint, pointwiseIff)
       return .ok { constraint, pointwiseIff }
+
+private def withFiniteInstances (instances : List Expr)
+    (action : MetaM (Except Affine.AffineError RowResult)) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  match instances with
+  | [] => action
+  | inst :: rest =>
+    withLetDecl `_sourceFinite (← inferType inst) inst fun binding => do
+      match ← withFiniteInstances rest action with
+      | .error error => return .error error
+      | .ok result => return .ok {
+          constraint := ← result.constraint.replaceFVarsM #[binding] #[inst]
+          pointwiseIff := ← result.pointwiseIff.replaceFVarsM #[binding] #[inst]
+        }
+
+private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
+    (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
+  let predicate ← instantiateMVars predicate
+  if ← hasUnresolved predicate then
+    return .error (← rowError predicate "unresolved metavariables in predicate" label?)
+  withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
+    normalizeRowWithInstances predicate config label?
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row.
 The optional label supplies diagnostic context without depending on source
