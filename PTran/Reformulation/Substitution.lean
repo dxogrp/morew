@@ -1,3 +1,4 @@
+import PTran.Elab.Atom
 import PTran.Reformulation.Presentation
 
 /-!
@@ -161,9 +162,10 @@ private def replacementIsRealExpOf (state : ReformState)
       let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
       synthesizeSyntheticMVarsNoPostponing
       let expression ← instantiateMVars expression
-      let arguments := expression.getAppArgs
-      pure <| expression.getAppFn.isConstOf ``Real.exp && arguments.size == 1 &&
-        arguments[0]!.fvarId? == binders[binderIndex]!.fvarId?
+      let some atom ← PTran.Elab.Atom.recognizeAtom? expression
+        | pure false
+      pure <| atom.kind == .exp && atom.operands.size == 1 &&
+        atom.operands[0]!.fvarId? == binders[binderIndex]!.fvarId?
 
 private structure PositiveConstraintMatch where
   index : Nat

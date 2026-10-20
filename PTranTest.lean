@@ -1,3 +1,4 @@
+import PTranTest.Atom
 import PTranTest.CompositionalRunner
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
