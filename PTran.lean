@@ -1,3 +1,6 @@
+import PTran.Conic
+import PTran.Conic.Basic
+import PTran.Conic.Cone
 import PTran.Core
 import PTran.Elab.Atom
 import PTran.Elab.Reformulation
@@ -13,4 +16,8 @@ import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
 import PTran.Syntax
+import PTran.Syntax.Elab
+import PTran.Syntax.Grammar
+import PTran.Syntax.Presentation
+import PTran.Syntax.Printer
 import PTran.Transform

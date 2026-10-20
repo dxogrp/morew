@@ -14,6 +14,17 @@ namespace PTran
 
 universe u v w
 
+/-- Whether an optimization problem is minimized or maximized.
+
+Maximization is represented semantically by `OrderDual`; this explicit sense
+is shared by certified target data and presentation metadata. -/
+inductive ObjectiveSense where
+  /-- Minimize the objective in its ordinary order. -/
+  | minimize
+  /-- Maximize the objective in its ordinary order. -/
+  | maximize
+  deriving Inhabited, BEq, Repr
+
 /-- An optimization problem before choosing whether its order is read as a
 minimization or maximization order.
 

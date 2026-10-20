@@ -1,5 +1,5 @@
+import PTran.Core
 import PTran.Elab.Reformulation.Names
-import PTran.Syntax
 
 /-!
 # Typed reformulation presentations
@@ -37,7 +37,7 @@ structure ConstraintEntry where
 /-- The typed presentation corresponding to a canonical semantic problem. -/
 structure PresentationState where
   /-- Optimization sense displayed by the presentation. -/
-  sense : PTran.Syntax.ObjectiveSense
+  sense : PTran.ObjectiveSense
   /-- Type of the presented decision domain. -/
   domainType : Expr
   /-- Type of objective values. -/
