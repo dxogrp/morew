@@ -9,7 +9,7 @@ must remain available in successful certificates, including through nested row
 and objective adapters, while failed recognition rolls them back.
 -/
 
-namespace PTranTest.AffineState
+namespace PTranTest.Affine.StateIsolation
 
 open Lean Lean.Meta Lean.Elab.Term
 open PTran.Elab
@@ -153,4 +153,4 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   checkSuccess .objective affine false
   checkSuccess .affine affine false
 
-end PTranTest.AffineState
+end PTranTest.Affine.StateIsolation

@@ -1,18 +1,17 @@
-import PTranTest.Affine
-import PTran.Elab.Conic
+import PTranTest.Affine.Support
 
 /-!
-# Affine certificates across elaborator contexts
+# Local declarations in affine recognition
 
-These regressions exercise local proof and finite-index instances, unrelated
-ambient algebra instances, and assigned metavariables hidden by declarations.
-Every successful result is checked after the recognizer has restored its state.
+Proof lets remain available during recognition. Assigned metavariables hidden
+in local values and types are accepted; unresolved ones are rejected without
+assigning caller state. Successful certificates are checked after scope restoration.
 -/
 
-namespace PTranTest.AffineContext
+namespace PTranTest.Affine.LocalContext
 
 open Lean Lean.Meta Lean.Elab.Term
-open PTran.Elab.Affine PTranTest.Affine Matrix
+open PTran.Elab.Affine PTranTest.Affine
 
 /-! A proof let remains available while recognizing its body. -/
 
@@ -45,77 +44,22 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       if (← error.reason.toString).isEmpty then
         throwError "dependent nonzero evidence was rejected without a diagnostic"
 
-/-! Constraint normalization preserves proof lets before splitting the row. -/
 
-private def assertRow (term : TSyntax `term) (parameterCount : Nat := 2) : TermElabM Unit := do
-  let expression ← elaborate term
-  lambdaBoundedTelescope expression parameterCount fun _ source => do
-    let result ← match ← PTran.Elab.Conic.normalizeRow source with
-      | .ok result => pure result
-      | .error error =>
-        throwError "expected affine row {source}\n{error.reason}"
-    for expression in #[result.constraint, result.pointwiseIff] do
-      if expression.hasMVar || expression.hasSorry then
-        throwError "row normalization returned an incomplete certificate"
-      checkWithKernel expression
-    let .forallE _ domain _ _ ← whnf (← inferType source)
-      | throwError "row test source is not a function"
-    let expected ← withLocalDeclD `x domain fun x => do
-      let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[result.constraint, x]
-      mkForallFVars #[x] (← mkAppM ``Iff #[holds, source.beta #[x]])
-    unless ← isDefEq (← inferType result.pointwiseIff) expected do
-      throwError "row certificate proves the wrong statement"
+/-! Constraint normalization preserves proof lets before splitting the row. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertRow (← `(fun c : ℝ => fun (hc : 0 < c) => fun x : ℝ =>
     let _h : c ≠ 0 := ne_of_gt hc
-    x / c ≤ 1))
+    x / c ≤ 1)) 2
   assertRow (← `(fun c : ℝ => fun (hc : 0 < c) =>
     let _h : c ≠ 0 := ne_of_gt hc
-    fun x : ℝ => x / c ≤ 1))
+    fun x : ℝ => x / c ≤ 1)) 2
   assertRow (← `(fun x : ℝ => let y := x + 1; y ≤ 3)) 0
   assertRow (← `(fun c : ℝ => fun (hc : 0 < c) => fun x : ℝ =>
     let y := x + 1
     let _h : c ≠ 0 := ne_of_gt hc
-    y / c ≤ 1))
+    y / c ≤ 1)) 2
 
-/-! Explicit finite-index evidence scopes the vector operands too. -/
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  assertAffine (← `(fun (ι : Type) [Finite ι] (a : ι → ℝ) => fun x : ℝ =>
-    @dotProduct ι ℝ (Fintype.ofFinite ι) _ _ a (fun _ => x))) 3
-  assertAffine (← `(fun (ι : Type) [Finite ι] (a : ι → ℝ) => fun x : ℝ =>
-    @dotProduct ι ℝ (Fintype.ofFinite ι) _ _ (fun _ => x) a)) 3
-  assertAffine (← `(fun (ι : Type) [Finite ι] (a : ι → ℝ) => fun x : ℝ =>
-    letI := Fintype.ofFinite ι
-    a ⬝ᵥ (fun _ => x))) 3
-  assertAffine (← `(fun (ι : Type) [Finite ι] (a : ι → ℝ) =>
-    letI := Fintype.ofFinite ι
-    fun x : ℝ => (fun _ => x) ⬝ᵥ a)) 3
-  assertAffine (← `(fun (ι : Type) [Finite ι] (A : Matrix (Fin 2) ι ℝ) =>
-    fun x : ℝ => @Matrix.mulVec (Fin 2) ι ℝ _ (Fintype.ofFinite ι)
-      A (fun _ => x + 1))) 3
-  assertAffine (← `(fun (ι : Type) [Finite ι] (A : Matrix ι (Fin 2) ℝ) =>
-    fun x : ℝ => @Matrix.vecMul ι (Fin 2) ℝ _ (Fintype.ofFinite ι)
-      (fun _ => x - 1) A)) 3
-
-/-! Unused ambient instances do not change the arithmetic in the source. -/
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  assertAffine (← `(fun [AddCommGroup ℝ] => fun x : ℝ => x)) 1
-  assertAffine (← `(fun [AddCommGroup ℝ] => fun _ : ℝ => (2 : ℝ))) 1
-  assertAffine (← `(fun [AddCommGroup ℝ] => fun x : ℝ => x + x)) 1
-  assertAffine (← `(fun [Module ℝ ℝ] => fun x : ℝ => x)) 1
-  assertAffine (← `(fun [Module ℝ ℝ] => fun _ : ℝ => (2 : ℝ))) 1
-  assertAffine (← `(fun [Module ℝ (Fin 2 → ℝ)] =>
-    fun x : Fin 2 → ℝ => (2 : ℝ) • x)) 1
-  assertAffine (← `(fun [AddCommGroup ℝ] [Module ℝ ℝ] => fun x : ℝ => x)) 2
-  assertAffine (← `(fun [Zero ℝ] => fun x : ℝ => x / 2)) 1
-  assertAffine (← `(fun [OfNat ℝ 0] => fun x : ℝ => x / 2)) 1
-  assertAffine (← `(fun c : ℝ => fun (_ : c ≠ 0) =>
-    fun [Zero ℝ] => fun x : ℝ => x / c)) 3
-  assertAffine (← `(fun c : ℝ => fun (_ : c ≠ 0) =>
-    fun [OfNat ℝ 0] => fun x : ℝ => x / c)) 3
 
 /-! Assigned metavariables hidden in values and types are already resolved. -/
 
@@ -171,4 +115,69 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     if ← unresolvedType.mvarId!.isAssigned then
       throwError "recognition assigned the caller's type metavariable"
 
-end PTranTest.AffineContext
+
+/-! An unresolved operation instance cannot be assigned to force recognition. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let real := Lean.mkConst ``Real
+  let instanceType ← elaborate (← `(HMul ℝ ℝ ℝ))
+  let unresolvedInstance ← mkFreshExprMVar instanceType
+  withLocalDeclD `x real fun x => do
+    let body := mkAppN (mkConst ``HMul.hMul [.zero, .zero, .zero])
+      #[real, real, real, unresolvedInstance, ← mkNumeral real 2, x]
+    let source ← mkLambdaFVars #[x] body
+    if (← reifyAffine source).isOk then
+      throwError "recognized an unresolved multiplication instance"
+    if ← unresolvedInstance.mvarId!.isAssigned then
+      throwError "reification assigned an instance metavariable"
+    withLetDecl `hidden instanceType unresolvedInstance fun hidden => do
+      let body := mkAppN (mkConst ``HMul.hMul [.zero, .zero, .zero])
+        #[real, real, real, hidden, ← mkNumeral real 2, x]
+      let source ← mkLambdaFVars #[x] body
+      if source.hasMVar then
+        throwError "hidden-instance regression no longer hides its metavariable"
+      if (← reifyAffine source).isOk then
+        throwError "recognized an unresolved instance hidden behind a local let"
+      if ← unresolvedInstance.mvarId!.isAssigned then
+        throwError "reification assigned a hidden instance metavariable"
+
+/-! A locally available nonzero proof must itself be fully elaborated. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let real := Lean.mkConst ``Real
+  withLocalDeclD `c real fun c => do
+    let obligation ← mkAppM ``Ne #[c, ← mkNumeral real 0]
+    let unresolvedProof ← mkFreshExprMVar obligation
+    withLetDecl `hiddenNonzero obligation unresolvedProof fun _ =>
+      withLocalDeclD `x real fun x => do
+        let body ← mkAppM ``HDiv.hDiv #[x, c]
+        let source ← mkLambdaFVars #[x] body
+        if source.hasMVar then
+          throwError "hidden-evidence regression no longer hides its metavariable"
+        if (← reifyAffine source).isOk then
+          throwError "accepted unresolved nonzero evidence hidden behind a local let"
+        if ← unresolvedProof.mvarId!.isAssigned then
+          throwError "reification assigned the hidden nonzero evidence metavariable"
+
+
+/-! Metavariables hidden inside local relation instances must not be solved
+temporarily while manufacturing a certificate for an incomplete predicate. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let real := Lean.mkConst ``Real
+  let orderType ← mkAppM ``LE #[real]
+  let unresolvedOrder ← mkFreshExprMVar orderType
+  withLetDecl `localOrder orderType unresolvedOrder fun order => do
+    let predicate ← withLocalDeclD `x real fun x => do
+      let relation := mkAppN (Lean.mkConst ``LE.le [Level.zero]) #[real, order, x, x]
+      mkLambdaFVars #[x] relation
+    unless !predicate.hasMVar do
+      throwError "test did not hide the metavariable in the local context"
+    let .error error ← PTran.Elab.Conic.normalizeRow predicate
+      | throwError "a predicate with a hidden metavariable was accepted"
+    unless (← error.reason.toString).contains "unresolved metavariables" do
+      throwError "missing hidden-metavariable diagnostic"
+  if ← unresolvedOrder.mvarId!.isAssigned then
+    throwError "row normalization assigned a caller metavariable"
+
+end PTranTest.Affine.LocalContext

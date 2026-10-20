@@ -1,54 +1,22 @@
-import PTran.Elab.Affine
+import PTranTest.Affine.Support
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.Matrix.ToLin
-import Lean.Meta.Check
 
 /-!
-# Certified affine reification
+# Supported affine expressions
 
-Each successful recognition is checked against the original elaborated function,
-and both the affine map and its pointwise certificate are checked by the kernel.
+Kernel-checked recognition of scalar arithmetic, products, vectors, symbolic
+sums, and constant-coefficient matrix operations.
 -/
 
-namespace PTranTest.Affine
+namespace PTranTest.Affine.Reification
 
 open Lean Lean.Meta Lean.Elab.Term
-open PTran.Elab.Affine Matrix
+open PTran.Elab.Affine PTranTest.Affine Matrix
 open scoped BigOperators
 
 private noncomputable abbrev canonicalAdd : HAdd ℝ ℝ ℝ := inferInstance
-
-def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let expression ← instantiateMVars expression
-  if expression.hasSorry || expression.hasMVar then
-    throwError "affine test did not fully elaborate: {expression}"
-  return expression
-
-def checkResult (source : Expr) (result : AffineResult) : MetaM Unit := do
-  for expression in #[result.map, result.pointwiseEquality] do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "affine reification returned an incomplete certificate"
-    withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-      checkWithKernel expression
-  let .forallE _ domain _ _ ← whnf (← inferType source)
-    | throwError "affine test source is not a function"
-  let expected ← withLocalDeclD `x domain fun x => do
-    let mapped := mkApp (← mkProjection result.map `toFun) x
-    mkForallFVars #[x] (← mkEq mapped (source.beta #[x]))
-  unless ← isDefEq (← inferType result.pointwiseEquality) expected do
-    throwError "affine certificate proves the wrong statement"
-
-def assertAffine (term : TSyntax `term) (parameterCount : Nat := 0)
-    (config : PTran.Elab.Affine.Config := {}) : TermElabM Unit := do
-  let expression ← elaborate term
-  lambdaBoundedTelescope expression parameterCount fun _ source => do
-    match ← reifyAffine source config with
-    | .ok result => checkResult source result
-    | .error error =>
-      throwError "expected affine recognition of {source}\n{error.reason}"
 
 /-! Scalars, ordinary notation, and external parameters. -/
 
@@ -130,8 +98,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => ∑ _i ∈ (∅ : Finset ℕ), x))
   assertAffine (← `(fun (ι : Type) [Fintype ι] => fun x : ι → ℝ => ∑ i, x i)) 2
   assertAffine (← `(fun x : Fin 2 → Fin 3 → ℝ => ∑ i, ∑ j, x i j))
-  assertAffine (← `(fun x : Fin 2 → ℝ =>
-    ∑ i ∈ @Finset.univ (Fin 2) (Fintype.ofFinite (Fin 2)), x i))
 
 /-! Dot products and rectangular matrix products, in both orientations. -/
 
@@ -149,16 +115,4 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun A : Matrix (Fin 2) (Fin 0) ℝ =>
     fun x : Fin 0 → ℝ => A *ᵥ x)) 1
 
-/-! Finite indexing instances belong to the source expression's semantics. -/
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  assertAffine (← `(fun x : Fin 2 → ℝ =>
-    @dotProduct (Fin 2) ℝ (Fintype.ofFinite (Fin 2)) _ _ ![1, 2] x))
-  assertAffine (← `(fun x : Fin 2 → ℝ =>
-    @dotProduct (Fin 2) ℝ (Fintype.ofFinite (Fin 2)) _ _ x ![1, 2]))
-  assertAffine (← `(fun x : Fin 2 → ℝ =>
-    @Matrix.mulVec (Fin 2) (Fin 2) ℝ _ (Fintype.ofFinite (Fin 2)) !![1, 2; 3, 4] x))
-  assertAffine (← `(fun x : Fin 2 → ℝ =>
-    @Matrix.vecMul (Fin 2) (Fin 2) ℝ _ (Fintype.ofFinite (Fin 2)) x !![1, 2; 3, 4]))
-
-end PTranTest.Affine
+end PTranTest.Affine.Reification

@@ -1,4 +1,4 @@
-import PTranTest.AffineRows
+import PTran.Elab.Conic
 import PTranTest.Surface.Conic
 import PTran.Reformulation
 
@@ -9,7 +9,7 @@ These regressions consume the same typed objective projections and predicates
 used by the reformulation runner, without installing a conic surface command.
 -/
 
-namespace PTranTest.Surface.AffineRows
+namespace PTranTest.Surface.Affine
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Term
 open PTran
@@ -97,4 +97,4 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 end
 
-end PTranTest.Surface.AffineRows
+end PTranTest.Surface.Affine

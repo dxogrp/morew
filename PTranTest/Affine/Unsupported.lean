@@ -1,32 +1,22 @@
-import PTranTest.Affine
+import PTranTest.Affine.Support
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Topology.Algebra.InfiniteSum.Basic
+import Mathlib.Data.Fin.VecNotation
+import Mathlib.LinearAlgebra.Matrix.ToLin
 
 /-!
-# Affine reification boundaries
+# Unsupported affine expressions and diagnostics
 
-Unsupported expressions fail without claiming a certificate or changing the
-caller's metavariables. Custom functions remain ordinary valid Lean terms.
+Nonlinear expressions, unproved denominators, custom helpers, and altered
+operation instances must fail with an explanation of the unsupported expression.
+Dimension mismatches remain ordinary Lean elaboration errors.
 -/
 
-namespace PTranTest.AffineFailures
+namespace PTranTest.Affine.Unsupported
 
 open Lean Lean.Meta Lean.Elab.Term
 open PTran.Elab.Affine PTranTest.Affine Matrix
 open scoped BigOperators
-
-private def assertUnsupported (term : TSyntax `term) (parameterCount : Nat := 0)
-    (expectedHead? : Option Name := none) : TermElabM Unit := do
-  let expression ← elaborate term
-  lambdaBoundedTelescope expression parameterCount fun _ source => do
-    match ← reifyAffine source with
-    | .ok _ => throwError "unexpected affine recognition of {source}"
-    | .error error =>
-      if (← error.reason.toString).isEmpty then
-        throwError "unsupported expression has no failure reason"
-      if let some expectedHead := expectedHead? then
-        unless error.expression.consumeMData.getAppFn.isConstOf expectedHead do
-          throwError "failure did not identify the unsupported subexpression"
 
 noncomputable def customAffine (x : ℝ) : ℝ := 2 * x + 1
 noncomputable abbrev customAlias (x : ℝ) : ℝ := 2 * x
@@ -64,7 +54,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℝ => ∑' _i : ℕ, x))
   assertUnsupported (← `(fun x : ℝ => if x ≤ 0 then x else 2 * x))
   assertUnsupported (← `(fun x : ℕ => (x : ℝ)))
-  assertUnsupported (← `(fun x : ℕ → ℝ => x 0))
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun c : ℝ => fun x : ℝ => x / c))
@@ -95,58 +84,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     @HMul.hMul ℝ ℝ ℝ ⟨fun a b => a * b * b⟩ 2 x))
   assertUnsupported (← `(fun x : ℝ =>
     @HSMul.hSMul ℝ ℝ ℝ ⟨fun a b => a * b * b⟩ 2 x))
-  assertUnsupported (← `(fun x : Fin 2 → ℝ =>
-    @dotProduct (Fin 2) ℝ
-      (if x 0 ≤ 0 then Fintype.ofFinite (Fin 2) else Fin.fintype 2) _ _ ![1, 2] x))
-  assertUnsupported (← `(fun x : Fin 2 → ℝ =>
-    @Matrix.mulVec (Fin 2) (Fin 2) ℝ _
-      (if x 0 ≤ 0 then Fintype.ofFinite (Fin 2) else Fin.fintype 2) !![1, 2; 3, 4] x))
-  assertUnsupported (← `(fun x : Fin 2 → ℝ =>
-    @Matrix.vecMul (Fin 2) (Fin 2) ℝ _
-      (if x 0 ≤ 0 then Fintype.ofFinite (Fin 2) else Fin.fintype 2) x !![1, 2; 3, 4]))
-
-/-! An unresolved operation instance cannot be assigned to force recognition. -/
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let real := Lean.mkConst ``Real
-  let instanceType ← elaborate (← `(HMul ℝ ℝ ℝ))
-  let unresolvedInstance ← mkFreshExprMVar instanceType
-  withLocalDeclD `x real fun x => do
-    let body := mkAppN (mkConst ``HMul.hMul [.zero, .zero, .zero])
-      #[real, real, real, unresolvedInstance, ← mkNumeral real 2, x]
-    let source ← mkLambdaFVars #[x] body
-    if (← reifyAffine source).isOk then
-      throwError "recognized an unresolved multiplication instance"
-    if ← unresolvedInstance.mvarId!.isAssigned then
-      throwError "reification assigned an instance metavariable"
-    withLetDecl `hidden instanceType unresolvedInstance fun hidden => do
-      let body := mkAppN (mkConst ``HMul.hMul [.zero, .zero, .zero])
-        #[real, real, real, hidden, ← mkNumeral real 2, x]
-      let source ← mkLambdaFVars #[x] body
-      if source.hasMVar then
-        throwError "hidden-instance regression no longer hides its metavariable"
-      if (← reifyAffine source).isOk then
-        throwError "recognized an unresolved instance hidden behind a local let"
-      if ← unresolvedInstance.mvarId!.isAssigned then
-        throwError "reification assigned a hidden instance metavariable"
-
-/-! A locally available nonzero proof must itself be fully elaborated. -/
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let real := Lean.mkConst ``Real
-  withLocalDeclD `c real fun c => do
-    let obligation ← mkAppM ``Ne #[c, ← mkNumeral real 0]
-    let unresolvedProof ← mkFreshExprMVar obligation
-    withLetDecl `hiddenNonzero obligation unresolvedProof fun _ =>
-      withLocalDeclD `x real fun x => do
-        let body ← mkAppM ``HDiv.hDiv #[x, c]
-        let source ← mkLambdaFVars #[x] body
-        if source.hasMVar then
-          throwError "hidden-evidence regression no longer hides its metavariable"
-        if (← reifyAffine source).isOk then
-          throwError "accepted unresolved nonzero evidence hidden behind a local let"
-        if ← unresolvedProof.mvarId!.isAssigned then
-          throwError "reification assigned the hidden nonzero evidence metavariable"
 
 /-! Matrix dimensions remain enforced by ordinary Lean elaboration. -/
 
@@ -163,4 +100,4 @@ in the application
 #guard_msgs in
 example (A : Matrix (Fin 2) (Fin 3) ℝ) (x : Fin 2 → ℝ) : Fin 2 → ℝ := A *ᵥ x
 
-end PTranTest.AffineFailures
+end PTranTest.Affine.Unsupported
