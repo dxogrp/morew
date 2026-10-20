@@ -3,9 +3,11 @@ import PTranTest.CompositionalRunner
 import PTranTest.Conic
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
+import PTranTest.ImportCompatibility.ProblemPresentation
+import PTranTest.ImportCompatibility.ProblemPresentation.Defined
+import PTranTest.ImportCompatibility.ProblemPresentation.Registered
 import PTranTest.ImportCompatibility.Reformulation
 import PTranTest.ImportCompatibility.Runner
-import PTranTest.ImportCompatibility.Syntax
 import PTranTest.ImportCompatibility.TypedPresentation
 import PTranTest.ObjectiveBoundLabels
 import PTranTest.RunnerFailures

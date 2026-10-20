@@ -3,6 +3,7 @@ import PTran.Syntax
 /-!
 # Problem presentation metadata edge cases
 
+The narrow `PTran.Syntax` import must provide both objective senses and the printer.
 A `problem` term nested inside an unrelated declaration must not make that
 declaration printable as though the whole declaration were a problem.
 -/
@@ -32,6 +33,24 @@ info: problem (x : Nat)
 -/
 #guard_msgs in
 #printp genuineProblem
+
+def boundedMaximum : Problem Nat (OrderDual Nat) :=
+  problem (n : Nat)
+    maximize n
+    subject to
+      upper : n ≤ 3
+
+example (n : Nat) : boundedMaximum.objective n = n := rfl
+example (n : Nat) : boundedMaximum.feasible n ↔ n ≤ 3 := Iff.rfl
+
+/--
+info: problem (n : Nat)
+  maximize n
+  subject to
+    upper : n ≤ 3
+-/
+#guard_msgs in
+#printp boundedMaximum
 
 /-! Transparent aliases of `Problem` are still genuine problem types. -/
 
