@@ -1,7 +1,9 @@
 import PTranTest.Affine
+import PTranTest.AffineContext
 import PTranTest.AffineFailures
 import PTranTest.AffineRows
 import PTranTest.AffineSemantic
+import PTranTest.AffineState
 import PTranTest.Atom
 import PTranTest.CompositionalRunner
 import PTranTest.Conic
