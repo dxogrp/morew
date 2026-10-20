@@ -29,10 +29,12 @@ import PTranTest.Reformulation.SubstitutionContext
 import PTranTest.Reformulation.SubstitutionFailures
 import PTranTest.Surface.Affine
 import PTranTest.Surface.Atom
-import PTranTest.Surface.Basic
 import PTranTest.Surface.Conic
 import PTranTest.Surface.Diagnostics
 import PTranTest.Surface.ElaborationContext
+import PTranTest.Surface.Fixtures
 import PTranTest.Surface.NameResolution
-import PTranTest.SyntaxEdge
+import PTranTest.Surface.Reformulation
+import PTranTest.Syntax.PresentationValidation
+import PTranTest.Syntax.Printing
 import PTranTest.Transform

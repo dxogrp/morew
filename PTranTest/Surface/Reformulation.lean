@@ -1,7 +1,7 @@
-import PTran
+import PTranTest.Surface.Fixtures
 
 /-!
-# Basic surface behavior
+# Surface reformulation composition
 
 Exercise the public DSL, printer metadata, and successful reformulation composition.
 -/
@@ -10,12 +10,6 @@ namespace PTranTest.Surface
 
 open PTran
 noncomputable section
-
-def original :=
-  problem (x : ℝ)
-    minimize (Real.log x)^2
-    subject to
-      positive : 0 < x
 
 /--
 info: problem (x : ℝ)
@@ -57,13 +51,6 @@ info: problem (u t : ℝ)
 #printp transformed
 
 /-! Grouped binders, multiple constraints, and maximization. -/
-
-def boundedMaximum :=
-  problem (x y : ℝ)
-    maximize x^2 - y^2
-    subject to
-      lower : -1 ≤ x
-      upper : x ≤ 1
 
 /--
 info: problem (x y : ℝ)
@@ -173,10 +160,6 @@ info: problem (x t : ℝ)
 #printp nonconvexEpigraph
 
 /-! An unregistered substitution can supply its feasible-coverage witness. -/
-
-def identitySource :=
-  problem (x : ℝ)
-    minimize x ^ 2
 
 def identityCoverage :
     FeasibleSurjection identitySource (fun u : ℝ => u) where
