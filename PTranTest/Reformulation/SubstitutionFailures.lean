@@ -1,14 +1,14 @@
 import PTran
 
 /-!
-# Reformulation runner failures
+# Substitution diagnostics and failed-command rollback
 
 These tests exercise localized failures in typed substitution steps.  Every
 failed command requests a certificate alias and is followed by an environment
 check, so a regression that commits any part of the command is caught.
 -/
 
-namespace PTranTest.RunnerFailures
+namespace PTranTest.Reformulation.SubstitutionFailures
 
 open PTran
 noncomputable section
@@ -42,8 +42,8 @@ reformulation unknownBinderTarget : positiveSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.unknownBinderTarget
-    `PTranTest.RunnerFailures.unknownBinderAlias
+    `PTranTest.Reformulation.SubstitutionFailures.unknownBinderTarget
+    `PTranTest.Reformulation.SubstitutionFailures.unknownBinderAlias
 
 /-- error: cannot determine the new decision variable; the substitution expression must contain one new identifier -/
 #guard_msgs in
@@ -53,8 +53,8 @@ reformulation noFreshBinderTarget : positiveSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.noFreshBinderTarget
-    `PTranTest.RunnerFailures.noFreshBinderAlias
+    `PTranTest.Reformulation.SubstitutionFailures.noFreshBinderTarget
+    `PTranTest.Reformulation.SubstitutionFailures.noFreshBinderAlias
 
 /-- error: ambiguous substitution: expected exactly one new decision variable -/
 #guard_msgs (substring := true) in
@@ -64,8 +64,8 @@ reformulation ambiguousFreshBindersTarget : positiveSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.ambiguousFreshBindersTarget
-    `PTranTest.RunnerFailures.ambiguousFreshBindersAlias
+    `PTranTest.Reformulation.SubstitutionFailures.ambiguousFreshBindersTarget
+    `PTranTest.Reformulation.SubstitutionFailures.ambiguousFreshBindersAlias
 
 /-! The automatic exponential rule needs positivity in the typed current
 problem, including when an earlier step has already changed that problem. -/
@@ -83,8 +83,8 @@ reformulation missingPositivityTarget : unrestrictedSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.missingPositivityTarget
-    `PTranTest.RunnerFailures.missingPositivityAlias
+    `PTranTest.Reformulation.SubstitutionFailures.missingPositivityTarget
+    `PTranTest.Reformulation.SubstitutionFailures.missingPositivityAlias
 
 /-! Replacement elaboration is checked at the selected coordinate's type. -/
 
@@ -96,8 +96,8 @@ reformulation illTypedReplacementTarget : positiveSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.illTypedReplacementTarget
-    `PTranTest.RunnerFailures.illTypedReplacementAlias
+    `PTranTest.Reformulation.SubstitutionFailures.illTypedReplacementTarget
+    `PTranTest.Reformulation.SubstitutionFailures.illTypedReplacementAlias
 
 /-! Automatic rules match elaborated declarations, not a shadowing spelling. -/
 
@@ -122,8 +122,8 @@ reformulation target : source certificate failedAlias := by
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.ShadowedReal.target
-    `PTranTest.RunnerFailures.ShadowedReal.failedAlias
+    `PTranTest.Reformulation.SubstitutionFailures.ShadowedReal.target
+    `PTranTest.Reformulation.SubstitutionFailures.ShadowedReal.failedAlias
 
 end ShadowedReal
 
@@ -153,8 +153,8 @@ reformulation staleCertificateTarget : quadraticSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.staleCertificateTarget
-    `PTranTest.RunnerFailures.staleCertificateAlias
+    `PTranTest.Reformulation.SubstitutionFailures.staleCertificateTarget
+    `PTranTest.Reformulation.SubstitutionFailures.staleCertificateAlias
 
 /-- error: Application type mismatch -/
 #guard_msgs (substring := true) in
@@ -164,8 +164,8 @@ reformulation wrongMapCertificateTarget : quadraticSource
 
 run_cmd do
   assertNoReformulationOutput
-    `PTranTest.RunnerFailures.wrongMapCertificateTarget
-    `PTranTest.RunnerFailures.wrongMapCertificateAlias
+    `PTranTest.Reformulation.SubstitutionFailures.wrongMapCertificateTarget
+    `PTranTest.Reformulation.SubstitutionFailures.wrongMapCertificateAlias
 
 end
-end PTranTest.RunnerFailures
+end PTranTest.Reformulation.SubstitutionFailures

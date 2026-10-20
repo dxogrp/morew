@@ -36,6 +36,36 @@ variable {X}
 def Holds (c : Constraint X) (x : X) : Prop :=
   c.map x ∈ c.cone.carrier
 
+/-- The zero-cone row for an affine map. In particular, scalar and finite-vector
+maps can be used directly, without a one-coordinate scalar embedding. -/
+def eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    [FiniteDimensional ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
+  cone := { Space := Y, carrier := 0 }
+  map := f
+
+/-- The nonnegative-cone row for an affine map into an ordered real vector
+space. For finite vectors, the order is coordinatewise. -/
+def nonnegative {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
+    [PosSMulMono ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
+  cone := { Space := Y, carrier := ConvexCone.positive ℝ Y }
+  map := f
+
+/-- A zero-cone row holds exactly when the affine map vanishes. -/
+@[simp]
+theorem holds_eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    [FiniteDimensional ℝ Y] (f : X →ᵃ[ℝ] Y) (x : X) :
+    (eqZero f).Holds x ↔ f x = 0 :=
+  Iff.rfl
+
+/-- A nonnegative-cone row holds exactly when its affine image is nonnegative. -/
+@[simp]
+theorem holds_nonnegative {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
+    [PosSMulMono ℝ Y] (f : X →ᵃ[ℝ] Y) (x : X) :
+    (nonnegative f).Holds x ↔ 0 ≤ f x :=
+  Iff.rfl
+
 /-- The feasible set of an affine cone-membership row is convex. -/
 theorem feasibleSetConvex (c : Constraint X) :
     Convex ℝ {x | c.Holds x} :=

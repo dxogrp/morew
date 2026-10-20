@@ -1,14 +1,13 @@
 import PTran.Syntax
 
 /-!
-# Problem presentation metadata edge cases
+# Problem presentation validation
 
-The narrow `PTran.Syntax` import must provide both objective senses and the printer.
-A `problem` term nested inside an unrelated declaration must not make that
-declaration printable as though the whole declaration were a problem.
+Reject declarations whose recorded presentation is not a whole problem, and
+reject structurally invalid or unprintable metadata with specific diagnostics.
 -/
 
-namespace PTranTest.SyntaxEdge
+namespace PTranTest.Syntax.PresentationValidation
 
 open PTran
 
@@ -16,100 +15,10 @@ def nestedProblem : Nat × Problem Nat Nat :=
   (37, problem (x : Nat) minimize x)
 
 /--
-error: declaration `PTranTest.SyntaxEdge.nestedProblem` has problem presentation metadata but is not a `PTran.Problem`
+error: declaration `PTranTest.Syntax.PresentationValidation.nestedProblem` has problem presentation metadata but is not a `PTran.Problem`
 -/
 #guard_msgs in
 #printp nestedProblem
-
-/-! The guard must not reject a genuine top-level problem declaration. -/
-
-def genuineProblem :=
-  problem (x : Nat)
-    minimize x
-
-/--
-info: problem (x : Nat)
-  minimize x
--/
-#guard_msgs in
-#printp genuineProblem
-
-def boundedMaximum : Problem Nat (OrderDual Nat) :=
-  problem (n : Nat)
-    maximize n
-    subject to
-      upper : n ≤ 3
-
-example (n : Nat) : boundedMaximum.objective n = n := rfl
-example (n : Nat) : boundedMaximum.feasible n ↔ n ≤ 3 := Iff.rfl
-
-/--
-info: problem (n : Nat)
-  maximize n
-  subject to
-    upper : n ≤ 3
--/
-#guard_msgs in
-#printp boundedMaximum
-
-/-! Transparent aliases of `Problem` are still genuine problem types. -/
-
-abbrev NatProblem := Problem Nat Nat
-
-def aliasedProblem : NatProblem :=
-  problem (x : Nat)
-    minimize x + 1
-
-/--
-info: problem (x : Nat)
-  minimize x + 1
--/
-#guard_msgs in
-#printp aliasedProblem
-
-/-! Identifier escaping and hygiene are normalized in printer output. -/
-
-def quotedIdentifierProblem :=
-  problem («minimize» : Nat)
-    minimize «minimize»
-    subject to
-      «subject» : True
-
-/--
-info: problem («minimize» : Nat)
-  minimize «minimize»
-  subject to
-    «subject» : True
--/
-#guard_msgs in
-#printp quotedIdentifierProblem
-
-macro "generatedProblemTerm" : term =>
-  `(problem (x : Nat) minimize x subject to c : True)
-
-def macroGeneratedProblem := generatedProblemTerm
-
-/--
-info: problem (x : Nat)
-  minimize x
-  subject to
-    c : True
--/
-#guard_msgs in
-#printp macroGeneratedProblem
-
-/-! Adjacent binders with equal rendered types remain grouped. -/
-
-def adjacentEqualTypeBinders :=
-  problem (x : Nat) (y : Nat)
-    minimize x + y
-
-/--
-info: problem (x y : Nat)
-  minimize x + y
--/
-#guard_msgs in
-#printp adjacentEqualTypeBinders
 
 /-! Structurally invalid presentation metadata is rejected explicitly. -/
 
@@ -118,7 +27,7 @@ def malformedProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.malformedProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.malformedProblem {
     sense := .minimize
     binders := #[]
     objective := Lean.Syntax.mkNumLit "0"
@@ -133,7 +42,7 @@ def duplicateBinderProblem : Problem (Nat × Nat) Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.duplicateBinderProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.duplicateBinderProblem {
     sense := .minimize
     binders := #[
       { name := `x, typeSyntax := Lean.mkIdent `Nat },
@@ -151,7 +60,7 @@ def duplicateConstraintProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.duplicateConstraintProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.duplicateConstraintProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent `x
@@ -170,7 +79,7 @@ def unprintableProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.unprintableProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.unprintableProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := .missing
@@ -185,7 +94,7 @@ def anonymousBinderProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousBinderProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.anonymousBinderProblem {
     sense := .minimize
     binders := #[{ name := .anonymous, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.Syntax.mkNumLit "0"
@@ -202,7 +111,7 @@ def anonymousConstraintProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousConstraintProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.anonymousConstraintProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent `x
@@ -220,7 +129,7 @@ def anonymousTermProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  PTran.Syntax.registerProblemView `PTranTest.SyntaxEdge.anonymousTermProblem {
+  PTran.Syntax.registerProblemView `PTranTest.Syntax.PresentationValidation.anonymousTermProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent .anonymous
@@ -232,4 +141,4 @@ error: problem presentation metadata contains unprintable objective syntax
 #guard_msgs in
 #printp anonymousTermProblem
 
-end PTranTest.SyntaxEdge
+end PTranTest.Syntax.PresentationValidation

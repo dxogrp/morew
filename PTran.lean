@@ -1,8 +1,14 @@
+import PTran.Affine
 import PTran.Conic
 import PTran.Conic.Basic
 import PTran.Conic.Cone
 import PTran.Core
+import PTran.Elab.Affine
+import PTran.Elab.Affine.Space
+import PTran.Elab.Affine.State
 import PTran.Elab.Atom
+import PTran.Elab.Conic
+import PTran.Elab.Conic.Space
 import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names
 import PTran.Elab.Reformulation.Presentation

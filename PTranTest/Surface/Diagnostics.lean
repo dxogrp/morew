@@ -1,4 +1,4 @@
-import PTranTest.Surface.Basic
+import PTranTest.Surface.Fixtures
 
 /-!
 # Surface diagnostics and rollback

@@ -3,12 +3,14 @@ import PTran
 /-!
 # Substitution elaboration contexts
 
-Public reformulation scripts preserve source types and constraints across
-section boundaries, instantiated parameters, and macro expansion. Nested
-positivity aliases also compose through manual and automatic substitutions.
+Substitution scripts preserve source types, arithmetic instances, and
+constraints across section boundaries, instantiated parameters, and macro
+expansion. Binder inference and certificate resolution respect local scopes,
+and nested positivity aliases compose through successive substitutions.
+Paired objective-bound steps check that substitution retains source instances.
 -/
 
-namespace PTranTest.SubstitutionContext
+namespace PTranTest.Reformulation.SubstitutionContext
 
 open PTran
 noncomputable section
@@ -259,5 +261,120 @@ example (u : Fin 2) (t : Nat) :
 
 end AmbientBinderType
 
+/-! Binder inference counts free identifiers in the elaborated replacement,
+not identifiers bound inside a lambda. -/
+
+namespace ScopedBinderInference
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+
+def coverage :
+    FeasibleSurjection source (fun u : ℝ => (fun z : ℝ => z) u) where
+  preimage point := point.1
+  rightInverse _ := rfl
+
+reformulation target : source := by
+  substitute x := (fun z : ℝ => z) u using coverage
+
+example : GlobalEquivalence source target := target.equivalence
+example (u : ℝ) : target.objective u = u := rfl
+
+end ScopedBinderInference
+
+/-! A checked manual witness keeps its original global resolution even when
+the new target is declared under the same short name. -/
+
+namespace CertificateNameCapture
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+
+namespace Witnesses
+
+def reused : FeasibleSurjection source (fun u : ℝ => u) where
+  preimage point := point.1
+  rightInverse _ := rfl
+
+end Witnesses
+
+open Witnesses
+
+reformulation reused : source := by
+  substitute x := u using reused
+
+example : GlobalEquivalence source reused := reused.equivalence
+
+end CertificateNameCapture
+
+/-! Objective-bound construction retains source arithmetic under changed ambient instances. -/
+
+namespace SubstitutionSourceInstances
+
+def source :=
+  problem (x : Nat)
+    minimize x + 1
+
+def identityCoverage : FeasibleSurjection source (fun u : Nat => u) where
+  preimage point := point.1
+  rightInverse _ := rfl
+
+local instance zeroHAdd : HAdd Nat Nat Nat where
+  hAdd _ _ := 0
+
+example : (2 + 3 : Nat) = 0 := rfl
+
+reformulation target : source := by
+  substitute x := u using identityCoverage
+  epigraph t as objective_bound
+
+example : GlobalEquivalence source target := target.equivalence
+
+example (u t : Nat) :
+    target.feasible (u, t) ↔ Nat.add u 1 ≤ t := Iff.rfl
+
+/--
+info: problem (u : Nat) (t : ℕ)
+  minimize t
+  subject to
+    objective_bound : u + 1 ≤ t
+-/
+#guard_msgs in
+#printp target
+
+end SubstitutionSourceInstances
+
+namespace ObjectiveBoundSourceInstances
+
+def source :=
+  problem (x : Nat)
+    minimize x + 1
+
+local instance zeroHAdd : HAdd Nat Nat Nat where
+  hAdd _ _ := 0
+
+example : (2 + 3 : Nat) = 0 := rfl
+
+reformulation target : source := by
+  epigraph t as objective_bound
+
+example : GlobalEquivalence source target := target.equivalence
+
+example (x t : Nat) :
+    target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
+
+/--
+info: problem (x : Nat) (t : ℕ)
+  minimize t
+  subject to
+    objective_bound : x + 1 ≤ t
+-/
+#guard_msgs in
+#printp target
+
+end ObjectiveBoundSourceInstances
+
 end
-end PTranTest.SubstitutionContext
+end PTranTest.Reformulation.SubstitutionContext
