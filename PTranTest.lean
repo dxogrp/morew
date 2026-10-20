@@ -1,3 +1,4 @@
+import PTranTest.AffineSemantic
 import PTranTest.Atom
 import PTranTest.CompositionalRunner
 import PTranTest.Conic
