@@ -1,5 +1,5 @@
+import PTran.Core
 import PTran.Elab.Reformulation.Names
-import PTran.Syntax
 
 /-!
 # Typed reformulation presentations
