@@ -7,7 +7,10 @@ import PTranTest.Affine.StateIsolation
 import PTranTest.Affine.Support
 import PTranTest.Affine.TypedPresentation
 import PTranTest.Affine.Unsupported
-import PTranTest.Atom
+import PTranTest.Atom.DomainEvidence
+import PTranTest.Atom.Recognition
+import PTranTest.Atom.Support
+import PTranTest.Atom.Unsupported
 import PTranTest.CompositionalRunner
 import PTranTest.Conic
 import PTranTest.Core
@@ -23,6 +26,7 @@ import PTranTest.RunnerFailures
 import PTranTest.RunnerInternals
 import PTranTest.SubstitutionContext
 import PTranTest.Surface.Affine
+import PTranTest.Surface.Atom
 import PTranTest.Surface.Basic
 import PTranTest.Surface.Conic
 import PTranTest.Surface.Diagnostics
