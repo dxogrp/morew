@@ -12,7 +12,7 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
 private def materializeObjectiveBound (state : ReformState)
     (binder : TSyntax `ident)
-    (expectedSense : PTran.Syntax.ObjectiveSense)
+    (expectedSense : PTran.ObjectiveSense)
     (allocation : PTran.Elab.Reformulation.NameAllocation) :
     CommandElabM SurfaceStepResult := do
   let some binderName := allocation.findName? 0
@@ -69,7 +69,7 @@ private def materializeObjectiveBound (state : ReformState)
 /-- Plan an epigraph or hypograph step with its binder and constraint-label requests. -/
 def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
     (binder : TSyntax `ident) (explicitLabel? : Option (TSyntax `ident))
-    (expectedSense : PTran.Syntax.ObjectiveSense) :
+    (expectedSense : PTran.ObjectiveSense) :
     CommandElabM SurfaceStepDraft := do
   unless state.view.sense == expectedSense do
     let expected := match expectedSense with

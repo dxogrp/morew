@@ -1,5 +1,6 @@
 import PTranTest.Atom
 import PTranTest.CompositionalRunner
+import PTranTest.Conic
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ImportCompatibility.Reformulation
@@ -9,6 +10,7 @@ import PTranTest.RunnerFailures
 import PTranTest.RunnerInternals
 import PTranTest.SubstitutionContext
 import PTranTest.Surface.Basic
+import PTranTest.Surface.Conic
 import PTranTest.Surface.Diagnostics
 import PTranTest.Surface.ElaborationContext
 import PTranTest.Surface.NameResolution

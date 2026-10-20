@@ -17,13 +17,6 @@ namespace Syntax
 
 open Lean Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
-/-- Whether the source notation presented a minimization or maximization
-problem.  Maximization is represented semantically by `OrderDual`. -/
-inductive ObjectiveSense where
-  | minimize
-  | maximize
-  deriving Inhabited, BEq, Repr
-
 /-- Presentation data for one (nondependent) decision-variable binder. -/
 structure BinderView where
   /-- The source-level name of the decision variable. -/
@@ -225,7 +218,7 @@ private def ensureDistinct (what : String) (names : Array Name) (refs : Array Le
           s!"duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
 private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Syntax)
-    (sense : PTran.Syntax.ObjectiveSense) (objective : TSyntax `term)
+    (sense : PTran.ObjectiveSense) (objective : TSyntax `term)
     (constraintsStx : Array Lean.Syntax) (expectedType? : Option Expr) : TermElabM Expr := do
   let binderGroups ← liftMacroM <| bindersStx.mapM decodeBinder
   let binders := binderGroups.foldl (init := #[]) (fun result group => result ++ group)
