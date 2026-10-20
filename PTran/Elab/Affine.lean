@@ -154,11 +154,55 @@ partial def isSupportedSpace (type : Expr) : MetaM Bool := do
     return (← isSupportedSpace type.getAppArgs[0]!) &&
       (← isSupportedSpace type.getAppArgs[1]!)
   if let .forallE _ index body _ := type then
-    if body.hasLooseBVars then return false
-    let finiteType ← mkAppM ``Fintype #[index]
+    if body.hasLooseBVars || (← isProp index) then return false
+    -- Shape validation needs finiteness, not an enumeration in the ambient
+    -- context. Indexed operations retain their own elaborated Fintype instance.
+    let finiteType ← mkAppM ``Finite #[index]
     unless (← synthInstance? finiteType).isSome do return false
     return ← isSupportedSpace body
   return false
+
+/-- Recover finiteness proofs from closed indexing instances already present in
+the typed source. Local lets are substituted, but named helpers are not expanded.
+Instances mentioning a source binder are never promoted into the caller's scope.
+Only `Finite` proofs are collected: each operation keeps its own enumeration. -/
+def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
+  let mut pending := [source]
+  let mut seen : ExprSet := {}
+  let mut instances := #[]
+  while let expression :: rest := pending do
+    pending := rest
+    if seen.contains expression then continue
+    seen := seen.insert expression
+    let expression ← if expression.hasLooseBVars then
+        pure expression.consumeMData.headBeta
+      else reduceStructure expression (preserveLets := true)
+    unless expression.hasLooseBVars do
+      -- Inspect the elaborated type rather than operation names or the spelling
+      -- of a let annotation. This also handles aliased classes and coefficients
+      -- such as Fintype.card, without expanding their definitions.
+      let type ← whnf (← inferType expression)
+      if type.isAppOfArity ``Fintype 1 then
+        let proof ← mkAppOptM ``Finite.of_fintype
+          #[some type.getAppArgs[0]!, some expression]
+        unless instances.contains proof do
+          instances := instances.push proof
+    match expression with
+    | .letE _ _ value body _ => pending := value :: body.instantiate1 value :: pending
+    | .lam _ _ body _ | .forallE _ _ body _ => pending := body :: pending
+    | .app f a => pending := f :: a :: pending
+    | .proj _ _ value => pending := value :: pending
+    | .mdata _ value => pending := value :: pending
+    | _ => pure ()
+  return instances
+
+private def withFiniteInstances (instances : List Expr) (action : ReifyM Expr) :
+    ReifyM Expr := do
+  match instances with
+  | [] => action
+  | inst :: rest =>
+    mapLetDeclZeta `_sourceFinite (← inferType inst) inst fun _ =>
+      withFiniteInstances rest action
 
 private def functionOf (point body : Expr) : MetaM Expr :=
   mkLambdaFVars #[point] body
@@ -413,10 +457,11 @@ private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult :=
     | reject source "expected a function from a decision space"
   if codomain.hasLooseBVars then
     reject source "dependent result types are not supported"
-  unless ← isSupportedSpace domain do
-    reject source m!"unsupported decision space {domain}"
-  let certificate ← withLocalDeclD `point domain fun point => do
-    reifyBody point (mkApp source point) config
+  let certificate ← withFiniteInstances (← sourceFiniteInstances source).toList do
+    unless ← isSupportedSpace domain do
+      reject source m!"unsupported decision space {domain}"
+    withLocalDeclD `point domain fun point => do
+      reifyBody point (mkApp source point) config
   let map ← mkProjection certificate `map
   let equality ← mkProjection certificate `correct
   let map ← instantiateMVars map
