@@ -11,7 +11,6 @@ import PTranTest.Atom.DomainEvidence
 import PTranTest.Atom.Recognition
 import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
-import PTranTest.CompositionalRunner
 import PTranTest.Conic
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
@@ -21,10 +20,13 @@ import PTranTest.ImportCompatibility.ProblemPresentation.Registered
 import PTranTest.ImportCompatibility.Reformulation
 import PTranTest.ImportCompatibility.Runner
 import PTranTest.ImportCompatibility.TypedPresentation
-import PTranTest.ObjectiveBoundLabels
-import PTranTest.RunnerFailures
-import PTranTest.RunnerInternals
-import PTranTest.SubstitutionContext
+import PTranTest.Reformulation.Composition
+import PTranTest.Reformulation.NameAllocation
+import PTranTest.Reformulation.ObjectiveBoundLabels
+import PTranTest.Reformulation.PresentationUpdates
+import PTranTest.Reformulation.RunnerState
+import PTranTest.Reformulation.SubstitutionContext
+import PTranTest.Reformulation.SubstitutionFailures
 import PTranTest.Surface.Affine
 import PTranTest.Surface.Atom
 import PTranTest.Surface.Basic

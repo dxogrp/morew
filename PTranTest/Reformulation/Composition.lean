@@ -8,7 +8,7 @@ already changed the semantic problem.  They intentionally use the public DSL
 and generated certificates rather than the runner's internal representation.
 -/
 
-namespace PTranTest.CompositionalRunner
+namespace PTranTest.Reformulation.Composition
 
 open PTran
 noncomputable section
@@ -160,7 +160,7 @@ example (u t : ℝ) :
 run_cmd do
   let env ← Lean.getEnv
   match PTran.Syntax.getProblemView? env
-      `PTranTest.CompositionalRunner.TrueRemovalAndLabelReuse.target with
+      `PTranTest.Reformulation.Composition.TrueRemovalAndLabelReuse.target with
   | none =>
       Lean.throwError "the reformulation target has no presentation metadata"
   | some view =>
@@ -195,7 +195,7 @@ example (u : ℝ) : target.feasible u ↔ True := Iff.rfl
 run_cmd do
   let env ← Lean.getEnv
   let some view := PTran.Syntax.getProblemView? env
-      `PTranTest.CompositionalRunner.ElaboratedRecognition.target
+      `PTranTest.Reformulation.Composition.ElaboratedRecognition.target
     | Lean.throwError "the alias-recognition target has no metadata"
   unless view.constraints.isEmpty do
     Lean.throwError "typed-equivalent positivity was not removed"
@@ -231,53 +231,5 @@ example (u v t : ℝ) :
 
 end SuccessiveAliasedSubstitutions
 
-/-! Binder inference counts free identifiers in the elaborated replacement,
-not identifiers bound inside a lambda. -/
-
-namespace ScopedBinderInference
-
-def source :=
-  problem (x : ℝ)
-    minimize x
-
-def coverage :
-    FeasibleSurjection source (fun u : ℝ => (fun z : ℝ => z) u) where
-  preimage point := point.1
-  rightInverse _ := rfl
-
-reformulation target : source := by
-  substitute x := (fun z : ℝ => z) u using coverage
-
-example : GlobalEquivalence source target := target.equivalence
-example (u : ℝ) : target.objective u = u := rfl
-
-end ScopedBinderInference
-
-/-! A checked manual witness keeps its original global resolution even when
-the new target is declared under the same short name. -/
-
-namespace CertificateNameCapture
-
-def source :=
-  problem (x : ℝ)
-    minimize x
-
-namespace Witnesses
-
-def reused : FeasibleSurjection source (fun u : ℝ => u) where
-  preimage point := point.1
-  rightInverse _ := rfl
-
-end Witnesses
-
-open Witnesses
-
-reformulation reused : source := by
-  substitute x := u using reused
-
-example : GlobalEquivalence source reused := reused.equivalence
-
-end CertificateNameCapture
-
 end
-end PTranTest.CompositionalRunner
+end PTranTest.Reformulation.Composition

@@ -8,7 +8,7 @@ epigraph and hypograph transformations.  They also exercise label hygiene,
 collision handling, parser rejection, and command atomicity.
 -/
 
-namespace PTranTest.ObjectiveBoundLabels
+namespace PTranTest.Reformulation.ObjectiveBoundLabels
 
 open PTran
 noncomputable section
@@ -184,71 +184,6 @@ info: problem (u t : ℝ)
 -/
 #guard_msgs in
 #printp substitutionAfterBound
-
-namespace CanonicalSubstitutionPath
-
-def source :=
-  problem (x : Nat)
-    minimize x + 1
-
-def identityCoverage : FeasibleSurjection source (fun u : Nat => u) where
-  preimage point := point.1
-  rightInverse _ := rfl
-
-local instance zeroHAdd : HAdd Nat Nat Nat where
-  hAdd _ _ := 0
-
-example : (2 + 3 : Nat) = 0 := rfl
-
-reformulation target : source := by
-  substitute x := u using identityCoverage
-  epigraph t as objective_bound
-
-example : GlobalEquivalence source target := target.equivalence
-
-example (u t : Nat) :
-    target.feasible (u, t) ↔ Nat.add u 1 ≤ t := Iff.rfl
-
-/--
-info: problem (u : Nat) (t : ℕ)
-  minimize t
-  subject to
-    objective_bound : u + 1 ≤ t
--/
-#guard_msgs in
-#printp target
-
-end CanonicalSubstitutionPath
-
-namespace SemanticTargetRetry
-
-def source :=
-  problem (x : Nat)
-    minimize x + 1
-
-local instance zeroHAdd : HAdd Nat Nat Nat where
-  hAdd _ _ := 0
-
-example : (2 + 3 : Nat) = 0 := rfl
-
-reformulation target : source := by
-  epigraph t as objective_bound
-
-example : GlobalEquivalence source target := target.equivalence
-
-example (x t : Nat) :
-    target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
-
-/--
-info: problem (x : Nat) (t : ℕ)
-  minimize t
-  subject to
-    objective_bound : x + 1 ≤ t
--/
-#guard_msgs in
-#printp target
-
-end SemanticTargetRetry
 
 /-! Binder names and presentation labels occupy independent namespaces. -/
 
@@ -429,14 +364,14 @@ reformulation atomicTarget : minimumSource certificate atomicAlias := by
 
 run_cmd do
   let env ← Lean.getEnv
-  if env.contains `PTranTest.ObjectiveBoundLabels.atomicTarget then
+  if env.contains `PTranTest.Reformulation.ObjectiveBoundLabels.atomicTarget then
     Lean.throwError "a label collision emitted the reformulation target"
-  if env.contains `PTranTest.ObjectiveBoundLabels.atomicTarget.equivalence then
+  if env.contains `PTranTest.Reformulation.ObjectiveBoundLabels.atomicTarget.equivalence then
     Lean.throwError "a label collision emitted the canonical certificate"
-  if env.contains `PTranTest.ObjectiveBoundLabels.atomicAlias then
+  if env.contains `PTranTest.Reformulation.ObjectiveBoundLabels.atomicAlias then
     Lean.throwError "a label collision emitted the certificate alias"
   if (PTran.Syntax.getProblemView? env
-      `PTranTest.ObjectiveBoundLabels.atomicTarget).isSome then
+      `PTranTest.Reformulation.ObjectiveBoundLabels.atomicTarget).isSome then
     Lean.throwError "a label collision emitted target presentation metadata"
 
 reformulation atomicTarget : minimumSource certificate atomicAlias := by
@@ -460,4 +395,4 @@ info: problem (x t s : ℝ)
 #printp atomicTarget
 
 end
-end PTranTest.ObjectiveBoundLabels
+end PTranTest.Reformulation.ObjectiveBoundLabels
