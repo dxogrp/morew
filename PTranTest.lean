@@ -1,3 +1,5 @@
+import PTranTest.Affine
+import PTranTest.AffineFailures
 import PTranTest.AffineSemantic
 import PTranTest.Atom
 import PTranTest.CompositionalRunner

@@ -3,6 +3,7 @@ import PTran.Conic
 import PTran.Conic.Basic
 import PTran.Conic.Cone
 import PTran.Core
+import PTran.Elab.Affine
 import PTran.Elab.Affine.Space
 import PTran.Elab.Atom
 import PTran.Elab.Reformulation
