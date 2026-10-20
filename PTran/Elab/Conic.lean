@@ -1,5 +1,6 @@
 import PTran.Conic
 import PTran.Elab.Affine
+import PTran.Elab.Affine.State
 import PTran.Elab.Reformulation.Presentation
 
 /-!
@@ -20,6 +21,14 @@ structure RowResult where
   constraint : Expr
   /-- Proof of `∀ x, constraint.Holds x ↔ predicate x`. -/
   pointwiseIff : Expr
+
+-- Fix the real normed-space instances before subtracting. The certified maps
+-- can use definitionally equal instance aliases that typeclass search alone
+-- does not unfold when asked to infer a heterogeneous subtraction operation.
+private def subtractMaps
+    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    (f g : X →ᵃ[ℝ] Y) : X →ᵃ[ℝ] Y := f - g
 
 private theorem normalizeEq
     {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
@@ -83,6 +92,27 @@ private partial def hasUnresolved (expression : Expr)
           if ← hasUnresolved value seen then return true
   return false
 
+-- Keep decision-independent lets available, including denominator proofs and
+-- instances. Dependent lets must be substituted before abstracting the point;
+-- independent values are substituted into both results before leaving scope.
+private partial def withPredicateLets (point body : Expr)
+    (action : Expr → MetaM (Except Affine.AffineError RowResult)) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  let body ← Affine.reduceStructure body (preserveLets := true)
+  if let .letE name type value rest nondep := body then
+    if (← Affine.depends point type) || (← Affine.depends point value) then
+      return ← withPredicateLets point (rest.instantiate1 value) action
+    withLetDecl name type value (nondep := nondep) fun binding => do
+      match ← withPredicateLets point (rest.instantiate1 binding) action with
+      | .error error => return .error error
+      | .ok result =>
+        return .ok {
+          constraint := ← result.constraint.replaceFVarsM #[binding] #[value]
+          pointwiseIff := ← result.pointwiseIff.replaceFVarsM #[binding] #[value]
+        }
+  else
+    action body
+
 private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
   let predicate ← instantiateMVars predicate
@@ -93,88 +123,85 @@ private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
     | return .error (← rowError predicate "expected a predicate on the decision space" label?)
   unless codomain == mkSort Level.zero do
     return .error (← rowError predicate "expected a predicate on the decision space" label?)
-  withLocalDeclD `point domain fun point => do
+  withLocalDeclD `point domain fun point =>
     -- Preserve the typed relation head while eliminating language-level
     -- wrappers, including the product patterns used by the surface DSL.
-    let body ← Affine.reduceStructure (mkApp predicate point)
-    let args := body.getAppArgs
-    let equality := body.isAppOfArity ``Eq 3
-    let greaterEqual := body.isAppOfArity ``GE.ge 4
-    unless equality || greaterEqual || body.isAppOfArity ``LE.le 4 do
-      return .error (← rowError body
-        m!"expected an equality or non-strict inequality; found {body}" label?)
-    let target := args[0]!
-    let some order ← realOrder? target
-      | return .error (← rowError body "expected real scalar or finite-vector operands" label?)
-    let lhs := args[args.size - 2]!
-    let rhs := args[args.size - 1]!
-    unless equality do
-      -- Compare the instance itself: a custom relation can agree with the
-      -- standard order on these particular operands without being that order.
-      unless ← isDefEq args[1]! order do
-        return .error (← rowError body m!"unsupported order instance {args[1]!}" label?)
-    let lhs ← mkLambdaFVars #[point] lhs
-    let rhs ← mkLambdaFVars #[point] rhs
-    let left ← Affine.reifyAffine lhs config
-    if let .error error := left then
-      return .error (← rowError error.expression m!"left-hand side: {error.reason}" label?)
-    let .ok left := left
-      | return .error (← rowError body "failed to recognize the left-hand side" label?)
-    let right ← Affine.reifyAffine rhs config
-    if let .error error := right then
-      return .error (← rowError error.expression m!"right-hand side: {error.reason}" label?)
-    let .ok right := right
-      | return .error (← rowError body "failed to recognize the right-hand side" label?)
-    let difference ← if equality || greaterEqual then
-        mkAppM ``HSub.hSub #[left.map, right.map]
-      else
-        mkAppM ``HSub.hSub #[right.map, left.map]
-    let constructor := if equality then
-        ``PTran.Conic.Constraint.eqZero
-      else ``PTran.Conic.Constraint.nonnegative
-    let constraint ← instantiateMVars (← mkAppM constructor #[difference])
-    let theoremName := if equality then ``normalizeEq else ``normalizeLE
-    let proofArguments := if greaterEqual then
-        #[right.map, left.map, rhs, lhs, right.pointwiseEquality, left.pointwiseEquality]
-      else
-        #[left.map, right.map, lhs, rhs, left.pointwiseEquality, right.pointwiseEquality]
-    let pointwiseIff ← instantiateMVars (← mkAppM theoremName proofArguments)
-    if constraint.hasMVar || pointwiseIff.hasMVar then
-      return .error (← rowError body "row construction left unresolved metavariables" label?)
-    let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
-    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-    checkWithKernel constraint
-    checkWithKernel pointwiseIff
-    unless ← isDefEq (← inferType pointwiseIff) expected do
-      return .error (← rowError body "row equivalence did not match the input predicate" label?)
-    return .ok { constraint, pointwiseIff }
+    withPredicateLets point (mkApp predicate point) fun body => do
+      let args := body.getAppArgs
+      let equality := body.isAppOfArity ``Eq 3
+      let greaterEqual := body.isAppOfArity ``GE.ge 4
+      unless equality || greaterEqual || body.isAppOfArity ``LE.le 4 do
+        return .error (← rowError body
+          m!"expected an equality or non-strict inequality; found {body}" label?)
+      let target := args[0]!
+      let some order ← realOrder? target
+        | return .error (← rowError body "expected real scalar or finite-vector operands" label?)
+      let lhs := args[args.size - 2]!
+      let rhs := args[args.size - 1]!
+      unless equality do
+        -- Compare the instance itself: a custom relation can agree with the
+        -- standard order on these particular operands without being that order.
+        unless ← isDefEq args[1]! order do
+          return .error (← rowError body m!"unsupported order instance {args[1]!}" label?)
+      let lhs ← mkLambdaFVars #[point] lhs
+      let rhs ← mkLambdaFVars #[point] rhs
+      let left ← Affine.reifyAffine lhs config
+      if let .error error := left then
+        return .error (← rowError error.expression m!"left-hand side: {error.reason}" label?)
+      let .ok left := left
+        | return .error (← rowError body "failed to recognize the left-hand side" label?)
+      let right ← Affine.reifyAffine rhs config
+      if let .error error := right then
+        return .error (← rowError error.expression m!"right-hand side: {error.reason}" label?)
+      let .ok right := right
+        | return .error (← rowError body "failed to recognize the right-hand side" label?)
+      let difference ← if equality || greaterEqual then
+          mkAppM ``subtractMaps #[left.map, right.map]
+        else
+          mkAppM ``subtractMaps #[right.map, left.map]
+      let constructor := if equality then
+          ``PTran.Conic.Constraint.eqZero
+        else ``PTran.Conic.Constraint.nonnegative
+      let constraint ← instantiateMVars (← mkAppM constructor #[difference])
+      let theoremName := if equality then ``normalizeEq else ``normalizeLE
+      let proofArguments := if greaterEqual then
+          #[right.map, left.map, rhs, lhs, right.pointwiseEquality, left.pointwiseEquality]
+        else
+          #[left.map, right.map, lhs, rhs, left.pointwiseEquality, right.pointwiseEquality]
+      let pointwiseIff ← instantiateMVars (← mkAppM theoremName proofArguments)
+      if constraint.hasMVar || pointwiseIff.hasMVar then
+        return .error (← rowError body "row construction left unresolved metavariables" label?)
+      let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
+      let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+      checkWithKernel constraint
+      checkWithKernel pointwiseIff
+      unless ← isDefEq (← inferType pointwiseIff) expected do
+        return .error (← rowError body "row equivalence did not match the input predicate" label?)
+      return .ok { constraint, pointwiseIff }
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
 def normalizeRow (predicate : Expr) (config : Affine.Config := {})
-    (label? : Option Name := none) : MetaM (Except Affine.AffineError RowResult) := do
-  let saved ← saveState
-  try
-    withNewMCtxDepth <| normalizeRowCore predicate config label?
-  catch error =>
-    return .error (← rowError predicate error.toMessageData label?)
-  finally
-    saved.restore
+    (label? : Option Name := none) : MetaM (Except Affine.AffineError RowResult) :=
+  Affine.withIsolatedMVars do
+    try
+      normalizeRowCore predicate config label?
+    catch error =>
+      return .error (← rowError predicate error.toMessageData label?)
 
 /-- Recognize the real objective retained by a typed presentation. The explicit
 optimization sense and order-dual annotation remain in the presentation. -/
 def reifyObjective (presentation : Reformulation.PresentationState)
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Affine.AffineResult) := do
-  let saved ← saveState
-  let fail (expression : Expr) (reason : MessageData) :
-      MetaM (Except Affine.AffineError Affine.AffineResult) := do
-    return .error {
-      expression
-      reason := ← addMessageContext m!"objective: {reason}"
-    }
-  try
-    withNewMCtxDepth do
+    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Affine.AffineResult) :=
+  Affine.withIsolatedMVars do
+    let fail (expression : Expr) (reason : MessageData) :
+        MetaM (Except Affine.AffineError Affine.AffineResult) := do
+      return .error {
+        expression
+        reason := ← addMessageContext m!"objective: {reason}"
+      }
+    try
       if (← hasUnresolved presentation.valueType) ||
           (← hasUnresolved presentation.domainType) ||
           (← hasUnresolved presentation.objective) then
@@ -188,10 +215,8 @@ def reifyObjective (presentation : Reformulation.PresentationState)
       match ← Affine.reifyAffine presentation.objective config with
       | .ok result => return .ok result
       | .error error => fail error.expression error.reason
-  catch error =>
-    fail presentation.objective error.toMessageData
-  finally
-    saved.restore
+    catch error =>
+      fail presentation.objective error.toMessageData
 
 /-- Normalize a typed named constraint, retaining its label in diagnostics. -/
 def normalizeConstraint (entry : Reformulation.ConstraintEntry)

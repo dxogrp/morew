@@ -5,6 +5,7 @@ import PTran.Conic.Cone
 import PTran.Core
 import PTran.Elab.Affine
 import PTran.Elab.Affine.Space
+import PTran.Elab.Affine.State
 import PTran.Elab.Atom
 import PTran.Elab.Conic
 import PTran.Elab.Reformulation

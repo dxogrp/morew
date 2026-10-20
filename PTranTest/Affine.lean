@@ -31,11 +31,12 @@ def checkResult (source : Expr) (result : AffineResult) : MetaM Unit := do
   for expression in #[result.map, result.pointwiseEquality] do
     if expression.hasMVar || expression.hasSorry then
       throwError "affine reification returned an incomplete certificate"
-    checkWithKernel expression
+    withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+      checkWithKernel expression
   let .forallE _ domain _ _ ← whnf (← inferType source)
     | throwError "affine test source is not a function"
   let expected ← withLocalDeclD `x domain fun x => do
-    let mapped ← mkAppM ``AffineMap.toFun #[result.map, x]
+    let mapped := mkApp (← mkProjection result.map `toFun) x
     mkForallFVars #[x] (← mkEq mapped (source.beta #[x]))
   unless ← isDefEq (← inferType result.pointwiseEquality) expected do
     throwError "affine certificate proves the wrong statement"

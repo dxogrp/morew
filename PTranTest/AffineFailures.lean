@@ -81,9 +81,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun [HMul ℝ ℝ ℝ] => fun x : ℝ => 2 * x)) 1
   assertUnsupported (← `(fun [HDiv ℝ ℝ ℝ] => fun x : ℝ => x / 2)) 1
   assertUnsupported (← `(fun [Neg ℝ] => fun x : ℝ => -x)) 1
-  assertUnsupported (← `(fun [AddCommGroup ℝ] => fun x : ℝ => x + x)) 1
-  assertUnsupported (← `(fun [Module ℝ (Fin 2 → ℝ)] =>
-    fun x : Fin 2 → ℝ => (2 : ℝ) • x)) 1
+  assertUnsupported (← `(fun (G : AddCommGroup ℝ) => fun x : ℝ =>
+    @HAdd.hAdd ℝ ℝ ℝ ⟨G.add⟩ x x)) 1
+  assertUnsupported (← `(fun (M : Module ℝ (Fin 2 → ℝ)) => fun x : Fin 2 → ℝ =>
+    @HSMul.hSMul ℝ (Fin 2 → ℝ) (Fin 2 → ℝ) ⟨M.smul⟩ (2 : ℝ) x)) 1
   assertUnsupported (← `(fun [AddCommMonoid ℝ] =>
     fun x : Fin 2 → ℝ => ∑ i, x i)) 1
   assertUnsupported (← `(fun x : ℝ =>

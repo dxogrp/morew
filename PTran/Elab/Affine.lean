@@ -1,5 +1,6 @@
 import PTran.Affine
 import PTran.Elab.Affine.Space
+import PTran.Elab.Affine.State
 import PTran.Core
 import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
@@ -16,7 +17,7 @@ certify the expression, not that the function is mathematically non-affine.
 
 namespace PTran.Elab.Affine
 
-open Lean Lean.Meta
+open Lean Lean.Meta Qq
 
 /-- An unsupported expression together with a diagnostic retaining its context. -/
 structure AffineError where
@@ -52,6 +53,7 @@ private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
 -- coefficient misses dependencies hidden behind a local let or an instance.
 private partial def inspectLocals (expression : Expr) (point? : Option FVarId)
     (seen : FVarIdSet := {}) : MetaM (Bool × Bool) := do
+  let expression ← instantiateMVars expression
   let mut dependent := false
   let mut unresolved := expression.hasMVar
   let mut seen := seen
@@ -69,7 +71,9 @@ private partial def inspectLocals (expression : Expr) (point? : Option FVarId)
           unresolved := unresolved || hole
   return (dependent, unresolved)
 
-private def depends (point expression : Expr) : MetaM Bool := do
+/-- Whether an expression depends on the decision free variable, following
+local declaration values and types as well as resolved metavariables. -/
+def depends (point expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression (some point.fvarId!)).1
 
 /-- Reduce local lets, applications, projections, and compiler-generated tuple
@@ -77,32 +81,40 @@ matches while preserving named arithmetic and user function heads.
 
 Only problem-container fields and single-alternative product matchers may
 unfold named declarations. This is internal support for typed presentations.
+With `preserveLets`, stop at a head let so the caller can retain its evidence
+and local instances while recognizing the body.
 -/
-partial def reduceStructure (expression : Expr) : MetaM Expr := do
-  let expression := expression.consumeMData
+partial def reduceStructure (expression : Expr) (preserveLets : Bool := false) :
+    MetaM Expr := do
+  let expression := (← instantiateMVars expression).consumeMData
   match expression with
-  | .letE _ _ value body _ => reduceStructure (body.instantiate1 value)
+  | .letE _ _ value body _ =>
+    if preserveLets then pure expression
+    else reduceStructure (body.instantiate1 value)
   | .fvar id =>
     if let some value := (← id.getDecl).value? (allowNondep := true) then
-      reduceStructure value
+      reduceStructure value preserveLets
     else pure expression
   | .proj name index value =>
-    let value ← reduceStructure value
+    let value ← reduceStructure value preserveLets
     if value.isAppOf ``Prod.mk then
-      reduceStructure value.getAppArgs[index + 2]!
+      reduceStructure value.getAppArgs[index + 2]! preserveLets
     else pure (.proj name index value)
   | .app .. =>
     let arguments := expression.getAppArgs
-    let function ← reduceStructure expression.getAppFn
+    let function ← reduceStructure expression.getAppFn preserveLets
+    if let .letE name type value body nondep := function then
+      return ← reduceStructure (.letE name type value
+        (mkAppN body (arguments.map (·.liftLooseBVars 0 1))) nondep) preserveLets
     if function.isLambda then
-      return ← reduceStructure (function.beta arguments)
+      return ← reduceStructure (function.beta arguments) preserveLets
     if (function.isConstOf ``Prod.casesOn || function.isConstOf ``Prod.rec) &&
         arguments.size >= 5 then
       let value := arguments[if function.isConstOf ``Prod.casesOn then 3 else 4]!
       let branch := arguments[if function.isConstOf ``Prod.casesOn then 4 else 3]!
       let fields := #[Expr.proj ``Prod 0 value, Expr.proj ``Prod 1 value]
-      return ← reduceStructure <| mkAppN (branch.beta fields)
-        (arguments.extract 5 arguments.size)
+      return ← reduceStructure (mkAppN (branch.beta fields)
+        (arguments.extract 5 arguments.size)) preserveLets
     if let some name := function.constName? then
       if let some matcher ← getMatcherInfo? name then
         if matcher.numAlts == 1 && arguments.size >= matcher.arity then
@@ -115,12 +127,13 @@ partial def reduceStructure (expression : Expr) : MetaM Expr := do
             if let some value := declaration.value? then
               let value := value.instantiateLevelParams
                 declaration.levelParams function.constLevels!
-              return ← reduceStructure (value.beta arguments)
+              return ← reduceStructure (value.beta arguments) preserveLets
     if (function.isConstOf ``Prod.fst || function.isConstOf ``Prod.snd) &&
         arguments.size >= 3 then
       let projection := .proj ``Prod
         (if function.isConstOf ``Prod.fst then 0 else 1) arguments[2]!
-      return ← reduceStructure <| mkAppN projection (arguments.extract 3 arguments.size)
+      return ← reduceStructure (mkAppN projection (arguments.extract 3 arguments.size))
+        preserveLets
     if (function.isConstOf ``PTran.Problem.objective ||
         function.isConstOf ``PTran.Problem.feasible) && arguments.size >= 3 then
       -- The model declaration is the container being inspected; its objective
@@ -128,8 +141,8 @@ partial def reduceStructure (expression : Expr) : MetaM Expr := do
       let problem ← whnf arguments[2]!
       if problem.isAppOf ``PTran.Problem.mk then
         let index := if function.isConstOf ``PTran.Problem.objective then 2 else 3
-        return ← reduceStructure <| mkAppN problem.getAppArgs[index]!
-          (arguments.extract 3 arguments.size)
+        return ← reduceStructure (mkAppN problem.getAppArgs[index]!
+          (arguments.extract 3 arguments.size)) preserveLets
     return mkAppN function arguments
   | _ => pure expression
 
@@ -180,22 +193,16 @@ private def finish (point source certificate : Expr)
     reject source "the supported affine construction does not match this typed expression"
   return certificate
 
-private def withIndexInstances (instances : List Expr) (action : MetaM Expr) : MetaM Expr := do
-  match instances with
-  | [] => action
-  | inst :: rest =>
-    mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ =>
-      withIndexInstances rest action
+private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : ReifyM Expr := do
+  if ← depends point inst then
+    reject inst "the finite indexing instance depends on a decision variable"
+  mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
 
 private def construct (point source : Expr) (name : Name) (args : Array Expr)
-    (operandCount? : Option Nat := none) (indexInstances : Array Expr := #[]) :
-    ReifyM Expr := do
-  for inst in indexInstances do
-    if ← depends point inst then
-      reject inst "the finite indexing instance depends on a decision variable"
+    (operandCount? : Option Nat := none) : ReifyM Expr := do
   let certificate ← try
     let spaces := #[← inferType point, ← inferType source]
-    withIndexInstances indexInstances.toList <| Space.withCanonicalSpaces spaces do
+    Space.withCanonicalSpaces spaces do
       let mut term ← mkAppM name args
       repeat
         let type ← whnf (← inferType term)
@@ -210,7 +217,7 @@ private def construct (point source : Expr) (name : Name) (args : Array Expr)
 private def nonzeroProof (point divisor : Expr) (config : Config) : ReifyM Expr := do
   if ← depends point divisor then
     reject divisor "the divisor depends on a decision variable"
-  let zero ← mkNumeral (mkConst ``Real) 0
+  let zero : Expr := q((0 : ℝ))
   let obligation ← mkAppM ``Ne #[divisor, zero]
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
@@ -249,7 +256,14 @@ private def nonzeroProof (point divisor : Expr) (config : Config) : ReifyM Expr 
   reject divisor m!"missing nonzero evidence; required {obligation}"
 
 private partial def reifyBody (point expression : Expr) (config : Config) : ReifyM Expr := do
-  let expression ← reduceStructure expression
+  let expression ← reduceStructure expression (preserveLets := true)
+  if let .letE name type value body nondep := expression then
+    -- A local alias of the decision point must be substituted before building
+    -- a new function binder. Independent lets retain useful proof/instance scope.
+    if (← depends point type) || (← depends point value) then
+      return ← reifyBody point (body.instantiate1 value) config
+    return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
+      reifyBody point (body.instantiate1 binding) config
   let type ← inferType expression
   unless ← isSupportedSpace type do
     reject expression m!"unsupported affine value type {type}"
@@ -346,32 +360,34 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
       mkLambdaFVars #[i] certificate
     return ← construct point expression ``PTran.Affine.Certified.sum #[set, family] (some 2)
   if name == some ``dotProduct && args.size == 7 then
-    let left := args[5]!
-    let right := args[6]!
-    if !(← depends point left) then
-      let rightMap ← reifyBody point right config
-      return ← construct point expression ``PTran.Affine.Certified.dotConstLeft
-        #[left, rightMap] (some 2) #[args[2]!]
-    if !(← depends point right) then
-      let leftMap ← reifyBody point left config
-      return ← construct point expression ``PTran.Affine.Certified.dotConstRight
-        #[leftMap, right] (some 2) #[args[2]!]
-    discard <| reifyBody point left config
-    discard <| reifyBody point right config
-    reject expression "both dot-product factors depend on decision variables"
+    return ← withIndexInstance point args[2]! do
+      let left := args[5]!
+      let right := args[6]!
+      if !(← depends point left) then
+        let rightMap ← reifyBody point right config
+        return ← construct point expression ``PTran.Affine.Certified.dotConstLeft
+          #[left, rightMap] (some 2)
+      if !(← depends point right) then
+        let leftMap ← reifyBody point left config
+        return ← construct point expression ``PTran.Affine.Certified.dotConstRight
+          #[leftMap, right] (some 2)
+      discard <| reifyBody point left config
+      discard <| reifyBody point right config
+      reject expression "both dot-product factors depend on decision variables"
   if (name == some ``Matrix.mulVec || name == some ``Matrix.vecMul) && args.size == 7 then
-    let matrix := if name == some ``Matrix.mulVec then args[5]! else args[6]!
-    let vector := if name == some ``Matrix.mulVec then args[6]! else args[5]!
-    if ← depends point matrix then
-      -- Diagnose an unsupported entry first, then the coefficient's dependence.
-      discard <| reifyBody point matrix config
-      reject matrix "the coefficient matrix depends on a decision variable"
-    let vectorMap ← reifyBody point vector config
-    if name == some ``Matrix.mulVec then
-      return ← construct point expression ``PTran.Affine.Certified.mulVec
-        #[matrix, vectorMap] (some 2) #[args[4]!]
-    return ← construct point expression ``PTran.Affine.Certified.vecMul
-      #[vectorMap, matrix] (some 2) #[args[4]!]
+    return ← withIndexInstance point args[4]! do
+      let matrix := if name == some ``Matrix.mulVec then args[5]! else args[6]!
+      let vector := if name == some ``Matrix.mulVec then args[6]! else args[5]!
+      if ← depends point matrix then
+        -- Diagnose an unsupported entry first, then the coefficient's dependence.
+        discard <| reifyBody point matrix config
+        reject matrix "the coefficient matrix depends on a decision variable"
+      let vectorMap ← reifyBody point vector config
+      if name == some ``Matrix.mulVec then
+        return ← construct point expression ``PTran.Affine.Certified.mulVec
+          #[matrix, vectorMap] (some 2)
+      return ← construct point expression ``PTran.Affine.Certified.vecMul
+        #[vectorMap, matrix] (some 2)
   -- A finite vector can be evaluated at a fixed index. This is deliberately
   -- checked after recognized operation heads so it cannot swallow a nonlinear
   -- function application under the guise of a projection.
@@ -389,6 +405,7 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
   reject expression "unsupported function, coercion, or nonlinear operation"
 
 private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult := do
+  let source ← instantiateMVars source
   if (← inspectLocals source none).2 then
     reject source "unresolved metavariables are not supported"
   let type ← whnf (← inferType source)
@@ -400,14 +417,14 @@ private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult :=
     reject source m!"unsupported decision space {domain}"
   let certificate ← withLocalDeclD `point domain fun point => do
     reifyBody point (mkApp source point) config
-  let map ← mkAppM ``PTran.Affine.Certified.map #[certificate]
-  let equality ← mkAppM ``PTran.Affine.Certified.correct #[certificate]
+  let map ← mkProjection certificate `map
+  let equality ← mkProjection certificate `correct
   let map ← instantiateMVars map
   let equality ← instantiateMVars equality
   if map.hasMVar || equality.hasMVar then
     reject source "affine construction left unresolved metavariables"
   let expected ← withLocalDeclD `point domain fun point => do
-    let value ← mkAppM ``AffineMap.toFun #[map, point]
+    let value := mkApp (← mkProjection map `toFun) point
     mkForallFVars #[point] (← mkEq value (mkApp source point))
   unless ← isDefEq (← inferType equality) expected do
     reject source "affine certificate does not establish equality to the original function"
@@ -422,16 +439,13 @@ are not unfolded. The optional evidence callback is checked against `c ≠ 0`;
 it does not weaken the global pointwise correctness obligation.
 -/
 def reifyAffine (source : Expr) (config : Config := {}) :
-    MetaM (Except AffineError AffineResult) := do
-  let saved ← saveState
+    MetaM (Except AffineError AffineResult) := withIsolatedMVars do
   try
-    withNewMCtxDepth (reifyCore source config).run
+    (reifyCore source config).run
   catch exception =>
     return .error {
       expression := source
       reason := ← addMessageContext exception.toMessageData
     }
-  finally
-    saved.restore
 
 end PTran.Elab.Affine
