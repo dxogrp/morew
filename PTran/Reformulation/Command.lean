@@ -1,4 +1,5 @@
 import PTran.Reformulation.ObjectiveBound
+import PTran.Reformulation.Conic
 import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
@@ -76,7 +77,7 @@ private def elabSemanticTarget (target : TSyntax `ident)
 private inductive RawDeclarationResult where
   | success
   | failed
-  | retryWithSemanticTarget
+  | retryWithSemanticTarget (messages : MessageLog)
 
 private inductive RawDeclarationStage where
   | target
@@ -84,11 +85,10 @@ private inductive RawDeclarationStage where
   | alias
   deriving BEq
 
-/-- Try the source-aligned target first.  A certificate failure means that
-re-elaborating presentation syntax selected different implicit data (for
-example, a newly scoped instance or coercion), so the entire attempt is rolled
-back and the caller may declare the stabilized semantic term instead.
-Target and alias failures retain their diagnostics and are never masked. -/
+/-- Try the source-aligned target first. Re-elaborating presentation syntax can
+omit implicit data or select different instances, so target and certificate
+failures retry the checked semantic target. Retain the original diagnostics if
+that retry also fails. Alias failures and internal exceptions are not retried. -/
 private def tryRawDeclarations (targetCommand certificateCommand : Syntax)
     (aliasCommand? : Option Syntax) : CommandElabM RawDeclarationResult := do
   let savedState ← get
@@ -97,16 +97,16 @@ private def tryRawDeclarations (targetCommand certificateCommand : Syntax)
   try
     elabCommand targetCommand
     if (← get).messages.hasErrors then
-      let resultingState ← get
-      set { resultingState with
-        messages := savedState.messages ++ resultingState.messages }
-      return .failed
+      let messages := (← get).messages
+      set savedState
+      return .retryWithSemanticTarget messages
 
     stage := .certificate
     elabCommand certificateCommand
     if (← get).messages.hasErrors then
+      let messages := (← get).messages
       set savedState
-      return .retryWithSemanticTarget
+      return .retryWithSemanticTarget messages
 
     if let some aliasCommand := aliasCommand? then
       stage := .alias
@@ -125,9 +125,11 @@ private def tryRawDeclarations (targetCommand certificateCommand : Syntax)
     let resultingState ← get
     match exception with
     | .error _ _ =>
-        if stage == .certificate then do
+        if stage == .target || stage == .certificate then do
+          logException exception
+          let messages := (← get).messages
           set savedState
-          pure .retryWithSemanticTarget
+          pure (.retryWithSemanticTarget messages)
         else do
           set { savedState with
             messages := savedState.messages ++ resultingState.messages }
@@ -215,6 +217,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
     certificateSyntax := initialCertificateSyntax
     source := sourceTerm
     sourceName
+    checkpoint := { semantic := sourceTerm, view := sourceView }
     runner
   }
 
@@ -229,6 +232,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .maximize
+      | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
+          prepareConic state step selector rule
       | _ => throwUnsupportedSyntax
     let (result, materialization) ← runTypedStepPlan state draft
     state ← commitSurfaceStep state result materialization
@@ -301,7 +306,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
           $certificateDeclIdent)
 
     let elabCanonicalDeclarations : CommandElabM Unit := do
-      elabSemanticTarget targetDeclIdent sourceName sourceTerm sourceView
+      elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
         state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
       unless (← get).messages.hasErrors do
         elabCommand certificateCommand
@@ -316,9 +321,16 @@ private def elabReformulationCore : CommandElab := fun stx => do
         match ← tryRawDeclarations targetCommand certificateCommand aliasCommand? with
         | .success => pure true
         | .failed => pure false
-        | .retryWithSemanticTarget =>
-            elabCanonicalDeclarations
-            pure !(← get).messages.hasErrors
+        | .retryWithSemanticTarget rawMessages =>
+            try
+              elabCanonicalDeclarations
+              let emitted := !(← get).messages.hasErrors
+              unless emitted do
+                modify fun state => { state with messages := state.messages ++ rawMessages }
+              pure emitted
+            catch exception =>
+              modify fun state => { state with messages := state.messages ++ rawMessages }
+              throw exception
     if emitted then
       for companion in state.typed.companions do
         unless (← get).messages.hasErrors do

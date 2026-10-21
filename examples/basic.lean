@@ -49,3 +49,26 @@ def shifted (a : ℝ) :=
 #check shifted 3
 
 end parameterized
+
+/-
+Targeted polyhedral rewriting
+-/
+namespace polyhedral
+noncomputable
+
+def absoluteObjective :=
+  problem (x : ℝ)
+    minimize |x - 2|
+    subject to
+      magnitude : |x| ≤ 5
+      nonnegative : 0 ≤ x
+
+reformulation linearBounds : absoluteObjective := by
+  conic at magnitude
+  epigraph t as distance
+  conic at distance
+
+#printp linearBounds
+#check linearBounds.equivalence
+
+end polyhedral

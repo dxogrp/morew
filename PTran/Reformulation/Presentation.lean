@@ -25,28 +25,63 @@ private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
       some name
   | _ => none
 
+private def annotatedFVarId? (infos : SubExpr.PosMap Elab.Info)
+    (stx : Lean.Syntax) : Option FVarId := do
+  let .ident (.synthetic start _ _) _ _ _ := stx | none
+  match infos.get? start.byteIdx with
+  | some (.ofTermInfo info) =>
+      let .fvar id := info.expr | none
+      some id
+  | some (.ofDelabTermInfo info) =>
+      let .fvar id := info.toTermInfo.expr | none
+      some id
+  | _ => none
+
+/-- Section variable UIDs survive fresh elaboration contexts, including for
+anonymous instances whose local names receive new macro scopes each time.
+They are suitable for transient semantic syntax within the current section. -/
+private def sectionReferenceNames : TermElabM (Std.HashMap FVarId Name) := do
+  let mut references := {}
+  for (uid, sectionVar) in (← read).sectionFVars do
+    if let .fvar id := sectionVar then
+      references := references.insert id uid
+  pure references
+
 private partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
+    (sectionReferences : Std.HashMap FVarId Name)
     (stx : Lean.Syntax) : Lean.Syntax :=
-  if let some name := annotatedConstName? infos stx then
+  if let some uid := (annotatedFVarId? infos stx).bind sectionReferences.get? then
+    mkCIdentFrom stx uid
+  else if let some name := annotatedConstName? infos stx then
     mkCIdentFrom stx name
   else
-    stx.setArgs <| stx.getArgs.map fun child => freezeConstantReferences infos child
+    stx.setArgs <| stx.getArgs.map fun child =>
+      freezeConstantReferences infos sectionReferences child
 
 private def stabilizeExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
   withOptions (fun options =>
       options.set `pp.fullNames true |>.set `pp.privateNames true
+        |>.set `pp.explicit true |>.set `pp.instances true
         |>.set `pp.proofs true |>.set `pp.tagAppFns true
+        |>.set `pp.deepTerms true |>.set `pp.structureInstanceTypes true
+        |>.set `pp.funBinderTypes true
+        |>.set `pp.numericTypes true
+        |>.set `pp.maxSteps (1000000 : Nat)
         |>.set `pp.fieldNotation false) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
-    pure ⟨freezeConstantReferences infos stable.raw⟩
+    pure ⟨freezeConstantReferences infos (← sectionReferenceNames) stable.raw⟩
 
 /-- Delaborate an expression with explicit arguments and fixed constant references. -/
 def exactExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
-  withOptions (fun options => options.set `pp.all true) do
+  withOptions (fun options => options.set `pp.all true
+      |>.set `pp.explicit true |>.set `pp.instances true
+      |>.set `pp.proofs true |>.set `pp.deepTerms true
+      |>.set `pp.structureInstances false |>.set `pp.beta true
+      |>.set `pp.maxSteps (1000000 : Nat)) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
-    pure ⟨freezeConstantReferences infos stable.raw⟩
+    pure ⟨freezeConstantReferences infos (← sectionReferenceNames) stable.raw⟩
 
 /-- Elaborate and stabilize a term for reuse in generated declarations. -/
 def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
@@ -57,6 +92,13 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
     if expression.hasMVar then
       throwErrorAt term "term contains unresolved metavariables"
     stabilizeExpressionSyntax expression
+
+/-- Readable binder type syntax with fixed global references and local names
+that can be retained in presentation metadata across sections. -/
+def presentationTypeSyntax (type : Expr) : TermElabM Lean.Syntax := do
+  let (stx, infos) ← PrettyPrinter.delabCore type {}
+    PrettyPrinter.Delaborator.delab
+  pure <| freezeConstantReferences infos {} stx.raw
 
 /-- Stable type syntax for the semantic and displayed problem types. -/
 structure ProblemTypeSyntax where
@@ -82,7 +124,7 @@ def problemTypeSyntax (optimizationProblem : TSyntax `term) :
     pure {
       domain := ← exactExpressionSyntax domain
       value := ← exactExpressionSyntax value
-      presentationValue := (← stabilizeExpressionSyntax value).raw
+      presentationValue := ← presentationTypeSyntax value
     }
 
 /-- Simplify an expression using only the supplied declarations and reductions. -/
@@ -141,7 +183,27 @@ def mkFeasibleFunction (domain : Expr) (constraints : Array Expr) : MetaM Expr :
     let propositions := constraints.map fun constraint => mkApp constraint point
     mkLambdaFVars #[point] <| mkConstraintConjunctionExpr propositions.toList
 
-/-- Construct the canonical target while preserving checked source semantics. -/
+/-- Replace only the checkpoint at the base of the supported transformation
+spine. In particular, do not search inside user objectives or constraints for
+references to an original source declaration. -/
+private partial def protectCheckpoint (expression checkpoint replacement : Expr) : MetaM Expr := do
+  let expression := expression.consumeMData.headBeta
+  if expression == checkpoint then return replacement
+  if let .letE _ _ value body _ := expression then
+    return ← protectCheckpoint (body.instantiate1 value) checkpoint replacement
+  let arguments := expression.getAppArgs
+  let isPullback := expression.isAppOfArity ``PTran.Problem.pullback 5
+  let isBound := expression.isAppOfArity ``PTran.Problem.epigraph 4 ||
+    expression.isAppOfArity ``PTran.Problem.hypograph 4
+  unless isPullback || isBound do
+    if ← isDefEq expression checkpoint then return replacement
+    throwError "reformulation semantic problem does not extend its canonicalization checkpoint"
+  let base ← protectCheckpoint arguments[3]! checkpoint replacement
+  pure <| mkAppN expression.getAppFn (arguments.set! 3 base)
+
+/-- Construct the canonical target while protecting the checkpoint's ordered
+rows. `sourceName` is retained only for unfolding the original problem container;
+the checkpoint itself may be an explicitly constructed canonical problem. -/
 def canonicalTargetExpression (sourceName : Name)
     (sourceTerm : TSyntax `term) (sourceView : PTran.Syntax.ProblemView)
     (removedConstraintNames : NameSet) (semantic : TSyntax `term)
@@ -170,13 +232,16 @@ def canonicalTargetExpression (sourceName : Name)
       let semanticExpression ← elabTerm semantic none
       synthesizeSyntheticMVarsNoPostponing
       let semanticExpression ← instantiateMVars semanticExpression
-      let protectedSemantic := semanticExpression.replace fun expression =>
-        if expression.getAppFn.isConstOf sourceName then some protectedSource else none
+      let protectedSemantic ← protectCheckpoint semanticExpression source protectedSource
       let transformed ← simpOnly protectedSemantic (unfold :=
         #[``PTran.Problem.pullback, ``PTran.Problem.epigraph,
           ``PTran.Problem.hypograph])
 
-      let exactParts := #[objective] ++ constraints
+      -- A same-domain rewrite can leave the protected objective as a bare
+      -- function. Normalize that function before restoring it, as well as
+      -- normalizing its applications below.
+      let exactObjective ← simpOnly objective (unfold := #[sourceName])
+      let exactParts := #[exactObjective] ++ constraints
       let protectAction : StateT (Array (MVarId × Expr)) TermElabM Expr :=
         Meta.transform transformed (post := fun expression => do
           let function := expression.getAppFn
@@ -242,24 +307,14 @@ def packPoint (components : Array Expr) : MetaM Expr := do
   else
     throwError "a problem presentation requires at least one decision variable"
 
-private def annotatedFVarId? (infos : SubExpr.PosMap Elab.Info)
-    (stx : Lean.Syntax) : Option FVarId := do
-  let .ident (.synthetic start _ _) _ _ _ := stx | none
-  match infos.get? start.byteIdx with
-  | some (.ofTermInfo info) =>
-      let .fvar id := info.expr | none
-      some id
-  | some (.ofDelabTermInfo info) =>
-      let .fvar id := info.toTermInfo.expr | none
-      some id
-  | _ => none
-
 private partial def freezePresentationReferences
     (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
     (stx : Lean.Syntax) : Lean.Syntax :=
   if let some id := annotatedFVarId? infos stx then
     match binders.find? fun entry => entry.1 == id with
     | some (_, name) => mkIdentFrom stx name
+    -- Presentation syntax is persisted and may be used in another section.
+    -- Keep local names instead of capturing the current section's UIDs.
     | none => stx
   else if let some name := annotatedConstName? infos stx then
     mkCIdentFrom stx name
@@ -273,7 +328,9 @@ private def delabPresentationTerm (expression : Expr)
     PrettyPrinter.Delaborator.delab
   pure <| freezePresentationReferences infos binders stx.raw
 
-private def problemViewFromExpression (target : Expr)
+/-- Recover printable bodies from a checked problem while retaining the supplied
+ordered names and binder type syntax. -/
+def problemViewFromExpression (target : Expr)
     (template : PTran.Syntax.ProblemView) : TermElabM PTran.Syntax.ProblemView := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``PTran.Problem &&
@@ -434,8 +491,19 @@ def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
 /-- Describe the checked binder, objective, and constraint presentation changes. -/
 def presentationDeltaBetween
     (current next : PTran.Elab.Reformulation.PresentationState)
-    (objectiveEquality feasibleIff : Expr) :
+    (objectiveEquality feasibleIff : Expr)
+    (constraintSplice? : Option ConstraintSplice := none) :
     MetaM PTran.Elab.Reformulation.PresentationDelta := do
+  if let some splice := constraintSplice? then
+    unless splice.index < current.constraints.size do
+      throwError "constraint splice index is out of bounds"
+    unless next.constraints.size + 1 == current.constraints.size + splice.count do
+      throwError "constraint splice does not match the next presentation shape"
+    for index in [:current.constraints.size] do
+      unless index == splice.index do
+        let nextIndex := if index < splice.index then index else index - 1 + splice.count
+        unless sameUserName current.constraints[index]!.name next.constraints[nextIndex]!.name do
+          throwError "constraint splice changed the order of an unselected constraint"
   if next.binders.size < current.binders.size then
     throwError "reformulation steps cannot remove decision-variable binders"
   let mut binderReplacements := #[]
@@ -461,6 +529,14 @@ def presentationDeltaBetween
 
   let mut constraintReplacements := #[]
   for index in [:current.constraints.size] do
+    if let some splice := constraintSplice? then
+      if index == splice.index then
+        constraintReplacements := constraintReplacements.push {
+          index
+          entries := next.constraints.extract splice.index (splice.index + splice.count)
+          pointwiseIff := feasibleIff
+        }
+        continue
     let currentConstraint := current.constraints[index]!
     let replacement := next.constraints.find? fun candidate =>
       sameUserName candidate.name currentConstraint.name
@@ -470,7 +546,10 @@ def presentationDeltaBetween
       pointwiseIff := feasibleIff
     }
   let mut constraintAdditions := #[]
-  for constraint in next.constraints do
+  for index in [:next.constraints.size] do
+    if let some splice := constraintSplice? then
+      if splice.index ≤ index && index < splice.index + splice.count then continue
+    let constraint := next.constraints[index]!
     unless current.constraints.any fun candidate =>
         sameUserName candidate.name constraint.name do
       constraintAdditions := constraintAdditions.push {

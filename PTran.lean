@@ -2,12 +2,15 @@ import PTran.Affine
 import PTran.Conic
 import PTran.Conic.Basic
 import PTran.Conic.Cone
+import PTran.Conic.Polyhedral
 import PTran.Core
 import PTran.Elab.Affine
 import PTran.Elab.Affine.Space
 import PTran.Elab.Affine.State
 import PTran.Elab.Atom
 import PTran.Elab.Conic
+import PTran.Elab.Conic.Polyhedral
+import PTran.Elab.Conic.Rewrite
 import PTran.Elab.Conic.Space
 import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names
@@ -15,6 +18,7 @@ import PTran.Elab.Reformulation.Presentation
 import PTran.Elab.Reformulation.Runner
 import PTran.Reformulation
 import PTran.Reformulation.Command
+import PTran.Reformulation.Conic
 import PTran.Reformulation.ObjectiveBound
 import PTran.Reformulation.Presentation
 import PTran.Reformulation.State
