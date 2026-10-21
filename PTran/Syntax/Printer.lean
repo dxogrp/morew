@@ -115,12 +115,15 @@ def elabPrintProblem : CommandElab := fun stx => do
   -- A `problem` term can occur as a proper subterm of another declaration.
   -- During elaboration it still sees the enclosing declaration name, so such
   -- a term may leave presentation metadata behind.  Metadata is deliberately
-  -- outside the trusted semantics; validate the declaration's actual type
-  -- before using it.  WHNF also admits transparent aliases of `Problem`.
-  let declType ← liftTermElabM do
+  -- outside the trusted semantics; validate the result type beneath the
+  -- declaration's parameters before using it. Reduction also admits transparent
+  -- aliases hiding further parameters or the final `Problem` type.
+  let isProblem ← liftTermElabM do
     let info ← getConstInfo declName
-    Lean.Meta.whnf info.type
-  unless declType.isAppOfArity ``PTran.Problem 2 do
+    Lean.Meta.forallTelescopeReducing info.type
+      (fun _ resultType => pure <| resultType.isAppOfArity ``PTran.Problem 2)
+      (whnfType := true)
+  unless isProblem do
     throwErrorAt name
       "declaration `{declName}` has problem presentation metadata but is not a `PTran.Problem`"
   logInfoAt stx (← liftCoreM <| formatProblemView view)

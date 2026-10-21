@@ -20,6 +20,15 @@ error: declaration `PTranTest.Syntax.PresentationValidation.nestedProblem` has p
 #guard_msgs in
 #printp nestedProblem
 
+def parameterizedNestedProblem (a : Nat) : Nat × Problem Nat Nat :=
+  (a, problem (x : Nat) minimize x + a)
+
+/--
+error: declaration `PTranTest.Syntax.PresentationValidation.parameterizedNestedProblem` has problem presentation metadata but is not a `PTran.Problem`
+-/
+#guard_msgs in
+#printp parameterizedNestedProblem
+
 /-! Structurally invalid presentation metadata is rejected explicitly. -/
 
 def malformedProblem : Problem Nat Nat where

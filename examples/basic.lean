@@ -31,3 +31,21 @@ reformulation pepi_lb : p := by
 #check pepi_lb.equivalence
 
 end epi_rw
+
+/-
+Parameterized problem examples
+-/
+namespace parameterized
+noncomputable
+
+def shifted (a : ℝ) :=
+  problem (x : ℝ)
+    minimize (x - a)^2
+    subject to
+      lower : x ≥ a
+
+-- Printing the family retains the parameter `a` symbolically.
+#printp shifted
+#check shifted 3
+
+end parameterized

@@ -1,4 +1,6 @@
 import PTran.Syntax
+import Mathlib.Data.Real.Basic
+import Mathlib.Algebra.BigOperators.Fin
 
 /-!
 # Problem presentation printing
@@ -22,6 +24,17 @@ info: problem (x : Nat)
 #guard_msgs in
 #printp genuineProblem
 
+def parameterizedProblem (a : Nat) :=
+  problem (x : Nat)
+    minimize x + a
+
+/--
+info: problem (x : Nat)
+  minimize x + a
+-/
+#guard_msgs in
+#printp parameterizedProblem
+
 def boundedMaximum : Problem Nat (OrderDual Nat) :=
   problem (n : Nat)
     maximize n
@@ -40,6 +53,29 @@ info: problem (n : Nat)
 #guard_msgs in
 #printp boundedMaximum
 
+/-! Family parameters remain source references after their section closes. -/
+
+section
+
+variable {α : Type} [Preorder α] (n : Nat) (score : (Fin n → α) → α) (bound : α)
+
+def parameterizedMaximum : Problem (Fin n → α) (OrderDual α) :=
+  problem (x : Fin n → α)
+    maximize score x
+    subject to
+      upper : ∀ i, x i ≤ bound
+
+end
+
+/--
+info: problem (x : Fin n → α)
+  maximize score x
+  subject to
+    upper : ∀ i, x i ≤ bound
+-/
+#guard_msgs in
+#printp parameterizedMaximum
+
 /-! Transparent aliases of `Problem` are still genuine problem types. -/
 
 abbrev NatProblem := Problem Nat Nat
@@ -54,6 +90,40 @@ info: problem (x : Nat)
 -/
 #guard_msgs in
 #printp aliasedProblem
+
+abbrev NatProblemFamily := Nat → NatProblem
+
+def aliasedParameterizedProblem (a : Nat) : NatProblemFamily :=
+  fun b =>
+    problem (x : Nat)
+      minimize x + a + b
+
+/--
+info: problem (x : Nat)
+  minimize x + a + b
+-/
+#guard_msgs in
+#printp aliasedParameterizedProblem
+
+/-! Matrix dimensions and data stay visible in a least-squares presentation. -/
+
+open scoped BigOperators
+
+noncomputable def leastSquares {m n : Nat}
+    (A : Fin m → Fin n → ℝ) (b : Fin m → ℝ) : Problem (Fin n → ℝ) ℝ :=
+  problem (x : Fin n → ℝ)
+    minimize ∑ i, ((∑ j, A i j * x j) - b i) ^ 2
+    subject to
+      upper : ∀ i, (∑ j, A i j * x j) ≤ b i
+
+/--
+info: problem (x : Fin n → ℝ)
+  minimize ∑ i, ((∑ j, A i j * x j) - b i) ^ 2
+  subject to
+    upper : ∀ i, (∑ j, A i j * x j) ≤ b i
+-/
+#guard_msgs in
+#printp leastSquares
 
 /-! Identifier escaping and hygiene are normalized in printer output. -/
 
