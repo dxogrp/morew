@@ -322,6 +322,10 @@ private partial def freezePresentationReferences
     stx.setArgs <| stx.getArgs.map fun child =>
       freezePresentationReferences infos binders child
 
+-- TODO: Render generated second-order cone carriers as `SOC n` / `RSOC n`
+-- using Lean notation, with `n` the vector dimension. Generate the notation here,
+-- since `#printp` formats stored syntax. Preserve frozen references and cover
+-- re-elaboration of the notation and persistence across imported presentations.
 private def delabPresentationTerm (expression : Expr)
     (binders : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
   let (stx, infos) ← PrettyPrinter.delabCore expression {}
