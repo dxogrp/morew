@@ -18,6 +18,8 @@ import PTranTest.Conic.PolyhedralReview
 import PTranTest.Conic.Rewrite
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
+import PTranTest.ImportCompatibility.Polyhedral
+import PTranTest.ImportCompatibility.Polyhedral.Defined
 import PTranTest.ImportCompatibility.ProblemPresentation
 import PTranTest.ImportCompatibility.ProblemPresentation.Defined
 import PTranTest.ImportCompatibility.ProblemPresentation.Registered
@@ -28,6 +30,8 @@ import PTranTest.Reformulation.CanonicalCheckpoint
 import PTranTest.Reformulation.Composition
 import PTranTest.Reformulation.NameAllocation
 import PTranTest.Reformulation.ObjectiveBoundLabels
+import PTranTest.Reformulation.Polyhedral
+import PTranTest.Reformulation.PolyhedralFailures
 import PTranTest.Reformulation.PresentationUpdates
 import PTranTest.Reformulation.RunnerState
 import PTranTest.Reformulation.SubstitutionContext

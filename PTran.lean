@@ -18,6 +18,7 @@ import PTran.Elab.Reformulation.Presentation
 import PTran.Elab.Reformulation.Runner
 import PTran.Reformulation
 import PTran.Reformulation.Command
+import PTran.Reformulation.Conic
 import PTran.Reformulation.ObjectiveBound
 import PTran.Reformulation.Presentation
 import PTran.Reformulation.State

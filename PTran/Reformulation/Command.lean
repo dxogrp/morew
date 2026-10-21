@@ -1,4 +1,5 @@
 import PTran.Reformulation.ObjectiveBound
+import PTran.Reformulation.Conic
 import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
@@ -230,6 +231,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .maximize
+      | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
+          prepareConic state step selector rule
       | _ => throwUnsupportedSyntax
     let (result, materialization) ← runTypedStepPlan state draft
     state ← commitSurfaceStep state result materialization
