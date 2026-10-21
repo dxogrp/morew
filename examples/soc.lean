@@ -2,6 +2,27 @@ import PTran
 
 open PTran
 
+/-
+Second-order cone rewriting
+-/
+namespace soc
+noncomputable
+
+def leastSquares :=
+  problem (x : Fin 2 → ℝ)
+    minimize (x 0 - 1) ^ 2 + (x 1 + 2) ^ 2
+    subject to
+      radius : ‖WithLp.toLp 2 x‖ ≤ 5
+
+reformulation coneBound : leastSquares := by
+  conic at radius
+  epigraph t as objectiveBound
+
+#printp coneBound
+#check coneBound.equivalence
+
+end soc
+
 namespace quadoverlin
 noncomputable
 
@@ -16,7 +37,6 @@ reformulation lowered : original := by
   epigraph t as quadraticBound
   conic at quadraticBound
 
--- The generated row is (t, y / 2, ![x]) ∈ RSOC 1.
 #printp original
 #printp lowered
 #check lowered.equivalence

@@ -72,26 +72,3 @@ reformulation linearBounds : absoluteObjective := by
 #check linearBounds.equivalence
 
 end polyhedral
-
-/-
-Targeted second-order cone rewriting
--/
-namespace secondOrder
-noncomputable
-
-def leastSquares :=
-  problem (x : Fin 2 → ℝ)
-    minimize (x 0 - 1) ^ 2 + (x 1 + 2) ^ 2
-    subject to
-      radius : ‖WithLp.toLp 2 x‖ ≤ 5
-
-reformulation coneBound : leastSquares := by
-  conic at radius
-  epigraph t as objectiveBound
-
--- The retained bound is an actual cone-membership row; the certificate relates
--- the original problem to the result after both exact transformations.
-#printp coneBound
-#check coneBound.equivalence
-
-end secondOrder
