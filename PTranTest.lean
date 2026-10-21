@@ -15,6 +15,7 @@ import PTranTest.Conic
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
 import PTranTest.Conic.Rewrite
+import PTranTest.Conic.SecondOrder
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ImportCompatibility.Polyhedral
