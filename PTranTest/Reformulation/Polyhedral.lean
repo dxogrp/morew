@@ -410,6 +410,29 @@ example : GlobalEquivalence source target := target.equivalence
 example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ∧ x ≤ y ∧ y ≤ x ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
+/-- A local alias in a replacement row may depend on the auxiliary decision. -/
+def auxiliaryAliasLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+  Auxiliary := ℝ
+  target x u := u = x ∧ (let y := u; 0 ≤ y)
+  source_iff_exists x := by simp
+
+def auxiliaryAliasSource :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      before : x ≤ 3
+      positive : 0 ≤ x
+      after : x ≤ 5
+
+reformulation auxiliaryAliasTarget : auxiliaryAliasSource := by
+  conic at positive using auxiliaryAliasLift
+
+example : GlobalEquivalence auxiliaryAliasSource auxiliaryAliasTarget :=
+  auxiliaryAliasTarget.equivalence
+
+example (x u : ℝ) : auxiliaryAliasTarget.feasible (x, u) ↔
+    x ≤ 3 ∧ u = x ∧ 0 ≤ u ∧ x ≤ 5 := Iff.rfl
+
 def trivialLift : ExactConstraintLift (fun x : ℝ => x = x) :=
   ExactConstraintLift.ofIff (fun _ => True) (fun _ => by simp)
 

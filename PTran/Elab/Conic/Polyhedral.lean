@@ -112,11 +112,16 @@ private partial def exposeTarget (body : Expr) : MetaM Expr := do
 
 private partial def splitTarget (body : Expr) : MetaM (List Expr × Expr) := do
   let body ← exposeTarget body
-  if let .letE name type value rest nondep := body then
-    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+  if let .letE name type value rest _ := body then
+    -- The decomposition proof's type can depend on this value even when the
+    -- original predicate's type does not. Rebuild it as a dependent let.
+    return ← withLetDecl name type value fun binding => do
       let (rows, proof) ← splitTarget (rest.instantiate1 binding)
-      let rows ← rows.mapM fun row => mkLetFVars #[binding] row (usedLetOnly := false)
-      let proof ← mkLetFVars #[binding] proof (usedLetOnly := false)
+      -- Keep nondependent lets as lets, rather than abstracting them into lambdas.
+      let rows ← rows.mapM fun row =>
+        mkLetFVars #[binding] row (usedLetOnly := false) (generalizeNondepLet := false)
+      let proof ← mkLetFVars #[binding] proof
+        (usedLetOnly := false) (generalizeNondepLet := false)
       return (rows, proof)
   if body.isConstOf ``True then
     return ([], mkApp (mkConst ``Iff.rfl) body)
