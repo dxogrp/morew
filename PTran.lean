@@ -9,6 +9,7 @@ import PTran.Elab.Affine.Space
 import PTran.Elab.Affine.State
 import PTran.Elab.Atom
 import PTran.Elab.Conic
+import PTran.Elab.Conic.Polyhedral
 import PTran.Elab.Conic.Space
 import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names

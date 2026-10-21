@@ -13,6 +13,8 @@ import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
 import PTranTest.Conic
 import PTranTest.Conic.Polyhedral
+import PTranTest.Conic.PolyhedralElab
+import PTranTest.Conic.PolyhedralReview
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ImportCompatibility.ProblemPresentation
