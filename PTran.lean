@@ -2,6 +2,7 @@ import PTran.Affine
 import PTran.Conic
 import PTran.Conic.Basic
 import PTran.Conic.Cone
+import PTran.Conic.Polyhedral
 import PTran.Core
 import PTran.Elab.Affine
 import PTran.Elab.Affine.Space
