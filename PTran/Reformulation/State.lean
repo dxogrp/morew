@@ -52,6 +52,23 @@ def liftCertificateEquivalence (runner : CertificateRunner)
 def globalEquivalenceRunner : CertificateRunner :=
   PTran.Elab.Reformulation.globalEquivalenceRunner
 
+/-- The exact problem whose ordered rows are protected while later standard
+steps are normalized. A rewrite may establish a new checkpoint without changing
+the original source of the accumulated certificate. -/
+structure CanonicalCheckpoint where
+  /-- Stable syntax for the checked checkpoint problem. -/
+  semantic : TSyntax `term
+  /-- The checkpoint's ordered binder and constraint presentation. -/
+  view : PTran.Syntax.ProblemView
+
+/-- Replace one selected constraint in place by a fixed number of ordered rows.
+The index refers to the presentation at step entry. -/
+structure ConstraintSplice where
+  /-- Position of the selected original constraint. -/
+  index : Nat
+  /-- Number of generated replacement rows, possibly zero. -/
+  count : Nat
+
 /-- Checked runner state together with syntax retained for declaration emission. -/
 structure ReformState where
   /-- Current checked semantic, presentation, and certificate state. -/
@@ -75,13 +92,15 @@ structure ReformState where
   source : TSyntax `term
   /-- Fully qualified declaration name of the source problem. -/
   sourceName : Name
+  /-- Base problem and row boundaries protected by canonicalization. -/
+  checkpoint : CanonicalCheckpoint
   /-- Certificate relation and composition operations. -/
   runner : CertificateRunner
   /-- Whether canonicalization simplifies exponential and logarithmic terms. -/
   simplifyExpLogTerms : Bool := false
   /-- Whether the script has committed a substitution step. -/
   hasSubstitution : Bool := false
-  /-- Source constraint labels whose rows have been proved removable. -/
+  /-- Checkpoint constraint labels whose rows have been proved removable. -/
   removedConstraintNames : NameSet := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
@@ -102,10 +121,15 @@ structure SurfaceStepResult where
   simplifyExpLogTerms : Bool
   /-- Whether the proposed state includes a substitution. -/
   hasSubstitution : Bool
-  /-- Source constraint labels removed by the proposed state. -/
+  /-- Checkpoint constraint labels removed by the proposed state. -/
   removedConstraintNames : NameSet
   /-- Accumulated checked predicate equivalences. -/
   normalizationLemmas : Array (TSyntax `term)
+  /-- Optional new base for normalization after a checked rewrite. Its removal
+  inventory starts empty; subsequent standard steps inherit this checkpoint. -/
+  checkpoint? : Option CanonicalCheckpoint := none
+  /-- Optional ordered replacement of one selected constraint. -/
+  constraintSplice? : Option ConstraintSplice := none
   /-- Whether additional steps may follow this result. -/
   status : PTran.Elab.Reformulation.StepStatus := .continue
   /-- Additional declarations requested by the step. -/

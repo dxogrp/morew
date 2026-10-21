@@ -43,11 +43,11 @@ private def validateTypedPrimitive (state : ReformState)
     if primitiveProof.hasMVar then
       throwErrorAt result.primitiveCertificate
         "primitive reformulation certificate contains unresolved metavariables"
-    let env ← getEnv
-    let some sourceView := PTran.Syntax.getProblemView? env state.sourceName
-      | throwError "source presentation metadata disappeared during reformulation"
-    let nextCanonical ← canonicalTargetExpression state.sourceName state.source
-      sourceView result.removedConstraintNames result.semantic
+    let checkpoint := result.checkpoint?.getD state.checkpoint
+    unless result.checkpoint?.isNone || result.removedConstraintNames.isEmpty do
+      throwError "a new canonicalization checkpoint must start with no removed constraints"
+    let nextCanonical ← canonicalTargetExpression state.sourceName checkpoint.semantic
+      checkpoint.view result.removedConstraintNames result.semantic
       result.simplifyExpLogTerms
     let currentPresentation := typed.presentation
     let nextPresentation ←
@@ -57,6 +57,7 @@ private def validateTypedPrimitive (state : ReformState)
         result.normalizationLemmas
     let presentationDelta ← presentationDeltaBetween currentPresentation
       nextPresentation normalization.objectiveEquality normalization.feasibleIff
+      result.constraintSplice?
     let updatedPresentation ← match currentPresentation.applyDelta presentationDelta with
       | .ok presentation => pure presentation
       | .error error =>
@@ -158,6 +159,7 @@ def commitSurfaceStep (state : ReformState)
     view := surface.view
     semantic := surface.semantic
     semanticDomainType := surface.semanticDomainType
+    checkpoint := surface.checkpoint?.getD state.checkpoint
     certificateSyntax
     simplifyExpLogTerms := surface.simplifyExpLogTerms
     hasSubstitution := surface.hasSubstitution

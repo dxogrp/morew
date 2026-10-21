@@ -24,6 +24,7 @@ import PTranTest.ImportCompatibility.ProblemPresentation.Registered
 import PTranTest.ImportCompatibility.Reformulation
 import PTranTest.ImportCompatibility.Runner
 import PTranTest.ImportCompatibility.TypedPresentation
+import PTranTest.Reformulation.CanonicalCheckpoint
 import PTranTest.Reformulation.Composition
 import PTranTest.Reformulation.NameAllocation
 import PTranTest.Reformulation.ObjectiveBoundLabels

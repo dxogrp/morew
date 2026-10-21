@@ -215,6 +215,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
     certificateSyntax := initialCertificateSyntax
     source := sourceTerm
     sourceName
+    checkpoint := { semantic := sourceTerm, view := sourceView }
     runner
   }
 
@@ -301,7 +302,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
           $certificateDeclIdent)
 
     let elabCanonicalDeclarations : CommandElabM Unit := do
-      elabSemanticTarget targetDeclIdent sourceName sourceTerm sourceView
+      elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
         state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
       unless (← get).messages.hasErrors do
         elabCommand certificateCommand
