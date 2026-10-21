@@ -127,6 +127,74 @@ example : GlobalEquivalence source target := target.equivalence
 
 end FiniteExtrema
 
+namespace FiniteInstances
+
+class Parameter where
+  Index : Type
+  equiv : Fin 2 ≃ Index
+  coeff : Index → ℝ
+
+section
+
+variable [Parameter]
+
+/- The index type has no ambient `Fintype` instance. Generated rows must retain
+the source's explicit instance through declaration emission and later reuse. -/
+def source :=
+  problem (x : Parameter.Index → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      bound : |@dotProduct Parameter.Index ℝ
+        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
+
+reformulation automaticTarget : source := by
+  conic at bound
+
+example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
+
+example (x : Parameter.Index → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    automaticTarget.feasible x ↔
+      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+
+def exactLift : ExactConstraintLift (fun x : Parameter.Index → ℝ =>
+    |@dotProduct Parameter.Index ℝ
+      (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1) :=
+  ExactConstraintLift.ofIff (fun x =>
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
+    (fun _ => PTran.Conic.Polyhedral.abs_le_iff _ _)
+
+reformulation customTarget : source := by
+  conic at bound using exactLift
+
+example : GlobalEquivalence source customTarget := customTarget.equivalence
+
+example (x : Parameter.Index → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    customTarget.feasible x ↔
+      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+
+end
+
+section
+
+variable [Parameter]
+
+reformulation continued : automaticTarget := by
+  epigraph t
+
+example : GlobalEquivalence automaticTarget continued := continued.equivalence
+
+example (x : Parameter.Index → ℝ) (t : ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    continued.feasible (x, t) ↔
+      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 ∧ 0 ≤ t := Iff.rfl
+
+end
+
+end FiniteInstances
+
 namespace SectionParameters
 
 class Parameter (a : outParam ℝ) where
