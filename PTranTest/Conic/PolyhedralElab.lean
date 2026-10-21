@@ -1,11 +1,12 @@
 import PTran.Elab.Conic.Polyhedral
+import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
 # Typed exact polyhedral planning
 
 These tests check exactness, ordered row decomposition, native instance
-recognition, and custom whole-predicate certificate adapters independently of
-the surface reformulation command.
+recognition, local evidence, caller metavariable state, and custom whole-predicate
+certificate adapters independently of the surface reformulation command.
 -/
 
 namespace PTranTest.Conic.PolyhedralElab
@@ -22,22 +23,24 @@ private def elaborate (stx : TSyntax `term) : TermElabM Expr := do
   instantiateMVars expression
 
 private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
-    (rule? : Option (TSyntax `term) := none) : TermElabM Unit := do
-  let source ← elaborate stx
-  let rule? ← rule?.mapM elaborate
-  let outcome ← PTran.Elab.Conic.Polyhedral.plan source rule?
-  let result ← match outcome with
-    | .ok result => pure result
-    | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
-  unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
-    throwError "expected {rows} rows, got {result.rowPredicates.size}"
-  unless result.auxiliary?.isSome == auxiliary do
-    throwError "unexpected auxiliary-variable shape"
-  checkWithKernel result.lift
-  checkWithKernel result.targetIff
-  for row in result.certifiedRows do
-    checkWithKernel row.constraint
-    checkWithKernel row.pointwiseIff
+    (rule? : Option (TSyntax `term) := none) (parameterCount : Nat := 0) :
+    TermElabM Unit := do
+  let expression ← elaborate stx
+  lambdaBoundedTelescope expression parameterCount fun _ source => do
+    let rule? ← rule?.mapM elaborate
+    let outcome ← PTran.Elab.Conic.Polyhedral.plan source rule?
+    let result ← match outcome with
+      | .ok result => pure result
+      | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
+    unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
+      throwError "expected {rows} rows, got {result.rowPredicates.size}"
+    unless result.auxiliary?.isSome == auxiliary do
+      throwError "unexpected auxiliary-variable shape"
+    checkWithKernel result.lift
+    checkWithKernel result.targetIff
+    for row in result.certifiedRows do
+      checkWithKernel row.constraint
+      checkWithKernel row.pointwiseIff
 
 private def expectRejected (stx : TSyntax `term) (fragment : String)
     (rule? : Option (TSyntax `term) := none) : TermElabM Unit := do
@@ -81,6 +84,21 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ({1, 3} : Finset ℕ).sup' (by decide) (fun i => (i : ℝ) * x) ≤ 4)) 1 false
   expectPlan (← `(fun x : ℝ =>
     4 ≤ ({1, 3} : Finset ℕ).inf' (by decide) (fun i => (i : ℝ) * x))) 1 false
+
+/-! Affine certification must retain local nonzero proofs and finite-index
+instances supplied only inside the selected predicate. -/
+run_cmd Lean.Elab.Command.liftTermElabM do
+  expectPlan (← `(fun (a : ℝ) => fun x : ℝ =>
+    let h : Real.exp a ≠ 0 := Real.exp_ne_zero a
+    |x / Real.exp a| ≤ 1)) 2 false (parameterCount := 1)
+  expectPlan (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) =>
+    fun x : ι → ℝ =>
+      |@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ a x| ≤ 1))
+    2 false (parameterCount := 3)
+  expectPlan (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) =>
+    fun x : ι → ℝ =>
+      letI := Fintype.ofEquiv (Fin 2) e
+      max (a ⬝ᵥ x) (x ⬝ᵥ a) ≤ 1)) 2 false (parameterCount := 3)
 
 def wholeConjunction : ExactConstraintLift (fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2) :=
   ExactConstraintLift.ofIff
@@ -160,8 +178,15 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ => @LE.le ℝ ⟨fun a b => a + 1 ≤ b⟩ |x| 1)) "order instance"
   expectRejected (← `(fun v : Fin 2 → ℝ =>
     @Norm.norm (Fin 2 → ℝ) ⟨fun _ => 0⟩ v ≤ 1)) "unsupported instance"
+  -- Coincident operands still require the native maximum instance.
   expectRejected (← `(fun x : ℝ =>
-    @Max.max ℝ ⟨fun a _ => a⟩ x 0 ≤ 1)) "no supported"
+    @Max.max ℝ ⟨fun a _ => a⟩ x x ≤ 1)) "no supported"
+  expectRejected (← `(fun x : ℝ =>
+    @Finset.sup' ℝ ℕ (inferInstance : SemilatticeSup (OrderDual ℝ))
+      {0} (by simp) (fun _ => x) ≤ 1)) "unsupported instance"
+  expectRejected (← `(fun x : ℝ =>
+    (if x ≤ 0 then ({0} : Finset ℕ) else {1}).sup'
+      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "depends on a decision"
   expectRejected (← `(fun x : ℝ => 0 ≤ x ∨ x ≤ 0)) "unsupported exact target"
     (some (← `(disjunctiveTarget)))
   expectRejected (← `(predicateHelper)) "unsupported exact target"
@@ -185,6 +210,14 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "an unresolved bound hidden in a let was accepted"
     unless (← error.reason.toString).contains "unresolved metavariables" do
       throwError "wrong hidden-bound diagnostic: {error.reason}"
+  let coefficientBuilder ← elaborate (← `(fun (a x : ℝ) => |a * x| ≤ 1))
+  withLetDecl `coefficient (mkConst ``Real) missing fun coefficient => do
+    let .error error ← PTran.Elab.Conic.Polyhedral.plan (mkApp coefficientBuilder coefficient)
+      | throwError "planner specialized an unresolved coefficient hidden in a local declaration"
+    unless (← error.reason.toString).contains "unresolved" do
+      throwError "missing unresolved-coefficient diagnostic"
+    if ← missing.mvarId!.isAssigned then
+      throwError "failed planning assigned a caller metavariable"
   let source ← elaborate (← `(fun x : ℝ => |x| ≤ 2))
   let before ← getMCtx
   let .ok _ ← PTran.Elab.Conic.Polyhedral.plan source

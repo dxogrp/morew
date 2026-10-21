@@ -14,7 +14,6 @@ import PTranTest.Atom.Unsupported
 import PTranTest.Conic
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
-import PTranTest.Conic.PolyhedralReview
 import PTranTest.Conic.Rewrite
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
