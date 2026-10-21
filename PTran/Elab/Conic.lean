@@ -8,8 +8,9 @@ import PTran.Elab.Reformulation.Presentation
 # Checked affine row normalization
 
 This internal API recognizes elaborated scalar and finite-vector equality and
-inequality predicates. It returns a semantic cone row and a checked pointwise
-equivalence, without changing a problem or its presentation.
+inequality predicates, and native second-order cone membership. It returns a
+semantic cone row and a checked pointwise equivalence, without changing a
+problem or its presentation.
 -/
 
 namespace PTran.Elab.Conic
@@ -54,6 +55,21 @@ private theorem normalizeLE
   change 0 ≤ g x - f x ↔ lhs x ≤ rhs x
   rw [hf, hg, sub_nonneg]
 
+-- This fixed-context template retains the actual canonical membership
+-- instance. Comparing only the resulting propositions would also accept a
+-- custom membership relation that happens to agree at the selected tuple.
+private def canonicalMembership (cone : PTran.Conic.Cone) (value : cone.Space) : Prop :=
+  value ∈ cone.carrier
+
+private theorem normalizeMembership
+    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    (cone : PTran.Conic.Cone) (map : X →ᵃ[ℝ] cone.Space)
+    (source : X → cone.Space) (h : ∀ x, map x = source x) :
+    ∀ x, (PTran.Conic.Constraint.mk cone map).Holds x ↔ source x ∈ cone.carrier := by
+  intro x
+  change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
+  rw [h x]
+
 /-- Return the canonical real or coordinatewise real order, rather than using
 an arbitrary local `LE` instance that happens to have the same operand type. -/
 private def realOrder? (type : Expr) : MetaM (Option Expr) := do
@@ -61,8 +77,9 @@ private def realOrder? (type : Expr) : MetaM (Option Expr) := do
   if type.isConstOf ``Real then
     return some (mkConst ``Real.instLE)
   let .forallE name domain codomain _ := type | return none
+  let codomain ← whnf codomain
   if codomain.hasLooseBVars then return none
-  unless (← whnf codomain).isConstOf ``Real do return none
+  unless codomain.isConstOf ``Real do return none
   unless (← whnf domain).isAppOfArity ``Fin 1 do return none
   let family := mkLambda name .default domain (mkConst ``Real)
   let orders := mkLambda name .default domain (mkConst ``Real.instLE)
@@ -114,6 +131,49 @@ private partial def withPredicateLets (point body : Expr)
   else
     action body
 
+private def normalizeMembershipRow (predicate domain point body : Expr)
+    (config : Affine.Config) (label? : Option Name) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  let args := body.getAppArgs
+  let carrier ← Affine.reduceStructure args[3]!
+  unless carrier.isAppOfArity ``PTran.Conic.Cone.carrier 1 do
+    return .error (← rowError body "expected native second-order cone membership" label?)
+  let cone ← Affine.reduceStructure carrier.getAppArgs[0]!
+  unless cone.isAppOfArity ``PTran.Conic.Cone.secondOrder 1 ||
+      cone.isAppOfArity ``PTran.Conic.Cone.rotatedSecondOrder 1 do
+    return .error (← rowError body m!"unsupported cone {cone}" label?)
+  if ← Affine.depends point cone then
+    return .error (← rowError body "cone dimension depends on the decision point" label?)
+  let value := args[4]!
+  let template := (← getConstInfo ``canonicalMembership).value!
+  let canonical := (mkAppN template #[cone, value]).headBeta
+  let canonicalArgs := canonical.getAppArgs
+  unless ← isDefEq args[2]! canonicalArgs[2]! do
+    return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
+  unless ← isDefEq body canonical do
+    return .error (← rowError body "membership does not match the canonical cone" label?)
+  let source ← mkLambdaFVars #[point] value
+  let affine ← Affine.reifyAffine source config
+  if let .error error := affine then
+    return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
+  let .ok affine := affine
+    | return .error (← rowError body "failed to recognize cone coordinates" label?)
+  let target ← whnf (← mkAppM ``PTran.Conic.Cone.Space #[cone])
+  let (constraint, pointwiseIff) ← Space.withCanonicalConeSpaces domain target do
+    let constraint ← instantiateMVars (← mkAppM ``PTran.Conic.Constraint.mk #[cone, affine.map])
+    let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeMembership
+      #[cone, affine.map, source, affine.pointwiseEquality])
+    if constraint.hasMVar || pointwiseIff.hasMVar then
+      throwError "row construction left unresolved metavariables"
+    let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
+    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+    checkWithKernel constraint
+    checkWithKernel pointwiseIff
+    unless ← isDefEq (← inferType pointwiseIff) expected do
+      throwError "row equivalence did not match the input predicate"
+    return (constraint, pointwiseIff)
+  return .ok { constraint, pointwiseIff }
+
 private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
   let type ← whnf (← inferType predicate)
@@ -125,6 +185,8 @@ private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config
     -- Preserve the typed relation head while eliminating language-level
     -- wrappers, including the product patterns used by the surface DSL.
     withPredicateLets point (mkApp predicate point) fun body => do
+      if body.isAppOfArity ``Membership.mem 5 then
+        return ← normalizeMembershipRow predicate domain point body config label?
       let args := body.getAppArgs
       let equality := body.isAppOfArity ``Eq 3
       let greaterEqual := body.isAppOfArity ``GE.ge 4
@@ -201,7 +263,8 @@ private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
   withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate config label?
 
-/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row.
+/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, or native
+second-order/rotated-second-order cone membership of affine coordinates.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
 def normalizeRow (predicate : Expr) (config : Affine.Config := {})

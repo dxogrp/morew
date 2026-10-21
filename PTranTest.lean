@@ -12,9 +12,13 @@ import PTranTest.Atom.Recognition
 import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
 import PTranTest.Conic
+import PTranTest.Conic.EuclideanAffine
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
 import PTranTest.Conic.Rewrite
+import PTranTest.Conic.SecondOrder
+import PTranTest.Conic.SecondOrderElab
+import PTranTest.Conic.SecondOrderRows
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ImportCompatibility.Polyhedral
@@ -24,6 +28,8 @@ import PTranTest.ImportCompatibility.ProblemPresentation.Defined
 import PTranTest.ImportCompatibility.ProblemPresentation.Registered
 import PTranTest.ImportCompatibility.Reformulation
 import PTranTest.ImportCompatibility.Runner
+import PTranTest.ImportCompatibility.SecondOrder
+import PTranTest.ImportCompatibility.SecondOrder.Defined
 import PTranTest.ImportCompatibility.TypedPresentation
 import PTranTest.Reformulation.CanonicalCheckpoint
 import PTranTest.Reformulation.Composition
@@ -33,6 +39,9 @@ import PTranTest.Reformulation.Polyhedral
 import PTranTest.Reformulation.PolyhedralFailures
 import PTranTest.Reformulation.PresentationUpdates
 import PTranTest.Reformulation.RunnerState
+import PTranTest.Reformulation.SecondOrder
+import PTranTest.Reformulation.SecondOrderCustom
+import PTranTest.Reformulation.SecondOrderFailures
 import PTranTest.Reformulation.SubstitutionContext
 import PTranTest.Reformulation.SubstitutionFailures
 import PTranTest.Surface.Affine

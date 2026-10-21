@@ -1,4 +1,5 @@
 import PTran.Conic.Basic
+import PTran.Elab.Affine.Space
 import Lean.Meta.Basic
 import Qq
 
@@ -24,6 +25,10 @@ namespace Structure
 
 /-- Standard real normed structures, resolved in this fixed context. -/
 noncomputable def real : Structure ℝ := ⟨inferInstance, inferInstance⟩
+
+/-- Standard finite Euclidean normed structures, independent of ambient instances. -/
+noncomputable def euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) :=
+  ⟨inferInstance, inferInstance⟩
 
 /-- Product normed structures from two explicitly supplied factors. -/
 noncomputable def prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
@@ -53,11 +58,14 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
+  else if let some n ← Affine.Space.euclideanDimension? shape then
+    finishSpace type (← mkAppM ``Structure.euclidean #[n])
   else if shape.isAppOfArity ``Prod 2 then
     let left ← buildSpace shape.getAppArgs[0]!
     let right ← buildSpace shape.getAppArgs[1]!
     finishSpace type (← mkAppM ``Structure.prod #[left, right])
   else if let .forallE _ index body _ := shape then
+    let body ← whnf body
     if body.hasLooseBVars || (← isProp index) then
       throwError "affine rows require a nondependent function space, got {type}"
     let target ← buildSpace body
@@ -119,5 +127,22 @@ def withCanonicalSpaces (domain target : Expr)
   let space ← mkAppM ``Structure.space #[data]
   let instances := realInstances ++ #[group, space] ++ (← targetInstances target)
   installInstances instances.toList action
+
+/-- Construct a cone-membership row using canonical normed structures on its
+coordinate space. Cone coordinates need no order structure. -/
+def withCanonicalConeSpaces (domain target : Expr)
+    (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
+  let domainData ← buildSpace domain
+  let targetData ← buildSpace target
+  let instances := realInstances ++ #[
+    ← mkAppM ``Structure.group #[domainData],
+    ← mkAppM ``Structure.space #[domainData],
+    ← mkAppM ``Structure.group #[targetData],
+    ← mkAppM ``Structure.space #[targetData]]
+  installInstances instances.toList do
+    let finiteType ← mkAppOptM ``FiniteDimensional
+      #[some (mkConst ``Real), some target, none, none, none]
+    let finite ← synthInstance finiteType
+    installInstances [finite] action
 
 end PTran.Elab.Conic.Space

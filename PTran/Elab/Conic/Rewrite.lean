@@ -165,4 +165,53 @@ def rewriteConstraint (presentation : PresentationState) (index : Nat)
   checkWithKernel equivalence
   return { targetProblem, equivalence }
 
+/-- Replace a selected row using a pointwise equivalence conditional on exactly
+the retained rows. The remainder is reconstructed in both directions; no
+assumption about the selected source row may escape into the reverse proof. -/
+def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
+    (rows : Array Expr) (conditionalIff : Expr) : MetaM RewriteResult := do
+  unless index < presentation.constraints.size do
+    throwError "constraint replacement index is out of bounds"
+  let oldProblem ← presentation.canonicalProblem
+  let oldRows := presentation.constraints.map (·.predicate)
+  let remainder := splice oldRows index #[]
+  let nextRows := splice oldRows index rows
+  let domain := presentation.domainType
+  let expected ← withLocalDeclD `point domain fun point => do
+    let hypothesis := conjunction (applyRows remainder point)
+    let conclusion := mkApp2 (mkConst ``Iff) (mkApp oldRows[index]! point)
+      (conjunction (applyRows rows point))
+    mkForallFVars #[point] (← mkArrow hypothesis conclusion)
+  unless ← isDefEq (← inferType conditionalIff) expected do
+    throwError "conditional conic certificate does not match the selected row and retained constraints"
+  checkWithKernel conditionalIff
+  let feasible ← feasibleFunction domain nextRows
+  let targetProblem ← mkAppM ``PTran.Problem.mk #[presentation.objective, feasible]
+  let feasibleIff ← withLocalDeclD `point domain fun point => do
+    let proof ← proveIff (conjunction (applyRows oldRows point))
+      (conjunction (applyRows nextRows point)) (fun h => do
+        let parts ← conjunctionParts oldRows.size h
+        let other := splice parts index #[]
+        let block := mkApp2 conditionalIff point (← conjunctionProof other)
+        let generated ← conjunctionParts rows.size
+          (← mkAppM ``Iff.mp #[block, parts[index]!])
+        conjunctionProof (other.extract 0 index ++ generated ++ other.extract index other.size))
+      (fun h => do
+        let parts ← conjunctionParts nextRows.size h
+        let before := parts.extract 0 index
+        let after := parts.extract (index + rows.size) parts.size
+        let block := mkApp2 conditionalIff point (← conjunctionProof (before ++ after))
+        let generated ← conjunctionProof (parts.extract index (index + rows.size))
+        let selected ← mkAppM ``Iff.mpr #[block, generated]
+        conjunctionProof (before ++ #[selected] ++ after))
+    mkLambdaFVars #[point] proof
+  let objectiveEq ← withLocalDeclD `point domain fun point => do
+    mkLambdaFVars #[point] (← mkEqRefl (mkApp presentation.objective point))
+  let equivalence ← instantiateMVars (← mkAppM ``PTran.pointwiseEquivalence
+    #[oldProblem, targetProblem, objectiveEq, feasibleIff])
+  if equivalence.hasMVar then
+    throwError "conditional constraint replacement contains unresolved metavariables"
+  checkWithKernel equivalence
+  return { targetProblem, equivalence }
+
 end PTran.Elab.Conic

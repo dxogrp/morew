@@ -24,7 +24,7 @@ choosing the generated constraint's presentation label. -/
 syntax (name := hypographStep)
   "hypograph " ident (" as " ident)? : reformulationStep
 
-/-- Replace one current constraint by an exact polyhedral representation,
+/-- Replace one current constraint by an exact conic representation,
 optionally using an explicitly supplied representation certificate. -/
 syntax (name := conicAtStep)
   "conic " "at " ident (" using " term)? : reformulationStep

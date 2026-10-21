@@ -1,9 +1,11 @@
 import PTran.Elab.Conic.Polyhedral
+import PTran.Elab.Conic.SecondOrder
 import PTran.Elab.Conic.Rewrite
 import PTran.Reformulation.Presentation
+import Lean.Meta.Closure
 
 /-!
-# Targeted exact polyhedral rewriting
+# Targeted exact conic rewriting
 
 The surface handler selects one current presentation label, preflights the
 generated name family, and materializes a checked in-place replacement.
@@ -23,8 +25,15 @@ freshens collisions numerically. The original selected label is consumed.
 hypograph representation of the entire predicate. Its inspectable target may
 contain `True`, conjunctions, and affine scalar/vector equalities or non-strict
 inequalities. Every generated row is certified independently of the objective
-or other constraints. The command remains nonterminal and does not certify a
-whole problem as conic.
+or other constraints. Supported SOC and rotated-SOC memberships are also valid
+custom target rows.
+
+Native Euclidean norms, scalar squares, and finite sums of squares become one
+SOC or rotated-SOC membership row. Quotients of squares require a positive
+constant lower margin on the denominator, obtained from an unchanged constraint
+(or a directly proved positive constant denominator). Existing margin rows stay
+in place. The command remains nonterminal and does not certify a whole problem
+as conic.
 -/
 
 namespace PTran.Reformulation.Internal
@@ -32,8 +41,8 @@ namespace PTran.Reformulation.Internal
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 open PTran.Elab.Reformulation
 
-private def rebasePlan (result : PTran.Elab.Conic.Polyhedral.Result)
-    (oldVars newVars : Array Expr) : PTran.Elab.Conic.Polyhedral.Result := {
+private def rebaseExactPlan (result : PTran.Elab.Conic.Plan.Result)
+    (oldVars newVars : Array Expr) : PTran.Elab.Conic.Plan.Result := {
   lift := result.lift.replaceFVars oldVars newVars
   auxiliary? := result.auxiliary?.map (·.replaceFVars oldVars newVars)
   nextDomain := result.nextDomain.replaceFVars oldVars newVars
@@ -45,6 +54,29 @@ private def rebasePlan (result : PTran.Elab.Conic.Polyhedral.Result)
   }
 }
 
+private abbrev Prepared := Sum PTran.Elab.Conic.Plan.Result PTran.Elab.Conic.SecondOrder.Result
+
+private def Prepared.replaceFVars (prepared : Prepared) (oldVars newVars : Array Expr) : Prepared :=
+  match prepared with
+  | .inl exact => .inl (rebaseExactPlan exact oldVars newVars)
+  | .inr contextual => .inr (contextual.replaceFVars oldVars newVars)
+
+private def Prepared.rowPredicates : Prepared → Array Expr
+  | .inl exact => exact.rowPredicates
+  | .inr contextual => contextual.rowPredicates
+
+private def Prepared.auxiliary? : Prepared → Option Expr
+  | .inl exact => exact.auxiliary?
+  | .inr _ => none
+
+private def Prepared.nextDomain : Prepared → Expr
+  | .inl exact => exact.nextDomain
+  | .inr contextual => contextual.domain
+
+private def Prepared.certificate : Prepared → Expr
+  | .inl exact => exact.lift
+  | .inr contextual => contextual.conditionalIff
+
 private def generatedStem (selector : TSyntax `ident) : CommandElabM String := do
   let .str _ stem := selector.getId.eraseMacroScopes
     | throwErrorAt selector "cannot derive a generated-name family from constraint `{selector.getId}`"
@@ -54,8 +86,8 @@ private def generatedStem (selector : TSyntax `ident) : CommandElabM String := d
 
 -- A row predicate occurs repeatedly in the explicit types and arguments of
 -- the conjunction proofs. Keep those predicates, then their containing lift
--- and problems, shared through the syntax round trip. Without these lets,
--- explicit proof printing duplicates large vector predicates at every use.
+-- and problems, shared in the stored certificate instead of duplicating large
+-- vector predicates at every use.
 private partial def shareCertificate (certificate : Expr)
     (candidates : List (Name × Expr)) : MetaM Expr := do
   match candidates with
@@ -69,14 +101,22 @@ private partial def shareCertificate (certificate : Expr)
       mkLetFVars #[binding] body
 
 private def materializeConic (state : ReformState) (index : Nat)
-    (prepared : PTran.Elab.Conic.Polyhedral.Result) (preparedVars : Array Expr)
+    (prepared : Prepared) (preparedVars : Array Expr)
     (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
   runTermElabM fun sectionFVars => do
+    -- Section proof parameters may still mention assigned instance variables.
+    -- The kernel needs their instantiated local types as well as the term.
+    let context ← instantiateLCtxMVars (← getLCtx)
+    withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
-    let prepared := rebasePlan prepared preparedVars sectionFVars
-    let replacement ← PTran.Elab.Conic.rewriteConstraint typed.presentation index
-      prepared.lift prepared.auxiliary? prepared.nextDomain
-      prepared.rowPredicates prepared.targetIff
+    let prepared := prepared.replaceFVars preparedVars sectionFVars
+    let replacement ← match prepared with
+      | .inl result => do
+        PTran.Elab.Conic.rewriteConstraint typed.presentation index
+          result.lift result.auxiliary? result.nextDomain result.rowPredicates result.targetIff
+      | .inr contextual => do
+        PTran.Elab.Conic.rewriteConstraintContextual typed.presentation index
+          contextual.rowPredicates contextual.conditionalIff
     let exact ← mkAppM ``PTran.GlobalEquivalence.trans
       #[typed.normalization.equivalence, replacement.equivalence]
     let primitive ← state.runner.liftEquivalence exact
@@ -86,10 +126,18 @@ private def materializeConic (state : ReformState) (index : Nat)
     let candidates := predicates.toList.zipIdx.map fun (predicate, index) =>
       (Name.mkSimple s!"conic_row_{index}", predicate)
     let primitive ← shareCertificate primitive (candidates ++ [
-      (`conic_lift, prepared.lift),
+      (`conic_certificate, prepared.certificate),
       (`conic_source, typed.canonical),
       (`conic_target, replacement.targetProblem)])
     checkWithKernel primitive
+    -- Store the checked proof data once before the syntax round trip. Later
+    -- steps and the final declaration then refer to this constant instead of
+    -- re-elaborating its conjunction proofs. The closure retains section
+    -- parameters; the enclosing command transaction rolls it back on failure.
+    let primitiveName ← mkAuxDeclName (kind := `_conicCertificate)
+    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
+      (compile := false)
+    modifyEnv (addNoncomputable · primitiveName)
     let mut binders := state.view.binders
     if let some auxiliary := prepared.auxiliary? then
       let some name := allocation.findName? 0
@@ -151,7 +199,23 @@ def prepareConic (state : ReformState) (step : Syntax)
           throwErrorAt ruleSyntax
             "constraint `{selector.getId.eraseMacroScopes}`: failed to elaborate exact rule: {message}"
         | exception => throw exception
-    let result ← PTran.Elab.Conic.Polyhedral.plan presentation.constraints[index]!.predicate rule?
+    let predicate := presentation.constraints[index]!.predicate
+    let result : Except PTran.Elab.Affine.AffineError Prepared ←
+      if rule?.isNone && (← PTran.Elab.Conic.SecondOrder.isCandidate predicate) then do
+        let retained := presentation.constraints.extract 0 index ++
+          presentation.constraints.extract (index + 1) presentation.constraints.size
+        match ← PTran.Elab.Conic.SecondOrder.planReplacement predicate
+            (retained.map (·.predicate)) with
+        | .ok result => pure (.ok result)
+        | .error error =>
+          -- Affine bounds can contain sums, powers, or division too. A failed
+          -- second-order candidate must not hide a certified polyhedral rule.
+          match ← PTran.Elab.Conic.Polyhedral.plan predicate with
+          | .ok result => pure (.ok (.inl result))
+          | .error _ => pure (.error error)
+      else do
+        let result ← PTran.Elab.Conic.Polyhedral.plan predicate rule?
+        pure (result.map Sum.inl)
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

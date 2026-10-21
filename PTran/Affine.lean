@@ -1,4 +1,5 @@
 import Mathlib.Data.Real.Basic
+import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.AffineSpace.AffineMap
 import Mathlib.LinearAlgebra.Matrix.ToLin
@@ -166,6 +167,18 @@ noncomputable def vecCons {n : ℕ} {f : X → Y} {g : X → Fin n → Y}
 noncomputable def vecEmpty (X : Type*) [AddCommGroup X] [Module ℝ X] :
     Certified (fun _ : X => (Matrix.vecEmpty : Fin 0 → ℝ)) :=
   const X Matrix.vecEmpty
+
+/-- Equip an affine finite real vector with its Euclidean norm. -/
+noncomputable def toEuclidean {n : ℕ} {f : X → Fin n → ℝ} (a : Certified f) :
+    Certified (fun x => WithLp.toLp 2 (f x)) where
+  map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).symm.toAffineEquiv.toAffineMap.comp a.map
+  correct x := congrArg (WithLp.toLp 2) (a.correct x)
+
+/-- Forget the norm of a Euclidean affine vector to obtain its coordinates. -/
+noncomputable def ofEuclidean {n : ℕ} {f : X → EuclideanSpace ℝ (Fin n)}
+    (a : Certified f) : Certified (fun x => WithLp.ofLp (f x)) where
+  map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).toAffineEquiv.toAffineMap.comp a.map
+  correct x := congrArg WithLp.ofLp (a.correct x)
 
 /-- Sum an indexed family of certified functions over a fixed finite set. -/
 noncomputable def sum {ι : Type*} {f : ι → X → Y}
