@@ -59,6 +59,39 @@ info: problem (x t : ℝ)
 #guard_msgs in
 #printp scalarTarget
 
+namespace AffineBounds
+
+-- These affine bounds share operation heads with second-order candidates.
+-- Both inequality orientations must still reach the polyhedral recognizer.
+def source :=
+  problem (x y t : ℝ) (v : Fin 2 → ℝ)
+    minimize t
+    subject to
+      absolute : |x| ≤ t / 2
+      minimum : t / 2 ≤ min x y
+      power : |x| ≤ t ^ 1
+      sum : ‖v‖ ≤ ∑ i, v i
+      reverseAbsolute : t / 2 ≥ |x|
+      reverseMinimum : min x y ≥ t / 2
+
+reformulation target : source := by
+  conic at absolute
+  conic at minimum
+  conic at power
+  conic at sum
+  conic at reverseAbsolute
+  conic at reverseMinimum
+
+example : GlobalEquivalence source target := target.equivalence
+
+example (x y t : ℝ) (v : Fin 2 → ℝ) : target.feasible (((x, y), t), v) ↔
+    x ≤ t / 2 ∧ -x ≤ t / 2 ∧ t / 2 ≤ x ∧ t / 2 ≤ y ∧
+      x ≤ t ^ 1 ∧ -x ≤ t ^ 1 ∧
+      0 ≤ ∑ i, v i ∧ v ≤ (fun _ => ∑ i, v i) ∧ -v ≤ (fun _ => ∑ i, v i) ∧
+      x ≤ t / 2 ∧ -x ≤ t / 2 ∧ t / 2 ≤ x ∧ t / 2 ≤ y := Iff.rfl
+
+end AffineBounds
+
 def absoluteObjective :=
   problem (x : ℝ)
     minimize |x|

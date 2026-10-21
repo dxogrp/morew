@@ -204,7 +204,15 @@ def prepareConic (state : ReformState) (step : Syntax)
       if rule?.isNone && (← PTran.Elab.Conic.SecondOrder.isCandidate predicate) then do
         let retained := presentation.constraints.extract 0 index ++
           presentation.constraints.extract (index + 1) presentation.constraints.size
-        PTran.Elab.Conic.SecondOrder.planReplacement predicate (retained.map (·.predicate))
+        match ← PTran.Elab.Conic.SecondOrder.planReplacement predicate
+            (retained.map (·.predicate)) with
+        | .ok result => pure (.ok result)
+        | .error error =>
+          -- Affine bounds can contain sums, powers, or division too. A failed
+          -- second-order candidate must not hide a certified polyhedral rule.
+          match ← PTran.Elab.Conic.Polyhedral.plan predicate with
+          | .ok result => pure (.ok (.inl result))
+          | .error _ => pure (.error error)
       else do
         let result ← PTran.Elab.Conic.Polyhedral.plan predicate rule?
         pure (result.map Sum.inl)
