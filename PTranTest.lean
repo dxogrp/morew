@@ -12,10 +12,12 @@ import PTranTest.Atom.Recognition
 import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
 import PTranTest.Conic
+import PTranTest.Conic.EuclideanAffine
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
 import PTranTest.Conic.Rewrite
 import PTranTest.Conic.SecondOrder
+import PTranTest.Conic.SecondOrderRows
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
 import PTranTest.ImportCompatibility.Polyhedral

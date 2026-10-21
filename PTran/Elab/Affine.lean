@@ -146,14 +146,16 @@ partial def reduceStructure (expression : Expr) (preserveLets : Bool := false) :
     return mkAppN function arguments
   | _ => pure expression
 
-/-- Whether a type has the supported real/product/finite-function shape. -/
+/-- Whether a type has the supported real/Euclidean/product/finite-function shape. -/
 partial def isSupportedSpace (type : Expr) : MetaM Bool := do
   let type ← whnf type
   if type.isConstOf ``Real then return true
+  if (← Space.euclideanDimension? type).isSome then return true
   if type.isAppOfArity ``Prod 2 then
     return (← isSupportedSpace type.getAppArgs[0]!) &&
       (← isSupportedSpace type.getAppArgs[1]!)
   if let .forallE _ index body _ := type then
+    let body ← whnf body
     if body.hasLooseBVars || (← isProp index) then return false
     -- Shape validation needs finiteness, not an enumeration in the ambient
     -- context. Indexed operations retain their own elaborated Fintype instance.
@@ -316,6 +318,10 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
     return ← construct point expression ``PTran.Affine.Certified.const #[domain, expression]
   if expression == point then
     return ← construct point expression ``PTran.Affine.Certified.id #[domain]
+  if let .proj ``WithLp 0 value := expression then
+    if (← Space.euclideanDimension? (← inferType value)).isSome then
+      let value ← reifyBody point value config
+      return ← construct point expression ``PTran.Affine.Certified.ofEuclidean #[value]
   if let .proj ``Prod index value := expression then
     let value ← reifyBody point value config
     let constructor := if index == 0 then
@@ -329,6 +335,14 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
   let head := expression.getAppFn
   let args := expression.getAppArgs
   let name := head.constName?
+  if name == some ``WithLp.toLp && args.size == 3 then
+    if (← Space.euclideanDimension? type).isSome then
+      let value ← reifyBody point args[2]! config
+      return ← construct point expression ``PTran.Affine.Certified.toEuclidean #[value]
+  if name == some ``WithLp.ofLp && args.size == 3 then
+    if (← Space.euclideanDimension? (← inferType args[2]!)).isSome then
+      let value ← reifyBody point args[2]! config
+      return ← construct point expression ``PTran.Affine.Certified.ofEuclidean #[value]
   if name == some ``HAdd.hAdd && args.size == 6 then
     let left ← reifyBody point args[4]! config
     let right ← reifyBody point args[5]! config
