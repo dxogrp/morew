@@ -38,12 +38,22 @@ example (x t : ℝ) : scalarTarget.feasible (x, t) ↔
 info: problem (x t : ℝ)
   minimize x ^ 2
   subject to
-    first_conic_1 : (t, 1 / 2, ![x - 1]) ∈ (Cone.rotatedSecondOrder 1).carrier
+    first_conic_1 : (t, 1 / 2, ![x - 1]) ∈ RSOC 1
     untouched : Real.exp x ≤ 100
-    last_conic_1 : (t, 1 / 2, ![2 * x + 1]) ∈ (Cone.rotatedSecondOrder 1).carrier
+    last_conic_1 : (t, 1 / 2, ![2 * x + 1]) ∈ RSOC 1
 -/
 #guard_msgs in
 #printp scalarTarget
+
+-- Re-elaborate the stored notation, rather than just checking its rendered text.
+run_cmd do
+  let some view := PTran.Syntax.getProblemView? (← Lean.getEnv) ``scalarTarget
+    | Lean.throwError "missing scalar cone presentation"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  let name := Lean.mkIdent `scalarCopy
+  Lean.Elab.Command.elabCommand (← `(def $name := $term))
+
+example : scalarCopy = scalarTarget := rfl
 
 namespace Vectors
 
@@ -96,6 +106,18 @@ example (z : EuclideanSpace ℝ (Fin Dimension.size)) (t value : ℝ) :
       (t, WithLp.ofLp z) ∈ (Cone.secondOrder Dimension.size).carrier ∧
       (t, 1 / 2, WithLp.ofLp ((2 : ℝ) • z)) ∈ (Cone.rotatedSecondOrder Dimension.size).carrier ∧
       value ≤ t := Iff.rfl
+
+run_cmd do
+  let some view := PTran.Syntax.getProblemView? (← Lean.getEnv) ``nativeTarget
+    | Lean.throwError "missing maximizing cone presentation"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  let name := Lean.mkIdent `nativeCopy
+  Lean.Elab.Command.elabCommand (← `(def $name := $term))
+
+-- The displayed numeral in `2 • z` re-elaborates as natural scaling, which
+-- agrees with the original real scaling by the module laws.
+example : nativeCopy = nativeTarget := by
+  simp only [nativeCopy, nativeTarget, ofNat_smul_eq_nsmul]
 
 end Vectors
 
@@ -181,7 +203,7 @@ info: problem (x y t : ℝ)
   minimize t
   subject to
     unusable : -1 ≤ y
-    quotient_conic_1 : (t, y / 2, ![x]) ∈ (Cone.rotatedSecondOrder 1).carrier
+    quotient_conic_1 : (t, y / 2, ![x]) ∈ RSOC 1
     nested : Real.exp x ≤ 100 ∧ 0 ≤ y ∧ 1 / 3 ≤ y ∧ x ≤ 10
 -/
 #guard_msgs in
@@ -247,6 +269,18 @@ example : ¬ emptyTarget.HasFeasiblePoint := by
   have := (norm_nonneg (WithLp.toLp 2 v)).trans hn
   norm_num at this
 
+/--
+info: problem (v : Fin 0 → ℝ) (y : ℝ)
+  minimize 0
+  subject to
+    norm_conic_1 : (-1, v) ∈ SOC 0
+    square_conic_1 : (-1, 1 / 2, fun i => v i) ∈ RSOC 0
+    quotient_conic_1 : (-1, y / 2, fun i => v i) ∈ RSOC 0
+    margin : 1 ≤ y
+-/
+#guard_msgs in
+#printp emptyTarget
+
 def singleSource :=
   problem (v : Fin 1 → ℝ)
     minimize v 0
@@ -264,13 +298,53 @@ example : GlobalEquivalence singleSource singleTarget := singleTarget.equivalenc
 info: problem (v : Fin 1 → ℝ)
   minimize v 0
   subject to
-    norm_conic_1 : (3, v) ∈ (Cone.secondOrder 1).carrier
-    square_conic_1 : (9, 1 / 2, fun i => v i) ∈ (Cone.rotatedSecondOrder 1).carrier
+    norm_conic_1 : (3, v) ∈ SOC 1
+    square_conic_1 : (9, 1 / 2, fun i => v i) ∈ RSOC 1
 -/
 #guard_msgs in
 #printp singleTarget
 
 end Dimensions
+
+namespace CarrierPresentation
+
+-- Compact notation must leave other cone carriers valid when stored syntax is
+-- re-elaborated, including the field notation used for their carriers.
+def source :=
+  problem (v : Fin 1 → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      norm : ‖WithLp.toLp 2 v‖ ≤ t
+      other : v ∈ (Cone.nonnegative 1).carrier
+
+reformulation target : source := by
+  conic at norm
+
+run_cmd do
+  let some view := PTran.Syntax.getProblemView? (← Lean.getEnv) ``target
+    | Lean.throwError "missing mixed cone presentation"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  let name := Lean.mkIdent `copied
+  Lean.Elab.Command.elabCommand (← `(def $name := $term))
+
+example : copied = target := rfl
+
+-- The presentation hook must not alter exact semantic serialization.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let original ← Lean.Elab.Term.elabTerm (← `(
+    fun (v : Fin 2 → ℝ) (t : ℝ) => (t, v) ∈ SOC 2 ∧ (t, 1 / 2, v) ∈ RSOC 2)) none
+  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+  let original ← Lean.instantiateMVars original
+  let exact ← PTran.Reformulation.Internal.exactExpressionSyntax original
+  if (exact.raw.findStack? (fun _ => true) (fun stx =>
+      stx.isOfKind ``PTran.Conic.socCarrier || stx.isOfKind ``PTran.Conic.rsocCarrier)).isSome then
+    Lean.throwError "cone presentation notation leaked into exact semantic syntax"
+  let restored ← Lean.Elab.Term.elabTerm exact none
+  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+  unless ← Lean.Meta.isDefEq original (← Lean.instantiateMVars restored) do
+    Lean.throwError "exact cone syntax changed its meaning"
+
+end CarrierPresentation
 
 namespace Auxiliary
 
@@ -371,9 +445,9 @@ info: problem (x : ℝ)
   minimize x
   subject to
     budget_conic_1 : x ≤ 10
-    budget_conic_1_1 : (25, 1 / 2, ![x]) ∈ (Cone.rotatedSecondOrder 1).carrier
-    cap_conic_1 : (16, 1 / 2, ![x - 1]) ∈ (Cone.rotatedSecondOrder 1).carrier
-    «cap value_conic_1» : (36, 1 / 2, ![x + 1]) ∈ (Cone.rotatedSecondOrder 1).carrier
+    budget_conic_1_1 : (25, 1 / 2, ![x]) ∈ RSOC 1
+    cap_conic_1 : (16, 1 / 2, ![x - 1]) ∈ RSOC 1
+    «cap value_conic_1» : (36, 1 / 2, ![x + 1]) ∈ RSOC 1
 -/
 #guard_msgs in
 #printp target

@@ -121,6 +121,14 @@ theorem mem_rotatedSecondOrder {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
 
 end Cone
 
+set_option quotPrecheck false in
+/-- The second-order cone carrier, where `n` is the vector dimension. -/
+notation:max (name := socCarrier) "SOC " n:arg => (PTran.Conic.Cone.secondOrder n).carrier
+
+set_option quotPrecheck false in
+/-- The rotated second-order cone carrier, where `n` is the vector dimension. -/
+notation:max (name := rsocCarrier) "RSOC " n:arg => (PTran.Conic.Cone.rotatedSecondOrder n).carrier
+
 namespace SecondOrder
 
 /-- A native finite Euclidean norm bound is a second-order cone row. -/

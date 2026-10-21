@@ -1,4 +1,5 @@
 import PTran.Reformulation.State
+import PTran.Conic.SecondOrder
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
@@ -307,6 +308,13 @@ def packPoint (components : Array Expr) : MetaM Expr := do
   else
     throwError "a problem presentation requires at least one decision variable"
 
+/-- Retain readable spelling while fixing the declaration and preventing local
+capture, just as `mkCIdentFrom` does for fully qualified identifiers. -/
+private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.Syntax :=
+  match (mkCIdentFrom stx stx.getId).raw with
+  | .ident info raw identifier _ => .ident info raw identifier [.decl name []]
+  | _ => mkCIdentFrom stx name
+
 private partial def freezePresentationReferences
     (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
     (stx : Lean.Syntax) : Lean.Syntax :=
@@ -317,20 +325,41 @@ private partial def freezePresentationReferences
     -- Keep local names instead of capturing the current section's UIDs.
     | none => stx
   else if let some name := annotatedConstName? infos stx then
-    mkCIdentFrom stx name
+    freezePresentationConstant stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
       freezePresentationReferences infos binders child
 
--- TODO: Render generated second-order cone carriers as `SOC n` / `RSOC n`
--- using Lean notation, with `n` the vector dimension. Generate the notation here,
--- since `#printp` formats stored syntax. Preserve frozen references and cover
--- re-elaboration of the notation and persistence across imported presentations.
+/-- Internal delaboration flag, enabled only while generating stored presentations.
+Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
+private def coneNotationOption : Name := `PTran.Reformulation.Internal.coneNotation
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.PTran.Conic.Cone.carrier]
+private def delabConeCarrier : Delab := do
+  unless (← getOptions).getBool coneNotationOption do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``PTran.Conic.Cone.carrier 1
+  let cone := expression.getAppArgs[0]!
+  guard <| cone.isAppOfArity ``PTran.Conic.Cone.secondOrder 1 ||
+    cone.isAppOfArity ``PTran.Conic.Cone.rotatedSecondOrder 1
+  -- Keep the original subexpression position, so dimension references are
+  -- frozen by the same pass as the rest of the generated presentation.
+  let dimension ← withAppArg <| withAppArg delab
+  if cone.isAppOfArity ``PTran.Conic.Cone.secondOrder 1 then
+    `(SOC $dimension)
+  else
+    `(RSOC $dimension)
+
 private def delabPresentationTerm (expression : Expr)
-    (binders : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
-  let (stx, infos) ← PrettyPrinter.delabCore expression {}
-    PrettyPrinter.Delaborator.delab
-  pure <| freezePresentationReferences infos binders stx.raw
+    (binders : Array (FVarId × Name)) : TermElabM Lean.Syntax :=
+  -- Tag application heads as constants even when their arguments are implicit,
+  -- so dimensions and coefficients supplied by class projections stay frozen.
+  withOptions (fun options => options.setBool coneNotationOption true
+      |>.setBool `pp.tagAppFns true) do
+    let (stx, infos) ← PrettyPrinter.delabCore expression {}
+      PrettyPrinter.Delaborator.delab
+    pure <| freezePresentationReferences infos binders stx.raw
 
 /-- Recover printable bodies from a checked problem while retaining the supplied
 ordered names and binder type syntax. -/

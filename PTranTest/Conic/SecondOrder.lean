@@ -28,6 +28,17 @@ example (n : Nat) : FiniteDimensional ℝ (Cone.rotatedSecondOrder n).Space := i
 example (n : Nat) : (Cone.secondOrder n).Space = (ℝ × (Fin n → ℝ)) := rfl
 example (n : Nat) : (Cone.rotatedSecondOrder n).Space = (ℝ × ℝ × (Fin n → ℝ)) := rfl
 
+/-! The public notation denotes the carrier, with the vector dimension unchanged. -/
+
+example (n : Nat) : SOC n = (Cone.secondOrder n).carrier := rfl
+example (n : Nat) : RSOC n = (Cone.rotatedSecondOrder n).carrier := rfl
+
+example (n : Nat) (t : ℝ) (x : Fin (n + 1) → ℝ) :
+    (t, x) ∈ SOC (n + 1) ↔ (t, x) ∈ (Cone.secondOrder (n + 1)).carrier := Iff.rfl
+
+example (u v : ℝ) (x : Fin 0 → ℝ) :
+    (u, v, x) ∈ RSOC 0 ↔ (u, v, x) ∈ (Cone.rotatedSecondOrder 0).carrier := Iff.rfl
+
 example (n : Nat) : Convex ℝ (↑(Cone.secondOrder n).carrier : Set (Cone.secondOrder n).Space) :=
   (Cone.secondOrder n).carrier.convex
 

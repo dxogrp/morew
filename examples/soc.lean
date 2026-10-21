@@ -16,7 +16,7 @@ reformulation lowered : original := by
   epigraph t as quadraticBound
   conic at quadraticBound
 
--- The generated row is (t, y / 2, ![x]) ∈ (Conic.Cone.rotatedSecondOrder 1).carrier.
+-- The generated row is (t, y / 2, ![x]) ∈ RSOC 1.
 #printp original
 #printp lowered
 #check lowered.equivalence
