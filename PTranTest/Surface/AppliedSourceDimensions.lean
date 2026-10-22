@@ -224,6 +224,123 @@ example : Conic.Form (parameterConic data) := parameterConic.conicForm data
 example : IsConic (parameterConic data) := parameterConic.isConic data
 
 end
+
+namespace ShadowedParameters
+
+-- Proof irrelevance can make a certificate with the wrong argument typecheck.
+-- Inspect the applications structurally, including the conic theorem's witness.
+private def checkParameterApplication (declaration : Lean.Name) (parameter body : Lean.Expr)
+    (applicationName : Lean.Name) : Lean.MetaM Unit := do
+  let some application := body.find? (·.isAppOfArity applicationName 1)
+    | throwError "`{declaration}` lost its application of `{applicationName}`"
+  unless application.getArg! 0 == parameter do
+    throwError "`{declaration}` applied `{applicationName}` to a different parameter"
+
+private def checkParameterIdentity (declaration : Lean.Name)
+    (typeApplications : Array Lean.Name := #[])
+    (valueApplications : Array Lean.Name := #[]) : Lean.MetaM Unit := do
+  let info ← Lean.getConstInfo declaration
+  Lean.Meta.forallTelescope info.type fun parameters type => do
+    unless parameters.size == 1 &&
+        (← Lean.Meta.inferType parameters[0]!).isConstOf ``Nat do
+      throwError "`{declaration}` generalized an unrelated shadowed parameter"
+    for applicationName in typeApplications do
+      checkParameterApplication declaration parameters[0]! type applicationName
+  unless valueApplications.isEmpty do
+    let some value := info.value? (allowOpaque := true)
+      | throwError "`{declaration}` has no value"
+    Lean.Meta.lambdaTelescope value fun parameters body => do
+      unless parameters.size == 1 do
+        throwError "`{declaration}` retained an unrelated shadowed parameter"
+      for applicationName in valueApplications do
+        checkParameterApplication declaration parameters[0]! body applicationName
+
+private def checkGeneratedParameters (target aliasName terminal terminalAlias : Lean.Name) :
+    Lean.MetaM Unit := do
+  for name in #[target, terminal] do
+    checkParameterIdentity name
+    checkParameterIdentity (name ++ `equivalence) #[``parameterSource, name]
+  checkParameterIdentity aliasName #[``parameterSource, target] #[target ++ `equivalence]
+  checkParameterIdentity terminalAlias #[``parameterSource, terminal]
+    #[terminal ++ `equivalence]
+  checkParameterIdentity (terminal ++ `conicForm) #[terminal]
+  checkParameterIdentity (terminal ++ `isConic) #[terminal] #[terminal ++ `conicForm]
+
+namespace DifferentTypes
+
+variable (data : Bool)
+section
+variable (data : Nat)
+
+reformulation target : (parameterSource data) certificate targetEquivalence := by
+  epigraph t
+
+reformulation terminal : (parameterSource data) certificate terminalEquivalence := by
+  conic
+
+example : GlobalEquivalence (parameterSource data) (target data) := targetEquivalence data
+example : GlobalEquivalence (parameterSource data) (terminal data) := terminalEquivalence data
+example : Conic.Form (terminal data) := terminal.conicForm data
+example : IsConic (terminal data) := terminal.isConic data
+
+end
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+
+end DifferentTypes
+
+namespace InnerParameter
+
+variable (data : Nat)
+section
+variable (data : Nat)
+
+reformulation target : (parameterSource data) certificate targetEquivalence := by
+  epigraph t
+
+reformulation terminal : (parameterSource data) certificate terminalEquivalence := by
+  conic
+
+example : GlobalEquivalence (parameterSource data) (target data) := targetEquivalence data
+example : GlobalEquivalence (parameterSource data) (terminal data) := terminalEquivalence data
+example : Conic.Form (terminal data) := terminal.conicForm data
+example : IsConic (terminal data) := terminal.isConic data
+
+end
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+
+end InnerParameter
+
+namespace OuterParameter
+
+variable (data : Nat)
+local notation "outerData" => data
+section
+variable (data : Nat)
+
+reformulation target : (parameterSource outerData) certificate targetEquivalence := by
+  epigraph t
+
+reformulation terminal : (parameterSource outerData) certificate terminalEquivalence := by
+  conic
+
+example : GlobalEquivalence (parameterSource outerData) (target outerData) :=
+  targetEquivalence outerData
+example : GlobalEquivalence (parameterSource outerData) (terminal outerData) :=
+  terminalEquivalence outerData
+example : Conic.Form (terminal outerData) := terminal.conicForm outerData
+example : IsConic (terminal outerData) := terminal.isConic outerData
+
+end
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+
+end OuterParameter
+end ShadowedParameters
 end ProofDependencies
 
 end

@@ -169,6 +169,43 @@ private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
       let view := Command.mkDefViewOfDef { computeKind := .noncomputable } definition
       Term.elabMutualDef sectionVars scope #[view]
 
+/-- Match corresponding parameter occurrences, including inside proof arguments
+that ordinary definitional equality can skip. Preserve matching application
+spines before reducing: reduction can erase a proof's data dependencies. The
+caller rolls back assignments if the structural comparison fails. -/
+private partial def recoverParameterOccurrences (actual expected : Expr) : MetaM Bool := do
+  let actual := (← instantiateMVars actual).consumeMData
+  let expected := (← instantiateMVars expected).consumeMData
+  if actual == expected then return true
+  if actual.isMVar || !actual.hasExprMVar then
+    return ← isDefEq actual expected
+  match actual, expected with
+  | .app .., .app .. =>
+      let actualHead := actual.getAppFn
+      let expectedHead := expected.getAppFn
+      let sameHead := actualHead == expectedHead ||
+        (actualHead.isConst && expectedHead.isConst &&
+          actualHead.constName! == expectedHead.constName!)
+      if sameHead && actual.getAppNumArgs == expected.getAppNumArgs then
+        unless ← isDefEq actualHead expectedHead do return false
+        for argument in actual.getAppArgs, expectedArgument in expected.getAppArgs do
+          unless ← recoverParameterOccurrences argument expectedArgument do return false
+        return true
+  | .lam name type body info, .lam _ expectedType expectedBody _
+  | .forallE name type body info, .forallE _ expectedType expectedBody _ =>
+      unless ← recoverParameterOccurrences type expectedType do return false
+      return ← withLocalDecl name info (← instantiateMVars type) fun binder =>
+        recoverParameterOccurrences (body.instantiate1 binder)
+          (expectedBody.instantiate1 binder)
+  | .proj name index structureValue, .proj expectedName expectedIndex expectedStructure =>
+      if name == expectedName && index == expectedIndex then
+        return ← recoverParameterOccurrences structureValue expectedStructure
+  | _, _ => pure ()
+  let reducedActual ← whnf actual
+  let reducedExpected ← whnf expected
+  if reducedActual == actual && reducedExpected == expected then return false
+  recoverParameterOccurrences reducedActual reducedExpected
+
 /-- Recover the emitted declaration's actual parameter application. Equality
 can ignore proof arguments, so recover any remaining evidence from the context
 and recheck the completed application. -/
@@ -180,6 +217,13 @@ private def recoverDeclarationApplication (name : Name) (expected : Expr)
   let actual ← if matchType then inferType application else pure application
   unless ← isDefEq actual expected do
     throwError "emitted declaration `{name}` does not match its checked expression"
+  if ← arguments.anyM fun argument => return (← instantiateMVars argument).hasMVar then
+    -- Proof irrelevance can leave data appearing inside proofs unconstrained.
+    -- Match those proof terms structurally, following their actual free
+    -- variables rather than ambiguous names of shadowed section parameters.
+    let saved ← saveState
+    unless ← recoverParameterOccurrences actual expected do
+      saved.restore
   for argument in arguments do
     let argument ← instantiateMVars argument
     if let .mvar id := argument then
