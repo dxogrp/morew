@@ -120,9 +120,24 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun x : ι → ℝ => x i ≤
       @dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ a x)) 4
 
+/-! An independent `Finite` proof let supplies the domain evidence directly,
+without an ambient instance or an operation carrying a `Fintype`. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun (ι : Type) (evidence : Finite ι ∧ True) (i : ι) =>
+    fun x : ι → ℝ =>
+      let finiteEvidence : Finite ι := evidence.1
+      x i + 1)) 3
+
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℕ → ℝ => x 0))
   assertUnsupported (← `(fun x : ℝ => fun _ : ℕ => x))
+  let boundEvidence ← `(fun x : ℕ → ℝ => fun i : Empty =>
+    let finiteEvidence : Finite ℕ := Empty.elim i
+    x 0)
+  unless (← sourceFiniteInstances (← elaborate boundEvidence)).isEmpty do
+    throwError "binder-dependent finiteness evidence escaped its scope"
+  assertUnsupported boundEvidence
   assertUnsupported (← `(fun x : ℕ → ℝ => fun i : Empty =>
     letI : Fintype ℕ := Empty.elim i
     @dotProduct ℕ ℝ inferInstance _ _ (fun _ => 0) x))

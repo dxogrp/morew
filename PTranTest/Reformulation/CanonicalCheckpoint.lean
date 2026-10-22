@@ -79,7 +79,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let normalization ← checkedPointwiseNormalization (← `(source)) base base #[]
   let delta ← presentationDeltaBetween current next
     normalization.objectiveEquality normalization.feasibleIff
-    (some { index := 0, count := 2 })
+    #[{ index := 0, count := 2 }]
   let .ok actual := current.applyDelta delta
     | throwError "valid generated-row splice was rejected"
   unless actual.constraints.map (·.name) == #[`generated_1, `generated_2, `positive] do
@@ -92,7 +92,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let rejected ← try
     discard <| presentationDeltaBetween current invalid
       normalization.objectiveEquality normalization.feasibleIff
-      (some { index := 0, count := 2 })
+      #[{ index := 0, count := 2 }]
     pure false
   catch _ => pure true
   unless rejected do

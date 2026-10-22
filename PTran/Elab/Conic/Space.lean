@@ -20,31 +20,40 @@ structure Structure (X : Type*) where
   group : NormedAddCommGroup X
   /-- Real scalar multiplication for the chosen normed group. -/
   space : @NormedSpace ℝ X inferInstance group.toSeminormedAddCommGroup
+  /-- Finite dimension for precisely the chosen additive and scalar structures. -/
+  finite : @FiniteDimensional ℝ X inferInstance group.toAddCommGroup space.toModule
 
 namespace Structure
 
+-- These constructors are reducible because their projections occur in the
+-- types of persisted forms. Later field notation must recognize the same
+-- canonical instances using typeclass search's restricted transparency.
+
 /-- Standard real normed structures, resolved in this fixed context. -/
-noncomputable def real : Structure ℝ := ⟨inferInstance, inferInstance⟩
+noncomputable abbrev real : Structure ℝ := ⟨inferInstance, inferInstance, inferInstance⟩
 
 /-- Standard finite Euclidean normed structures, independent of ambient instances. -/
-noncomputable def euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) :=
-  ⟨inferInstance, inferInstance⟩
+noncomputable abbrev euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) :=
+  ⟨inferInstance, inferInstance, inferInstance⟩
 
 /-- Product normed structures from two explicitly supplied factors. -/
-noncomputable def prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
+noncomputable abbrev prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
     Structure (X × Y) := by
   letI := a.group
   letI := a.space
+  letI := a.finite
   letI := b.group
   letI := b.space
-  exact ⟨inferInstance, inferInstance⟩
+  letI := b.finite
+  exact ⟨inferInstance, inferInstance, inferInstance⟩
 
 /-- Finite function-space normed structures from the supplied range. -/
-noncomputable def pi (ι : Type*) [Fintype ι] {Y : Type*} (a : Structure Y) :
+noncomputable abbrev pi (ι : Type*) [Fintype ι] {Y : Type*} (a : Structure Y) :
     Structure (ι → Y) := by
   letI := a.group
   letI := a.space
-  exact ⟨inferInstance, inferInstance⟩
+  letI := a.finite
+  exact ⟨inferInstance, inferInstance, inferInstance⟩
 
 end Structure
 
@@ -78,6 +87,29 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
     finishSpace type data
   else
     throwError "unsupported affine row domain {type}"
+
+/-- Expose structural decision-space aliases in a persisted form's type.
+For example, instance synthesis recognizes `Fin m → Fin n → ℝ`, whereas it
+need not unfold the semireducible `Matrix` alias. This changes neither the
+represented problem nor its presentation's decision-domain spelling. -/
+partial def structuralDomain (type : Expr) : MetaM Expr := do
+  let shape ← whnf type
+  if shape.isConstOf ``Real then
+    return shape
+  if let some dimension ← Affine.Space.euclideanDimension? shape then
+    let n : Q(Nat) := dimension
+    return q(EuclideanSpace ℝ (Fin $n))
+  if shape.isAppOfArity ``Prod 2 then
+    return ← mkAppM ``Prod #[← structuralDomain shape.getAppArgs[0]!,
+      ← structuralDomain shape.getAppArgs[1]!]
+  if let .forallE _ index body _ := shape then
+    let body ← Core.betaReduce (← whnf body)
+    if body.hasLooseBVars || (← isProp index) then
+      throwError "affine rows require a nondependent function space, got {type}"
+    -- Index aliases can carry their own Fintype instance. Preserve that spelling
+    -- so projections synthesize the same enumeration as the stored norm.
+    return ← mkArrow index (← structuralDomain body)
+  throwError "unsupported affine row domain {type}"
 
 private def realInstances : Array Expr := #[
   q(inferInstance : NormedAddCommGroup ℝ),
@@ -138,11 +170,22 @@ def withCanonicalConeSpaces (domain target : Expr)
     ← mkAppM ``Structure.group #[domainData],
     ← mkAppM ``Structure.space #[domainData],
     ← mkAppM ``Structure.group #[targetData],
-    ← mkAppM ``Structure.space #[targetData]]
-  installInstances instances.toList do
-    let finiteType ← mkAppOptM ``FiniteDimensional
-      #[some (mkConst ``Real), some target, none, none, none]
-    let finite ← synthInstance finiteType
-    installInstances [finite] action
+    ← mkAppM ``Structure.space #[targetData],
+    ← mkAppM ``Structure.finite #[targetData]]
+  installInstances instances.toList action
+
+/-- Build a complete form with canonical finite-dimensional decision structures.
+The recursive finite-dimensional proof uses the same structures as the affine
+maps, even in the presence of unrelated ambient instances. -/
+def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
+  let data ← buildSpace domain
+  let instances := realInstances ++ #[
+    ← mkAppM ``Structure.group #[data],
+    ← mkAppM ``Structure.space #[data],
+    ← mkAppM ``Structure.finite #[data]]
+  let (result, _) ← installInstances instances.toList do
+    let result ← action
+    return (result, result)
+  return result
 
 end PTran.Elab.Conic.Space

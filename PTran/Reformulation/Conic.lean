@@ -1,6 +1,4 @@
-import PTran.Elab.Conic.Polyhedral
-import PTran.Elab.Conic.SecondOrder
-import PTran.Elab.Conic.Exponential
+import PTran.Elab.Conic.Automatic
 import PTran.Elab.Conic.Rewrite
 import PTran.Reformulation.Presentation
 import Lean.Meta.Closure
@@ -81,7 +79,8 @@ private def generatedStem (selector : TSyntax `ident) : CommandElabM String := d
 -- the conjunction proofs. Keep those predicates, then their containing lift
 -- and problems, shared in the stored certificate instead of duplicating large
 -- vector predicates at every use.
-private partial def shareCertificate (certificate : Expr)
+/-- Share repeated rows and problems in a stored conic certificate. -/
+partial def shareConicCertificate (certificate : Expr)
     (candidates : List (Name × Expr)) : MetaM Expr := do
   match candidates with
   | [] => pure certificate
@@ -89,7 +88,7 @@ private partial def shareCertificate (certificate : Expr)
     withLetDecl name (← inferType value) value fun binding => do
       let replace := fun expression : Expr => expression.replace fun subexpression =>
         if subexpression == value then some binding else none
-      let body ← shareCertificate (replace certificate)
+      let body ← shareConicCertificate (replace certificate)
         (remaining.map fun (name, value) => (name, replace value))
       mkLetFVars #[binding] body
 
@@ -119,7 +118,7 @@ private def materializeConic (state : ReformState) (index : Nat)
       prepared.rowPredicates
     let candidates := predicates.toList.zipIdx.map fun (predicate, index) =>
       (Name.mkSimple s!"conic_row_{index}", predicate)
-    let primitive ← shareCertificate primitive (candidates ++ [
+    let primitive ← shareConicCertificate primitive (candidates ++ [
       (`conic_certificate, prepared.certificate),
       (`conic_source, typed.canonical),
       (`conic_target, replacement.targetProblem)])
@@ -168,27 +167,8 @@ private def materializeConic (state : ReformState) (index : Nat)
       removedConstraintNames := {}
       normalizationLemmas := state.normalizationLemmas
       checkpoint? := some { semantic, view }
-      constraintSplice? := some { index, count := rows.size }
+      constraintSplices := #[{ index, count := rows.size }]
     }
-
-private def planAutomatic (predicate : Expr) (retained : Array Expr) :
-    MetaM (Except PTran.Elab.Affine.AffineError Prepared) := do
-  let mut candidateError? := none
-  if ← PTran.Elab.Conic.Exponential.isCandidate predicate then
-    match ← PTran.Elab.Conic.Exponential.plan predicate retained with
-    | .ok result => return .ok result
-    | .error error => candidateError? := some error
-  if ← PTran.Elab.Conic.SecondOrder.isCandidate predicate then
-    match ← PTran.Elab.Conic.SecondOrder.planReplacement predicate retained with
-    | .ok result => return .ok result
-    | .error error =>
-      if candidateError?.isNone then candidateError? := some error
-  -- Candidate heads can also occur inside affine bounds. Keep trying
-  -- every applicable family before reporting the first candidate's
-  -- failed obligation; a certified fallback always takes precedence.
-  match ← PTran.Elab.Conic.Polyhedral.plan predicate with
-  | .ok result => pure (.ok (.inl result))
-  | .error error => pure (.error (candidateError?.getD error))
 
 /-- Select and certify a whole-constraint rewrite, deferring named
 materialization until the runner has allocated its generated family. -/
@@ -220,7 +200,7 @@ def prepareConic (state : ReformState) (step : Syntax)
       else do
         let retained := presentation.constraints.extract 0 index ++
           presentation.constraints.extract (index + 1) presentation.constraints.size
-        planAutomatic predicate (retained.map (·.predicate))
+        PTran.Elab.Conic.Automatic.planFirst predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

@@ -13,13 +13,17 @@ import PTran.Elab.Affine.Space
 import PTran.Elab.Affine.State
 import PTran.Elab.Atom
 import PTran.Elab.Conic
+import PTran.Elab.Conic.Automatic
+import PTran.Elab.Conic.Decomposition
 import PTran.Elab.Conic.Domain
 import PTran.Elab.Conic.Exponential
+import PTran.Elab.Conic.Form
 import PTran.Elab.Conic.Plan
 import PTran.Elab.Conic.Polyhedral
 import PTran.Elab.Conic.Rewrite
 import PTran.Elab.Conic.SecondOrder
 import PTran.Elab.Conic.Space
+import PTran.Elab.Conic.Terminal
 import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names
 import PTran.Elab.Reformulation.Presentation
@@ -35,6 +39,7 @@ import PTran.Reformulation.State
 import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
+import PTran.Reformulation.TerminalConic
 import PTran.Syntax
 import PTran.Syntax.Elab
 import PTran.Syntax.Grammar

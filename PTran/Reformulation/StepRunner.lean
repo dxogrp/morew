@@ -1,4 +1,5 @@
 import PTran.Reformulation.Presentation
+import PTran.Conic.Basic
 
 /-!
 # Surface step validation and commitment
@@ -15,7 +16,8 @@ private abbrev SurfaceMaterializerM :=
 
 private def validateTypedPrimitive (state : ReformState)
     (result : SurfaceStepResult) :
-    CommandElabM (PTran.Elab.Reformulation.StepResult × Array Expr) :=
+    CommandElabM (PTran.Elab.Reformulation.StepResult × Array Expr ×
+      Option CheckedTerminalConicArtifact) :=
   runTermElabM fun sectionFVars => do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let next ← elabTerm result.semantic none
@@ -57,7 +59,7 @@ private def validateTypedPrimitive (state : ReformState)
         result.normalizationLemmas
     let presentationDelta ← presentationDeltaBetween currentPresentation
       nextPresentation normalization.objectiveEquality normalization.feasibleIff
-      result.constraintSplice?
+      result.constraintSplices
     let updatedPresentation ← match currentPresentation.applyDelta presentationDelta with
       | .ok presentation => pure presentation
       | .error error =>
@@ -89,16 +91,43 @@ private def validateTypedPrimitive (state : ReformState)
     let expectedCanonical ← updatedPresentation.canonicalProblem
     unless ← isDefEq normalization.canonical expectedCanonical do
       throwError "checked normalization does not target the presentation delta"
-    pure (typedResult, sectionFVars)
+    let terminalConic? ← result.terminalForm?.mapM fun (formSyntax : TSyntax `term) => do
+      unless result.status == .terminal do
+        throwErrorAt formSyntax "a conic form requires a terminal result"
+      let form ← elabTerm formSyntax none
+      synthesizeSyntheticMVarsNoPostponing
+      let form ← instantiateMVars form
+      if form.hasMVar then
+        throwErrorAt formSyntax "terminal conic form contains unresolved metavariables"
+      let type ← whnf (← inferType form)
+      unless type.isAppOfArity ``PTran.Conic.Form 5 do
+        throwErrorAt formSyntax "terminal evidence is not a Conic.Form"
+      unless ← isDefEq type.getAppArgs.back! expectedCanonical do
+        throwErrorAt formSyntax "terminal conic form does not represent the final canonical problem"
+      -- Use the form's stored instances even when finiteness was available
+      -- only inside a source constraint during planning.
+      let data ← mkProjection form `data
+      let sense ← mkProjection data `sense
+      let expectedSense := match nextPresentation.sense with
+        | .minimize => mkConst ``PTran.ObjectiveSense.minimize
+        | .maximize => mkConst ``PTran.ObjectiveSense.maximize
+      unless ← isDefEq sense expectedSense do
+        throwErrorAt formSyntax "terminal conic form has the wrong objective sense"
+      -- Section-instance types can contain metavariables assigned while
+      -- elaborating the target. The kernel needs their instantiated context.
+      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+        checkWithKernel form
+      pure { form, ref := formSyntax.raw : CheckedTerminalConicArtifact }
+    pure (typedResult, sectionFVars, terminalConic?)
 
 private def typedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     PTran.Elab.Reformulation.StepPlan SurfaceMaterializerM := {
   nameRequests := draft.nameRequests
   materialize := fun allocation _ => do
     let surface ← draft.materialize allocation
-    let (result, sectionFVars) ←
+    let (result, sectionFVars, terminalConic?) ←
       validateTypedPrimitive state surface
-    pure (result, some { surface, sectionFVars })
+    pure (result, some { surface, sectionFVars, terminalConic? })
 }
 
 private def reportNamePreflightError {α}
@@ -165,6 +194,8 @@ def commitSurfaceStep (state : ReformState)
     hasSubstitution := surface.hasSubstitution
     removedConstraintNames := surface.removedConstraintNames
     normalizationLemmas := surface.normalizationLemmas
+    terminalConic? := materialization.terminalConic?.map
+      (·.replaceFVars materialization.sectionFVars sectionFVars)
   }
 
 end PTran.Reformulation.Internal

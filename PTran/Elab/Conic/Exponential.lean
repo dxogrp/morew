@@ -15,6 +15,15 @@ namespace PTran.Elab.Conic.Exponential
 
 open Lean Lean.Meta Qq
 
+/-- Exact exponential rules; named and native composite spellings share one identity. -/
+inductive Rule where
+  | exponential | logarithm | logSumExp | softplus | relativeEntropy
+  deriving BEq, Repr
+
+/-- Stable order for exhaustive certification, including both inequality orientations. -/
+def rules : Array Rule :=
+  #[.exponential, .logSumExp, .softplus, .relativeEntropy, .logarithm]
+
 private def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
@@ -123,7 +132,7 @@ private def formula (name : Name) (arguments : Array Expr) : MetaM Expr := do
 -- Only unfold our own definitions to compare the exact native formulas and
 -- their canonical operation instances. Source helper applications stay opaque.
 private def rawCompositeProof? (point operation bound : Expr) (retained : Array Expr)
-    (remainderProof : Expr) : MetaM (Option Expr) := do
+    (remainderProof : Expr) : MetaM (Option (Rule × Expr)) := do
   if operation.isAppOfArity ``Real.log 1 then
     let inner ← Affine.reduceStructure operation.getAppArgs[0]!
     if inner.isAppOfArity ``Finset.sum 5 then
@@ -141,7 +150,7 @@ private def rawCompositeProof? (point operation bound : Expr) (retained : Array 
       sameOperation inner expected.getAppArgs[0]! 2
       unless ← isDefEq inner expected.getAppArgs[0]! do
         throwError "log-sum-exp rewrite was not certified: expected a sum over all of Fin n with canonical instances"
-      return some (← logSumExpProof point vector bound)
+      return some (.logSumExp, ← logSumExpProof point vector bound)
     if inner.isAppOfArity ``HAdd.hAdd 6 then
       let args := inner.getAppArgs
       let right ← Affine.reduceStructure args[5]!
@@ -151,7 +160,7 @@ private def rawCompositeProof? (point operation bound : Expr) (retained : Array 
           sameOperation inner expected.getAppArgs[0]! 2
           unless ← isDefEq inner expected.getAppArgs[0]! do
             throwError "softplus rewrite was not certified: expected exactly Real.log (1 + Real.exp a)"
-          return some (← mkAppM ``PTran.Conic.Exponential.softplus_le_iff
+          return some (.softplus, ← mkAppM ``PTran.Conic.Exponential.softplus_le_iff
             #[atom.operands[0]!, bound])
   if operation.isAppOfArity ``HMul.hMul 6 then
     let numerator := operation.getAppArgs[4]!
@@ -168,7 +177,7 @@ private def rawCompositeProof? (point operation bound : Expr) (retained : Array 
           throwError "relative-entropy rewrite was not certified: expected exactly a * Real.log (a / b)"
         let nonnegative ← signEvidence point numerator retained remainderProof false "relative-entropy numerator"
         let positive ← signEvidence point denominator retained remainderProof true "relative-entropy denominator"
-        return some (← mkAppM ``PTran.Conic.Exponential.relativeEntropy_le_iff
+        return some (.relativeEntropy, ← mkAppM ``PTran.Conic.Exponential.relativeEntropy_le_iff
           #[numerator, denominator, bound, nonnegative, positive])
   return none
 
@@ -182,7 +191,8 @@ private def logarithmProof (point left right : Expr) (retained : Array Expr)
   mkAppM ``PTran.Conic.Exponential.le_log_iff #[atom.operands[0]!, left, positive]
 
 private def automaticProof (point body : Expr) (retained : Array Expr)
-    (remainderProof : Expr) (preferLog : Bool) : MetaM Expr := do
+    (remainderProof : Expr) (preferLog : Bool) (selected? : Option Rule := none) :
+    MetaM Expr := do
   let body ← Affine.reduceStructure body
   let ge := body.isAppOfArity ``GE.ge 4
   unless ge || body.isAppOfArity ``LE.le 4 do
@@ -193,25 +203,33 @@ private def automaticProof (point body : Expr) (retained : Array Expr)
     throwError "exponential rewrite was not certified: unsupported scalar or order instance"
   let left ← Affine.reduceStructure args[if ge then 3 else 2]!
   let right ← Affine.reduceStructure args[if ge then 2 else 3]!
-  let proof ← if preferLog then
-      logarithmProof point left right retained remainderProof
+  let lowerProof : MetaM (Rule × Expr) := do
+    return (.logarithm, ← logarithmProof point left right retained remainderProof)
+  let (matched, proof) ← if preferLog then
+      lowerProof
     else if left.isAppOfArity ``PTran.Fn.logSumExp 2 then
-      logSumExpProof point left.getAppArgs[1]! right
+      pure (.logSumExp, ← logSumExpProof point left.getAppArgs[1]! right)
     else if left.isAppOfArity ``PTran.Fn.softplus 1 then
-      mkAppM ``PTran.Conic.Exponential.softplus_le_iff #[left.getAppArgs[0]!, right]
+      pure (.softplus, ← mkAppM ``PTran.Conic.Exponential.softplus_le_iff
+        #[left.getAppArgs[0]!, right])
     else if left.isAppOfArity ``PTran.Fn.relativeEntropy 2 then do
       let a := left.getAppArgs[0]!
       let b := left.getAppArgs[1]!
       let ha ← signEvidence point a retained remainderProof false "relative-entropy numerator"
       let hb ← signEvidence point b retained remainderProof true "relative-entropy denominator"
-      mkAppM ``PTran.Conic.Exponential.relativeEntropy_le_iff #[a, b, right, ha, hb]
+      pure (.relativeEntropy, ← mkAppM ``PTran.Conic.Exponential.relativeEntropy_le_iff
+        #[a, b, right, ha, hb])
     else if let some proof ← rawCompositeProof? point left right retained remainderProof then
       pure proof
     else if let some atom ← Atom.recognizeAtom? left then do
       if atom.kind == .exp then
-        mkAppM ``PTran.Conic.Exponential.exp_le_iff #[atom.operands[0]!, right]
-      else logarithmProof point left right retained remainderProof
-    else logarithmProof point left right retained remainderProof
+        pure (.exponential, ← mkAppM ``PTran.Conic.Exponential.exp_le_iff
+          #[atom.operands[0]!, right])
+      else lowerProof
+    else lowerProof
+  if let some selected := selected? then
+    unless matched == selected do
+      throwError "the selected exponential rule does not match this predicate"
   let (source, _) ← sides proof
   unless ← isDefEq source body do
     throwError "exponential rewrite was not certified: the native rule does not match the complete selected bound"
@@ -223,7 +241,8 @@ private def withRowDiagnostics {α : Type} (source : Expr) (action : MetaM α) :
     throwError "exponential rewrite was not certified for {source}: {error.toMessageData}"
 
 private def planCore (source : Expr) (retained : Array Expr)
-    (config : Affine.Config) (preferLog : Bool) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+    (config : Affine.Config) (preferLog : Bool) (selected? : Option Rule := none) :
+    MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     try
       if ← Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
@@ -239,7 +258,7 @@ private def planCore (source : Expr) (retained : Array Expr)
           Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
             withLocalDeclD `retained (conjunction (retained.map (mkApp · point))) fun evidence => do
               let proof ← automaticProof point (mkApp source point)
-                (retained.map (mkApp · point)) evidence preferLog
+                (retained.map (mkApp · point)) evidence preferLog selected?
               let (_, target) ← sides proof
               if ← Affine.depends evidence target then
                 throwError "generated exponential row depends on feasibility evidence"
@@ -279,5 +298,11 @@ def plan (source : Expr) (retained : Array Expr := #[])
     match ← planCore source retained config true with
     | .ok result => return .ok result
     | .error _ => return .error error
+
+/-- Certify exactly one native rule, without treating a lower-log fallback as
+another upper rule or counting a composite's alternate spelling twice. -/
+def planRule (rule : Rule) (source : Expr) (retained : Array Expr := #[])
+    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+  planCore source retained config (rule == .logarithm) (some rule)
 
 end PTran.Elab.Conic.Exponential

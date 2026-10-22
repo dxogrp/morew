@@ -531,18 +531,30 @@ def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
 def presentationDeltaBetween
     (current next : PTran.Elab.Reformulation.PresentationState)
     (objectiveEquality feasibleIff : Expr)
-    (constraintSplice? : Option ConstraintSplice := none) :
+    (constraintSplices : Array ConstraintSplice := #[]) :
     MetaM PTran.Elab.Reformulation.PresentationDelta := do
-  if let some splice := constraintSplice? then
+  let mut selected : Array Nat := #[]
+  for splice in constraintSplices do
     unless splice.index < current.constraints.size do
       throwError "constraint splice index is out of bounds"
-    unless next.constraints.size + 1 == current.constraints.size + splice.count do
-      throwError "constraint splice does not match the next presentation shape"
+    if selected.contains splice.index then
+      throwError "duplicate constraint splice index"
+    selected := selected.push splice.index
+  let mut ranges : Array (Nat × Nat) := #[]
+  unless constraintSplices.isEmpty do
+    let mut offset := 0
     for index in [:current.constraints.size] do
-      unless index == splice.index do
-        let nextIndex := if index < splice.index then index else index - 1 + splice.count
-        unless sameUserName current.constraints[index]!.name next.constraints[nextIndex]!.name do
+      let splice? := constraintSplices.find? (·.index == index)
+      let count := splice?.map (·.count) |>.getD 1
+      unless offset + count ≤ next.constraints.size do
+        throwError "constraint splice does not match the next presentation shape"
+      if splice?.isNone then
+        unless sameUserName current.constraints[index]!.name next.constraints[offset]!.name do
           throwError "constraint splice changed the order of an unselected constraint"
+      ranges := ranges.push (offset, count)
+      offset := offset + count
+    unless offset == next.constraints.size do
+      throwError "constraint splice does not match the next presentation shape"
   if next.binders.size < current.binders.size then
     throwError "reformulation steps cannot remove decision-variable binders"
   let mut binderReplacements := #[]
@@ -568,14 +580,14 @@ def presentationDeltaBetween
 
   let mut constraintReplacements := #[]
   for index in [:current.constraints.size] do
-    if let some splice := constraintSplice? then
-      if index == splice.index then
-        constraintReplacements := constraintReplacements.push {
-          index
-          entries := next.constraints.extract splice.index (splice.index + splice.count)
-          pointwiseIff := feasibleIff
-        }
-        continue
+    unless constraintSplices.isEmpty do
+      let (offset, count) := ranges[index]!
+      constraintReplacements := constraintReplacements.push {
+        index
+        entries := next.constraints.extract offset (offset + count)
+        pointwiseIff := feasibleIff
+      }
+      continue
     let currentConstraint := current.constraints[index]!
     let replacement := next.constraints.find? fun candidate =>
       sameUserName candidate.name currentConstraint.name
@@ -586,8 +598,7 @@ def presentationDeltaBetween
     }
   let mut constraintAdditions := #[]
   for index in [:next.constraints.size] do
-    if let some splice := constraintSplice? then
-      if splice.index ≤ index && index < splice.index + splice.count then continue
+    unless constraintSplices.isEmpty do continue
     let constraint := next.constraints[index]!
     unless current.constraints.any fun candidate =>
         sameUserName candidate.name constraint.name do

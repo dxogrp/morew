@@ -1,4 +1,5 @@
 import PTran.Elab.Conic
+import PTran.Elab.Conic.Decomposition
 import PTran.Transform
 
 /-!
@@ -81,6 +82,20 @@ def withScopedFiniteInstances {α : Type}
       let result ← withScopedFiniteInstances replace rest action
       return replace result #[binding] #[inst]
 
+/-- Retain finite-index evidence from the entire presentation while constructing
+certificates. A row can carry the only explicit indexing instance needed by the
+objective or another row. Duplicate proofs are scoped once, and all temporary
+bindings are substituted through the completed result before leaving scope. -/
+def withPresentationFiniteInstances {α : Type}
+    (replace : α → Array Expr → Array Expr → α)
+    (presentation : Reformulation.PresentationState) (action : MetaM α) : MetaM α := do
+  let mut instances := #[]
+  for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
+    for inst in ← Affine.sourceFiniteInstances source do
+      unless instances.contains inst do
+        instances := instances.push inst
+  withScopedFiniteInstances replace instances.toList action
+
 /-- Retain independent source lets throughout certificate construction. -/
 partial def withScopedEvidence {α : Type}
     (replace : α → Array Expr → Array Expr → α)
@@ -104,29 +119,7 @@ def withPredicateEvidence (point body : Expr)
     (action : MetaM Result) : MetaM Result :=
   withScopedEvidence Result.replaceFVars point body action
 
-private theorem emptyLeft (p : Prop) : True ∧ p ↔ p :=
-  ⟨fun h => h.2, fun h => ⟨True.intro, h⟩⟩
-
-private theorem emptyRight (p : Prop) : p ∧ True ↔ p :=
-  ⟨fun h => h.1, fun h => ⟨h, True.intro⟩⟩
-
-private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
-    (p ∧ q) ∧ r ↔ p ∧ s :=
-  and_assoc.trans (and_congr Iff.rfl h)
-
-private def conjunction : List Expr → Expr
-  | [] => mkConst ``True
-  | [p] => p
-  | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
-
-private partial def appendIff (left right : List Expr) : MetaM Expr := do
-  match left, right with
-  | [], _ => mkAppM ``emptyLeft #[conjunction right]
-  | _, [] => mkAppM ``emptyRight #[conjunction left]
-  | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (conjunction (left ++ right))
-  | p :: rest, _ =>
-      mkAppM ``appendHead #[p, conjunction rest, conjunction right,
-        conjunction (rest ++ right), ← appendIff rest right]
+private abbrev conjunction := Decomposition.conjunction
 
 -- Adapters can leave another representation's target projection at the head.
 -- Expose only these record fields, stopping before arbitrary predicate helpers
@@ -149,34 +142,15 @@ private partial def exposeTarget (body : Expr) : MetaM Expr := do
         return ← exposeTarget (mkAppN reduced (args.extract prefixSize args.size))
   return body
 
-private partial def splitTarget (body : Expr) : MetaM (List Expr × Expr) := do
-  let body ← exposeTarget body
-  if let .letE name type value rest _ := body then
-    -- The decomposition proof's type can depend on this value even when the
-    -- original predicate's type does not. Rebuild it as a dependent let.
-    return ← withLetDecl name type value fun binding => do
-      let (rows, proof) ← splitTarget (rest.instantiate1 binding)
-      -- Keep nondependent lets as lets, rather than abstracting them into lambdas.
-      let rows ← rows.mapM fun row =>
-        mkLetFVars #[binding] row (usedLetOnly := false) (generalizeNondepLet := false)
-      let proof ← mkLetFVars #[binding] proof
-        (usedLetOnly := false) (generalizeNondepLet := false)
-      return (rows, proof)
-  if body.isConstOf ``True then
-    return ([], mkApp (mkConst ``Iff.rfl) body)
-  if body.isAppOfArity ``And 2 then
-    let args := body.getAppArgs
-    let (left, hl) ← splitTarget args[0]!
-    let (right, hr) ← splitTarget args[1]!
-    let split ← mkAppM ``and_congr #[hl, hr]
-    let combined ← mkAppM ``Iff.trans #[split, ← appendIff left right]
-    return (left ++ right, combined)
-  -- A finite quantified membership remains one row. Its index, carrier, and
-  -- body are checked by the row normalizer, without expanding coordinates.
-  unless body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
-      body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
-    throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential membership family"
-  return ([body], mkApp (mkConst ``Iff.rfl) body)
+private def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
+  Decomposition.split body fun body => do
+    let body ← exposeTarget body
+    -- Keep exact-lift diagnostics stable while sharing conjunction proof assembly.
+    unless body.isLet || body.isConstOf ``True || body.isAppOfArity ``And 2 ||
+        body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
+        body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
+      throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential membership family"
+    return body
 
 -- Do not let unification specialize a caller's unresolved local declarations.
 /-- Detect unresolved expressions, including evidence hidden in local declarations. -/
