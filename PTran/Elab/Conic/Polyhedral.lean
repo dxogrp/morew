@@ -17,6 +17,15 @@ open Plan
 /-- A checked exact replacement, before presentation names are allocated. -/
 abbrev Result := Plan.Result
 
+/-- Independently selectable native rules. Norm carriers select disjoint variants. -/
+inductive Rule where
+  | absolute | positivePart | maximum | minimum | supremum | infimum | norm
+  deriving BEq, Repr
+
+/-- Stable order for exhaustive native-rule certification. -/
+def rules : Array Rule :=
+  #[.absolute, .positivePart, .maximum, .minimum, .supremum, .infimum, .norm]
+
 private def isRealVector (type : Expr) : MetaM Bool := do
   let type ← whnf type
   let .forallE _ index body _ := type | return false
@@ -89,7 +98,8 @@ private def normProof (operation bound : Expr) : MetaM Expr := do
   sameOperationPrefix operation source.getAppArgs[2]! 1
   return proof
 
-private def automaticProof (point body : Expr) : MetaM Expr := do
+private def automaticProof (point body : Expr) (selected? : Option Rule := none) :
+    MetaM Expr := do
   let body ← Affine.reduceStructure body
   let greaterEqual := body.isAppOfArity ``GE.ge 4
   unless greaterEqual || body.isAppOfArity ``LE.le 4 do
@@ -101,31 +111,37 @@ private def automaticProof (point body : Expr) : MetaM Expr := do
     throwError "unsupported order instance in the selected predicate"
   let left ← Affine.reduceStructure args[if greaterEqual then 3 else 2]!
   let right ← Affine.reduceStructure args[if greaterEqual then 2 else 3]!
+  let accepts := fun rule => selected?.isNone || selected? == some rule
   if let some operation ← Atom.recognizeAtom? left then
     let operands := operation.operands
     match operation.kind with
-    | .abs => return ← mkAppM ``PTran.Conic.Polyhedral.abs_le_iff #[operands[0]!, right]
-    | .pos => return ← mkAppM ``PTran.Conic.Polyhedral.posPart_le_iff #[operands[0]!, right]
+    | .abs =>
+        if accepts .absolute then
+          return ← mkAppM ``PTran.Conic.Polyhedral.abs_le_iff #[operands[0]!, right]
+    | .pos =>
+        if accepts .positivePart then
+          return ← mkAppM ``PTran.Conic.Polyhedral.posPart_le_iff #[operands[0]!, right]
     | .maximum =>
-        return ← mkAppM ``PTran.Conic.Polyhedral.max_le_iff
-          #[operands[0]!, operands[1]!, right]
+        if accepts .maximum then
+          return ← mkAppM ``PTran.Conic.Polyhedral.max_le_iff
+            #[operands[0]!, operands[1]!, right]
     | _ => pure ()
   if let some operation ← Atom.recognizeAtom? right then
-    if operation.kind == .minimum then
+    if operation.kind == .minimum && accepts .minimum then
       return ← mkAppM ``PTran.Conic.Polyhedral.le_min_iff
         #[operation.operands[0]!, operation.operands[1]!, left]
-  if left.isAppOfArity ``Finset.sup' 6 then
+  if left.isAppOfArity ``Finset.sup' 6 && accepts .supremum then
     return ← finiteExtremumProof point left right false
-  if right.isAppOfArity ``Finset.inf' 6 then
+  if right.isAppOfArity ``Finset.inf' 6 && accepts .infimum then
     return ← finiteExtremumProof point right left true
-  if left.isAppOfArity ``Norm.norm 3 then
+  if left.isAppOfArity ``Norm.norm 3 && accepts .norm then
     return ← normProof left right
   throwError "no supported exact polyhedral rule for {body}; expected abs, positive part, maximum, minimum, a finite extremum, or a supported norm in its exact orientation"
 
-private def automaticLift (source domain : Expr) : MetaM Expr :=
+private def automaticLift (selected? : Option Rule) (source domain : Expr) : MetaM Expr :=
   withLocalDeclD `point domain fun point => do
     let body ← Affine.reduceStructure (mkApp source point)
-    let proof ← automaticProof point body
+    let proof ← automaticProof point body selected?
     let (provedSource, target) ← theoremSides proof
     unless ← isDefEq provedSource body do
       throwError "the exact rule does not describe the entire selected predicate"
@@ -144,6 +160,11 @@ private def automaticLift (source domain : Expr) : MetaM Expr :=
 /-- Plan an exact polyhedral replacement or certify an explicit representation. -/
 def plan (sourcePredicate : Expr) (rule? : Option Expr := none)
     (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
-  Plan.plan automaticLift sourcePredicate rule? config
+  Plan.plan (automaticLift none) sourcePredicate rule? config
+
+/-- Certify one native rule without falling through to another operation. -/
+def planRule (rule : Rule) (sourcePredicate : Expr) (config : Affine.Config := {}) :
+    MetaM (Except Affine.AffineError Result) :=
+  Plan.plan (automaticLift (some rule)) sourcePredicate none config
 
 end PTran.Elab.Conic.Polyhedral

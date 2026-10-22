@@ -12,6 +12,7 @@ import PTranTest.Atom.Recognition
 import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
 import PTranTest.Conic
+import PTranTest.Conic.Automatic
 import PTranTest.Conic.EuclideanAffine
 import PTranTest.Conic.Exponential
 import PTranTest.Conic.ExponentialCone

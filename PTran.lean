@@ -13,6 +13,8 @@ import PTran.Elab.Affine.Space
 import PTran.Elab.Affine.State
 import PTran.Elab.Atom
 import PTran.Elab.Conic
+import PTran.Elab.Conic.Automatic
+import PTran.Elab.Conic.Decomposition
 import PTran.Elab.Conic.Domain
 import PTran.Elab.Conic.Exponential
 import PTran.Elab.Conic.Plan
