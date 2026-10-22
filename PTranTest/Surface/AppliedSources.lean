@@ -479,6 +479,131 @@ run_cmd do
 
 end GeneratedNames
 
+namespace ShadowedParameterNames
+
+def family (a b : ℝ) :=
+  problem (x : ℝ)
+    minimize a - b + x
+    subject to
+      lower : a ≤ x
+      upper : x ≤ b
+
+section
+
+variable (data : ℝ)
+local notation "outerData" => data
+
+section
+
+variable (data : ℝ)
+
+reformulation unchanged : (family outerData data) := by
+
+reformulation target : (family outerData data) := by
+  epigraph t
+
+end
+end
+
+/--
+info: problem (x : ℝ)
+  minimize data - data_1 + x
+  subject to
+    lower : data ≤ x
+    upper : x ≤ data_1
+-/
+#guard_msgs in
+#printp unchanged
+
+/--
+info: problem (x t : ℝ)
+  minimize t
+  subject to
+    lower : data ≤ x
+    upper : x ≤ data_1
+    epigraph_t : data - data_1 + x ≤ t
+-/
+#guard_msgs in
+#printp target
+
+reformulation chained : (target 2 5) := by
+  epigraph s
+
+example : GlobalEquivalence (target 2 5) chained := chained.equivalence
+
+example (x t s : ℝ) : chained.feasible ((x, t), s) ↔
+    2 ≤ x ∧ x ≤ 5 ∧ 2 - 5 + x ≤ t ∧ t ≤ s := Iff.rfl
+
+namespace Dimensions
+
+def family (m n : Nat) :=
+  problem (v : Fin m → ℝ) (w : Fin n → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      left : ∀ i, v i ≤ 0
+      right : ∀ i, w i ≤ 0
+
+section
+
+variable (data : Nat)
+local notation "outerData" => data
+
+section
+
+variable (data : Nat)
+
+reformulation target : (family outerData data) := by
+  epigraph t
+
+end
+end
+
+/--
+info: problem (v : Fin data → ℝ) (w : Fin data_1 → ℝ) (t : ℝ)
+  minimize t
+  subject to
+    left : ∀ (i : Fin data), v i ≤ 0
+    right : ∀ (i : Fin data_1), w i ≤ 0
+    epigraph_t : 0 ≤ t
+-/
+#guard_msgs in
+#printp target
+
+end Dimensions
+
+namespace ReservedNames
+
+def family (a b c : ℝ) :=
+  problem (data_1 : ℝ)
+    minimize a - b + c + data_1
+
+section
+
+variable (data : ℝ)
+local notation "outerData" => data
+
+section
+
+variable (data data_2 : ℝ)
+
+reformulation target : (family outerData data data_2) := by
+  epigraph t
+
+end
+end
+
+/--
+info: problem (data_1 t : ℝ)
+  minimize t
+  subject to
+    epigraph_t : data - data_3 + data_2 + data_1 ≤ t
+-/
+#guard_msgs in
+#printp target
+
+end ReservedNames
+end ShadowedParameterNames
+
 reformulation validAfterFailures : (quadratic 11) := by
   epigraph t
 
