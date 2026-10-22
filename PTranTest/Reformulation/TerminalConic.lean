@@ -234,5 +234,77 @@ run_cmd do
       #[`generated_conic_1, `generated_conic_2] do
     Lean.throwError "terminal names retained macro scopes"
 
+namespace FiniteInstances
+
+class Parameter where
+  Index : Type
+  equiv : Fin 2 ≃ Index
+  coeff : Index → ℝ
+
+variable [Parameter]
+
+/- The only finite-index evidence occurs inside the constraint's dot product.
+Terminal planning must retain it while validating the constant objective,
+lowering the nonlinear row, and emitting reusable form artifacts. -/
+def source :=
+  problem (x : Parameter.Index → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      bound : |@dotProduct Parameter.Index ℝ
+        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
+
+reformulation automaticTarget : source := by
+  conic
+
+reformulation selectedTarget : source := by
+  conic at bound
+  conic
+
+def auxiliarySource :=
+  problem (x : Parameter.Index → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      bound : |@dotProduct Parameter.Index ℝ
+        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
+      loss : Fn.softplus (@dotProduct Parameter.Index ℝ
+        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x) ≤ 2
+
+reformulation auxiliaryTarget : auxiliarySource := by
+  conic
+
+example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
+example : GlobalEquivalence source selectedTarget := selectedTarget.equivalence
+example : GlobalEquivalence auxiliarySource auxiliaryTarget := auxiliaryTarget.equivalence
+
+-- Only finiteness is recovered from source expressions. For ordinary field
+-- notation, install the same canonical enumeration used by the stored forms.
+local instance : Finite Parameter.Index := by
+  let := Fintype.ofEquiv (Fin 2) Parameter.equiv
+  infer_instance
+local instance : Fintype Parameter.Index := Fintype.ofFinite Parameter.Index
+
+example : automaticTarget.conicForm.data.rowCount = 2 := rfl
+example : selectedTarget.conicForm.data.rowCount = 2 := rfl
+example : auxiliaryTarget.conicForm.data.rowCount = 4 := rfl
+example : automaticTarget.conicForm.data.toProblem = automaticTarget :=
+  automaticTarget.conicForm.represents
+example : selectedTarget.conicForm.data.toProblem = selectedTarget :=
+  selectedTarget.conicForm.represents
+
+example : Conic.Form automaticTarget := automaticTarget.conicForm
+example : IsConic selectedTarget := selectedTarget.isConic
+example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
+
+example (x : Parameter.Index → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    automaticTarget.feasible x ↔
+      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+example (x : Parameter.Index → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
+    selectedTarget.feasible x ↔
+      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+
+end FiniteInstances
+
 end
 end PTranTest.Reformulation.TerminalConic

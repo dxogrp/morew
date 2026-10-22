@@ -230,7 +230,12 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       let namedForm ← instantiateMVars namedForm
       if namedForm.hasMVar then
         throwErrorAt artifact.ref "named conic form parameters could not be recovered"
-      let property ← mkAppM ``PTran.Conic.Form.isConic #[namedForm]
+      -- The form already carries its canonical instances. Source-local finite
+      -- evidence need not be available to typeclass search at emission time.
+      let namedFormType ← whnf (← inferType namedForm)
+      let property := mkAppN
+        (mkConst ``PTran.Conic.Form.isConic namedFormType.getAppFn.constLevels!)
+        (namedFormType.getAppArgs ++ #[namedForm])
       let propertyType ← inferType property
       let propertyDefinition ← `(Parser.Command.theorem|
         theorem $propertyIdent : $(← exactExpressionSyntax propertyType) :=

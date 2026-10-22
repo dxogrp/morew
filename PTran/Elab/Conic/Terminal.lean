@@ -191,38 +191,40 @@ def plan (presentation : PresentationState) (config : Affine.Config := {}) :
           presentation.objective] ++ presentation.constraints.map (·.predicate) do
         if ← Plan.unresolved expression then
           throwError "terminal conic planning requires fully elaborated expressions"
-      match ← reifyObjective presentation config with
-      | .error error =>
-        let bound := match presentation.sense with
-          | .minimize => "epigraph t"
-          | .maximize => "hypograph t"
-        return .error { error with
-          reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
-      | .ok _ => pure ()
-      let canonical ← presentation.canonicalProblem
-      let equivalence ← instantiateMVars (← mkAppM ``PTran.GlobalEquivalence.refl #[canonical])
-      let work : Work := {
-        presentation
-        equivalence
-        rowOrigins := presentation.constraints.mapIdx fun index _ => index
-      }
-      let work ← splitNonconicGroups work config
-      let work ← match ← lower presentation work config with
-        | .ok work => pure work
-        | .error error => return .error error
-      let form ← match ← buildForm work.presentation config with
-        | .ok form => pure form
-        | .error error => return .error error
-      checkWithKernel work.equivalence
-      checkWithKernel form
-      return .ok {
-        presentation := work.presentation
-        equivalence := work.equivalence
-        form
-        rowOrigins := work.rowOrigins
-        replacedIndices := work.replacedIndices.qsort (· < ·)
-        auxiliaries := work.auxiliaries
-      }
+      Plan.withPresentationFiniteInstances
+        (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars)) presentation do
+        match ← reifyObjective presentation config with
+        | .error error =>
+          let bound := match presentation.sense with
+            | .minimize => "epigraph t"
+            | .maximize => "hypograph t"
+          return .error { error with
+            reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
+        | .ok _ => pure ()
+        let canonical ← presentation.canonicalProblem
+        let equivalence ← instantiateMVars (← mkAppM ``PTran.GlobalEquivalence.refl #[canonical])
+        let work : Work := {
+          presentation
+          equivalence
+          rowOrigins := presentation.constraints.mapIdx fun index _ => index
+        }
+        let work ← splitNonconicGroups work config
+        let work ← match ← lower presentation work config with
+          | .ok work => pure work
+          | .error error => return .error error
+        let form ← match ← buildForm work.presentation config with
+          | .ok form => pure form
+          | .error error => return .error error
+        checkWithKernel work.equivalence
+        checkWithKernel form
+        return .ok {
+          presentation := work.presentation
+          equivalence := work.equivalence
+          form
+          rowOrigins := work.rowOrigins
+          replacedIndices := work.replacedIndices.qsort (· < ·)
+          auxiliaries := work.auxiliaries
+        }
     catch error =>
       return .error {
         expression := presentation.objective

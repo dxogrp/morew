@@ -82,6 +82,20 @@ def withScopedFiniteInstances {α : Type}
       let result ← withScopedFiniteInstances replace rest action
       return replace result #[binding] #[inst]
 
+/-- Retain finite-index evidence from the entire presentation while constructing
+certificates. A row can carry the only explicit indexing instance needed by the
+objective or another row. Duplicate proofs are scoped once, and all temporary
+bindings are substituted through the completed result before leaving scope. -/
+def withPresentationFiniteInstances {α : Type}
+    (replace : α → Array Expr → Array Expr → α)
+    (presentation : Reformulation.PresentationState) (action : MetaM α) : MetaM α := do
+  let mut instances := #[]
+  for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
+    for inst in ← Affine.sourceFiniteInstances source do
+      unless instances.contains inst do
+        instances := instances.push inst
+  withScopedFiniteInstances replace instances.toList action
+
 /-- Retain independent source lets throughout certificate construction. -/
 partial def withScopedEvidence {α : Type}
     (replace : α → Array Expr → Array Expr → α)

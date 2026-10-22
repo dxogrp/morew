@@ -159,14 +159,9 @@ def buildForm (presentation : PresentationState) (config : Affine.Config := {}) 
     MetaM (Except Affine.AffineError Expr) :=
   Affine.withIsolatedMVars do
     try
-      let mut instances := #[]
-      for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
-        for inst in ← Affine.sourceFiniteInstances source do
-          unless instances.contains inst do
-            instances := instances.push inst
-      Plan.withScopedFiniteInstances
+      Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
-        instances.toList (buildFormCore presentation config)
+        presentation (buildFormCore presentation config)
     catch error =>
       return .error {
         expression := presentation.objective

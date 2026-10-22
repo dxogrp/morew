@@ -104,8 +104,10 @@ private def validateTypedPrimitive (state : ReformState)
         throwErrorAt formSyntax "terminal evidence is not a Conic.Form"
       unless ← isDefEq type.getAppArgs.back! expectedCanonical do
         throwErrorAt formSyntax "terminal conic form does not represent the final canonical problem"
-      let data ← mkAppM ``PTran.Conic.Form.data #[form]
-      let sense ← mkAppM ``PTran.Conic.Data.sense #[data]
+      -- Use the form's stored instances even when finiteness was available
+      -- only inside a source constraint during planning.
+      let data ← mkProjection form `data
+      let sense ← mkProjection data `sense
       let expectedSense := match nextPresentation.sense with
         | .minimize => mkConst ``PTran.ObjectiveSense.minimize
         | .maximize => mkConst ``PTran.ObjectiveSense.maximize
