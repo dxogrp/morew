@@ -2,6 +2,9 @@ import PTran.Affine
 import PTran.Conic
 import PTran.Conic.Basic
 import PTran.Conic.Cone
+import PTran.Conic.Exponential
+import PTran.Conic.Exponential.Basic
+import PTran.Conic.Exponential.Cone
 import PTran.Conic.Polyhedral
 import PTran.Conic.SecondOrder
 import PTran.Core
@@ -19,6 +22,8 @@ import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names
 import PTran.Elab.Reformulation.Presentation
 import PTran.Elab.Reformulation.Runner
+import PTran.Fn
+import PTran.Fn.Exponential
 import PTran.Reformulation
 import PTran.Reformulation.Command
 import PTran.Reformulation.Conic

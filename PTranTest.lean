@@ -13,6 +13,8 @@ import PTranTest.Atom.Support
 import PTranTest.Atom.Unsupported
 import PTranTest.Conic
 import PTranTest.Conic.EuclideanAffine
+import PTranTest.Conic.Exponential
+import PTranTest.Conic.ExponentialCone
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
 import PTranTest.Conic.Rewrite
