@@ -1,5 +1,6 @@
 import PTran.Affine
 import Lean.Meta.Basic
+import Lean.Meta.Transform
 import Qq
 
 /-!
@@ -57,7 +58,7 @@ def euclideanDimension? (type : Expr) : MetaM (Option Expr) := do
   unless ← isDefEq shape.getAppArgs[0]! q((2 : ENNReal)) do return none
   let coordinates ← whnf shape.getAppArgs[1]!
   let .forallE _ index body _ := coordinates | return none
-  let body ← whnf body
+  let body ← Core.betaReduce (← whnf body)
   if body.hasLooseBVars then return none
   unless body.isConstOf ``Real do return none
   let index ← whnf index
@@ -92,7 +93,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
     let data ← mkAppM ``Structure.prod #[left.data, right.data]
     finishSpace type data (left.instances ++ right.instances)
   else if let .forallE _ index body _ := shape then
-    let body ← whnf body
+    let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then
       throwError "affine certification requires a nondependent function space, got {type}"
     let target ← buildSpace body

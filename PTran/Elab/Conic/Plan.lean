@@ -171,9 +171,11 @@ private partial def splitTarget (body : Expr) : MetaM (List Expr × Expr) := do
     let split ← mkAppM ``and_congr #[hl, hr]
     let combined ← mkAppM ``Iff.trans #[split, ← appendIff left right]
     return (left ++ right, combined)
-  unless body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
+  -- A finite quantified membership remains one row. Its index, carrier, and
+  -- body are checked by the row normalizer, without expanding coordinates.
+  unless body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
       body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
-    throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, or supported cone memberships"
+    throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential membership family"
   return ([body], mkApp (mkConst ``Iff.rfl) body)
 
 -- Do not let unification specialize a caller's unresolved local declarations.
