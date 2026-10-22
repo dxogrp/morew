@@ -18,6 +18,7 @@ import PTranTest.Conic.Exponential
 import PTranTest.Conic.ExponentialCone
 import PTranTest.Conic.ExponentialElab
 import PTranTest.Conic.ExponentialRows
+import PTranTest.Conic.Form
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
 import PTranTest.Conic.Rewrite

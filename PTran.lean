@@ -17,6 +17,7 @@ import PTran.Elab.Conic.Automatic
 import PTran.Elab.Conic.Decomposition
 import PTran.Elab.Conic.Domain
 import PTran.Elab.Conic.Exponential
+import PTran.Elab.Conic.Form
 import PTran.Elab.Conic.Plan
 import PTran.Elab.Conic.Polyhedral
 import PTran.Elab.Conic.Rewrite
