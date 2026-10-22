@@ -1,5 +1,6 @@
 import PTran.Conic.SecondOrder
 import PTran.Elab.Conic.Plan
+import PTran.Elab.Conic.Domain
 
 /-!
 # Checked second-order replacements
@@ -14,39 +15,12 @@ namespace PTran.Elab.Conic.SecondOrder
 open Lean Lean.Meta Qq
 open scoped ENNReal
 
-/-- A same-domain replacement certified under the unchanged row conjunction. -/
-structure Result where
-  /-- The unchanged decision domain. -/
-  domain : Expr
-  /-- Generated predicates in presentation order. -/
-  rowPredicates : Array Expr
-  /-- Checked affine cone constraints for all generated predicates. -/
-  certifiedRows : Array RowResult
-  /-- `∀ x, remainder x → (source x ↔ conjunction rowPredicates x)`. -/
-  conditionalIff : Expr
-
-/-- Rebase all expressions in a contextual plan, including its domain evidence. -/
-def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
-  domain := result.domain.replaceFVars oldVars newVars
-  rowPredicates := result.rowPredicates.map (·.replaceFVars oldVars newVars)
-  certifiedRows := result.certifiedRows.map fun row => {
-    constraint := row.constraint.replaceFVars oldVars newVars
-    pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars }
-  conditionalIff := result.conditionalIff.replaceFVars oldVars newVars
-}
+/-- A same-domain replacement using the shared retained-evidence certificate. -/
+abbrev Result := Plan.ContextualResult
 
 private def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
-
-private def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
-  if count == 0 then return #[]
-  let mut parts := #[]
-  let mut rest := proof
-  for _ in [:count - 1] do
-    parts := parts.push (← mkAppM ``And.left #[rest])
-    rest ← mkAppM ``And.right #[rest]
-  return parts.push rest
 
 private def euclidean? (type : Expr) : MetaM Bool := do
   return (← Affine.Space.euclideanDimension? type).isSome
@@ -102,73 +76,10 @@ private def squareBase (expression : Expr) : MetaM Expr := do
     throwError "quadratic bound requires the natural exponent 2; found {expression}"
   return args[4]!
 
-private def positiveProof? (point epsilon : Expr) : MetaM (Option Expr) := do
-  if (← Affine.depends point epsilon) || (← Plan.unresolved epsilon) then return none
-  let epsilon : Q(ℝ) := epsilon
-  let obligation : Q(Prop) := q(0 < $epsilon)
-  for declaration in ← getLCtx do
-    unless declaration.isImplementationDetail do
-      if !(← Affine.depends point declaration.toExpr) &&
-          !(← Plan.unresolved declaration.toExpr) &&
-          (← isDefEq declaration.type obligation) then
-        checkWithKernel declaration.toExpr
-        return some declaration.toExpr
-  try
-    let context ← readThe Core.Context
-    let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
-    let limit := if context.maxHeartbeats == 0 then localLimit
-      else min context.maxHeartbeats localLimit
-    let proof ← mapLetDeclZeta `_marginOrder q(LT ℝ) q(inferInstance : LT ℝ) fun _ => do
-      mapLetDeclZeta `_marginPreorder q(Preorder ℝ) q(inferInstance : Preorder ℝ) fun _ => do
-      mapLetDeclZeta `_marginPartialOrder q(PartialOrder ℝ)
-        q(inferInstance : PartialOrder ℝ) fun _ => do
-      let result ← withTheReader Core.Context
-        (fun context => { context with maxHeartbeats := limit }) <|
-        Mathlib.Meta.NormNum.deriveBool obligation
-      match result with
-      | ⟨true, proof⟩ => pure proof
-      | _ => throwError "positive margin was not established"
-    checkWithKernel proof
-    return some proof
-  catch _ => return none
-
-private theorem marginPositive {epsilon denominator : ℝ}
-    (positive : 0 < epsilon) (bound : epsilon ≤ denominator) : 0 < denominator :=
-  lt_of_lt_of_le positive bound
-
-private partial def marginInRow? (point denominator body evidence : Expr) :
-    MetaM (Option Expr) := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
-  if let .letE name type value rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
-      return ← marginInRow? point denominator (rest.instantiate1 value) evidence
-    return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      let proof? ← marginInRow? point denominator (rest.instantiate1 binding) evidence
-      proof?.mapM fun proof => proof.replaceFVarsM #[binding] #[value]
-  if body.isAppOfArity ``And 2 then
-    let args := body.getAppArgs
-    if let some proof ← marginInRow? point denominator args[0]!
-        (← mkAppM ``And.left #[evidence]) then return some proof
-    return ← marginInRow? point denominator args[1]!
-      (← mkAppM ``And.right #[evidence])
-  let ge := body.isAppOfArity ``GE.ge 4
-  unless ge || body.isAppOfArity ``LE.le 4 do return none
-  let args := body.getAppArgs
-  unless (← isDefEq args[0]! q(ℝ)) &&
-      (← isDefEq args[1]! (mkConst ``Real.instLE)) do return none
-  let epsilon := args[if ge then 3 else 2]!
-  let upper ← Affine.reduceStructure args[if ge then 2 else 3]!
-  unless ← isDefEq upper denominator do return none
-  let some positive ← positiveProof? point epsilon | return none
-  return some (← mkAppM ``marginPositive #[positive, evidence])
-
 private def denominatorPositive (point denominator : Expr)
     (retainedBodies : Array Expr) (remainderProof : Expr) : MetaM Expr := do
-  if let some proof ← positiveProof? point denominator then return proof
-  let parts ← conjunctionParts retainedBodies.size remainderProof
-  for body in retainedBodies, proof in parts do
-    if let some positive ← marginInRow? point denominator body proof then
-      return positive
+  if let some proof ← Domain.signFromRetained? point denominator retainedBodies remainderProof true then
+    return proof
   throwError "quadratic-over-linear rewrite was not certified: missing positive constant margin; required an independent ε with 0 < ε and a retained constraint ε ≤ {denominator}"
 
 -- Construct a theorem using its native operation, then compare the actual
@@ -247,24 +158,6 @@ private def automaticProof (point body : Expr) (retained : Array Expr)
     throwError "second-order rewrite was not certified: the native rule does not match the complete selected bound"
   return proof
 
-private partial def withEvidence (point body : Expr) (action : MetaM Result) : MetaM Result := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
-  if let .letE name type value rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
-      return ← withEvidence point (rest.instantiate1 value) action
-    withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← withEvidence point (rest.instantiate1 binding) action
-      return result.replaceFVars #[binding] #[value]
-  else action
-
-private def withFiniteInstances (instances : List Expr) (action : MetaM Result) : MetaM Result := do
-  match instances with
-  | [] => action
-  | inst :: rest =>
-    withLetDecl `_secondOrderFinite (← inferType inst) inst fun binding => do
-      let result ← withFiniteInstances rest action
-      return result.replaceFVars #[binding] #[inst]
-
 /-- Certify one native upper bound under exactly the supplied retained rows.
 The selected predicate must not be included among `retained`. -/
 def plan (source : Expr) (retained : Array Expr := #[])
@@ -277,9 +170,9 @@ def plan (source : Expr) (retained : Array Expr := #[])
       let domain ← Plan.predicateDomain source
       let mut instances ← Affine.sourceFiniteInstances source
       for row in retained do instances := instances ++ (← Affine.sourceFiniteInstances row)
-      let result ← withFiniteInstances instances.toList do
+      let result ← Plan.withScopedFiniteInstances Plan.ContextualResult.replaceFVars instances.toList do
         withLocalDeclD `point domain fun point =>
-          withEvidence point (mkApp source point) do
+          Plan.withScopedEvidence Plan.ContextualResult.replaceFVars point (mkApp source point) do
             let bodies := retained.map (mkApp · point)
             let (row, conditionalIff) ← withLocalDeclD `retained (conjunction bodies) fun evidence => do
               let proof ← automaticProof point (mkApp source point) bodies evidence
@@ -309,29 +202,7 @@ def planReplacement (source : Expr) (retained : Array Expr := #[])
     | .error error => return .error error
     | .ok result =>
       try
-        let exact? ← withLocalDeclD `point result.domain fun point => do
-          let remainder := conjunction (retained.map (mkApp · point))
-          withLocalDeclD `retained remainder fun evidence => do
-            let proof := (mkApp2 result.conditionalIff point evidence).headBeta
-            if ← Affine.depends evidence proof then return none
-            let pointwise ← mkLambdaFVars #[point] proof
-            let lift ← instantiateMVars (← mkAppM ``PTran.ExactConstraintLift.ofIff
-              #[result.rowPredicates[0]!, pointwise])
-            let lift ← Plan.checkLift source lift
-            let targetIff ← mkLambdaFVars #[point]
-              (mkApp (mkConst ``Iff.rfl) (mkApp result.rowPredicates[0]! point))
-            checkWithKernel targetIff
-            return some ({
-              lift
-              auxiliary? := none
-              nextDomain := result.domain
-              rowPredicates := result.rowPredicates
-              targetIff
-              certifiedRows := result.certifiedRows
-            } : Plan.Result)
-        return .ok (match exact? with
-          | some exact => .inl exact
-          | none => .inr result)
+        return .ok (← Plan.prepareContextual source retained result)
       catch error =>
         return .error { expression := source, reason := ← addMessageContext error.toMessageData }
 

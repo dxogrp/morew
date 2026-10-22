@@ -155,7 +155,7 @@ partial def isSupportedSpace (type : Expr) : MetaM Bool := do
     return (← isSupportedSpace type.getAppArgs[0]!) &&
       (← isSupportedSpace type.getAppArgs[1]!)
   if let .forallE _ index body _ := type then
-    let body ← whnf body
+    let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then return false
     -- Shape validation needs finiteness, not an enumeration in the ambient
     -- context. Indexed operations retain their own elaborated Fintype instance.

@@ -27,8 +27,34 @@ structure Result where
   /-- Checked affine cone rows corresponding to `rowPredicates`. -/
   certifiedRows : Array RowResult
 
-private def Result.replaceFVar (result : Result) (binding value : Expr) : Result :=
-  let replace := fun expression : Expr => expression.replaceFVars #[binding] #[value]
+/-- A same-domain replacement certified under exactly the retained row conjunction. -/
+structure ContextualResult where
+  /-- The unchanged decision domain. -/
+  domain : Expr
+  /-- Generated predicates in presentation order. -/
+  rowPredicates : Array Expr
+  /-- Checked affine cone constraints for all generated predicates. -/
+  certifiedRows : Array RowResult
+  /-- `∀ x, remainder x → (source x ↔ conjunction rowPredicates x)`. -/
+  conditionalIff : Expr
+
+/-- Rebase a contextual replacement, including its retained domain evidence. -/
+def ContextualResult.replaceFVars (result : ContextualResult)
+    (oldVars newVars : Array Expr) : ContextualResult := {
+  domain := result.domain.replaceFVars oldVars newVars
+  rowPredicates := result.rowPredicates.map (·.replaceFVars oldVars newVars)
+  certifiedRows := result.certifiedRows.map fun row => {
+    constraint := row.constraint.replaceFVars oldVars newVars
+    pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars }
+  conditionalIff := result.conditionalIff.replaceFVars oldVars newVars
+}
+
+/-- Either an unconditional exact lift or a replacement using retained evidence. -/
+abbrev Prepared := Sum Result ContextualResult
+
+/-- Rebase all expressions of an unconditional replacement. -/
+def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
+  let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
   { lift := replace result.lift
     auxiliary? := result.auxiliary?.map replace
     nextDomain := replace result.nextDomain
@@ -38,31 +64,45 @@ private def Result.replaceFVar (result : Result) (binding value : Expr) : Result
       constraint := replace row.constraint
       pointwiseIff := replace row.pointwiseIff } }
 
-/-- Retain source indexing evidence while constructing a checked plan. -/
-def withFiniteInstances (instances : List Expr) (action : MetaM Result) :
-    MetaM Result := do
+/-- Rebase either kind of checked replacement. -/
+def Prepared.replaceFVars (result : Prepared) (oldVars newVars : Array Expr) : Prepared :=
+  match result with
+  | .inl exact => .inl (exact.replaceFVars oldVars newVars)
+  | .inr contextual => .inr (contextual.replaceFVars oldVars newVars)
+
+/-- Retain finite-index evidence and substitute it through the completed result. -/
+def withScopedFiniteInstances {α : Type}
+    (replace : α → Array Expr → Array Expr → α)
+    (instances : List Expr) (action : MetaM α) : MetaM α := do
   match instances with
   | [] => action
   | inst :: rest =>
     withLetDecl `_conicFinite (← inferType inst) inst fun binding => do
-      let result ← withFiniteInstances rest action
-      return result.replaceFVar binding inst
+      let result ← withScopedFiniteInstances replace rest action
+      return replace result #[binding] #[inst]
 
--- Independent source lets can carry denominator proofs needed by generated
--- rows. Keep those declarations in scope throughout planning, then substitute
--- their values into every returned expression.
-/-- Retain independent source lets during exact-rule construction. -/
-partial def withPredicateEvidence (point body : Expr)
-    (action : MetaM Result) : MetaM Result := do
+/-- Retain independent source lets throughout certificate construction. -/
+partial def withScopedEvidence {α : Type}
+    (replace : α → Array Expr → Array Expr → α)
+    (point body : Expr) (action : MetaM α) : MetaM α := do
   let body ← Affine.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
     if (← Affine.depends point type) || (← Affine.depends point value) then
-      return ← withPredicateEvidence point (rest.instantiate1 value) action
+      return ← withScopedEvidence replace point (rest.instantiate1 value) action
     withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← withPredicateEvidence point (rest.instantiate1 binding) action
-      return result.replaceFVar binding value
-  else
-    action
+      let result ← withScopedEvidence replace point (rest.instantiate1 binding) action
+      return replace result #[binding] #[value]
+  else action
+
+/-- Retain source indexing evidence while constructing an exact lift. -/
+def withFiniteInstances (instances : List Expr) (action : MetaM Result) :
+    MetaM Result :=
+  withScopedFiniteInstances Result.replaceFVars instances action
+
+/-- Retain independent source lets while constructing an exact lift. -/
+def withPredicateEvidence (point body : Expr)
+    (action : MetaM Result) : MetaM Result :=
+  withScopedEvidence Result.replaceFVars point body action
 
 private theorem emptyLeft (p : Prop) : True ∧ p ↔ p :=
   ⟨fun h => h.2, fun h => ⟨True.intro, h⟩⟩
@@ -131,9 +171,11 @@ private partial def splitTarget (body : Expr) : MetaM (List Expr × Expr) := do
     let split ← mkAppM ``and_congr #[hl, hr]
     let combined ← mkAppM ``Iff.trans #[split, ← appendIff left right]
     return (left ++ right, combined)
-  unless body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
+  -- A finite quantified membership remains one row. Its index, carrier, and
+  -- body are checked by the row normalizer, without expanding coordinates.
+  unless body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
       body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
-    throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, or supported cone memberships"
+    throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential membership family"
   return ([body], mkApp (mkConst ``Iff.rfl) body)
 
 -- Do not let unification specialize a caller's unresolved local declarations.
@@ -246,6 +288,36 @@ def finish (source domain lift : Expr) (config : Affine.Config) : MetaM Result :
   let target ← whnf (← mkAppM ``PTran.ExactConstraintLift.target #[lift])
   withFiniteInstances (← Affine.sourceFiniteInstances target).toList do
     finishCore source domain lift config
+
+/-- Discard unused retained assumptions while reusing the already certified rows.
+An unconditional same-domain proof becomes an ordinary exact lift; otherwise
+the complete conditional proof remains attached to the replacement. -/
+def prepareContextual (source : Expr) (retained : Array Expr)
+    (result : ContextualResult) : MetaM Prepared := do
+  let exact? ← withLocalDeclD `point result.domain fun point => do
+    let remainder := conjunction (retained.toList.map (mkApp · point))
+    withLocalDeclD `retained remainder fun evidence => do
+      let proof := (mkApp2 result.conditionalIff point evidence).headBeta
+      if ← Affine.depends evidence proof then return none
+      let targetBody := conjunction (result.rowPredicates.toList.map (mkApp · point))
+      let target ← mkLambdaFVars #[point] targetBody
+      let pointwise ← mkLambdaFVars #[point] proof
+      let lift ← instantiateMVars (← mkAppM ``PTran.ExactConstraintLift.ofIff
+        #[target, pointwise])
+      let lift ← checkLift source lift
+      let targetIff ← mkLambdaFVars #[point] (mkApp (mkConst ``Iff.rfl) targetBody)
+      checkWithKernel targetIff
+      return some ({
+        lift
+        auxiliary? := none
+        nextDomain := result.domain
+        rowPredicates := result.rowPredicates
+        targetIff
+        certifiedRows := result.certifiedRows
+      } : Result)
+  return match exact? with
+    | some exact => .inl exact
+    | none => .inr result
 
 /-- Plan one entire selected predicate. A supplied record bypasses automatic
 operation matching, but every resulting row still undergoes affine checking.

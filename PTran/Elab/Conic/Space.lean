@@ -65,7 +65,7 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
     let right ← buildSpace shape.getAppArgs[1]!
     finishSpace type (← mkAppM ``Structure.prod #[left, right])
   else if let .forallE _ index body _ := shape then
-    let body ← whnf body
+    let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then
       throwError "affine rows require a nondependent function space, got {type}"
     let target ← buildSpace body

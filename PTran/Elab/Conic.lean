@@ -8,9 +8,11 @@ import PTran.Elab.Reformulation.Presentation
 # Checked affine row normalization
 
 This internal API recognizes elaborated scalar and finite-vector equality and
-inequality predicates, and native second-order cone membership. It returns a
-semantic cone row and a checked pointwise equivalence, without changing a
-problem or its presentation.
+inequality predicates, and native second-order and exponential cone membership.
+A finite family of exponential memberships remains one quantified presentation
+row and is certified against the finite product cone. The API returns a semantic
+cone row and a checked pointwise equivalence, without changing a problem or its
+presentation.
 -/
 
 namespace PTran.Elab.Conic
@@ -69,6 +71,17 @@ private theorem normalizeMembership
   intro x
   change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
   rw [h x]
+
+private theorem normalizeExponentialFamily
+    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    (n : Nat) (map : X →ᵃ[ℝ] (PTran.Conic.Cone.exponentialProduct n).Space)
+    (source : X → Fin n → ℝ × ℝ × ℝ) (h : ∀ x, map x = source x) :
+    ∀ x, (PTran.Conic.Constraint.mk (PTran.Conic.Cone.exponentialProduct n) map).Holds x ↔
+      ∀ i, source x i ∈ PTran.Conic.Cone.exponential.carrier := by
+  intro x
+  change map x ∈ (PTran.Conic.Cone.exponentialProduct n).carrier ↔ _
+  rw [h x]
+  exact PTran.Conic.Cone.mem_exponentialProduct (source x)
 
 /-- Return the canonical real or coordinatewise real order, rather than using
 an arbitrary local `LE` instance that happens to have the same operand type. -/
@@ -131,16 +144,17 @@ private partial def withPredicateLets (point body : Expr)
   else
     action body
 
-private def normalizeMembershipRow (predicate domain point body : Expr)
-    (config : Affine.Config) (label? : Option Name) :
-    MetaM (Except Affine.AffineError RowResult) := do
+private def membershipData (point body : Expr) (label? : Option Name) :
+    MetaM (Except Affine.AffineError (Expr × Expr)) := do
   let args := body.getAppArgs
   let carrier ← Affine.reduceStructure args[3]!
   unless carrier.isAppOfArity ``PTran.Conic.Cone.carrier 1 do
-    return .error (← rowError body "expected native second-order cone membership" label?)
+    return .error (← rowError body "expected native supported cone membership" label?)
   let cone ← Affine.reduceStructure carrier.getAppArgs[0]!
   unless cone.isAppOfArity ``PTran.Conic.Cone.secondOrder 1 ||
-      cone.isAppOfArity ``PTran.Conic.Cone.rotatedSecondOrder 1 do
+      cone.isAppOfArity ``PTran.Conic.Cone.rotatedSecondOrder 1 ||
+      cone.isConstOf ``PTran.Conic.Cone.exponential ||
+      cone.isAppOfArity ``PTran.Conic.Cone.exponentialProduct 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
   if ← Affine.depends point cone then
     return .error (← rowError body "cone dimension depends on the decision point" label?)
@@ -152,6 +166,15 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
     return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
   unless ← isDefEq body canonical do
     return .error (← rowError body "membership does not match the canonical cone" label?)
+  return .ok (cone, value)
+
+private def normalizeMembershipRow (predicate domain point body : Expr)
+    (config : Affine.Config) (label? : Option Name) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  let data ← membershipData point body label?
+  if let .error error := data then return .error error
+  let .ok (cone, value) := data
+    | throwError "internal error: missing checked membership"
   let source ← mkLambdaFVars #[point] value
   let affine ← Affine.reifyAffine source config
   if let .error error := affine then
@@ -174,6 +197,69 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
     return (constraint, pointwiseIff)
   return .ok { constraint, pointwiseIff }
 
+-- Keep evidence lets inside the coordinate function where the affine reifier
+-- can use them. Quantifiers, conjunctions, and arbitrary helpers are not opened.
+private partial def exponentialFamilyCoordinates (point body : Expr)
+    (label? : Option Name) : MetaM (Except Affine.AffineError Expr) := do
+  let body ← Affine.reduceStructure body (preserveLets := true)
+  if let .letE name type value rest nondep := body then
+    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+      match ← exponentialFamilyCoordinates point (rest.instantiate1 binding) label? with
+      | .error error => return .error error
+      | .ok coordinates =>
+          return .ok (← mkLetFVars #[binding] coordinates
+            (usedLetOnly := false) (generalizeNondepLet := false))
+  unless body.isAppOfArity ``Membership.mem 5 do
+    return .error (← rowError body
+      "expected one exponential membership under the finite quantifier" label?)
+  match ← membershipData point body label? with
+  | .error error => return .error error
+  | .ok (cone, coordinates) =>
+      unless cone.isConstOf ``PTran.Conic.Cone.exponential do
+        return .error (← rowError body
+          "finite quantified rows require the native exponential cone" label?)
+      return .ok coordinates
+
+private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
+    (config : Affine.Config) (label? : Option Name) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  let .forallE name index rest info := body
+    | return .error (← rowError body "expected a finite quantified membership" label?)
+  let shape ← whnf index
+  unless shape.isAppOfArity ``Fin 1 do
+    return .error (← rowError body "quantified cone rows require one index of type Fin n" label?)
+  let n := shape.getAppArgs[0]!
+  if ← Affine.depends point n then
+    return .error (← rowError body "cone dimension depends on the decision point" label?)
+  let coordinates : Except Affine.AffineError Expr ← withLocalDecl name info index fun i => do
+    match ← exponentialFamilyCoordinates point (rest.instantiate1 i) label? with
+    | .error error => return .error error
+    | .ok value => return .ok (← mkLambdaFVars #[point, i] value)
+  if let .error error := coordinates then return .error error
+  let .ok source := coordinates
+    | throwError "internal error: missing exponential family coordinates"
+  let affine ← Affine.reifyAffine source config
+  if let .error error := affine then
+    return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
+  let .ok affine := affine
+    | throwError "internal error: missing affine exponential family"
+  let cone ← mkAppM ``PTran.Conic.Cone.exponentialProduct #[n]
+  let target ← whnf (← mkAppM ``PTran.Conic.Cone.Space #[cone])
+  let (constraint, pointwiseIff) ← Space.withCanonicalConeSpaces domain target do
+    let constraint ← instantiateMVars (← mkAppM ``PTran.Conic.Constraint.mk #[cone, affine.map])
+    let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeExponentialFamily
+      #[n, affine.map, source, affine.pointwiseEquality])
+    if constraint.hasMVar || pointwiseIff.hasMVar then
+      throwError "quantified row construction left unresolved metavariables"
+    let holds ← mkAppM ``PTran.Conic.Constraint.Holds #[constraint, point]
+    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+    checkWithKernel constraint
+    checkWithKernel pointwiseIff
+    unless ← isDefEq (← inferType pointwiseIff) expected do
+      throwError "quantified row equivalence did not match the input predicate"
+    return (constraint, pointwiseIff)
+  return .ok { constraint, pointwiseIff }
+
 private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
   let type ← whnf (← inferType predicate)
@@ -187,6 +273,8 @@ private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOfArity ``Membership.mem 5 then
         return ← normalizeMembershipRow predicate domain point body config label?
+      if body.isForall then
+        return ← normalizeExponentialFamilyRow predicate domain point body config label?
       let args := body.getAppArgs
       let equality := body.isAppOfArity ``Eq 3
       let greaterEqual := body.isAppOfArity ``GE.ge 4
@@ -263,8 +351,9 @@ private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
   withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate config label?
 
-/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, or native
-second-order/rotated-second-order cone membership of affine coordinates.
+/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, native
+second-order or exponential cone membership, or one finite quantified family
+of exponential memberships. Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
 def normalizeRow (predicate : Expr) (config : Affine.Config := {})
