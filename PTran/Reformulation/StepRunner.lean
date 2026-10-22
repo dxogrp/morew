@@ -113,7 +113,10 @@ private def validateTypedPrimitive (state : ReformState)
         | .maximize => mkConst ``PTran.ObjectiveSense.maximize
       unless ← isDefEq sense expectedSense do
         throwErrorAt formSyntax "terminal conic form has the wrong objective sense"
-      checkWithKernel form
+      -- Section-instance types can contain metavariables assigned while
+      -- elaborating the target. The kernel needs their instantiated context.
+      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+        checkWithKernel form
       pure { form, ref := formSyntax.raw : CheckedTerminalConicArtifact }
     pure (typedResult, sectionFVars, terminalConic?)
 

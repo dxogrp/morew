@@ -204,7 +204,8 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
         (formType.getAppArgs.set! (formType.getAppNumArgs - 1) target)
       unless ← isDefEq (← inferType artifact.form) formType do
         throwErrorAt artifact.ref "the checked conic form does not represent the emitted target"
-      checkWithKernel artifact.form
+      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+        checkWithKernel artifact.form
       let formIdent := rootIdentFrom artifact.ref (targetName ++ `conicForm)
       let propertyIdent := rootIdentFrom artifact.ref (targetName ++ `isConic)
       let formDefinition ← `(Parser.Command.definition|
@@ -241,11 +242,16 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
         theorem $propertyIdent : $(← exactExpressionSyntax propertyType) :=
           $(← exactExpressionSyntax property))
       -- Source-domain hypotheses can be necessary for equivalence but absent
-      -- from the final form. Include only variables used by this derived proof.
+      -- from the final form. Keep the proof's complete dependency closure and
+      -- explicitly omit unused instances, which Lean otherwise adds automatically.
+      let used ←
+        (Lean.collectFVars (Lean.collectFVars {} propertyType) property).addDependencies
       let mut propertyScope := { scope with includedVars := {} }
       for (name, sectionVar) in (← read).sectionFVars do
-        if property.containsFVar sectionVar.fvarId! then
+        if used.fvarSet.contains sectionVar.fvarId! then
           propertyScope := { propertyScope with includedVars := propertyScope.includedVars.insert name }
+        else if (← sectionVar.fvarId!.getDecl).binderInfo.isInstImplicit then
+          propertyScope := { propertyScope with omittedVars := propertyScope.omittedVars.insert name }
       Term.elabMutualDef sectionVars propertyScope
         #[Command.mkDefViewOfTheorem {} propertyDefinition]
 

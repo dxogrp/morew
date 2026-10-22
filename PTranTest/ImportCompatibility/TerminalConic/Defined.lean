@@ -50,4 +50,53 @@ reformulation maximumTarget : maximumSource certificate maximumEquivalence := by
 example : GlobalEquivalence maximumSource maximumTarget := maximumTarget.equivalence hε
 
 end
+
+noncomputable section
+
+variable [Parameter]
+
+def dimensionSource :=
+  problem (v : Fin Parameter.size → ℝ) (t : ℝ)
+    minimize t
+    subject to loss : Fn.logSumExp v ≤ t
+
+-- Instance evidence is required by the rewrite's equivalence, but the final
+-- conic form and its derived property remain valid for every dimension.
+section NonzeroDimension
+
+variable [hne : NeZero Parameter.size]
+
+#guard_msgs in
+reformulation nonzeroTarget : dimensionSource := by
+  conic
+
+example : GlobalEquivalence dimensionSource nonzeroTarget := nonzeroTarget.equivalence
+
+-- Keep the same instance when the represented problem actually uses it.
+def coordinateSource :=
+  problem (v : Fin Parameter.size → ℝ)
+    minimize v 0
+    subject to upper : v 0 ≤ 1
+
+#guard_msgs in
+reformulation coordinateTarget : coordinateSource := by
+  conic
+
+example : IsConic coordinateTarget := coordinateTarget.isConic
+
+end NonzeroDimension
+
+section NonemptyDimension
+
+variable [hne : Nonempty (Fin Parameter.size)]
+
+#guard_msgs in
+reformulation nonemptyTarget : dimensionSource := by
+  conic
+
+example : GlobalEquivalence dimensionSource nonemptyTarget := nonemptyTarget.equivalence
+
+end NonemptyDimension
+
+end
 end PTranTest.ImportCompatibility.TerminalConic

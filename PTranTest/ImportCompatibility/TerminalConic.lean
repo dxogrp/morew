@@ -28,6 +28,17 @@ example : importedMaximumForm.data.rowCount = 2 := rfl
 example : GlobalEquivalence minimumSource minimumTarget := minimumEquivalence hn hε
 example : GlobalEquivalence maximumSource maximumTarget := maximumEquivalence hε
 
+-- The source sections' NeZero/Nonempty instances are absent after import.
+-- The named property must have the same prerequisites as the stored form.
+example : IsConic nonzeroTarget := nonzeroTarget.conicForm.isConic
+example : IsConic nonzeroTarget := nonzeroTarget.isConic
+example : IsConic nonemptyTarget := nonemptyTarget.conicForm.isConic
+example : IsConic nonemptyTarget := nonemptyTarget.isConic
+example : nonzeroTarget.conicForm.data.rowCount = 2 := rfl
+example : nonemptyTarget.conicForm.data.rowCount = 2 := rfl
+
+example [NeZero Parameter.size] : IsConic coordinateTarget := coordinateTarget.isConic
+
 reformulation continuedMinimum : minimumTarget := by
   epigraph value as objectiveBound
   conic
