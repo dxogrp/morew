@@ -56,27 +56,75 @@ private def withDeclarationTransaction (action : CommandElabM Unit) : CommandEla
     set { savedState with messages := savedState.messages ++ generatedMessages }
     throw exception
 
+/-- Emit an already elaborated definition and retain its actual section arguments.
+Use the same dependency collection as Lean's definition generalization, before
+proof extraction can hide occurrences in auxiliary theorems. Embedding the
+expressions avoids a pretty-printing round trip changing those dependencies. -/
+private def emitDefinitionWithParameters (target : TSyntax `ident)
+    (sectionVars : Array Expr) (scope : Command.Scope) (type value : Expr) :
+    TermElabM Expr := do
+  synthesizeSyntheticMVarsNoPostponing
+  let type ← instantiateMVars type
+  let value ← instantiateMVars value
+  if type.hasMVar || value.hasMVar then
+    throwErrorAt target "emitted definition contains unresolved metavariables"
+  let used := Lean.collectFVars (Lean.collectFVars {} type) value
+  let (_, _, parameters) ← removeUnused sectionVars used
+  let definition ← `(Parser.Command.definition|
+    def $target : $(← Term.exprToSyntax type) := $(← Term.exprToSyntax value))
+  Term.elabMutualDef sectionVars scope #[
+    Command.mkDefViewOfDef { computeKind := .noncomputable } definition]
+  let name := target.getId.replacePrefix `_root_ Name.anonymous
+  -- With no unresolved metavariables, declaration generalization preserves the
+  -- checked expressions' universe names as well as their section variables.
+  let info ← getConstInfo name
+  let mut application := Lean.mkConst name (info.levelParams.map Level.param)
+  let mut applicationType ← inferType application
+  for parameter in parameters do
+    let .forallE _ domain body _ ← whnf applicationType
+      | throwErrorAt target "emitted definition has unexpected parameters"
+    unless ← isDefEq domain (← inferType parameter) do
+      throwErrorAt target "emitted definition has unexpected parameter types"
+    application := mkApp application parameter
+    applicationType := body.instantiate1 parameter
+  unless ← isDefEq (← inferType application) type do
+    throwErrorAt target "emitted definition has unexpected parameter types"
+  unless ← isDefEq application value do
+    throwErrorAt target "emitted definition does not match its checked expression"
+  application ← instantiateMVars application
+  if application.hasMVar then
+    throwErrorAt target "emitted definition contains unresolved universe parameters"
+  pure application
+
+/-- Freeze the retained application before leaving its section-variable context. -/
+private def emitDefinition (target : TSyntax `ident)
+    (elaborate : Array Expr → TermElabM (Expr × Expr)) :
+    CommandElabM (TSyntax `term) := do
+  let scope ← getScope
+  -- Lean's quotation-context wrapper returns Unit.
+  let result ← IO.mkRef (none : Option (TSyntax `term))
+  withExporting (isExporting := scope.isPublic) do
+  withInitQuotContext (some (hash #[target.getId])) do
+    let application ← runTermElabM fun sectionVars => do
+      let (type, value) ← elaborate sectionVars
+      exactExpressionSyntax (← emitDefinitionWithParameters target sectionVars scope type value)
+    result.set (some application)
+  let some application ← result.get
+    | throwErrorAt target "internal error: emitted definition application was not retained"
+  pure application
+
 private def elabSemanticTarget (target : TSyntax `ident)
     (sourceName : Name) (sourceTerm : TSyntax `term)
     (sourceView : PTran.Syntax.ProblemView)
     (removedConstraintNames : NameSet) (semantic : TSyntax `term)
-    (simplifyExpLogTerms : Bool) : CommandElabM Unit := do
-  let scope ← getScope
-  withExporting (isExporting := scope.isPublic) do
-  withInitQuotContext (some (hash #[target.getId])) do
-    runTermElabM fun sectionVars => do
-      let expression ← canonicalTargetExpression sourceName sourceTerm sourceView
-        removedConstraintNames semantic simplifyExpLogTerms
-      if expression.hasMVar then
-        throwErrorAt semantic "term contains unresolved metavariables"
-      let definition ← `(Parser.Command.definition|
-        def $target := $(← Term.exprToSyntax expression))
-      let view := Command.mkDefViewOfDef
-        { computeKind := .noncomputable } definition
-      Term.elabMutualDef sectionVars scope #[view]
+    (simplifyExpLogTerms : Bool) : CommandElabM (TSyntax `term) :=
+  emitDefinition target fun _ => do
+    let expression ← canonicalTargetExpression sourceName sourceTerm sourceView
+      removedConstraintNames semantic simplifyExpLogTerms
+    pure (← inferType expression, expression)
 
 private inductive RawDeclarationResult where
-  | success
+  | success (target : TSyntax `term)
   | failed
   | retryWithSemanticTarget (messages : MessageLog)
 
@@ -90,38 +138,38 @@ private inductive RawDeclarationStage where
 omit implicit data or select different instances, so target and certificate
 failures retry the checked semantic target. Retain the original diagnostics if
 that retry also fails. Alias failures and internal exceptions are not retried. -/
-private def tryRawDeclarations (targetCommand certificateCommand : Syntax)
-    (aliasCommand? : Option Syntax) : CommandElabM RawDeclarationResult := do
+private def tryRawDeclarations (emitTarget : CommandElabM (TSyntax `term))
+    (emitCertificate : TSyntax `term → CommandElabM (TSyntax `term))
+    (emitAlias : TSyntax `term → CommandElabM Unit) : CommandElabM RawDeclarationResult := do
   let savedState ← get
   set { savedState with messages := .empty }
   let mut stage := RawDeclarationStage.target
   try
-    elabCommand targetCommand
+    let target ← emitTarget
     if (← get).messages.hasErrors then
       let messages := (← get).messages
       set savedState
       return .retryWithSemanticTarget messages
 
     stage := .certificate
-    elabCommand certificateCommand
+    let appliedCertificate ← emitCertificate target
     if (← get).messages.hasErrors then
       let messages := (← get).messages
       set savedState
       return .retryWithSemanticTarget messages
 
-    if let some aliasCommand := aliasCommand? then
-      stage := .alias
-      elabCommand aliasCommand
-      if (← get).messages.hasErrors then
-        let resultingState ← get
-        set { resultingState with
-          messages := savedState.messages ++ resultingState.messages }
-        return .failed
+    stage := .alias
+    emitAlias appliedCertificate
+    if (← get).messages.hasErrors then
+      let resultingState ← get
+      set { resultingState with
+        messages := savedState.messages ++ resultingState.messages }
+      return .failed
 
     let resultingState ← get
     set { resultingState with
       messages := savedState.messages ++ resultingState.messages }
-    pure .success
+    pure (.success target)
   catch exception =>
     let resultingState ← get
     match exception with
@@ -153,52 +201,25 @@ private def emitCompanionDeclaration
     noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
   elabCommand command
 
--- Terminal output uses the already checked canonical expression. In particular,
+-- Applied and terminal output use the already checked canonical expression. In particular,
 -- the explicit objective-value annotation must retain OrderDual for maxima.
-private def emitTerminalTarget (target : TSyntax `ident) (state : ReformState) :
-    CommandElabM Unit := do
-  let scope ← getScope
-  withExporting (isExporting := scope.isPublic) do
-  withInitQuotContext (some (hash #[target.getId])) do
-    runTermElabM fun sectionVars => do
-      let typed := state.typed.replaceFVars state.sectionFVars sectionVars
-      let valueType ← match typed.presentation.sense with
-        | .minimize => pure (Lean.mkConst ``Real)
-        | .maximize => mkAppM ``OrderDual #[Lean.mkConst ``Real]
-      let type ← mkAppM ``PTran.Problem #[typed.presentation.domainType, valueType]
-      let definition ← `(Parser.Command.definition|
-        def $target : $(← exactExpressionSyntax type) :=
-          $(← exactExpressionSyntax typed.canonical))
-      let view := Command.mkDefViewOfDef { computeKind := .noncomputable } definition
-      Term.elabMutualDef sectionVars scope #[view]
+private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
+    CommandElabM (TSyntax `term) :=
+  emitDefinition target fun sectionVars => do
+    let typed := state.typed.replaceFVars state.sectionFVars sectionVars
+    let type ← mkAppM ``PTran.Problem
+      #[typed.presentation.domainType, typed.semanticValueType]
+    pure (type, typed.canonical)
 
 private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
-    (artifact : CheckedTerminalConicArtifact) : CommandElabM Unit := do
+    (appliedTarget : TSyntax `term) (artifact : CheckedTerminalConicArtifact) :
+    CommandElabM Unit := do
   let scope ← getScope
   withExporting (isExporting := scope.isPublic) do
   withInitQuotContext (some (hash #[targetName])) do
     runTermElabM fun sectionVars => do
       let artifact := artifact.replaceFVars state.sectionFVars sectionVars
-      let typed := state.typed.replaceFVars state.sectionFVars sectionVars
-      let target ← mkConstWithFreshMVarLevels targetName
-      let (arguments, _, _) ← forallMetaTelescope (← inferType target)
-      let target := mkAppN target arguments
-      unless ← isDefEq target typed.canonical do
-        throwErrorAt artifact.ref "the emitted target does not match its checked conic form"
-      -- Definitional equality can ignore proof arguments (including a class
-      -- used only to supply a proof). Recover these from the emission context.
-      for argument in arguments do
-        let argument ← instantiateMVars argument
-        if let .mvar id := argument then
-          try
-            id.assign (← synthInstance (← id.getType))
-          catch _ =>
-            id.assumption
-      let target ← instantiateMVars target
-      if target.hasMVar then
-        throwErrorAt artifact.ref "terminal target parameters could not be recovered"
-      unless ← isDefEq target typed.canonical do
-        throwErrorAt artifact.ref "recovered target parameters changed the checked problem"
+      let target ← elabTerm appliedTarget none
       let formType ← whnf (← inferType artifact.form)
       let formType := mkAppN formType.getAppFn
         (formType.getAppArgs.set! (formType.getAppNumArgs - 1) target)
@@ -208,29 +229,11 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
         checkWithKernel artifact.form
       let formIdent := rootIdentFrom artifact.ref (targetName ++ `conicForm)
       let propertyIdent := rootIdentFrom artifact.ref (targetName ++ `isConic)
-      let formDefinition ← `(Parser.Command.definition|
-        def $formIdent : $(← exactExpressionSyntax formType) :=
-          $(← exactExpressionSyntax artifact.form))
-      Term.elabMutualDef sectionVars scope #[
-        Command.mkDefViewOfDef { computeKind := .noncomputable } formDefinition]
+      let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope
+        formType artifact.form
       -- Elaborate both artifacts in the same section context. Lean does not
       -- permit mixing a noncomputable data definition and a theorem in one
       -- mutual group, so instantiate the newly declared form explicitly.
-      let namedForm ← mkConstWithFreshMVarLevels (targetName ++ `conicForm)
-      let (formArguments, _, _) ← forallMetaTelescope (← inferType namedForm)
-      let namedForm := mkAppN namedForm formArguments
-      unless ← isDefEq (← inferType namedForm) formType do
-        throwErrorAt artifact.ref "the named conic form has an unexpected type"
-      for argument in formArguments do
-        let argument ← instantiateMVars argument
-        if let .mvar id := argument then
-          try
-            id.assign (← synthInstance (← id.getType))
-          catch _ =>
-            id.assumption
-      let namedForm ← instantiateMVars namedForm
-      if namedForm.hasMVar then
-        throwErrorAt artifact.ref "named conic form parameters could not be recovered"
       -- The form already carries its canonical instances. Source-local finite
       -- evidence need not be available to typeclass search at emission time.
       let namedFormType ← whnf (← inferType namedForm)
@@ -256,9 +259,15 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
         #[Command.mkDefViewOfTheorem {} propertyDefinition]
 
 private def elabReformulationCore : CommandElab := fun stx => do
-  let `(reformulation $targetName:ident : $sourceIdent:ident
-      $[certificate $aliasName:ident]? := by $steps:reformulationStep*) := stx
-    | throwUnsupportedSyntax
+  let (targetName, inputTerm, instantiatedSource, aliasName, steps) ← match stx with
+    | `(reformulation $targetName:ident : $sourceIdent:ident
+        $[certificate $aliasName:ident]? := by $steps:reformulationStep*) => do
+        let sourceName ← resolveGlobalConstNoOverload sourceIdent
+        pure (targetName, ⟨(rootIdentFrom sourceIdent sourceName).raw⟩, false, aliasName, steps)
+    | `(reformulation $targetName:ident : ($sourceTerm:term)
+        $[certificate $aliasName:ident]? := by $steps:reformulationStep*) =>
+        pure (targetName, sourceTerm, true, aliasName, steps)
+    | _ => throwUnsupportedSyntax
 
   let targetDeclName ← outputDeclName targetName
   let certificateDeclName := targetDeclName ++ `equivalence
@@ -276,26 +285,36 @@ private def elabReformulationCore : CommandElab := fun stx => do
     | some ref, some name => some (rootIdentFrom ref name)
     | _, _ => none
 
-  let sourceName ← resolveGlobalConstNoOverload sourceIdent
-  let env ← getEnv
-  let some sourceView := PTran.Syntax.getProblemView? env sourceName
-    | throwErrorAt sourceIdent
-        "declaration `{sourceName}` has no registered problem presentation"
-
-  let sourceTerm : TSyntax `term :=
-    ⟨(rootIdentFrom sourceIdent sourceName).raw⟩
-  let problemTypes ← problemTypeSyntax sourceTerm
   let runner := globalEquivalenceRunner
-  let initialCertificateSyntax ← liftMacroM <|
-    certificateReflTerm runner sourceTerm
-  let (typed, sectionFVars) ← runTermElabM fun sectionFVars => do
-    let source ← elabTerm sourceTerm none
+  let (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+      usedSourceParameterNames) ← runTermElabM fun sectionFVars => withRef inputTerm do
+    let source ← elabTerm inputTerm none
     synthesizeSyntheticMVarsNoPostponing
     let source ← instantiateMVars source
-    let canonical ← canonicalTargetExpression sourceName sourceTerm sourceView
-      {} sourceTerm false
+    if source.hasMVar then
+      throwError "reformulation source contains unresolved metavariables"
+    let .const sourceName _ := source.consumeMData.getAppFn
+      | throwError "reformulation source must be an application of a registered problem declaration"
+    let some template := PTran.Syntax.getProblemView? (← getEnv) sourceName
+      | throwError "declaration `{sourceName}` has no registered problem presentation"
+    let problemTypes ← problemTypeSyntaxFromExpression source
+    let sourceType ← whnf (← inferType source)
+    let mut usedSourceParameterNames := #[]
+    if instantiatedSource then
+      let dependencies ← (Lean.collectFVars {} source).addDependencies
+      for id in dependencies.fvarSet.toArray do
+        let name := (← id.getDecl).userName.eraseMacroScopes
+        if template.binders.any (sameUserName ·.name name) then
+          throwError "source parameter `{name}` conflicts with a decision variable; rename the outer parameter"
+        unless usedSourceParameterNames.contains name do
+          usedSourceParameterNames := usedSourceParameterNames.push name
+    let canonical ← canonicalTargetExpressionFromExpressions sourceName source template
+      {} source false
+    let sourceView ← if instantiatedSource then
+        problemViewFromExpression canonical template true
+      else pure template
     let presentation ← typedPresentationFromExpression canonical sourceView
-    let normalization ← checkedPointwiseNormalization sourceTerm source canonical #[]
+    let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
     let accumulatedCertificate ← runner.reflexivity source
     synthesizeSyntheticMVarsNoPostponing
     let accumulatedCertificate ← instantiateMVars accumulatedCertificate
@@ -303,12 +322,16 @@ private def elabReformulationCore : CommandElab := fun stx => do
       semantic := source
       canonical
       semanticDomainType := presentation.domainType
-      semanticValueType := presentation.valueType
+      semanticValueType := sourceType.getAppArgs[1]!
       presentation
       accumulatedCertificate
       normalization
     }
-    pure (typed, sectionFVars)
+    let sourceTerm ← exactExpressionSyntax source
+    pure (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+      usedSourceParameterNames)
+  let initialCertificateSyntax ← liftMacroM <|
+    certificateReflTerm runner sourceTerm
   let mut state : ReformState := {
     typed
     sectionFVars
@@ -320,6 +343,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
     certificateSyntax := initialCertificateSyntax
     source := sourceTerm
     sourceName
+    instantiatedSource
+    usedSourceParameterNames
     checkpoint := { semantic := sourceTerm, view := sourceView }
     runner
   }
@@ -385,80 +410,85 @@ private def elabReformulationCore : CommandElab := fun stx => do
     let stableEquivalenceProof := state.certificateSyntax
 
     let targetTerm ← liftMacroM <| state.view.toTermSyntax
-    let targetCommand ← liftMacroM `(
-      command| noncomputable def $targetDeclIdent := $targetTerm)
+    let emitRawTarget := emitDefinition targetDeclIdent fun _ => do
+      let value ← elabTerm targetTerm none
+      pure (← inferType value, value)
 
-    let normalizationLemmas ← liftMacroM <|
-      normalizationSimpLemmas sourceTerm state.normalizationLemmas
-    let targetSimp ← liftMacroM `(
-      Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
-    let normalizationLemmas := normalizationLemmas.push targetSimp
-    let normalizationEquivalence ← liftMacroM `(
-      PTran.pointwiseEquivalence $stableSemantic $targetDeclIdent
-        (fun _ => by
-          simp only [$[$normalizationLemmas],*] <;> rfl)
-        (fun _ => by
-          simp only [$[$normalizationLemmas],*] <;> rfl))
-    let normalization ← liftMacroM <|
-      liftCertificateEquivalence state.runner normalizationEquivalence
-    let equivalenceProof ← liftMacroM <|
-      certificateTransTerm state.runner stableEquivalenceProof normalization
-    let relation ← liftMacroM <|
-      certificateRelationTerm state.runner sourceTerm ⟨targetDeclIdent.raw⟩
-    let certificateCommand ← liftMacroM `(command|
-      noncomputable def $certificateDeclIdent :
-          $relation := by
-        exact $equivalenceProof)
-    let aliasCommand? ← aliasDeclIdent?.mapM fun aliasDeclIdent =>
-      liftMacroM `(command|
-        noncomputable abbrev $aliasDeclIdent : $relation := by
-          apply ($certificateDeclIdent:term)
-          all_goals assumption)
+    let emitCertificate (appliedTarget : TSyntax `term) :
+        CommandElabM (TSyntax `term) := do
+      let normalizationLemmas ← liftMacroM <|
+        normalizationSimpLemmas sourceName state.normalizationLemmas
+      let targetSimp ← liftMacroM `(
+        Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
+      let normalizationLemmas := normalizationLemmas.push targetSimp
+      let normalizationEquivalence ← liftMacroM `(
+        PTran.pointwiseEquivalence $stableSemantic $appliedTarget
+          (fun _ => by
+            simp only [$[$normalizationLemmas],*] <;> rfl)
+          (fun _ => by
+            simp only [$[$normalizationLemmas],*] <;> rfl))
+      let normalization ← liftMacroM <|
+        liftCertificateEquivalence state.runner normalizationEquivalence
+      let equivalenceProof ← liftMacroM <|
+        certificateTransTerm state.runner stableEquivalenceProof normalization
+      let relation ← liftMacroM <|
+        certificateRelationTerm state.runner sourceTerm appliedTarget
+      emitDefinition certificateDeclIdent fun _ => do
+        let type ← elabTerm relation none
+        let value ← elabTermEnsuringType equivalenceProof type
+        pure (type, value)
+    let emitAlias (appliedCertificate : TSyntax `term) : CommandElabM Unit := do
+      if let some aliasDeclIdent := aliasDeclIdent? then
+        let relation ← runTermElabM fun _ => do
+          let proof ← elabTerm appliedCertificate none
+          exactExpressionSyntax (← inferType proof)
+        let aliasCommand ← liftMacroM `(command|
+          noncomputable abbrev $aliasDeclIdent : $relation := $appliedCertificate)
+        elabCommand aliasCommand
 
-    let elabCanonicalDeclarations : CommandElabM Unit := do
-      if state.terminalConic?.isSome then
-        emitTerminalTarget targetDeclIdent state
+    let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do
+      let target ← if state.terminalConic?.isSome || state.instantiatedSource then
+        emitCheckedTarget targetDeclIdent state
       else
         elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
           state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
-      unless (← get).messages.hasErrors do
-        elabCommand certificateCommand
-        unless (← get).messages.hasErrors do
-          if let some aliasCommand := aliasCommand? then
-            elabCommand aliasCommand
+      if (← get).messages.hasErrors then return none
+      let appliedCertificate ← emitCertificate target
+      if (← get).messages.hasErrors then return none
+      emitAlias appliedCertificate
+      pure <| if (← get).messages.hasErrors then none else some target
 
-    let emitted ← if state.hasSubstitution || state.terminalConic?.isSome then do
+    let appliedTarget? ← if state.hasSubstitution || state.terminalConic?.isSome ||
+        state.instantiatedSource then do
         elabCanonicalDeclarations
-        pure !(← get).messages.hasErrors
       else
-        match ← tryRawDeclarations targetCommand certificateCommand aliasCommand? with
-        | .success => pure true
-        | .failed => pure false
+        match ← tryRawDeclarations emitRawTarget emitCertificate emitAlias with
+        | .success target => pure (some target)
+        | .failed => pure none
         | .retryWithSemanticTarget rawMessages =>
             try
-              elabCanonicalDeclarations
-              let emitted := !(← get).messages.hasErrors
-              unless emitted do
+              let target? ← elabCanonicalDeclarations
+              if target?.isNone then
                 modify fun state => { state with messages := state.messages ++ rawMessages }
-              pure emitted
+              pure target?
             catch exception =>
               modify fun state => { state with messages := state.messages ++ rawMessages }
               throw exception
-    if emitted then
+    if let some appliedTarget := appliedTarget? then
       for companion in state.typed.companions do
         unless (← get).messages.hasErrors do
           emitCompanionDeclaration companion state.sectionFVars
       if let some artifact := state.terminalConic? then
         unless (← get).messages.hasErrors do
-          emitTerminalArtifacts targetDeclName state artifact
+          emitTerminalArtifacts targetDeclName state appliedTarget artifact
       unless (← get).messages.hasErrors do
-        refreshProblemView targetDeclName state.view
+        refreshProblemView targetDeclName state.view state.instantiatedSource
 
 /-- Elaborate a reformulation declaration and emit the transformed problem and
 its composed global-equivalence certificate.  Planning, typed step validation,
 declaration emission, companions, and metadata registration share one rollback
 boundary. -/
-@[command_elab reformulationCmd]
+@[command_elab reformulationCmd, command_elab appliedReformulationCmd]
 def elabReformulation : CommandElab := fun stx =>
   withDeclarationTransaction (elabReformulationCore stx)
 

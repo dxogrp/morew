@@ -28,6 +28,8 @@ import PTranTest.Conic.SecondOrderRows
 import PTranTest.Conic.Terminal
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
+import PTranTest.ImportCompatibility.AppliedSources
+import PTranTest.ImportCompatibility.AppliedSources.Defined
 import PTranTest.ImportCompatibility.Exponential
 import PTranTest.ImportCompatibility.Exponential.Defined
 import PTranTest.ImportCompatibility.Polyhedral
@@ -63,6 +65,8 @@ import PTranTest.Reformulation.TerminalConicCustom
 import PTranTest.Reformulation.TerminalConicFailures
 import PTranTest.Reformulation.TerminalConicSection
 import PTranTest.Surface.Affine
+import PTranTest.Surface.AppliedSourceDimensions
+import PTranTest.Surface.AppliedSources
 import PTranTest.Surface.Atom
 import PTranTest.Surface.Conic
 import PTranTest.Surface.Diagnostics

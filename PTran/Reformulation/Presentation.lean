@@ -136,23 +136,28 @@ structure ProblemTypeSyntax where
   /-- Objective-value type syntax for the displayed presentation. -/
   presentationValue : Lean.Syntax
 
+/-- Recover stable type syntax directly from an already checked problem. -/
+def problemTypeSyntaxFromExpression (expression : Expr) :
+    TermElabM ProblemTypeSyntax := do
+  let type ← whnf (← inferType expression)
+  unless type.getAppFn.isConstOf ``PTran.Problem &&
+      type.getAppNumArgs == 2 do
+    throwError "term does not have type `PTran.Problem _ _`"
+  let domain := type.getAppArgs[0]!
+  let value := type.getAppArgs[1]!
+  pure {
+    domain := ← exactExpressionSyntax domain
+    value := ← exactExpressionSyntax value
+    presentationValue := ← presentationTypeSyntax (← whnf value)
+  }
+
 /-- Recover stable domain and objective-value type syntax from a problem. -/
 def problemTypeSyntax (optimizationProblem : TSyntax `term) :
     CommandElabM ProblemTypeSyntax :=
-  runTermElabM fun _ => do
+  runTermElabM fun _ => withRef optimizationProblem do
     let expression ← elabTerm optimizationProblem none
     synthesizeSyntheticMVarsNoPostponing
-    let type ← whnf (← inferType (← instantiateMVars expression))
-    unless type.getAppFn.isConstOf ``PTran.Problem &&
-        type.getAppNumArgs == 2 do
-      throwErrorAt optimizationProblem "term does not have type `PTran.Problem _ _`"
-    let domain := type.getAppArgs[0]!
-    let value ← whnf type.getAppArgs[1]!
-    pure {
-      domain := ← exactExpressionSyntax domain
-      value := ← exactExpressionSyntax value
-      presentationValue := ← presentationTypeSyntax value
-    }
+    problemTypeSyntaxFromExpression (← instantiateMVars expression)
 
 /-- Simplify an expression using only the supplied declarations and reductions. -/
 def simpOnly (expression : Expr) (lemmas : Array Name := #[])
@@ -231,13 +236,10 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
 /-- Construct the canonical target while protecting the checkpoint's ordered
 rows. `sourceName` is retained only for unfolding the original problem container;
 the checkpoint itself may be an explicitly constructed canonical problem. -/
-def canonicalTargetExpression (sourceName : Name)
-    (sourceTerm : TSyntax `term) (sourceView : PTran.Syntax.ProblemView)
-    (removedConstraintNames : NameSet) (semantic : TSyntax `term)
+def canonicalTargetExpressionFromExpressions (sourceName : Name)
+    (source : Expr) (sourceView : PTran.Syntax.ProblemView)
+    (removedConstraintNames : NameSet) (semanticExpression : Expr)
     (simplifyExpLogTerms : Bool) : TermElabM Expr := do
-  let source ← elabTerm sourceTerm none
-  synthesizeSyntheticMVarsNoPostponing
-  let source ← instantiateMVars source
   let (domain, objective, constraints) ←
     sourceProblemParts sourceName source sourceView.constraints.size
   let objectiveType ← inferType objective
@@ -256,9 +258,6 @@ def canonicalTargetExpression (sourceName : Name)
         mkFeasibleFunction domain protectedConstraints
       let protectedSource ← mkAppM ``PTran.Problem.mk
         #[protectedObjective, protectedFeasible]
-      let semanticExpression ← elabTerm semantic none
-      synthesizeSyntheticMVarsNoPostponing
-      let semanticExpression ← instantiateMVars semanticExpression
       let protectedSemantic ← protectCheckpoint semanticExpression source protectedSource
       let transformed ← simpOnly protectedSemantic (unfold :=
         #[``PTran.Problem.pullback, ``PTran.Problem.epigraph,
@@ -312,6 +311,21 @@ def canonicalTargetExpression (sourceName : Name)
         withProtectedParts rest (protectedParts.push part)
 
   withProtectedParts (objectiveType :: constraintTypes.toList) #[]
+
+/-- Elaborate a source and transformation spine, then canonicalize their checked
+expressions while protecting the checkpoint's ordered rows. -/
+def canonicalTargetExpression (sourceName : Name)
+    (sourceTerm : TSyntax `term) (sourceView : PTran.Syntax.ProblemView)
+    (removedConstraintNames : NameSet) (semantic : TSyntax `term)
+    (simplifyExpLogTerms : Bool) : TermElabM Expr := do
+  let source ← elabTerm sourceTerm none
+  synthesizeSyntheticMVarsNoPostponing
+  let source ← instantiateMVars source
+  let semanticExpression ← elabTerm semantic none
+  synthesizeSyntheticMVarsNoPostponing
+  let semanticExpression ← instantiateMVars semanticExpression
+  canonicalTargetExpressionFromExpressions sourceName source sourceView
+    removedConstraintNames semanticExpression simplifyExpLogTerms
 
 private partial def splitProductDomain (domain : Expr) : Nat → MetaM (Array Expr)
   | 0 => throwError "a problem presentation requires at least one decision variable"
@@ -368,15 +382,22 @@ private def delabPresentationTerm (expression : Expr)
     pure <| freezePresentationReferences infos binders stx.raw
 
 /-- Recover printable bodies from a checked problem while retaining the supplied
-ordered names and binder type syntax. -/
+ordered names. Applied sources also instantiate binder types; existing bare-name
+sources retain their original spelling, including type aliases. -/
 def problemViewFromExpression (target : Expr)
-    (template : PTran.Syntax.ProblemView) : TermElabM PTran.Syntax.ProblemView := do
+    (template : PTran.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
+    TermElabM PTran.Syntax.ProblemView := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``PTran.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `PTran.Problem _ _`"
   let domain := targetType.getArg! 0
   let binderTypes ← splitProductDomain domain template.binders.size
+  let displayedBinders ← template.binders.mapIdxM fun index binder => do
+    if instantiateBinderTypes then
+      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! }
+    else
+      pure binder
   let binderDeclarations := binderTypes.mapIdx fun index type =>
     (template.binders[index]!.name, type)
   withLocalDeclsDND binderDeclarations fun binders => do
@@ -393,6 +414,7 @@ def problemViewFromExpression (target : Expr)
       delabPresentationTerm proposition binderNames
     pure {
       template with
+      binders := displayedBinders
       objective := objectiveSyntax
       constraints := template.constraints.mapIdx fun index constraint =>
         { constraint with proposition := constraintSyntax[index]! }
@@ -432,16 +454,42 @@ def typedPresentationFromExpression (target : Expr)
 
 /-- Register a presentation recovered from an emitted target declaration. -/
 def refreshProblemView (targetName : Name)
-    (template : PTran.Syntax.ProblemView) : CommandElabM Unit := do
+    (template : PTran.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
+    CommandElabM Unit := do
   let refreshed ← runTermElabM fun _ => do
-    let targetSyntax : TSyntax `term :=
-      ⟨mkIdent (`_root_ ++ targetName)⟩
-    let target ← elabTerm targetSyntax none
-    synthesizeSyntheticMVarsNoPostponing
-    let target ← instantiateMVars target
-    let some target ← unfoldDefinition? target
-      | throwError "cannot inspect reformulation target `{targetName}`"
-    problemViewFromExpression target template
+    -- Inspect the declaration's own parameters, independently of the section
+    -- that emitted it. Fresh universe metavariables or ambient local names
+    -- must not leak into persistent presentation metadata.
+    let info ← getConstInfo targetName
+    let target := Lean.mkConst targetName (info.levelParams.map Level.param)
+    withLCtx {} {} do
+      forallTelescopeReducing info.type (fun parameters _ => do
+        -- Distinct section variables can have the same declaration binder name.
+        -- Choose one consistent display name per parameter before rendering any
+        -- binder type or body. Reserve existing names before adding suffixes, so
+        -- fresh names cannot capture a decision or another parameter's name.
+        let parameterNames ← parameters.mapM fun parameter =>
+          return (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
+        let decisionNames := template.binders.foldl
+          (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
+        let reserved := parameterNames.foldl (fun names name => names.insert name) decisionNames
+        let mut occupied := decisionNames
+        let mut lctx ← getLCtx
+        for parameter in parameters, name in parameterNames do
+          let mut displayName := name
+          if occupied.contains displayName then
+            let mut index := 1
+            displayName := name.appendIndexAfter index
+            while reserved.contains displayName || occupied.contains displayName do
+              index := index + 1
+              displayName := name.appendIndexAfter index
+          occupied := occupied.insert displayName
+          lctx := lctx.setUserName parameter.fvarId! displayName
+        let target := mkAppN target parameters
+        let some target ← unfoldDefinition? target
+          | throwError "cannot inspect reformulation target `{targetName}`"
+        withLCtx' lctx do
+          problemViewFromExpression target template instantiateBinderTypes)
   PTran.Syntax.registerProblemView targetName refreshed
 
 /-- Rebase a retained presentation into the current section-variable context. -/
@@ -461,9 +509,10 @@ def withPresentationBinders [Inhabited α]
   withLocalDeclsDND declarations fun binders => action binderTypes binders
 
 /-- Build the shared simplification set for accumulated normalization evidence. -/
-def normalizationSimpLemmas (sourceTerm : TSyntax `term)
+def normalizationSimpLemmas (sourceName : Name)
     (predicateLemmas : Array (TSyntax `term)) :
     MacroM (Array (TSyntax `Lean.Parser.Tactic.simpLemma)) := do
+  let sourceTerm := mkCIdent sourceName
   let sourceLemma ← `(
     Lean.Parser.Tactic.simpLemma| $sourceTerm:term)
   let mut lemmas := #[sourceLemma]
@@ -478,7 +527,7 @@ def normalizationSimpLemmas (sourceTerm : TSyntax `term)
   pure lemmas
 
 /-- Construct and check normalization from semantic to canonical problems. -/
-def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
+def checkedPointwiseNormalization (sourceName : Name)
     (semantic canonical : Expr) (predicateLemmas : Array (TSyntax `term)) :
     TermElabM PTran.Elab.Reformulation.PointwiseNormalization := do
   let semanticType ← whnf (← inferType semantic)
@@ -505,7 +554,7 @@ def checkedPointwiseNormalization (sourceTerm : TSyntax `term)
     mkForallFVars #[point] <| mkApp2 (mkConst ``Iff)
       (mkApp semanticFeasible point) (mkApp canonicalFeasible point)
   let simpLemmas ← liftMacroM <|
-    normalizationSimpLemmas sourceTerm predicateLemmas
+    normalizationSimpLemmas sourceName predicateLemmas
   let proofSyntax ← liftMacroM `(
     fun _ => by
       simp only [$[$simpLemmas],*] <;> rfl)

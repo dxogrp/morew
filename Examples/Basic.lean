@@ -49,7 +49,28 @@ def p (a : ℝ) :=
 
 -- Printing the family retains the parameter `a` symbolically.
 #printp p
-#check p 3
+
+-- Reformulate a particular member of the problem family.
+reformulation concreteEpigraph : (p 3) := by
+  epigraph t
+
+#printp concreteEpigraph
+example : GlobalEquivalence (p 3) concreteEpigraph := concreteEpigraph.equivalence
+
+section
+
+variable (shift : ℝ)
+
+-- A local argument produces a reformulation family with the same parameter.
+reformulation shiftedEpigraph : (p shift) := by
+  epigraph t
+
+example : GlobalEquivalence (p shift) (shiftedEpigraph shift) :=
+  shiftedEpigraph.equivalence shift
+
+end
+
+#printp shiftedEpigraph
 
 end
 end Parameterized

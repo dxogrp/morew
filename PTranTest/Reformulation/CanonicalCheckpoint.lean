@@ -49,7 +49,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     throwError "checkpoint normalization changed grouped rows or failed to remove aliased positivity"
   let semanticExpr ← elabTerm semantic none
   synthesizeSyntheticMVarsNoPostponing
-  discard <| checkedPointwiseNormalization (← `(source))
+  discard <| checkedPointwiseNormalization ``source
     (← instantiateMVars semanticExpr) canonical #[← `(inDomain_iff)]
   let nextView : PTran.Syntax.ProblemView := {
     view with
@@ -76,7 +76,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     { selected with name := `generated_2 },
     current.constraints[1]!
   ] }
-  let normalization ← checkedPointwiseNormalization (← `(source)) base base #[]
+  let normalization ← checkedPointwiseNormalization ``source base base #[]
   let delta ← presentationDeltaBetween current next
     normalization.objectiveEquality normalization.feasibleIff
     #[{ index := 0, count := 2 }]
