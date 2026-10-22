@@ -55,7 +55,7 @@ private def validateTypedPrimitive (state : ReformState)
     let nextPresentation ←
       typedPresentationFromExpression nextCanonical result.view
     let normalization ←
-      checkedPointwiseNormalization state.source next nextCanonical
+      checkedPointwiseNormalization state.sourceName next nextCanonical
         result.normalizationLemmas
     let presentationDelta ← presentationDeltaBetween currentPresentation
       nextPresentation normalization.objectiveEquality normalization.feasibleIff

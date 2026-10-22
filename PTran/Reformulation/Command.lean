@@ -295,7 +295,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
     let canonical ← canonicalTargetExpression sourceName sourceTerm sourceView
       {} sourceTerm false
     let presentation ← typedPresentationFromExpression canonical sourceView
-    let normalization ← checkedPointwiseNormalization sourceTerm source canonical #[]
+    let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
     let accumulatedCertificate ← runner.reflexivity source
     synthesizeSyntheticMVarsNoPostponing
     let accumulatedCertificate ← instantiateMVars accumulatedCertificate
@@ -389,7 +389,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       command| noncomputable def $targetDeclIdent := $targetTerm)
 
     let normalizationLemmas ← liftMacroM <|
-      normalizationSimpLemmas sourceTerm state.normalizationLemmas
+      normalizationSimpLemmas sourceName state.normalizationLemmas
     let targetSimp ← liftMacroM `(
       Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
     let normalizationLemmas := normalizationLemmas.push targetSimp

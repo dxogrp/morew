@@ -274,7 +274,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
         let current := state.semantic
         -- Earlier steps may have removed positivity constraints through aliases.
         let normalizationLemmas ← liftMacroM <|
-          normalizationSimpLemmas state.source state.normalizationLemmas
+          normalizationSimpLemmas state.sourceName state.normalizationLemmas
         let pointIdent : TSyntax `ident := ⟨mkIdent `point⟩
         let pointTerm : TSyntax `term := ⟨pointIdent.raw⟩
         let sourcePoint ← liftMacroM `(($pointTerm).1)
