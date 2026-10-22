@@ -31,8 +31,9 @@ private def presentationFor (source : Expr) (sense : ObjectiveSense := .minimize
     constraints := if noConstraints then #[] else #[{ name := `bounds, predicate := feasible }]
   }
 
-private def requireForm (presentation : Elab.Reformulation.PresentationState) : MetaM Expr := do
-  match ← Elab.Conic.buildForm presentation with
+private def requireForm (presentation : Elab.Reformulation.PresentationState)
+    (certifiedRows : Array (Option (Array Elab.Conic.RowResult)) := #[]) : MetaM Expr := do
+  match ← Elab.Conic.buildForm presentation {} certifiedRows with
   | .error error => throwError "expected conic form: {error.reason}"
   | .ok form =>
     if form.hasMVar || form.hasSorry then throwError "incomplete conic form"
@@ -202,6 +203,66 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let data ← mkProjection form `data
   unless ← isDefEq (← mkProjection data `rowCount) (mkNatLit 3) do
     throwError "wrong number of rows across named blocks"
+
+-- A planner may certify a row while source-local evidence is available, then
+-- retain only the bare predicate. The cached certificate must remain usable
+-- after the local let is removed, without rediscovering its nonzero proof.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← PTranTest.Affine.elaborate (← `(fun (c : ℝ) (hc : True ∧ c ≠ 0) =>
+    show Problem ℝ ℝ from ⟨fun x => x, fun x =>
+      let localEvidence : c ≠ 0 := hc.2
+      x / c ≤ 2⟩))
+  lambdaBoundedTelescope expression 2 fun parameters source => do
+    let initial ← presentationFor source
+    let predicate := initial.constraints[0]!.predicate
+    let .ok row ← Elab.Conic.normalizeRow predicate
+      | throwError "source-local nonzero evidence did not certify the original row"
+    let bare ← withLocalDeclD `point initial.domainType fun point => do
+      mkLambdaFVars #[point] (← Elab.Affine.reduceStructure (mkApp predicate point))
+    let empty ← PTranTest.Affine.elaborate (← `(fun _ : ℝ => True))
+    let presentation := { initial with constraints := #[
+      { name := `bounds, predicate := bare }, { name := `empty, predicate := empty }] }
+    let .error error ← Elab.Conic.buildForm presentation
+      | throwError "bare predicate unexpectedly rediscovered source-local nonzero evidence"
+    unless (← error.reason.toString).contains "nonzero evidence" do
+      throwError "bare row failed for the wrong reason: {error.reason}"
+    let form ← requireForm presentation #[some #[row], none]
+    let data ← mkProjection form `data
+    unless ← isDefEq (← mkProjection data `rowCount) (mkNatLit 1) do
+      throwError "cached row changed the represented row count"
+    let canonical ← presentation.canonicalProblem
+    unless ← isDefEq (← inferType form).getAppArgs.back! canonical do
+      throwError "cached row changed the represented problem"
+    let closed ← mkLambdaFVars parameters form
+    if closed.hasFVar || closed.hasMVar then
+      throwError "source-local evidence escaped the cached form"
+    checkWithKernel closed
+
+private def rejectCachedForm (presentation : Elab.Reformulation.PresentationState)
+    (certifiedRows : Array (Option (Array Elab.Conic.RowResult)))
+    (fragment : String) : MetaM Unit := do
+  let .error error ← Elab.Conic.buildForm presentation {} certifiedRows
+    | throwError "invalid row cache received a conic form"
+  unless (← error.reason.toString).contains fragment do
+    throwError "missing cached-row diagnostic: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let source ← PTranTest.Affine.elaborate (← `(show Problem ℝ ℝ from
+    ⟨fun x => x, fun x => x ≤ 1⟩))
+  let presentation ← presentationFor source
+  let predicate := presentation.constraints[0]!.predicate
+  let rows ← Elab.Conic.Plan.certifyRows #[predicate]
+  let wrong ← PTranTest.Affine.elaborate (← `(fun x : ℝ => 0 ≤ x))
+  let wrongRows ← Elab.Conic.Plan.certifyRows #[wrong]
+  rejectCachedForm presentation #[some wrongRows] "does not match its decomposed predicate"
+  rejectCachedForm presentation #[some rows, none] "entry count"
+  rejectCachedForm presentation #[some #[]] "decomposed predicate count"
+  let some row := rows[0]? | throwError "missing certified fixture row"
+  let unresolved ← mkFreshExprMVar (← inferType row.pointwiseIff)
+  let incomplete := { row with pointwiseIff := unresolved }
+  rejectCachedForm presentation #[some #[incomplete]] "unresolved metavariables"
+  if ← unresolved.mvarId!.isAssigned then
+    throwError "cached-row validation assigned a caller metavariable"
 
 private def rejectForm (termSyntax : TSyntax `term) (fragment : String) : TermElabM Unit := do
   let source ← PTranTest.Affine.elaborate termSyntax

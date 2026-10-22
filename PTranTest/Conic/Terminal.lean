@@ -129,6 +129,51 @@ run_cmd liftTermElabM do
   unless result.presentation.constraints.back!.name == `keep do
     throwError "terminal auxiliary pullback renamed an untouched row"
 
+/-! Accepted affine certificates survive the original source's independent
+proof-let scope. Later auxiliary lifts must pull back these maps and proofs,
+including the stored leaves of an untouched conjunction, without recognizing
+the now evidence-free predicates again. -/
+run_cmd liftTermElabM do
+  let expressions ← elaborate (← `(fun (c : ℝ) (h : c ≠ 0 ∧ True) =>
+    ((fun p : ℝ × ℝ => let hn : c ≠ 0 := h.1; |p.1 / c| ≤ p.2),
+     (fun p : ℝ × ℝ => let hn : c ≠ 0 := h.1; p.1 / c ≤ 10 ∧ -5 ≤ p.1 / c),
+     (fun p : ℝ × ℝ => let hn : c ≠ 0 := h.1; PTran.Fn.softplus (p.1 / c) ≤ p.2),
+     (fun p : ℝ × ℝ => let hn : c ≠ 0 := h.1; PTran.Fn.softplus (-(p.1 / c)) ≤ p.2))))
+  lambdaBoundedTelescope expressions 2 fun parameters predicates => do
+    let absolute ← mkAppM ``Prod.fst #[predicates]
+    let rest ← mkAppM ``Prod.snd #[predicates]
+    let grouped ← mkAppM ``Prod.fst #[rest]
+    let losses ← mkAppM ``Prod.snd #[rest]
+    let firstLoss ← mkAppM ``Prod.fst #[losses]
+    let secondLoss ← mkAppM ``Prod.snd #[losses]
+    let .ok (.inl direct) ← Automatic.planUnique absolute
+      | throwError "source-local evidence did not certify the exact rule"
+    for predicate in direct.rowPredicates do
+      let .error _ ← normalizeRow predicate
+        | throwError "fixture unexpectedly retained discoverable nonzero evidence"
+    let base ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[]
+    let auxiliaryRows : Array ConstraintEntry := #[
+      { name := `firstLoss, predicate := firstLoss },
+      { name := `secondLoss, predicate := secondLoss }]
+    for auxiliaryCount in [:3] do
+      let constraints : Array ConstraintEntry := #[
+          { name := `absolute, predicate := absolute },
+          { name := `grouped, predicate := grouped }] ++ auxiliaryRows.extract 0 auxiliaryCount
+      let source := { base with constraints }
+      let result ← checkPlan source
+      unless result.auxiliaries.size == auxiliaryCount do
+        throwError "retained evidence test did not exercise all auxiliary pullbacks"
+      unless result.presentation.constraints[2]!.name == `grouped do
+        throwError "retained evidence changed the already-conic group"
+      let data ← mkAppM ``PTran.Conic.Form.data #[result.form]
+      unless ← isDefEq (← mkAppM ``PTran.Conic.Data.rowCount #[data])
+          (mkNatLit (4 + 2 * auxiliaryCount)) do
+        throwError "retained certificates lost structural rows"
+      let closed ← mkLambdaFVars parameters result.form
+      if closed.hasFVar || closed.hasMVar then
+        throwError "source-local evidence escaped the completed form"
+      checkWithKernel closed
+
 /-! Failures identify the original source entry and restore any auxiliary
 declarations introduced during earlier successful planning attempts. -/
 run_cmd liftTermElabM do

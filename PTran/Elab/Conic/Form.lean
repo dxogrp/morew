@@ -88,7 +88,34 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
       leaves := predicates ++ leaves
     mkLambdaFVars #[point] proof
 
-private def buildFormCore (presentation : PresentationState) (config : Affine.Config) :
+-- Cached rows are untrusted inputs: retain their certificates only after checking
+-- that they prove the exact decomposed predicate for the current domain.
+private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
+    MetaM RowResult := do
+  for expression in #[row.constraint, row.pointwiseIff] do
+    if ← Plan.unresolved expression then
+      throwError "cached row contains unresolved metavariables"
+  let row := { row with
+    constraint := ← instantiateMVars row.constraint
+    pointwiseIff := ← instantiateMVars row.pointwiseIff }
+  checkWithKernel row.constraint
+  checkWithKernel row.pointwiseIff
+  let constraintType ← whnf (← inferType row.constraint)
+  unless constraintType.isAppOfArity ``PTran.Conic.Constraint 3 do
+    throwError "cached row is not a conic constraint"
+  unless ← isDefEq constraintType.getAppArgs[0]! domain do
+    throwError "cached row does not use the current decision domain"
+  let expected ← withLocalDeclD `point domain fun point => do
+    let holds := mkAppN
+      (mkConst ``PTran.Conic.Constraint.Holds constraintType.getAppFn.constLevels!)
+      (constraintType.getAppArgs ++ #[row.constraint, point])
+    mkForallFVars #[point] (mkApp2 (mkConst ``Iff) holds (mkApp predicate point))
+  unless ← isDefEq (← inferType row.pointwiseIff) expected do
+    throwError "cached row certificate does not match its decomposed predicate"
+  return row
+
+private def buildFormCore (presentation : PresentationState) (config : Affine.Config)
+    (certifiedRows : Array (Option (Array RowResult))) :
     MetaM (Except Affine.AffineError Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
@@ -97,12 +124,15 @@ private def buildFormCore (presentation : PresentationState) (config : Affine.Co
         expression
         reason := ← addMessageContext "conic form: unresolved metavariables in typed presentation"
       }
+  unless certifiedRows.isEmpty || certifiedRows.size == presentation.constraints.size do
+    throwError "cached row entry count does not match the typed presentation"
   let canonical ← presentation.canonicalProblem
   let objective ← match ← reifyObjective presentation config with
     | .error error => return .error error
     | .ok result => pure result
   let mut blocks := #[]
-  for entry in presentation.constraints do
+  for entryIndex in [:presentation.constraints.size] do
+    let entry := presentation.constraints[entryIndex]!
     let (predicates, decomposition) ← try
       decomposePredicate entry.predicate
     catch error =>
@@ -111,10 +141,22 @@ private def buildFormCore (presentation : PresentationState) (config : Affine.Co
         reason := ← addMessageContext m!"constraint `{entry.name}`: {error.toMessageData}"
       }
     let mut rows := #[]
-    for predicate in predicates do
-      match ← normalizeRow predicate config (some entry.name) with
-      | .error error => return .error error
-      | .ok row => rows := rows.push row
+    if let some cached := (certifiedRows[entryIndex]?).getD none then
+      try
+        unless cached.size == predicates.size do
+          throwError "cached row count does not match the decomposed predicate count"
+        rows ← (cached.zip predicates).mapM fun (row, predicate) =>
+          checkCertifiedRow presentation.domainType predicate row
+      catch error =>
+        return .error {
+          expression := entry.predicate
+          reason := ← addMessageContext m!"constraint `{entry.name}`: {error.toMessageData}"
+        }
+    else
+      for predicate in predicates do
+        match ← normalizeRow predicate config (some entry.name) with
+        | .error error => return .error error
+        | .ok row => rows := rows.push row
     blocks := blocks.push { predicates, decomposition, rows : RowBlock }
   let predicates := blocks.flatMap (·.predicates)
   let rows := blocks.flatMap (·.rows)
@@ -154,14 +196,18 @@ private def buildFormCore (presentation : PresentationState) (config : Affine.Co
 /-- Certify the complete current typed problem as persistent affine cone data.
 Conjunction leaves retain presentation order; literal `True` contributes no
 rows. The returned form represents `presentation.canonicalProblem` exactly and
-retains the explicit objective sense, including maximizing declarations. -/
-def buildForm (presentation : PresentationState) (config : Affine.Config := {}) :
+retains the explicit objective sense, including maximizing declarations.
+An optional nonempty cache has one slot per presentation entry. Each `some`
+contains checked rows in decomposed predicate order; `none` normalizes the entry.
+Cached constraints and proofs are checked against their current predicates. -/
+def buildForm (presentation : PresentationState) (config : Affine.Config := {})
+    (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Affine.AffineError Expr) :=
   Affine.withIsolatedMVars do
     try
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
-        presentation (buildFormCore presentation config)
+        presentation (buildFormCore presentation config certifiedRows)
     catch error =>
       return .error {
         expression := presentation.objective

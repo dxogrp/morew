@@ -45,6 +45,7 @@ private structure Work where
   presentation : PresentationState
   equivalence : Expr
   rowOrigins : Array Nat
+  certifiedRows : Array (Option (Array RowResult))
   replacedIndices : Array Nat := #[]
   auxiliaries : Array (Nat × Expr) := #[]
   nextName : Nat := 0
@@ -59,21 +60,49 @@ private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) :
   else
     (name, index + 1)
 
-private def isConicPredicate (predicate : Expr) (config : Affine.Config) : MetaM Bool := do
+private def certifyPredicate (predicate : Expr) (config : Affine.Config) :
+    MetaM (Option (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate
+  let mut rows := #[]
   for leaf in leaves do
-    if let .error _ ← normalizeRow leaf config then return false
-  return true
+    match ← normalizeRow leaf config with
+    | .error _ => return none
+    | .ok row => rows := rows.push row
+  return some rows
+
+private noncomputable def pullbackConstraint {X A : Type*}
+    [NormedAddCommGroup X] [NormedSpace ℝ X]
+    [NormedAddCommGroup A] [NormedSpace ℝ A]
+    (row : PTran.Conic.Constraint X) : PTran.Conic.Constraint (X × A) :=
+  ⟨row.cone, row.map.comp AffineMap.fst⟩
+
+-- Compose an accepted affine map with the product projection. Re-recognizing
+-- its source syntax would lose independent proof lets from the original rule.
+private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowResult := do
+  let nextDomain ← mkAppM ``Prod #[domain, auxiliary]
+  let constraint ← Space.withCanonicalDomain domain do
+    Space.withCanonicalDomain auxiliary do
+      instantiateMVars (← mkAppOptM ``pullbackConstraint
+        #[some domain, some auxiliary, none, none, none, none, some row.constraint])
+  let pointwiseIff ← withLocalDeclD `point nextDomain fun point => do
+    mkLambdaFVars #[point] (mkApp row.pointwiseIff (← mkAppM ``Prod.fst #[point]))
+  checkWithKernel constraint
+  checkWithKernel pointwiseIff
+  return { constraint, pointwiseIff }
 
 /-- Apply the same domain pullback as the checked rewrite and retain original
 entry provenance independently of the temporary presentation names. -/
 private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
+    (certificates : Array (Option (Array RowResult)))
     (nextDomain : Expr) (auxiliary? : Option Expr) (rewrite : RewriteResult) : MetaM Work := do
+  unless certificates.size == rows.size do
+    throwError "terminal replacement certificates do not match the generated rows"
   let origin := work.rowOrigins[index]!
   let old := work.presentation
   let mut nextName := work.nextName
   let mut binders := old.binders
   let mut auxiliaries := work.auxiliaries
+  let mut retainedCertificates := work.certifiedRows
   let (objective, retained) ← match auxiliary? with
     | none => pure (old.objective, old.constraints)
     | some auxiliary => do
@@ -81,6 +110,8 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
       nextName := following
       binders := binders.push { name, type := auxiliary }
       auxiliaries := auxiliaries.push (origin, auxiliary)
+      retainedCertificates ← retainedCertificates.mapM fun rows? =>
+        rows?.mapM (·.mapM (pullbackRow old.domainType auxiliary))
       withLocalDeclD `point nextDomain fun point => do
         let original ← mkAppM ``Prod.fst #[point]
         let objective ← mkLambdaFVars #[point] (mkApp old.objective original)
@@ -110,6 +141,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     presentation
     equivalence
     rowOrigins := splice work.rowOrigins index (rows.map fun _ => origin)
+    certifiedRows := splice retainedCertificates index certificates
     replacedIndices
     auxiliaries
     nextName
@@ -123,7 +155,8 @@ private def splitNonconicGroups (work : Work) (config : Affine.Config) : MetaM W
   while index < work.presentation.constraints.size do
     let source := work.presentation.constraints[index]!.predicate
     let (leaves, decomposition) ← decomposePredicate source
-    if ← isConicPredicate source config then
+    if let some rows ← certifyPredicate source config then
+      work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       index := index + 1
       continue
     -- An atomic unsupported row needs no structural rewrite yet.
@@ -137,7 +170,8 @@ private def splitNonconicGroups (work : Work) (config : Affine.Config) : MetaM W
       withLocalDeclD `retained remainder fun hypothesis =>
         mkLambdaFVars #[point, hypothesis] (mkApp decomposition point)
     let rewrite ← rewriteConstraintContextual presentation index leaves conditional
-    work ← applyReplacement work index leaves presentation.domainType none rewrite
+    work ← applyReplacement work index leaves (leaves.map fun _ => none)
+      presentation.domainType none rewrite
     index := index + leaves.size
   return work
 
@@ -146,11 +180,13 @@ private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Prepared)
   | .inl exact =>
     let rewrite ← rewriteConstraint work.presentation index exact.lift exact.auxiliary?
       exact.nextDomain exact.rowPredicates exact.targetIff
-    applyReplacement work index exact.rowPredicates exact.nextDomain exact.auxiliary? rewrite
+    applyReplacement work index exact.rowPredicates
+      (exact.certifiedRows.map fun row => some #[row]) exact.nextDomain exact.auxiliary? rewrite
   | .inr contextual =>
     let rewrite ← rewriteConstraintContextual work.presentation index
       contextual.rowPredicates contextual.conditionalIff
-    applyReplacement work index contextual.rowPredicates contextual.domain none rewrite
+    applyReplacement work index contextual.rowPredicates
+      (contextual.certifiedRows.map fun row => some #[row]) contextual.domain none rewrite
 
 private def originalError (original : PresentationState) (origin : Nat)
     (error : Affine.AffineError) : MetaM Affine.AffineError := do
@@ -161,10 +197,14 @@ private def originalError (original : PresentationState) (origin : Nat)
 
 private partial def lower (original : PresentationState) (work : Work)
     (config : Affine.Config) : MetaM (Except Affine.AffineError Work) := do
+  let mut work := work
   let mut firstError? := none
   for index in [:work.presentation.constraints.size] do
     let predicate := work.presentation.constraints[index]!.predicate
-    if ← isConicPredicate predicate config then continue
+    if work.certifiedRows[index]!.isSome then continue
+    if let some rows ← certifyPredicate predicate config then
+      work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
+      continue
     let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
     match ← Automatic.planUnique predicate retained config with
     | .ok prepared =>
@@ -207,12 +247,13 @@ def plan (presentation : PresentationState) (config : Affine.Config := {}) :
           presentation
           equivalence
           rowOrigins := presentation.constraints.mapIdx fun index _ => index
+          certifiedRows := presentation.constraints.map fun _ => none
         }
         let work ← splitNonconicGroups work config
         let work ← match ← lower presentation work config with
           | .ok work => pure work
           | .error error => return .error error
-        let form ← match ← buildForm work.presentation config with
+        let form ← match ← buildForm work.presentation config work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
         checkWithKernel work.equivalence
