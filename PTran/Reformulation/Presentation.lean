@@ -1,5 +1,6 @@
 import PTran.Reformulation.State
 import PTran.Conic.SecondOrder
+import PTran.Conic.Exponential.Cone
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
@@ -37,6 +38,28 @@ private def annotatedFVarId? (infos : SubExpr.PosMap Elab.Info)
       let .fvar id := info.toTermInfo.expr | none
       some id
   | _ => none
+
+/-- Retain readable spelling while fixing the declaration and preventing local
+capture, just as `mkCIdentFrom` does for fully qualified identifiers. -/
+private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.Syntax :=
+  match (mkCIdentFrom stx stx.getId).raw with
+  | .ident info raw identifier _ => .ident info raw identifier [.decl name []]
+  | _ => mkCIdentFrom stx name
+
+private partial def freezePresentationReferences
+    (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
+    (stx : Lean.Syntax) : Lean.Syntax :=
+  if let some id := annotatedFVarId? infos stx then
+    match binders.find? fun entry => entry.1 == id with
+    | some (_, name) => mkIdentFrom stx name
+    -- Presentation syntax is persisted and may be used in another section.
+    -- Keep local names instead of capturing the current section's UIDs.
+    | none => stx
+  else if let some name := annotatedConstName? infos stx then
+    freezePresentationConstant stx name
+  else
+    stx.setArgs <| stx.getArgs.map fun child =>
+      freezePresentationReferences infos binders child
 
 /-- Section variable UIDs survive fresh elaboration contexts, including for
 anonymous instances whose local names receive new macro scopes each time.
@@ -96,10 +119,13 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
-def presentationTypeSyntax (type : Expr) : TermElabM Lean.Syntax := do
-  let (stx, infos) ← PrettyPrinter.delabCore type {}
-    PrettyPrinter.Delaborator.delab
-  pure <| freezeConstantReferences infos {} stx.raw
+def presentationTypeSyntax (type : Expr) : TermElabM Lean.Syntax :=
+  -- Generated auxiliary types need the same fixed class projections as row
+  -- bodies, while retaining their readable spelling in imported metadata.
+  withOptions (fun options => options.setBool `pp.tagAppFns true) do
+    let (stx, infos) ← PrettyPrinter.delabCore type {}
+      PrettyPrinter.Delaborator.delab
+    pure <| freezePresentationReferences infos #[] stx.raw
 
 /-- Stable type syntax for the semantic and displayed problem types. -/
 structure ProblemTypeSyntax where
@@ -308,28 +334,6 @@ def packPoint (components : Array Expr) : MetaM Expr := do
   else
     throwError "a problem presentation requires at least one decision variable"
 
-/-- Retain readable spelling while fixing the declaration and preventing local
-capture, just as `mkCIdentFrom` does for fully qualified identifiers. -/
-private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.Syntax :=
-  match (mkCIdentFrom stx stx.getId).raw with
-  | .ident info raw identifier _ => .ident info raw identifier [.decl name []]
-  | _ => mkCIdentFrom stx name
-
-private partial def freezePresentationReferences
-    (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
-    (stx : Lean.Syntax) : Lean.Syntax :=
-  if let some id := annotatedFVarId? infos stx then
-    match binders.find? fun entry => entry.1 == id with
-    | some (_, name) => mkIdentFrom stx name
-    -- Presentation syntax is persisted and may be used in another section.
-    -- Keep local names instead of capturing the current section's UIDs.
-    | none => stx
-  else if let some name := annotatedConstName? infos stx then
-    freezePresentationConstant stx name
-  else
-    stx.setArgs <| stx.getArgs.map fun child =>
-      freezePresentationReferences infos binders child
-
 /-- Internal delaboration flag, enabled only while generating stored presentations.
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `PTran.Reformulation.Internal.coneNotation
@@ -341,6 +345,8 @@ private def delabConeCarrier : Delab := do
   let expression ← getExpr
   guard <| expression.isAppOfArity ``PTran.Conic.Cone.carrier 1
   let cone := expression.getAppArgs[0]!
+  if cone.isConstOf ``PTran.Conic.Cone.exponential then
+    return ← `(EXP)
   guard <| cone.isAppOfArity ``PTran.Conic.Cone.secondOrder 1 ||
     cone.isAppOfArity ``PTran.Conic.Cone.rotatedSecondOrder 1
   -- Keep the original subexpression position, so dimension references are

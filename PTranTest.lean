@@ -25,6 +25,8 @@ import PTranTest.Conic.SecondOrderElab
 import PTranTest.Conic.SecondOrderRows
 import PTranTest.Core
 import PTranTest.ExactConstraintLift
+import PTranTest.ImportCompatibility.Exponential
+import PTranTest.ImportCompatibility.Exponential.Defined
 import PTranTest.ImportCompatibility.Polyhedral
 import PTranTest.ImportCompatibility.Polyhedral.Defined
 import PTranTest.ImportCompatibility.ProblemPresentation
@@ -37,6 +39,9 @@ import PTranTest.ImportCompatibility.SecondOrder.Defined
 import PTranTest.ImportCompatibility.TypedPresentation
 import PTranTest.Reformulation.CanonicalCheckpoint
 import PTranTest.Reformulation.Composition
+import PTranTest.Reformulation.Exponential
+import PTranTest.Reformulation.ExponentialCustom
+import PTranTest.Reformulation.ExponentialFailures
 import PTranTest.Reformulation.NameAllocation
 import PTranTest.Reformulation.ObjectiveBoundLabels
 import PTranTest.Reformulation.Polyhedral

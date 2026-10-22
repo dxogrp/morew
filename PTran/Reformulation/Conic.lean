@@ -1,5 +1,6 @@
 import PTran.Elab.Conic.Polyhedral
 import PTran.Elab.Conic.SecondOrder
+import PTran.Elab.Conic.Exponential
 import PTran.Elab.Conic.Rewrite
 import PTran.Reformulation.Presentation
 import Lean.Meta.Closure
@@ -26,7 +27,8 @@ hypograph representation of the entire predicate. Its inspectable target may
 contain `True`, conjunctions, and affine scalar/vector equalities or non-strict
 inequalities. Every generated row is certified independently of the objective
 or other constraints. Supported SOC and rotated-SOC memberships are also valid
-custom target rows.
+custom target rows, as are exponential memberships and grouped finite
+families of exponential memberships.
 
 Native Euclidean norms, scalar squares, and finite sums of squares become one
 SOC or rotated-SOC membership row. Quotients of squares require a positive
@@ -34,6 +36,15 @@ constant lower margin on the denominator, obtained from an unchanged constraint
 (or a directly proved positive constant denominator). Existing margin rows stay
 in place. The command remains nonterminal and does not certify a whole problem
 as conic.
+
+Exponential upper bounds and logarithmic lower bounds become exponential-cone
+memberships. Logarithms require a positive constant lower margin on their
+argument. Relative-entropy upper bounds retain a nonnegative numerator margin
+and a positive denominator margin, including zero numerators. Finite nonempty
+log-sum-exp and softplus use one finite auxiliary vector, one grouped family of
+exponential memberships, and one sum bound. Domain evidence is taken only from
+independent constants or retained entries; no selected constraint proves its
+own domain.
 -/
 
 namespace PTran.Reformulation.Internal
@@ -41,25 +52,7 @@ namespace PTran.Reformulation.Internal
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 open PTran.Elab.Reformulation
 
-private def rebaseExactPlan (result : PTran.Elab.Conic.Plan.Result)
-    (oldVars newVars : Array Expr) : PTran.Elab.Conic.Plan.Result := {
-  lift := result.lift.replaceFVars oldVars newVars
-  auxiliary? := result.auxiliary?.map (·.replaceFVars oldVars newVars)
-  nextDomain := result.nextDomain.replaceFVars oldVars newVars
-  rowPredicates := result.rowPredicates.map (·.replaceFVars oldVars newVars)
-  targetIff := result.targetIff.replaceFVars oldVars newVars
-  certifiedRows := result.certifiedRows.map fun row => {
-    constraint := row.constraint.replaceFVars oldVars newVars
-    pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars
-  }
-}
-
-private abbrev Prepared := Sum PTran.Elab.Conic.Plan.Result PTran.Elab.Conic.SecondOrder.Result
-
-private def Prepared.replaceFVars (prepared : Prepared) (oldVars newVars : Array Expr) : Prepared :=
-  match prepared with
-  | .inl exact => .inl (rebaseExactPlan exact oldVars newVars)
-  | .inr contextual => .inr (contextual.replaceFVars oldVars newVars)
+private abbrev Prepared := PTran.Elab.Conic.Plan.Prepared
 
 private def Prepared.rowPredicates : Prepared → Array Expr
   | .inl exact => exact.rowPredicates
@@ -109,7 +102,8 @@ private def materializeConic (state : ReformState) (index : Nat)
     let context ← instantiateLCtxMVars (← getLCtx)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
-    let prepared := prepared.replaceFVars preparedVars sectionFVars
+    let prepared : Prepared :=
+      PTran.Elab.Conic.Plan.Prepared.replaceFVars prepared preparedVars sectionFVars
     let replacement ← match prepared with
       | .inl result => do
         PTran.Elab.Conic.rewriteConstraint typed.presentation index
@@ -177,6 +171,25 @@ private def materializeConic (state : ReformState) (index : Nat)
       constraintSplice? := some { index, count := rows.size }
     }
 
+private def planAutomatic (predicate : Expr) (retained : Array Expr) :
+    MetaM (Except PTran.Elab.Affine.AffineError Prepared) := do
+  let mut candidateError? := none
+  if ← PTran.Elab.Conic.Exponential.isCandidate predicate then
+    match ← PTran.Elab.Conic.Exponential.plan predicate retained with
+    | .ok result => return .ok result
+    | .error error => candidateError? := some error
+  if ← PTran.Elab.Conic.SecondOrder.isCandidate predicate then
+    match ← PTran.Elab.Conic.SecondOrder.planReplacement predicate retained with
+    | .ok result => return .ok result
+    | .error error =>
+      if candidateError?.isNone then candidateError? := some error
+  -- Candidate heads can also occur inside affine bounds. Keep trying
+  -- every applicable family before reporting the first candidate's
+  -- failed obligation; a certified fallback always takes precedence.
+  match ← PTran.Elab.Conic.Polyhedral.plan predicate with
+  | .ok result => pure (.ok (.inl result))
+  | .error error => pure (.error (candidateError?.getD error))
+
 /-- Select and certify a whole-constraint rewrite, deferring named
 materialization until the runner has allocated its generated family. -/
 def prepareConic (state : ReformState) (step : Syntax)
@@ -201,21 +214,13 @@ def prepareConic (state : ReformState) (step : Syntax)
         | exception => throw exception
     let predicate := presentation.constraints[index]!.predicate
     let result : Except PTran.Elab.Affine.AffineError Prepared ←
-      if rule?.isNone && (← PTran.Elab.Conic.SecondOrder.isCandidate predicate) then do
-        let retained := presentation.constraints.extract 0 index ++
-          presentation.constraints.extract (index + 1) presentation.constraints.size
-        match ← PTran.Elab.Conic.SecondOrder.planReplacement predicate
-            (retained.map (·.predicate)) with
-        | .ok result => pure (.ok result)
-        | .error error =>
-          -- Affine bounds can contain sums, powers, or division too. A failed
-          -- second-order candidate must not hide a certified polyhedral rule.
-          match ← PTran.Elab.Conic.Polyhedral.plan predicate with
-          | .ok result => pure (.ok (.inl result))
-          | .error _ => pure (.error error)
-      else do
+      if rule?.isSome then do
         let result ← PTran.Elab.Conic.Polyhedral.plan predicate rule?
         pure (result.map Sum.inl)
+      else do
+        let retained := presentation.constraints.extract 0 index ++
+          presentation.constraints.extract (index + 1) presentation.constraints.size
+        planAutomatic predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"
