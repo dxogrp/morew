@@ -69,6 +69,19 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
+/-- Checked structural evidence retained until the final target is declared.
+Its free variables belong to the containing state's section-variable context. -/
+structure CheckedTerminalConicArtifact where
+  /-- A kernel-checked form of the final canonical problem. -/
+  form : Expr
+  /-- Source location of terminal validation. -/
+  ref : Syntax
+
+/-- Move retained terminal evidence into a later elaboration context. -/
+def CheckedTerminalConicArtifact.replaceFVars (artifact : CheckedTerminalConicArtifact)
+    (oldVars newVars : Array Expr) : CheckedTerminalConicArtifact :=
+  { artifact with form := artifact.form.replaceFVars oldVars newVars }
+
 /-- Checked runner state together with syntax retained for declaration emission. -/
 structure ReformState where
   /-- Current checked semantic, presentation, and certificate state. -/
@@ -104,6 +117,8 @@ structure ReformState where
   removedConstraintNames : NameSet := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
+  /-- Structural evidence produced by terminal conic validation. -/
+  terminalConic? : Option CheckedTerminalConicArtifact := none
 
 /-- A handler describes one uncommitted primitive step.  Certificate
 composition and state mutation are deliberately centralized in
@@ -128,8 +143,10 @@ structure SurfaceStepResult where
   /-- Optional new base for normalization after a checked rewrite. Its removal
   inventory starts empty; subsequent standard steps inherit this checkpoint. -/
   checkpoint? : Option CanonicalCheckpoint := none
-  /-- Optional ordered replacement of one selected constraint. -/
-  constraintSplice? : Option ConstraintSplice := none
+  /-- Ordered replacements indexed by entries at step entry. -/
+  constraintSplices : Array ConstraintSplice := #[]
+  /-- Form syntax to validate against the proposed canonical target. -/
+  terminalForm? : Option (TSyntax `term) := none
   /-- Whether additional steps may follow this result. -/
   status : PTran.Elab.Reformulation.StepStatus := .continue
   /-- Additional declarations requested by the step. -/
@@ -151,5 +168,7 @@ structure SurfaceMaterialization where
   surface : SurfaceStepResult
   /-- Section variables used while validating the typed result. -/
   sectionFVars : Array Expr
+  /-- Validated terminal evidence in the same section-variable context. -/
+  terminalConic? : Option CheckedTerminalConicArtifact := none
 
 end PTran.Reformulation.Internal

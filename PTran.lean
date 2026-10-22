@@ -39,6 +39,7 @@ import PTran.Reformulation.State
 import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
+import PTran.Reformulation.TerminalConic
 import PTran.Syntax
 import PTran.Syntax.Elab
 import PTran.Syntax.Grammar

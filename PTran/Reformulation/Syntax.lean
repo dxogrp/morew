@@ -29,6 +29,9 @@ optionally using an explicitly supplied representation certificate. -/
 syntax (name := conicAtStep)
   "conic " "at " ident (" using " term)? : reformulationStep
 
+/-- Certify the complete problem and finish the reformulation script. -/
+syntax (name := conicStep) "conic" : reformulationStep
+
 /-- Declare a transformed problem together with its global-equivalence
 certificate. -/
 syntax (name := reformulationCmd)

@@ -56,6 +56,7 @@ import PTranTest.Reformulation.SecondOrderCustom
 import PTranTest.Reformulation.SecondOrderFailures
 import PTranTest.Reformulation.SubstitutionContext
 import PTranTest.Reformulation.SubstitutionFailures
+import PTranTest.Reformulation.TerminalConic
 import PTranTest.Surface.Affine
 import PTranTest.Surface.Atom
 import PTranTest.Surface.Conic

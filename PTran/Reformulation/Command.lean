@@ -1,5 +1,6 @@
 import PTran.Reformulation.ObjectiveBound
 import PTran.Reformulation.Conic
+import PTran.Reformulation.TerminalConic
 import PTran.Reformulation.StepRunner
 import PTran.Reformulation.Substitution
 import PTran.Reformulation.Syntax
@@ -10,8 +11,8 @@ import Lean.Elab.MutualDef
 
 This module implements the small, proof-producing transformation language used
 by PTran's first release.  A reformulation command declares both the transformed
-problem and a `GlobalEquivalence` certificate.  Convexity is deliberately not
-part of either the command or the generated proof.
+problem and a `GlobalEquivalence` certificate. Terminal conic validation also
+retains a structural form and a proof of conic representability.
 -/
 
 namespace PTran
@@ -152,6 +153,97 @@ private def emitCompanionDeclaration
     noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
   elabCommand command
 
+-- Terminal output uses the already checked canonical expression. In particular,
+-- the explicit objective-value annotation must retain OrderDual for maxima.
+private def emitTerminalTarget (target : TSyntax `ident) (state : ReformState) :
+    CommandElabM Unit := do
+  let scope ← getScope
+  withExporting (isExporting := scope.isPublic) do
+  withInitQuotContext (some (hash #[target.getId])) do
+    runTermElabM fun sectionVars => do
+      let typed := state.typed.replaceFVars state.sectionFVars sectionVars
+      let valueType ← match typed.presentation.sense with
+        | .minimize => pure (Lean.mkConst ``Real)
+        | .maximize => mkAppM ``OrderDual #[Lean.mkConst ``Real]
+      let type ← mkAppM ``PTran.Problem #[typed.presentation.domainType, valueType]
+      let definition ← `(Parser.Command.definition|
+        def $target : $(← exactExpressionSyntax type) :=
+          $(← exactExpressionSyntax typed.canonical))
+      let view := Command.mkDefViewOfDef { computeKind := .noncomputable } definition
+      Term.elabMutualDef sectionVars scope #[view]
+
+private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
+    (artifact : CheckedTerminalConicArtifact) : CommandElabM Unit := do
+  let scope ← getScope
+  withExporting (isExporting := scope.isPublic) do
+  withInitQuotContext (some (hash #[targetName])) do
+    runTermElabM fun sectionVars => do
+      let artifact := artifact.replaceFVars state.sectionFVars sectionVars
+      let typed := state.typed.replaceFVars state.sectionFVars sectionVars
+      let target ← mkConstWithFreshMVarLevels targetName
+      let (arguments, _, _) ← forallMetaTelescope (← inferType target)
+      let target := mkAppN target arguments
+      unless ← isDefEq target typed.canonical do
+        throwErrorAt artifact.ref "the emitted target does not match its checked conic form"
+      -- Definitional equality can ignore proof arguments (including a class
+      -- used only to supply a proof). Recover these from the emission context.
+      for argument in arguments do
+        let argument ← instantiateMVars argument
+        if let .mvar id := argument then
+          try
+            id.assign (← synthInstance (← id.getType))
+          catch _ =>
+            id.assumption
+      let target ← instantiateMVars target
+      if target.hasMVar then
+        throwErrorAt artifact.ref "terminal target parameters could not be recovered"
+      unless ← isDefEq target typed.canonical do
+        throwErrorAt artifact.ref "recovered target parameters changed the checked problem"
+      let formType ← whnf (← inferType artifact.form)
+      let formType := mkAppN formType.getAppFn
+        (formType.getAppArgs.set! (formType.getAppNumArgs - 1) target)
+      unless ← isDefEq (← inferType artifact.form) formType do
+        throwErrorAt artifact.ref "the checked conic form does not represent the emitted target"
+      checkWithKernel artifact.form
+      let formIdent := rootIdentFrom artifact.ref (targetName ++ `conicForm)
+      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ `isConic)
+      let formDefinition ← `(Parser.Command.definition|
+        def $formIdent : $(← exactExpressionSyntax formType) :=
+          $(← exactExpressionSyntax artifact.form))
+      Term.elabMutualDef sectionVars scope #[
+        Command.mkDefViewOfDef { computeKind := .noncomputable } formDefinition]
+      -- Elaborate both artifacts in the same section context. Lean does not
+      -- permit mixing a noncomputable data definition and a theorem in one
+      -- mutual group, so instantiate the newly declared form explicitly.
+      let namedForm ← mkConstWithFreshMVarLevels (targetName ++ `conicForm)
+      let (formArguments, _, _) ← forallMetaTelescope (← inferType namedForm)
+      let namedForm := mkAppN namedForm formArguments
+      unless ← isDefEq (← inferType namedForm) formType do
+        throwErrorAt artifact.ref "the named conic form has an unexpected type"
+      for argument in formArguments do
+        let argument ← instantiateMVars argument
+        if let .mvar id := argument then
+          try
+            id.assign (← synthInstance (← id.getType))
+          catch _ =>
+            id.assumption
+      let namedForm ← instantiateMVars namedForm
+      if namedForm.hasMVar then
+        throwErrorAt artifact.ref "named conic form parameters could not be recovered"
+      let property ← mkAppM ``PTran.Conic.Form.isConic #[namedForm]
+      let propertyType ← inferType property
+      let propertyDefinition ← `(Parser.Command.theorem|
+        theorem $propertyIdent : $(← exactExpressionSyntax propertyType) :=
+          $(← exactExpressionSyntax property))
+      -- Source-domain hypotheses can be necessary for equivalence but absent
+      -- from the final form. Include only variables used by this derived proof.
+      let mut propertyScope := { scope with includedVars := {} }
+      for (name, sectionVar) in (← read).sectionFVars do
+        if property.containsFVar sectionVar.fvarId! then
+          propertyScope := { propertyScope with includedVars := propertyScope.includedVars.insert name }
+      Term.elabMutualDef sectionVars propertyScope
+        #[Command.mkDefViewOfTheorem {} propertyDefinition]
+
 private def elabReformulationCore : CommandElab := fun stx => do
   let `(reformulation $targetName:ident : $sourceIdent:ident
       $[certificate $aliasName:ident]? := by $steps:reformulationStep*) := stx
@@ -234,6 +326,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareObjectiveBound state step binder label .maximize
       | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
           prepareConic state step selector rule
+      | `(reformulationStep| conic) =>
+          prepareTerminalConic state step
       | _ => throwUnsupportedSyntax
     let (result, materialization) ← runTypedStepPlan state draft
     state ← commitSurfaceStep state result materialization
@@ -250,6 +344,10 @@ private def elabReformulationCore : CommandElab := fun stx => do
     }
   for companion in state.typed.companions do
     outputRequests := outputRequests.push companion.nameRequest
+  if let some artifact := state.terminalConic? then
+    outputRequests := outputRequests ++ #[
+      { name := targetDeclName ++ `conicForm, ref := artifact.ref },
+      { name := targetDeclName ++ `isConic, ref := artifact.ref }]
   match PTran.Elab.Reformulation.preflightDeclarationNames
       (← getEnv) outputRequests with
   | .ok _ => pure ()
@@ -302,19 +400,23 @@ private def elabReformulationCore : CommandElab := fun stx => do
         exact $equivalenceProof)
     let aliasCommand? ← aliasDeclIdent?.mapM fun aliasDeclIdent =>
       liftMacroM `(command|
-        noncomputable abbrev $aliasDeclIdent : $relation :=
-          $certificateDeclIdent)
+        noncomputable abbrev $aliasDeclIdent : $relation := by
+          apply ($certificateDeclIdent:term)
+          all_goals assumption)
 
     let elabCanonicalDeclarations : CommandElabM Unit := do
-      elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
-        state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
+      if state.terminalConic?.isSome then
+        emitTerminalTarget targetDeclIdent state
+      else
+        elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
+          state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
       unless (← get).messages.hasErrors do
         elabCommand certificateCommand
         unless (← get).messages.hasErrors do
           if let some aliasCommand := aliasCommand? then
             elabCommand aliasCommand
 
-    let emitted ← if state.hasSubstitution then do
+    let emitted ← if state.hasSubstitution || state.terminalConic?.isSome then do
         elabCanonicalDeclarations
         pure !(← get).messages.hasErrors
       else
@@ -335,6 +437,9 @@ private def elabReformulationCore : CommandElab := fun stx => do
       for companion in state.typed.companions do
         unless (← get).messages.hasErrors do
           emitCompanionDeclaration companion state.sectionFVars
+      if let some artifact := state.terminalConic? then
+        unless (← get).messages.hasErrors do
+          emitTerminalArtifacts targetDeclName state artifact
       unless (← get).messages.hasErrors do
         refreshProblemView targetDeclName state.view
 
