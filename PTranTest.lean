@@ -39,6 +39,8 @@ import PTranTest.ImportCompatibility.Reformulation
 import PTranTest.ImportCompatibility.Runner
 import PTranTest.ImportCompatibility.SecondOrder
 import PTranTest.ImportCompatibility.SecondOrder.Defined
+import PTranTest.ImportCompatibility.TerminalConic
+import PTranTest.ImportCompatibility.TerminalConic.Defined
 import PTranTest.ImportCompatibility.TypedPresentation
 import PTranTest.Reformulation.CanonicalCheckpoint
 import PTranTest.Reformulation.Composition
@@ -57,6 +59,9 @@ import PTranTest.Reformulation.SecondOrderFailures
 import PTranTest.Reformulation.SubstitutionContext
 import PTranTest.Reformulation.SubstitutionFailures
 import PTranTest.Reformulation.TerminalConic
+import PTranTest.Reformulation.TerminalConicCustom
+import PTranTest.Reformulation.TerminalConicFailures
+import PTranTest.Reformulation.TerminalConicSection
 import PTranTest.Surface.Affine
 import PTranTest.Surface.Atom
 import PTranTest.Surface.Conic
