@@ -6,7 +6,9 @@ open Real
 /-
 Epigraph rewriting example
 -/
-namespace epi_rw
+namespace Examples.Basic
+
+namespace Epigraph
 noncomputable
 
 def p :=
@@ -18,25 +20,25 @@ def p :=
 #printp p
 
 -- Default epigraph rewriting
-reformulation pepi : p := by
+reformulation epigraphForm : p := by
   epigraph t
 
-#printp pepi
-#check pepi.equivalence
+#printp epigraphForm
+#check epigraphForm.equivalence
 
 -- Epigraph rewriting with explicit label
-reformulation pepi_lb : p := by
-  epigraph t as epi_constr
+reformulation labeledEpigraphForm : p := by
+  epigraph t as objectiveBound
 
-#printp pepi_lb
-#check pepi_lb.equivalence
+#printp labeledEpigraphForm
+#check labeledEpigraphForm.equivalence
 
-end epi_rw
+end Epigraph
 
 /-
 Parameterized problem examples
 -/
-namespace parameterized
+namespace Parameterized
 noncomputable section
 
 def p (a : ℝ) :=
@@ -50,12 +52,12 @@ def p (a : ℝ) :=
 #check p 3
 
 end
-end parameterized
+end Parameterized
 
 /-
 Substitute and epigraph rewriting example
 -/
-namespace log_sq
+namespace LogSquared
 noncomputable section
 
 def p :=
@@ -66,20 +68,20 @@ def p :=
 
 #printp p
 
-reformulation pexp : p := by
+reformulation exponentialEpigraph : p := by
   substitute x := exp u
   epigraph t
 
-#printp pexp
-example : GlobalEquivalence p pexp := pexp.equivalence
+#printp exponentialEpigraph
+example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
 
 end
-end log_sq
+end LogSquared
 
 /-
 Targeted polyhedral rewriting
 -/
-namespace polyhedral
+namespace Polyhedral
 noncomputable section
 
 def p :=
@@ -98,4 +100,6 @@ reformulation linearBounds : p := by
 example : GlobalEquivalence p linearBounds := linearBounds.equivalence
 
 end
-end polyhedral
+end Polyhedral
+
+end Examples.Basic

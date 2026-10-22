@@ -6,7 +6,9 @@ open PTran
 # Exponential-cone examples
 -/
 
-namespace relativeEntropy
+namespace Examples.Exponential
+
+namespace RelativeEntropy
 noncomputable section
 
 def p :=
@@ -26,9 +28,9 @@ reformulation lowered : p := by
 example : GlobalEquivalence p lowered := lowered.equivalence
 
 end
-end relativeEntropy
+end RelativeEntropy
 
-namespace softplus
+namespace Softplus
 noncomputable section
 
 def p :=
@@ -46,4 +48,6 @@ reformulation lowered : p := by
 example : GlobalEquivalence p lowered := lowered.equivalence
 
 end
-end softplus
+end Softplus
+
+end Examples.Exponential

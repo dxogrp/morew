@@ -5,7 +5,9 @@ open PTran
 /-
 Second-order cone rewriting
 -/
-namespace soc
+namespace Examples.SecondOrder
+
+namespace NormBound
 noncomputable section
 
 def p :=
@@ -22,9 +24,9 @@ reformulation coneBound : p := by
 example : GlobalEquivalence p coneBound := coneBound.equivalence
 
 end
-end soc
+end NormBound
 
-namespace quadoverlin
+namespace QuadraticOverLinear
 noncomputable section
 
 def p :=
@@ -43,4 +45,6 @@ reformulation lowered : p := by
 example : GlobalEquivalence p lowered := lowered.equivalence
 
 end
-end quadoverlin
+end QuadraticOverLinear
+
+end Examples.SecondOrder
