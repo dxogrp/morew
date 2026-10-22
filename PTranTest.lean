@@ -15,6 +15,7 @@ import PTranTest.Conic
 import PTranTest.Conic.EuclideanAffine
 import PTranTest.Conic.Exponential
 import PTranTest.Conic.ExponentialCone
+import PTranTest.Conic.ExponentialElab
 import PTranTest.Conic.ExponentialRows
 import PTranTest.Conic.Polyhedral
 import PTranTest.Conic.PolyhedralElab
