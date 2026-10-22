@@ -23,6 +23,7 @@ import PTran.Elab.Conic.Polyhedral
 import PTran.Elab.Conic.Rewrite
 import PTran.Elab.Conic.SecondOrder
 import PTran.Elab.Conic.Space
+import PTran.Elab.Conic.Terminal
 import PTran.Elab.Reformulation
 import PTran.Elab.Reformulation.Names
 import PTran.Elab.Reformulation.Presentation

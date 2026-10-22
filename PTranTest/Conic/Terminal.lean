@@ -1,0 +1,184 @@
+import PTran.Elab.Conic.Terminal
+import PTranTest.Affine.Support
+
+/-!
+# Whole-problem conic planner tests
+
+Check provenance, exact group splitting, retained margins, auxiliary pullbacks,
+and whole-plan rollback through the typed API alone.
+-/
+
+namespace PTranTest.Conic.Terminal
+
+open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
+open PTran.Elab.Reformulation
+open PTran.Elab.Conic
+open PTranTest.Affine
+
+private def makePresentation (objectiveSyntax : TSyntax `term)
+    (rows : Array (Name × TSyntax `term))
+    (sense : PTran.ObjectiveSense := .minimize) : TermElabM PresentationState := do
+  let objective ← elaborate objectiveSyntax
+  let .forallE _ domain value _ ← whnf (← inferType objective)
+    | throwError "test objective is not a function"
+  let constraints ← rows.mapM fun (name, rowSyntax) => do
+    return { name, predicate := ← elaborate rowSyntax : ConstraintEntry }
+  return {
+    sense
+    domainType := domain
+    valueType := value
+    binders := #[{ name := `point, type := domain }]
+    objective
+    constraints
+  }
+
+private def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
+  let result ← match ← Terminal.plan source with
+    | .ok result => pure result
+    | .error error => throwError "expected successful terminal conic plan: {error.reason}"
+  let before ← source.canonicalProblem
+  let after ← result.presentation.canonicalProblem
+  let expected ← mkAppM ``PTran.GlobalEquivalence #[before, after]
+  unless ← isDefEq (← inferType result.equivalence) expected do
+    throwError "terminal equivalence has the wrong endpoints"
+  let formType ← whnf (← inferType result.form)
+  unless formType.getAppFn.isConstOf ``PTran.Conic.Form do
+    throwError "terminal form has the wrong type"
+  unless ← isDefEq formType.getAppArgs.back! after do
+    throwError "terminal form does not represent the final canonical problem"
+  for expression in #[result.equivalence, result.form] do
+    if expression.hasMVar || expression.hasSorry then
+      throwError "terminal planning returned incomplete proof evidence"
+    checkWithKernel expression
+  unless result.rowOrigins.size == result.presentation.constraints.size do
+    throwError "terminal row provenance does not match the presentation"
+  unless result.presentation.binders.size == source.binders.size + result.auxiliaries.size do
+    throwError "terminal auxiliary inventory does not match the presentation"
+  for index in [:source.binders.size] do
+    unless result.presentation.binders[index]!.name == source.binders[index]!.name &&
+        result.presentation.binders[index]!.type == source.binders[index]!.type do
+      throwError "terminal planning changed an original decision binder"
+  return result
+
+/-! All-conic groups retain their original labels and boundaries, including
+empty conjunctions; maximization sense is retained independently of the type. -/
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun x : ℝ => 2 * x + 1)) #[
+    (`grouped, ← `(fun x : ℝ => x ≤ 3 ∧ (True ∧ 0 ≤ x))),
+    (`empty, ← `(fun _ : ℝ => True))
+  ] .maximize
+  let result ← checkPlan source
+  unless result.replacedIndices.isEmpty && result.auxiliaries.isEmpty do
+    throwError "already-conic groups were replaced"
+  unless result.presentation.constraints.map (·.name) == #[`grouped, `empty] do
+    throwError "already-conic group names changed"
+  unless result.rowOrigins == #[0, 1] && result.presentation.sense == .maximize do
+    throwError "already-conic planning lost provenance or sense"
+  let sense ← mkAppM ``PTran.Conic.Data.sense
+    #[← mkAppM ``PTran.Conic.Form.data #[result.form]]
+  unless ← isDefEq sense (mkConst ``PTran.ObjectiveSense.maximize) do
+    throwError "terminal conic data lost maximization sense"
+
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun _ : ℝ => (4 : ℝ))) #[]
+  let result ← checkPlan source
+  unless result.presentation.constraints.isEmpty && result.rowOrigins.isEmpty do
+    throwError "empty feasibility acquired a row"
+
+/-! A nonlinear conjunction splits once, exposing its own affine margin as a
+retained sibling. Other conic groups remain intact throughout later rewrites. -/
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[
+    (`logGroup, ← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1 ∧ 1 ≤ p.1)),
+    (`absolute, ← `(fun p : ℝ × ℝ => |p.2| ≤ 4)),
+    (`square, ← `(fun p : ℝ × ℝ => p.1 ^ 2 ≤ p.2)),
+    (`keep, ← `(fun p : ℝ × ℝ => 0 ≤ p.1 ∧ p.2 ≤ 8))
+  ]
+  let result ← checkPlan source
+  unless result.rowOrigins == #[0, 0, 1, 1, 2, 3] do
+    throwError "mixed terminal rewriting changed row provenance or order: {result.rowOrigins}"
+  unless result.replacedIndices == #[0, 1, 2] do
+    throwError "mixed terminal rewriting lost the original replacement inventory"
+  unless result.presentation.constraints.back!.name == `keep do
+    throwError "mixed terminal rewriting renamed an already-conic group"
+
+/-! An initially unsupported domain obligation can become available after a
+later exact polyhedral rewrite; the planner restarts and revisits earlier rows. -/
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[
+    (`logarithm, ← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)),
+    (`margin, ← `(fun p : ℝ × ℝ => min p.1 (2 : ℝ) ≥ 1))
+  ]
+  let result ← checkPlan source
+  unless result.rowOrigins == #[0, 1, 1] && result.replacedIndices == #[0, 1] do
+    throwError "deferred domain planning did not preserve source row order"
+
+/-! Each subsequent auxiliary lifts all earlier rows and the objective through
+the new product domain, while append provenance remains deterministic. -/
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[
+    (`first, ← `(fun p : ℝ × ℝ => PTran.Fn.softplus p.1 ≤ p.2)),
+    (`second, ← `(fun p : ℝ × ℝ => PTran.Fn.softplus (-p.1) ≤ p.2)),
+    (`keep, ← `(fun p : ℝ × ℝ => 0 ≤ p.2))
+  ]
+  let result ← checkPlan source
+  unless result.auxiliaries.map (·.1) == #[0, 1] do
+    throwError "terminal auxiliaries were not appended in rewrite order"
+  unless result.rowOrigins == #[0, 0, 1, 1, 2] do
+    throwError "terminal auxiliary rewrites lost original row provenance"
+  unless result.presentation.constraints.back!.name == `keep do
+    throwError "terminal auxiliary pullback renamed an untouched row"
+
+/-! Failures identify the original source entry and restore any auxiliary
+declarations introduced during earlier successful planning attempts. -/
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[
+    (`firstBad, ← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)),
+    (`canLower, ← `(fun p : ℝ × ℝ => PTran.Fn.softplus p.1 ≤ p.2)),
+    (`laterBad, ← `(fun p : ℝ × ℝ => p.1 < p.2))
+  ]
+  let before ← getEnv
+  let .error error ← Terminal.plan source
+    | throwError "unsupported terminal problem was accepted"
+  let message ← error.reason.toString
+  unless message.contains "firstBad" && message.contains "conic at firstBad using rule" do
+    throwError "terminal planning did not report the earliest remaining failure: {message}"
+  unless (← getEnv).constants.toList.length == before.constants.toList.length do
+    throwError "failed terminal planning leaked auxiliary declarations"
+
+run_cmd liftTermElabM do
+  let source ← makePresentation (← `(fun x : ℝ => x ^ 2)) #[
+    (`unsupported, ← `(fun x : ℝ => x < 0))
+  ]
+  let .error error ← Terminal.plan source
+    | throwError "nonaffine terminal objective was accepted"
+  let message ← error.reason.toString
+  unless message.contains "objective" && message.contains "epigraph" do
+    throwError "terminal objective failure was not actionable: {message}"
+  let maximum := { source with sense := .maximize }
+  let .error error ← Terminal.plan maximum
+    | throwError "nonaffine maximization objective was accepted"
+  let message ← error.reason.toString
+  unless message.contains "hypograph t" && !message.contains "epigraph t" do
+    throwError "terminal maximization diagnostic used the wrong objective bound: {message}"
+
+run_cmd liftTermElabM do
+  let dimension ← mkFreshExprMVar (mkConst ``Nat)
+  let index ← mkAppM ``Fin #[dimension]
+  let domain ← mkArrow index (mkConst ``Real)
+  let zero ← elaborate (← `((0 : ℝ)))
+  let objective ← withLocalDeclD `point domain fun point =>
+    mkLambdaFVars #[point] zero
+  let source : PresentationState := {
+    sense := .minimize
+    domainType := domain
+    valueType := mkConst ``Real
+    binders := #[{ name := `point, type := domain }]
+    objective
+  }
+  let .error _ ← Terminal.plan source
+    | throwError "terminal planning specialized an unresolved decision dimension"
+  if ← dimension.mvarId!.isAssigned then
+    throwError "terminal planning assigned a caller metavariable"
+
+end PTranTest.Conic.Terminal
