@@ -464,10 +464,32 @@ def refreshProblemView (targetName : Name)
     let target := Lean.mkConst targetName (info.levelParams.map Level.param)
     withLCtx {} {} do
       forallTelescopeReducing info.type (fun parameters _ => do
+        -- Distinct section variables can have the same declaration binder name.
+        -- Choose one consistent display name per parameter before rendering any
+        -- binder type or body. Reserve existing names before adding suffixes, so
+        -- fresh names cannot capture a decision or another parameter's name.
+        let parameterNames ← parameters.mapM fun parameter =>
+          return (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
+        let decisionNames := template.binders.foldl
+          (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
+        let reserved := parameterNames.foldl (fun names name => names.insert name) decisionNames
+        let mut occupied := decisionNames
+        let mut lctx ← getLCtx
+        for parameter in parameters, name in parameterNames do
+          let mut displayName := name
+          if occupied.contains displayName then
+            let mut index := 1
+            displayName := name.appendIndexAfter index
+            while reserved.contains displayName || occupied.contains displayName do
+              index := index + 1
+              displayName := name.appendIndexAfter index
+          occupied := occupied.insert displayName
+          lctx := lctx.setUserName parameter.fvarId! displayName
         let target := mkAppN target parameters
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
-        problemViewFromExpression target template instantiateBinderTypes)
+        withLCtx' lctx do
+          problemViewFromExpression target template instantiateBinderTypes)
   PTran.Syntax.registerProblemView targetName refreshed
 
 /-- Rebase a retained presentation into the current section-variable context. -/
