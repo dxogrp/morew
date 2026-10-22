@@ -1,6 +1,7 @@
 import PTran
 
 open PTran
+open Real
 
 /-
 Epigraph rewriting example
@@ -36,39 +37,65 @@ end epi_rw
 Parameterized problem examples
 -/
 namespace parameterized
-noncomputable
+noncomputable section
 
-def shifted (a : ℝ) :=
+def p (a : ℝ) :=
   problem (x : ℝ)
     minimize (x - a)^2
     subject to
       lower : x ≥ a
 
 -- Printing the family retains the parameter `a` symbolically.
-#printp shifted
-#check shifted 3
+#printp p
+#check p 3
 
+end
 end parameterized
+
+/-
+Substitute and epigraph rewriting example
+-/
+namespace log_sq
+noncomputable section
+
+def p :=
+  problem (x : ℝ)
+    minimize (log x)^2
+    subject to
+      pos : x > 0
+
+#printp p
+
+reformulation pexp : p := by
+  substitute x := exp u
+  epigraph t
+
+#printp pexp
+example : GlobalEquivalence p pexp := pexp.equivalence
+
+end
+end log_sq
 
 /-
 Targeted polyhedral rewriting
 -/
 namespace polyhedral
-noncomputable
+noncomputable section
 
-def absoluteObjective :=
+def p :=
   problem (x : ℝ)
     minimize |x - 2|
     subject to
       magnitude : |x| ≤ 5
       nonnegative : 0 ≤ x
 
-reformulation linearBounds : absoluteObjective := by
+reformulation linearBounds : p := by
   conic at magnitude
   epigraph t as distance
   conic at distance
 
 #printp linearBounds
-#check linearBounds.equivalence
+example : GlobalEquivalence p linearBounds := linearBounds.equivalence
 
+end
 end polyhedral
