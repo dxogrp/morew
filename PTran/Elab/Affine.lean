@@ -164,8 +164,9 @@ partial def isSupportedSpace (type : Expr) : MetaM Bool := do
     return ← isSupportedSpace body
   return false
 
-/-- Recover finiteness proofs from closed indexing instances already present in
-the typed source. Local lets are substituted, but named helpers are not expanded.
+/-- Recover finiteness proofs from `Finite` evidence and `Fintype` indexing
+instances already present in the typed source. Local lets are substituted, but
+named helpers are not expanded.
 Instances mentioning a source binder are never promoted into the caller's scope.
 Only `Finite` proofs are collected: each operation keeps its own enumeration. -/
 def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
@@ -184,7 +185,10 @@ def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
       -- of a let annotation. This also handles aliased classes and coefficients
       -- such as Fintype.card, without expanding their definitions.
       let type ← whnf (← inferType expression)
-      if type.isAppOfArity ``Fintype 1 then
+      if type.isAppOfArity ``Finite 1 then
+        unless instances.contains expression do
+          instances := instances.push expression
+      else if type.isAppOfArity ``Fintype 1 then
         let proof ← mkAppOptM ``Finite.of_fintype
           #[some type.getAppArgs[0]!, some expression]
         unless instances.contains proof do

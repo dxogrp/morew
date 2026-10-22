@@ -174,6 +174,55 @@ run_cmd liftTermElabM do
         throwError "source-local evidence escaped the completed form"
       checkWithKernel closed
 
+/-! Only the first row exposes finiteness evidence. The constant objective,
+nonlinear rows, and an auxiliary pullback all reuse its recovered
+canonical domain instances. -/
+run_cmd liftTermElabM do
+  let expression ← elaborate (← `(fun (ι : Type) (evidence : Finite ι ∧ True) (i : ι) =>
+    ((fun _ : ι → ℝ => (0 : ℝ)),
+     (fun x : ι → ℝ => let finiteEvidence : Finite ι := evidence.1; x i ≤ 1),
+     (fun x : ι → ℝ => |x i| ≤ 2),
+     (fun x : ι → ℝ => PTran.Fn.softplus (x i) ≤ 3))))
+  lambdaBoundedTelescope expression 3 fun parameters expressions => do
+    let objective ← mkAppM ``Prod.fst #[expressions]
+    let rows ← mkAppM ``Prod.snd #[expressions]
+    let bound ← mkAppM ``Prod.fst #[rows]
+    let nonlinear ← mkAppM ``Prod.snd #[rows]
+    let absolute ← mkAppM ``Prod.fst #[nonlinear]
+    let loss ← mkAppM ``Prod.snd #[nonlinear]
+    let .ok _ ← normalizeRow bound
+      | throwError "source-local finite evidence did not certify the original row"
+    let .forallE _ domain value _ ← whnf (← inferType objective)
+      | throwError "finite-domain objective is not a function"
+    let auxiliaryRows : Array ConstraintEntry := #[
+      { name := `loss, predicate := loss }]
+    for auxiliaryCount in [:2] do
+      let source : PresentationState := {
+        sense := .minimize
+        domainType := domain
+        valueType := value
+        binders := #[{ name := `point, type := domain }]
+        objective
+        constraints := #[
+          { name := `bound, predicate := bound },
+          { name := `absolute, predicate := absolute }] ++ auxiliaryRows.extract 0 auxiliaryCount
+      }
+      let result ← checkPlan source
+      unless result.auxiliaries.size == auxiliaryCount do
+        throwError "source-local finite evidence did not survive all auxiliary pullbacks"
+      let expectedOrigins := #[0, 1, 1] ++ (#[2, 2].extract 0 (2 * auxiliaryCount))
+      unless result.rowOrigins == expectedOrigins do
+        throwError "finite-domain planning changed source row provenance"
+      let data ← mkProjection result.form `data
+      unless ← isDefEq (← mkProjection data `rowCount)
+          (mkNatLit (3 + 2 * auxiliaryCount)) do
+        throwError "finite-domain planning lost certified rows"
+      for certificate in #[result.form, result.equivalence] do
+        let closed ← mkLambdaFVars parameters certificate
+        if closed.hasFVar || closed.hasMVar || closed.hasSorry then
+          throwError "source-local finite evidence escaped the completed certificate"
+        checkWithKernel closed
+
 /-! Failures identify the original source entry and restore any auxiliary
 declarations introduced during earlier successful planning attempts. -/
 run_cmd liftTermElabM do

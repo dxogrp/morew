@@ -186,6 +186,14 @@ run_cmd Lean.Elab.Command.liftTermElabM do
         letI : Fintype ι := enumeration
         x i ≤ Fintype.card ι⟩)) 1 3
 
+-- A finiteness proof exposed by one source leaf supplies the canonical domain
+-- instances for the constant objective and for other, evidence-free leaves.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertForm (← `(fun (ι : Type) (evidence : Finite ι ∧ True) (i : ι) =>
+    show Problem (ι → ℝ) ℝ from
+      ⟨fun _ => 0, fun x =>
+        (let finiteEvidence : Finite ι := evidence.1; x i ≤ 1) ∧ 0 ≤ x i⟩)) 2 3
+
 -- Multiple named entries preserve their boundaries in the exact represented
 -- predicate even when each contributes a different number of stored rows.
 run_cmd Lean.Elab.Command.liftTermElabM do
