@@ -63,6 +63,7 @@ import PTranTest.Reformulation.TerminalConicCustom
 import PTranTest.Reformulation.TerminalConicFailures
 import PTranTest.Reformulation.TerminalConicSection
 import PTranTest.Surface.Affine
+import PTranTest.Surface.AppliedSources
 import PTranTest.Surface.Atom
 import PTranTest.Surface.Conic
 import PTranTest.Surface.Diagnostics
