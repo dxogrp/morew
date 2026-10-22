@@ -106,7 +106,9 @@ partial def structuralDomain (type : Expr) : MetaM Expr := do
     let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then
       throwError "affine rows require a nondependent function space, got {type}"
-    return ← mkArrow (← whnf index) (← structuralDomain body)
+    -- Index aliases can carry their own Fintype instance. Preserve that spelling
+    -- so projections synthesize the same enumeration as the stored norm.
+    return ← mkArrow index (← structuralDomain body)
   throwError "unsupported affine row domain {type}"
 
 private def realInstances : Array Expr := #[

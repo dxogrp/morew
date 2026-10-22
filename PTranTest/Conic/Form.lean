@@ -131,6 +131,31 @@ example (ι : Type) [Finite ι] (i : ι) :
     letI := Fintype.ofFinite ι
     (inferredFiniteForm ι i).data.rowCount = 1 := rfl
 
+namespace AliasedFiniteIndex
+
+def IndexAlias := Fin 2
+def VectorAlias := IndexAlias → ℝ
+
+local instance : Finite IndexAlias := by
+  change Finite (Fin 2)
+  infer_instance
+local instance : Fintype IndexAlias := Fintype.ofFinite IndexAlias
+
+def first : IndexAlias := (0 : Fin 2)
+
+def source : Problem VectorAlias ℝ where
+  objective x := x first
+  feasible x := x first ≤ 1
+
+-- Expose the vector alias while retaining the index alias and its enumeration.
+-- Both ordinary projections must work directly on the inferred declaration.
+def inferredForm := form_for% source
+
+example : inferredForm.data.rowCount = 1 := rfl
+example : inferredForm.data.toProblem = source := inferredForm.represents
+
+end AliasedFiniteIndex
+
 private def assertForm (termSyntax : TSyntax `term) (count : Nat)
     (parameterCount : Nat := 0) (noConstraints : Bool := false) : TermElabM Unit := do
   let expression ← PTranTest.Affine.elaborate termSyntax

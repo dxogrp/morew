@@ -306,5 +306,33 @@ example (x : Parameter.Index → ℝ) :
 
 end FiniteInstances
 
+namespace AliasedFiniteIndex
+
+def IndexAlias := Fin 2
+
+local instance : Finite IndexAlias := by
+  change Finite (Fin 2)
+  infer_instance
+local instance : Fintype IndexAlias := Fintype.ofFinite IndexAlias
+
+def first : IndexAlias := (0 : Fin 2)
+
+def source :=
+  problem (x : IndexAlias → ℝ)
+    minimize x first
+    subject to
+      upper : x first ≤ 1
+
+reformulation target : source := by
+  conic
+
+-- The exported form retains the index spelling required by its stored norm.
+example : target.conicForm.data.rowCount = 1 := rfl
+example : target.conicForm.data.toProblem = target := target.conicForm.represents
+example : Conic.Form target := target.conicForm
+example : IsConic target := target.isConic
+
+end AliasedFiniteIndex
+
 end
 end PTranTest.Reformulation.TerminalConic
