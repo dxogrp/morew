@@ -38,4 +38,10 @@ syntax (name := reformulationCmd)
   "reformulation" ident ":" ident ("certificate" ident)? ":=" "by" ppLine
     ppIndent(reformulationStep*) : command
 
+/-- Reformulate an explicitly applied registered problem family. Keep this
+separate from the bare-name grammar so existing command quotations still work. -/
+syntax (name := appliedReformulationCmd)
+  "reformulation" ident ":" "(" term ")" ("certificate" ident)? ":=" "by" ppLine
+    ppIndent(reformulationStep*) : command
+
 end PTran

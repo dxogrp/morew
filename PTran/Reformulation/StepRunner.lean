@@ -131,6 +131,7 @@ private def typedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
 }
 
 private def reportNamePreflightError {α}
+    (state : ReformState)
     (error : PTran.Elab.Reformulation.NamePreflightError) :
     CommandElabM α := do
   match error with
@@ -139,7 +140,10 @@ private def reportNamePreflightError {α}
   | .collision request occupied =>
       let name := occupied.eraseMacroScopes
       match request.kind with
-      | .explicitDecisionBinder | .inferredDecisionBinder =>
+      | .explicitDecisionBinder | .inferredDecisionBinder => do
+          if state.usedSourceParameterNames.any (sameUserName · name) then
+            throwErrorAt request.ref
+              "decision variable `{name}` conflicts with a source parameter; rename the outer parameter or choose a different decision name"
           throwErrorAt request.ref "decision variable `{name}` already exists"
       | .explicitConstraintLabel =>
           throwErrorAt request.ref "constraint name `{name}` already exists"
@@ -155,11 +159,13 @@ def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     CommandElabM (PTran.Elab.Reformulation.StepResult ×
       SurfaceMaterialization) := do
   let plan := typedStepPlan state draft
-  let active := state.typed.presentation.nameInventory
+  let active := state.usedSourceParameterNames.foldl
+    (fun inventory name => inventory.insert .decisionBinder name)
+    state.typed.presentation.nameInventory
   let (outcome, materialization?) ← (plan.run active).run.run none
   let result ← match outcome with
     | .ok result => pure result
-    | .error error => reportNamePreflightError error
+    | .error error => reportNamePreflightError state error
   let some materialization := materialization?
     | throwError "internal error: typed step produced no surface materialization"
   pure (result, materialization)
