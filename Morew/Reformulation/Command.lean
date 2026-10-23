@@ -1,4 +1,5 @@
 import Morew.Reformulation.ObjectiveBound
+import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Conic
 import Morew.Reformulation.TerminalConic
 import Morew.Reformulation.StepRunner
@@ -405,6 +406,12 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .maximize
+      | `(reformulationStep| epigraph $binder:ident at $selector:boundOccurrence
+          $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
+          prepareOccurrenceBound state step binder selector constraint label provided .upper
+      | `(reformulationStep| hypograph $binder:ident at $selector:boundOccurrence
+          $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
+          prepareOccurrenceBound state step binder selector constraint label provided .lower
       | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
           prepareConic state step selector rule
       | `(reformulationStep| conic) =>

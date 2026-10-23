@@ -35,6 +35,7 @@ import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
 import Morew.Reformulation.ObjectiveBound
+import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Presentation
 import Morew.Reformulation.State
 import Morew.Reformulation.StepRunner
