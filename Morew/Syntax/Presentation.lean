@@ -30,6 +30,20 @@ structure ConstraintView where
   proposition : Lean.Syntax
   deriving Inhabited
 
+/-- One sequential, nonrecursive model-local definition. Its name denotes a
+binding, even when another definition has the same value. -/
+structure DefinitionView where
+  /-- The source-level name available in later definitions and all problem bodies. -/
+  name : Name
+  /-- Optional source-level type annotation. -/
+  typeSyntax? : Option Lean.Syntax := none
+  /-- Checked inferred type retained for re-elaboration when the source omitted
+  an annotation. This is not printed as an explicit source annotation. -/
+  inferredTypeSyntax? : Option Lean.Syntax := none
+  /-- Source syntax of the definition's value. -/
+  value : Lean.Syntax
+  deriving Inhabited
+
 /-- The source-level view of a problem.  None of these fields affects the
 meaning of the corresponding `Problem`. -/
 structure ProblemView where
@@ -37,6 +51,8 @@ structure ProblemView where
   sense : ObjectiveSense
   /-- Presentation data for the problem's decision-variable binders. -/
   binders : Array BinderView
+  /-- Sequential local definitions shared by the objective and constraints. -/
+  definitions : Array DefinitionView := #[]
   /-- The source syntax of the objective expression. -/
   objective : Lean.Syntax
   /-- Presentation data for the problem's named constraints. -/
@@ -88,6 +104,13 @@ nondependent. -/
 def ProblemView.replaceIdent (view : ProblemView) (oldName : Name)
     (replacement : Lean.Syntax) : ProblemView :=
   { view with
+    definitions := view.definitions.map fun definition =>
+      { definition with
+        typeSyntax? := definition.typeSyntax?.map
+          (Syntax.replaceIdent · oldName replacement)
+        inferredTypeSyntax? := definition.inferredTypeSyntax?.map
+          (Syntax.replaceIdent · oldName replacement)
+        value := Syntax.replaceIdent definition.value oldName replacement }
     objective := Syntax.replaceIdent view.objective oldName replacement
     constraints := view.constraints.map fun constraint =>
       { constraint with
@@ -112,6 +135,19 @@ partial def preResolveTerm (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
       pure <| .node info kind (← args.mapM preResolveTerm)
   | _ => pure stx
 
+/-- Close a problem body over the model's ordered local definitions. The
+decision-variable binders must already surround the resulting term. -/
+def ProblemView.wrapDefinitions (view : ProblemView) (body : TSyntax `term) :
+    MacroM (TSyntax `term) := do
+  view.definitions.toList.foldrM (fun (definition : DefinitionView) (body : TSyntax `term) => do
+    let name := Lean.mkIdent definition.name
+    let value : TSyntax `term := ⟨definition.value⟩
+    match definition.typeSyntax?.or definition.inferredTypeSyntax? with
+    | some type =>
+        let type : TSyntax `term := ⟨type⟩
+        `(let $name : $type := $value; $body)
+    | none => `(let $name := $value; $body)) body
+
 /-- Reconstruct the canonical `problem` term syntax represented by a view.
 Generated declaration commands can elaborate this term and then register the
 same view under the newly created declaration name. -/
@@ -126,13 +162,21 @@ def ProblemView.toTermSyntax (view : ProblemView) : MacroM (TSyntax `term) := do
     let name : TSyntax `ident := Lean.mkIdent constraint.name.eraseMacroScopes
     let proposition : TSyntax `term := ⟨constraint.proposition⟩
     `(problemConstraint| $name:ident : $proposition:term)
+  let definitions : Array (TSyntax `problemDefinition) ← view.definitions.mapM fun definition => do
+    let name := Lean.mkIdent definition.name
+    let value : TSyntax `term := ⟨definition.value⟩
+    match definition.typeSyntax?.or definition.inferredTypeSyntax? with
+    | some type =>
+        let type : TSyntax `term := ⟨type⟩
+        `(problemDefinition| let $name : $type := $value)
+    | none => `(problemDefinition| let $name := $value)
   let objective : TSyntax `term := ⟨view.objective⟩
   match view.sense, constraints.isEmpty with
-  | .minimize, true => `(problem $binders* minimize $objective)
+  | .minimize, true => `(problem $binders:problemBinder* $definitions:problemDefinition* minimize $objective)
   | .minimize, false =>
-      `(problem $binders* minimize $objective subject to $constraints*)
-  | .maximize, true => `(problem $binders* maximize $objective)
+      `(problem $binders:problemBinder* $definitions:problemDefinition* minimize $objective subject to $constraints*)
+  | .maximize, true => `(problem $binders:problemBinder* $definitions:problemDefinition* maximize $objective)
   | .maximize, false =>
-      `(problem $binders* maximize $objective subject to $constraints*)
+      `(problem $binders:problemBinder* $definitions:problemDefinition* maximize $objective subject to $constraints*)
 
 end Morew.Syntax

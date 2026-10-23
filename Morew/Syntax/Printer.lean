@@ -67,11 +67,28 @@ private def formatProblemView (view : Morew.Syntax.ProblemView) : CoreM Format :
     throwError "problem presentation metadata contains no decision-variable binders"
   ensureViewNamesDistinct "decision variable" (view.binders.map (·.name))
   ensureViewNamesDistinct "constraint" (view.constraints.map (·.name))
+  ensureViewNamesDistinct "model-local definition" (view.definitions.map (·.name))
 
   let objective ← syntaxFormat "objective" view.objective
   let mut body := match view.sense with
     | .minimize => f!"minimize {objective}"
     | .maximize => f!"maximize {objective}"
+  let mut definitionFormats : Array Format := #[]
+  for definition in view.definitions do
+    if view.binders.any (fun binder =>
+        binder.name.eraseMacroScopes == definition.name.eraseMacroScopes) then
+      throwError "problem presentation metadata contains a model-local definition shadowing a decision variable"
+    let name ← nameFormat "model-local definition" definition.name (atomic := true)
+    let value ← syntaxFormat s!"value for model-local definition `{definition.name.eraseMacroScopes}`"
+      definition.value
+    let annotation ← match definition.typeSyntax? with
+      | none => pure Format.nil
+      | some type => do
+          let type ← syntaxFormat "model-local definition type" type
+          pure f!" : {type}"
+    definitionFormats := definitionFormats.push f!"let {name}{annotation} := {value}"
+  unless definitionFormats.isEmpty do
+    body := Format.joinSep definitionFormats.toList Format.line ++ Format.line ++ body
   let mut binderGroups : Array (Array Name × String × Format) := #[]
   for binder in view.binders do
     let typeFormat ← syntaxFormat s!"type for decision variable `{binder.name.eraseMacroScopes}`"
