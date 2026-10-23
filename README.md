@@ -1,6 +1,6 @@
 # Morew
 
-Morew is a Lean 4 library for expressing optimization problems and certifying global reformulations.
+**Morew** (pronounced “MOH-roo”) is a mathematical optimization rewriting system in Lean 4 for expressing optimization problems and certifying their reformulations.
 
 ## Example
 
