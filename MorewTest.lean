@@ -55,6 +55,8 @@ import MorewTest.Reformulation.ExponentialFailures
 import MorewTest.Reformulation.LocalDefinitionSubstitution
 import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
+import MorewTest.Reformulation.OccurrenceBounds
+import MorewTest.Reformulation.OccurrenceFailures
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
