@@ -2,7 +2,7 @@ BLUE := \033[36m
 BOLD := \033[1m
 RESET := \033[0m
 
-LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker PTran PTranTest
+LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest
 
 .DEFAULT_GOAL := help
 
@@ -29,14 +29,14 @@ build: imports ## synchronize imports and build all Lean libraries warning-free
 	@lake build --wfail
 
 .PHONY: lint
-lint: build ## build and lint the shipped PTran library
+lint: build ## build and lint the shipped Morew library
 	@printf "$(BLUE)Checking the lint driver configuration...$(RESET)\n"
 	@lake check-lint
-	@printf "$(BLUE)Linting PTran...$(RESET)\n"
+	@printf "$(BLUE)Linting Morew...$(RESET)\n"
 	@lake lint
 
 .PHONY: check-kernel
-check-kernel: build ## build and kernel-check all compiled PTran modules
+check-kernel: build ## build and kernel-check all compiled Morew modules
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
 	@$(LEANCHECK)
 
@@ -46,9 +46,9 @@ check: lint ## run the complete local development validation sequence
 	@$(LEANCHECK)
 
 .PHONY: clean
-clean: ## remove only PTran build artifacts
-	@printf "$(BLUE)Cleaning PTran build artifacts...$(RESET)\n"
-	@lake clean ptran
+clean: ## remove only Morew build artifacts
+	@printf "$(BLUE)Cleaning Morew build artifacts...$(RESET)\n"
+	@lake clean morew
 
 .PHONY: help
 help: ## display this help message

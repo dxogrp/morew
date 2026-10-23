@@ -1,13 +1,13 @@
-# PTran
+# Morew
 
-PTran is a Lean 4 library for expressing optimization problems and certifying global reformulations.
+Morew is a Lean 4 library for expressing optimization problems and certifying global reformulations.
 
 ## Example
 
 ```lean
-import PTran
+import Morew
 
-open PTran
+open Morew
 noncomputable section
 
 def original :=

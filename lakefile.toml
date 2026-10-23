@@ -1,14 +1,14 @@
-name = "ptran"
+name = "morew"
 version = "0.1.0"
-defaultTargets = ["PTran", "PTranTest"]
+defaultTargets = ["Morew", "MorewTest"]
 lintDriver = "batteries/runLinter"
-lintDriverArgs = ["PTran"]
+lintDriverArgs = ["Morew"]
 
 [[lean_lib]]
-name = "PTran"
+name = "Morew"
 
 [[lean_lib]]
-name = "PTranTest"
+name = "MorewTest"
 
 [[require]]
 name = "mathlib"

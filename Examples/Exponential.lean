@@ -1,6 +1,6 @@
-import PTran
+import Morew
 
-open PTran
+open Morew
 
 /-!
 # Exponential-cone examples
