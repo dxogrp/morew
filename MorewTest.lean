@@ -44,6 +44,7 @@ import MorewTest.ImportCompatibility.SecondOrder.Defined
 import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
+import MorewTest.ObjectiveContext
 import MorewTest.Reformulation.CanonicalCheckpoint
 import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.Exponential
