@@ -32,7 +32,9 @@ import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
 import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
+import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
+import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
@@ -57,6 +59,7 @@ import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
+import MorewTest.Reformulation.OccurrenceGeneric
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
