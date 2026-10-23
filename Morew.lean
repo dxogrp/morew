@@ -24,6 +24,7 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
+import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
