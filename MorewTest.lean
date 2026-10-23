@@ -52,6 +52,7 @@ import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
+import MorewTest.Reformulation.LocalDefinitionSubstitution
 import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.Polyhedral
