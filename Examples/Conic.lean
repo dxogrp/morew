@@ -1,4 +1,4 @@
-import PTran
+import Morew
 
 /-!
 # Certified complete conic reformulations
@@ -9,7 +9,7 @@ bounds and coordinate substitutions remain explicit steps chosen by the user.
 
 namespace Examples.Conic
 
-open PTran
+open Morew
 open Real
 noncomputable section
 
