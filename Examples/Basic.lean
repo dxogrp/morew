@@ -26,6 +26,21 @@ reformulation epigraphForm : p := by
 #printp epigraphForm
 #check epigraphForm.equivalence
 
+example : p.IsGlobalOptimum ⟨0, le_rfl⟩ := by
+  -- The epigraph point (0, 0) satisfies both constraints.
+  let z : FeasiblePoint epigraphForm := ⟨(0, 0), by
+    change 0 ≤ (0 : ℝ) ∧ (0 : ℝ) ^ 2 ≤ 0
+    norm_num⟩
+
+  -- Every feasible point has objective t ≥ x² ≥ 0.
+  have hz : epigraphForm.IsGlobalOptimum z := by
+    intro y
+    change (0 : ℝ) ≤ y.1.2
+    exact le_trans (sq_nonneg y.1.1) y.2.2
+
+  -- The certificate's backward map recovers x and transfers optimality.
+  exact epigraphForm.equivalence.map_isGlobalOptimum_backward hz
+
 -- Epigraph rewriting with explicit label
 reformulation labeledEpigraphForm : p := by
   epigraph t as objectiveBound
