@@ -152,7 +152,7 @@ private def materializeConic (state : ReformState) (index : Nat)
         state.view.constraints.extract (index + 1) state.view.constraints.size
     }
     let targetProblem ← simpOnly replacement.targetProblem
-    let rendered ← problemViewFromExpression targetProblem template
+    let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
     let view := { template with constraints := template.constraints.mapIdx fun i row =>
       if index ≤ i && i < index + rows.size then rendered.constraints[i]! else row }
     let semantic ← exactExpressionSyntax targetProblem

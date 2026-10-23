@@ -48,18 +48,19 @@ private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.
 
 private partial def freezePresentationReferences
     (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
+    (sectionReferences : Std.HashMap FVarId Name)
     (stx : Lean.Syntax) : Lean.Syntax :=
   if let some id := annotatedFVarId? infos stx then
     match binders.find? fun entry => entry.1 == id with
     | some (_, name) => mkIdentFrom stx name
-    -- Presentation syntax is persisted and may be used in another section.
-    -- Keep local names instead of capturing the current section's UIDs.
-    | none => stx
+    | none => match sectionReferences.get? id with
+      | some uid => mkCIdentFrom stx uid
+      | none => stx
   else if let some name := annotatedConstName? infos stx then
     freezePresentationConstant stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
-      freezePresentationReferences infos binders child
+      freezePresentationReferences infos binders sectionReferences child
 
 /-- Section variable UIDs survive fresh elaboration contexts, including for
 anonymous instances whose local names receive new macro scopes each time.
@@ -119,13 +120,18 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
-def presentationTypeSyntax (type : Expr) : TermElabM Lean.Syntax :=
+def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lean.Syntax :=
   -- Generated auxiliary types need the same fixed class projections as row
   -- bodies, while retaining their readable spelling in imported metadata.
-  withOptions (fun options => options.setBool `pp.tagAppFns true) do
+  withOptions (fun options =>
+      let options := options.setBool `pp.tagAppFns true
+      if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
+        |>.setBool `pp.deepTerms true else options) do
     let (stx, infos) ← PrettyPrinter.delabCore type {}
       PrettyPrinter.Delaborator.delab
-    pure <| freezePresentationReferences infos #[] stx.raw
+    let sectionReferences ← if replay then sectionReferenceNames else pure {}
+    pure <| freezePresentationReferences infos #[]
+      sectionReferences stx.raw
 
 /-- Stable type syntax for the semantic and displayed problem types. -/
 structure ProblemTypeSyntax where
@@ -371,21 +377,94 @@ private def delabConeCarrier : Delab := do
   else
     `(RSOC $dimension)
 
-private def delabPresentationTerm (expression : Expr)
-    (binders : Array (FVarId × Name)) : TermElabM Lean.Syntax :=
+/-- Render a presentation body while freezing global references and retaining
+the supplied decision-variable and model-definition binding names. -/
+def delabPresentationTerm (expression : Expr)
+    (binders : Array (FVarId × Name)) (replay : Bool := true) : TermElabM Lean.Syntax :=
   -- Tag application heads as constants even when their arguments are implicit,
   -- so dimensions and coefficients supplied by class projections stay frozen.
-  withOptions (fun options => options.setBool coneNotationOption true
-      |>.setBool `pp.tagAppFns true) do
+  withOptions (fun options =>
+      let options := options.setBool coneNotationOption true |>.setBool `pp.tagAppFns true
+        |>.setBool `pp.coercions.types true
+      if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
+        |>.setBool `pp.deepTerms true else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
-    pure <| freezePresentationReferences infos binders stx.raw
+    let sectionReferences ← if replay then sectionReferenceNames else pure {}
+    pure <| freezePresentationReferences infos binders
+      sectionReferences stx.raw
+
+/-- Elaborate sequential model-local definitions beneath the current decision
+binders. The callback sees real let-bound locals, so their values remain
+available to type checking while references retain binding identity. -/
+def withViewDefinitions (view : Morew.Syntax.ProblemView)
+    (action : Array Expr → TermElabM α) : TermElabM α := do
+  let rec /-- Elaborate each definition in the scope of its predecessors. -/
+      visit (remaining : List Morew.Syntax.DefinitionView) (bindings : Array Expr) := do
+    match remaining with
+    | [] => action bindings
+    | definition :: remaining =>
+        let type? ← (definition.typeSyntax?.or definition.inferredTypeSyntax?).mapM elabType
+        let value ← match type? with
+          | some type => elabTermEnsuringType definition.value type
+          | none => elabTerm definition.value none
+        synthesizeSyntheticMVarsNoPostponing
+        let value ← instantiateMVars value
+        if value.hasMVar then
+          throwErrorAt definition.value "model-local definition contains unresolved metavariables"
+        let type ← instantiateMVars (← inferType value)
+        withLetDecl definition.name type value fun binding =>
+          visit remaining (bindings.push binding)
+  visit view.definitions.toList #[]
+
+/-- Reduce applications and decision-product destructuring without erasing the
+model-local let spine. The declaration itself is the closed, parameterized
+carrier of these bindings; no expression-equality search reconstructs names. -/
+private def reduceModelBody (expression : Expr) : MetaM Expr :=
+  withConfig (fun config => { config with
+    zeta := false, zetaDelta := false, zetaUnused := false }) <|
+    whnf expression
+
+/-- Read the paired definition spines using the same opaque local for each
+binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
+private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
+    (objective feasible : Expr) (names : Array (FVarId × Name))
+    (replay : Bool)
+    (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
+      Array (FVarId × Name) → TermElabM Morew.Syntax.ProblemView) :
+    TermElabM Morew.Syntax.ProblemView := do
+  let rec visit (remaining : List Morew.Syntax.DefinitionView)
+      (definitions : Array Morew.Syntax.DefinitionView)
+      (objective feasible : Expr) (names : Array (FVarId × Name)) :
+      TermElabM Morew.Syntax.ProblemView := do
+    let definition :: remaining := remaining
+      | return ← action definitions objective feasible names
+    let objective ← reduceModelBody objective
+    let feasible ← reduceModelBody feasible
+    let .letE _ type value body _ := objective
+      | throwError "problem presentation lost model-local definition `{definition.name.eraseMacroScopes}`"
+    let .letE _ feasibleType feasibleValue feasibleBody _ := feasible
+      | throwError "problem feasibility presentation lost its model-local definition spine"
+    unless (← isDefEq type feasibleType) && (← isDefEq value feasibleValue) do
+      throwError "problem objective and feasibility disagree on a model-local definition"
+    let displayedType ← simpOnly type
+    let displayedValue ← simpOnly value
+    let definition := { definition with
+      value := ← delabPresentationTerm displayedValue names replay
+      typeSyntax? := ← definition.typeSyntax?.mapM fun _ => delabPresentationTerm displayedType names replay
+      inferredTypeSyntax? := some (← delabPresentationTerm displayedType names replay) }
+    withLocalDeclD definition.name type fun binding =>
+      visit remaining (definitions.push definition)
+        (body.instantiate1 binding) (feasibleBody.instantiate1 binding)
+        (names.push (binding.fvarId!, definition.name))
+  visit template.definitions.toList #[] objective feasible names
 
 /-- Recover printable bodies from a checked problem while retaining the supplied
 ordered names. Applied sources also instantiate binder types; existing bare-name
 sources retain their original spelling, including type aliases. -/
 def problemViewFromExpression (target : Expr)
-    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
+    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
+    (recoverDefinitions : Bool := true) (forRegistration : Bool := false) :
     TermElabM Morew.Syntax.ProblemView := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
@@ -395,7 +474,7 @@ def problemViewFromExpression (target : Expr)
   let binderTypes ← splitProductDomain domain template.binders.size
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
     if instantiateBinderTypes then
-      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! }
+      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! (!forRegistration) }
     else
       pure binder
   let binderDeclarations := binderTypes.mapIdx fun index type =>
@@ -403,22 +482,29 @@ def problemViewFromExpression (target : Expr)
   withLocalDeclsDND binderDeclarations fun binders => do
     let point ← packPoint binders
     let objective ← mkAppM ``Morew.Problem.objective #[target]
-    let objectiveBody ← simpOnly (mkApp objective point)
     let feasible ← mkAppM ``Morew.Problem.feasible #[target]
-    let feasibleBody ← simpOnly (mkApp feasible point)
-    let constraints ← splitConstraintBody feasibleBody template.constraints.size
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
-    let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
-    let constraintSyntax ← constraints.mapM fun proposition =>
-      delabPresentationTerm proposition binderNames
-    pure {
-      template with
-      binders := displayedBinders
-      objective := objectiveSyntax
-      constraints := template.constraints.mapIdx fun index constraint =>
-        { constraint with proposition := constraintSyntax[index]! }
-    }
+    let render definitions objectiveBody feasibleBody binderNames := do
+      let objectiveBody ← simpOnly objectiveBody
+      let feasibleBody ← simpOnly feasibleBody
+      let constraints ← splitConstraintBody feasibleBody template.constraints.size
+      let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames (!forRegistration)
+      let constraintSyntax ← constraints.mapM fun proposition =>
+        delabPresentationTerm proposition binderNames (!forRegistration)
+      pure {
+        template with
+        binders := displayedBinders
+        definitions
+        objective := objectiveSyntax
+        constraints := template.constraints.mapIdx fun index constraint =>
+          { constraint with proposition := constraintSyntax[index]! }
+      }
+    if recoverDefinitions && !template.definitions.isEmpty then
+      withModelDefinitionBodies template (mkApp objective point) (mkApp feasible point)
+        binderNames (!forRegistration) render
+    else
+      render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
 
 /-- Recover a typed presentation from a checked problem expression. -/
 def typedPresentationFromExpression (target : Expr)
@@ -472,6 +558,8 @@ def refreshProblemView (targetName : Name)
           return (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
         let decisionNames := template.binders.foldl
           (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
+        let decisionNames := template.definitions.foldl
+          (fun names definition => names.insert definition.name.eraseMacroScopes) decisionNames
         let reserved := parameterNames.foldl (fun names name => names.insert name) decisionNames
         let mut occupied := decisionNames
         let mut lctx ← getLCtx
@@ -489,7 +577,7 @@ def refreshProblemView (targetName : Name)
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          problemViewFromExpression target template instantiateBinderTypes)
+          problemViewFromExpression target template instantiateBinderTypes (forRegistration := true))
   Morew.Syntax.registerProblemView targetName refreshed
 
 /-- Rebase a retained presentation into the current section-variable context. -/

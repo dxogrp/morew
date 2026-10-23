@@ -217,7 +217,7 @@ example (u : Fin 2) (t : Nat) :
 info: problem (u : Fin (1 + 1)) (t : ℕ)
   minimize t
   subject to
-    epigraph_t : ↑u ≤ t
+    epigraph_t : (↑u : ℕ) ≤ t
 -/
 #guard_msgs in
 #printp target

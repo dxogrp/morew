@@ -61,7 +61,7 @@ private def materializeTerminalConic (state : ReformState)
       else
         rows := rows.push state.view.constraints[origin]!
     let template := { state.view with binders, constraints := rows }
-    let rendered ← problemViewFromExpression targetProblem template
+    let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
     let view := { template with constraints := rows.mapIdx fun i row =>
       if prepared.replacedIndices.contains prepared.rowOrigins[i]! then
         rendered.constraints[i]! else row }

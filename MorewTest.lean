@@ -32,6 +32,7 @@ import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
 import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
+import MorewTest.ImportCompatibility.LocalDefinitions.Defined
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
@@ -74,6 +75,7 @@ import MorewTest.Surface.Conic
 import MorewTest.Surface.Diagnostics
 import MorewTest.Surface.ElaborationContext
 import MorewTest.Surface.Fixtures
+import MorewTest.Surface.LocalDefinitions
 import MorewTest.Surface.NameResolution
 import MorewTest.Surface.Reformulation
 import MorewTest.Syntax.PresentationValidation

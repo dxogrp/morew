@@ -209,7 +209,34 @@ private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
     let typed := state.typed.replaceFVars state.sectionFVars sectionVars
     let type ← mkAppM ``Morew.Problem
       #[typed.presentation.domainType, typed.semanticValueType]
-    pure (type, typed.canonical)
+    let value ← if state.view.definitions.isEmpty then
+        pure typed.canonical
+      else do
+        -- Keep the model-let binding spine in the actual declaration value.
+        -- Its normal declaration telescope supplies exact parameter and
+        -- universe instantiation when the presentation is imported or applied.
+        let term ← liftMacroM state.view.toTermSyntax
+        let carrier ← elabTerm term (some type)
+        synthesizeSyntheticMVarsNoPostponing
+        let carrier ← instantiateMVars carrier
+        unless ← isDefEq carrier typed.canonical do
+          -- Dependent definitions retain their exact substituted bodies.
+          -- Check their agreement using the same normalization evidence as
+          -- the final emitted equivalence, without rewriting their types.
+          discard <| checkedPointwiseNormalization state.sourceName carrier
+            typed.canonical state.normalizationLemmas
+        pure carrier
+    pure (type, value)
+
+private theorem problemEquality {X : Type u} {V : Type v} (p q : Morew.Problem X V)
+    (objective : ∀ x, p.objective x = q.objective x)
+    (feasible : ∀ x, p.feasible x ↔ q.feasible x) : p = q := by
+  cases p with
+  | mk po pf =>
+    cases q with
+    | mk qo qf =>
+      exact congrArg₂ Morew.Problem.mk (funext objective)
+        (funext fun x => propext (feasible x))
 
 private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
     (appliedTarget : TSyntax `term) (artifact : CheckedTerminalConicArtifact) :
@@ -221,16 +248,31 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       let artifact := artifact.replaceFVars state.sectionFVars sectionVars
       let target ← elabTerm appliedTarget none
       let formType ← whnf (← inferType artifact.form)
+      let represented := formType.getAppArgs.back!
       let formType := mkAppN formType.getAppFn
         (formType.getAppArgs.set! (formType.getAppNumArgs - 1) target)
-      unless ← isDefEq (← inferType artifact.form) formType do
-        throwErrorAt artifact.ref "the checked conic form does not represent the emitted target"
+      let form ← if ← isDefEq (← inferType artifact.form) formType then
+          pure artifact.form
+        else do
+          -- Retained dependent definitions can agree with the canonical conic
+          -- target by proved normalization rather than definitional equality.
+          let some targetBody ← unfoldDefinition? target
+            | throwErrorAt artifact.ref "cannot inspect the emitted conic target"
+          let normalization ← checkedPointwiseNormalization state.sourceName
+            represented targetBody state.normalizationLemmas
+          let equality ← mkAppM ``problemEquality #[represented, target,
+            normalization.objectiveEquality, normalization.feasibleIff]
+          let represents ← mkAppM ``Eq.trans
+            #[← mkProjection artifact.form `represents, equality]
+          let data ← mkProjection artifact.form `data
+          pure <| mkAppN (mkConst ``Morew.Conic.Form.mk formType.getAppFn.constLevels!)
+            (formType.getAppArgs ++ #[data, represents])
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-        checkWithKernel artifact.form
+        checkWithKernel form
       let formIdent := rootIdentFrom artifact.ref (targetName ++ `conicForm)
       let propertyIdent := rootIdentFrom artifact.ref (targetName ++ `isConic)
       let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope
-        formType artifact.form
+        formType form
       -- Elaborate both artifacts in the same section context. Lean does not
       -- permit mixing a noncomputable data definition and a theorem in one
       -- mutual group, so instantiate the newly declared form explicitly.
@@ -306,12 +348,15 @@ private def elabReformulationCore : CommandElab := fun stx => do
         let name := (← id.getDecl).userName.eraseMacroScopes
         if template.binders.any (sameUserName ·.name name) then
           throwError "source parameter `{name}` conflicts with a decision variable; rename the outer parameter"
+        if template.definitions.any (sameUserName ·.name name) then
+          throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
         unless usedSourceParameterNames.contains name do
           usedSourceParameterNames := usedSourceParameterNames.push name
     let canonical ← canonicalTargetExpressionFromExpressions sourceName source template
       {} source false
-    let sourceView ← if instantiatedSource then
-        problemViewFromExpression canonical template true
+    let sourceView ← if instantiatedSource || !template.definitions.isEmpty then
+        problemViewFromExpression (if template.definitions.isEmpty then canonical else source)
+          template instantiatedSource
       else pure template
     let presentation ← typedPresentationFromExpression canonical sourceView
     let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
@@ -447,7 +492,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
         elabCommand aliasCommand
 
     let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do
-      let target ← if state.terminalConic?.isSome || state.instantiatedSource then
+      let target ← if state.terminalConic?.isSome || state.instantiatedSource ||
+          !state.view.definitions.isEmpty then
         emitCheckedTarget targetDeclIdent state
       else
         elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
