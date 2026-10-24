@@ -114,16 +114,6 @@ private def emitDefinition (target : TSyntax `ident)
     | throwErrorAt target "internal error: emitted definition application was not retained"
   pure application
 
-private def elabSemanticTarget (target : TSyntax `ident)
-    (sourceName : Name) (sourceTerm : TSyntax `term)
-    (sourceView : Morew.Syntax.ProblemView)
-    (removedConstraintNames : NameSet) (semantic : TSyntax `term)
-    (simplifyExpLogTerms : Bool) : CommandElabM (TSyntax `term) :=
-  emitDefinition target fun _ => do
-    let expression ← canonicalTargetExpression sourceName sourceTerm sourceView
-      removedConstraintNames semantic simplifyExpLogTerms
-    pure (← inferType expression, expression)
-
 private inductive RawDeclarationResult where
   | success (target : TSyntax `term)
   | failed
@@ -135,10 +125,10 @@ private inductive RawDeclarationStage where
   | alias
   deriving BEq
 
-/-- Try the source-aligned target first. Re-elaborating presentation syntax can
-omit implicit data or select different instances, so target and certificate
-failures retry the checked semantic target. Retain the original diagnostics if
-that retry also fails. Alias failures and internal exceptions are not retried. -/
+/-- Try the source-aligned target first. Target and certificate failures retry
+with the checked target's explicit type and normalization evidence. Retain the
+original diagnostics if that retry also fails. Alias failures and internal
+exceptions are not retried. -/
 private def tryRawDeclarations (emitTarget : CommandElabM (TSyntax `term))
     (emitCertificate : TSyntax `term → CommandElabM (TSyntax `term))
     (emitAlias : TSyntax `term → CommandElabM Unit) : CommandElabM RawDeclarationResult := do
@@ -202,32 +192,27 @@ private def emitCompanionDeclaration
     noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
   elabCommand command
 
--- Applied and terminal output use the already checked canonical expression. In particular,
--- the explicit objective-value annotation must retain OrderDual for maxima.
+-- Retain the occurrence structure in applied and terminal output after checking
+-- agreement with the canonical expression. The value type retains OrderDual.
 private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
     CommandElabM (TSyntax `term) :=
   emitDefinition target fun sectionVars => do
     let typed := state.typed.replaceFVars state.sectionFVars sectionVars
     let type ← mkAppM ``Morew.Problem
       #[typed.presentation.domainType, typed.semanticValueType]
-    let value ← if state.view.definitions.isEmpty then
-        pure typed.canonical
-      else do
-        -- Keep the model-let binding spine in the actual declaration value.
-        -- Its normal declaration telescope supplies exact parameter and
-        -- universe instantiation when the presentation is imported or applied.
-        let term ← liftMacroM state.view.toTermSyntax
-        let carrier ← elabTerm term (some type)
-        synthesizeSyntheticMVarsNoPostponing
-        let carrier ← instantiateMVars carrier
-        unless ← isDefEq carrier typed.canonical do
-          -- Dependent definitions retain their exact substituted bodies.
-          -- Check their agreement using the same normalization evidence as
-          -- the final emitted equivalence, without rewriting their types.
-          discard <| checkedPointwiseNormalization state.sourceName carrier
-            typed.canonical state.normalizationLemmas
-        pure carrier
-    pure (type, value)
+    -- Keep definitions and direct occurrences in the actual declaration value.
+    -- Its normal declaration telescope supplies exact parameter and universe
+    -- instantiation when the presentation is imported or applied.
+    let term ← liftMacroM state.view.toTermSyntax
+    let carrier ← elabTerm term (some type)
+    synthesizeSyntheticMVarsNoPostponing
+    let carrier ← instantiateMVars carrier
+    unless ← isDefEq carrier typed.canonical do
+      -- Dependent definitions retain their exact substituted bodies. Check
+      -- agreement without rewriting the types of their proof-bearing uses.
+      discard <| checkedPointwiseNormalization state.sourceName carrier
+        typed.canonical state.normalizationLemmas
+    pure (type, carrier)
 
 private theorem problemEquality {X : Type u} {V : Type v} (p q : Morew.Problem X V)
     (objective : ∀ x, p.objective x = q.objective x)
@@ -355,10 +340,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
           usedSourceParameterNames := usedSourceParameterNames.push name
     let canonical ← canonicalTargetExpressionFromExpressions sourceName source template
       {} source false
-    let sourceView ← if instantiatedSource || !template.definitions.isEmpty then
-        problemViewFromExpression (if template.definitions.isEmpty then canonical else source)
-          template instantiatedSource
-      else pure template
+    let sourceView ← problemViewFromExpression source template (instantiateBinderTypes := true)
     let presentation ← typedPresentationFromExpression canonical sourceView
     let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
     let accumulatedCertificate ← runner.reflexivity source
@@ -499,12 +481,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
         elabCommand aliasCommand
 
     let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do
-      let target ← if state.terminalConic?.isSome || state.instantiatedSource ||
-          !state.view.definitions.isEmpty then
-        emitCheckedTarget targetDeclIdent state
-      else
-        elabSemanticTarget targetDeclIdent sourceName state.checkpoint.semantic state.checkpoint.view
-          state.removedConstraintNames stableSemantic state.simplifyExpLogTerms
+      let target ← emitCheckedTarget targetDeclIdent state
       if (← get).messages.hasErrors then return none
       let appliedCertificate ← emitCertificate target
       if (← get).messages.hasErrors then return none
@@ -535,7 +512,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
         unless (← get).messages.hasErrors do
           emitTerminalArtifacts targetDeclName state appliedTarget artifact
       unless (← get).messages.hasErrors do
-        refreshProblemView targetDeclName state.view state.instantiatedSource
+        refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
 
 /-- Elaborate a reformulation declaration and emit the transformed problem and
 its composed global-equivalence certificate.  Planning, typed step validation,

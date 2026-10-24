@@ -353,7 +353,7 @@ info: problem (v budget_aux : Fin 1 → ℝ)
   subject to
     budget_conic_1 : v ≤ budget_aux
     budget_conic_2 : -v ≤ budget_aux
-    budget_conic_3 : ∑ x, budget_aux x ≤ 3
+    budget_conic_3 : ∑ i, budget_aux i ≤ 3
 -/
 #guard_msgs in
 #printp singleTarget
@@ -442,7 +442,7 @@ info: problem (budget_aux : ℝ) (v budget_aux_1 : Fin 1 → ℝ)
     budget_conic_1 : budget_aux ≤ 10
     budget_conic_1_1 : v ≤ budget_aux_1
     budget_conic_2 : -v ≤ budget_aux_1
-    budget_conic_3 : ∑ x, budget_aux_1 x ≤ 3
+    budget_conic_3 : ∑ i, budget_aux_1 i ≤ 3
     cap_conic_1 : budget_aux ≤ 5
     cap_conic_2 : -budget_aux ≤ 5
     «cap value_conic_1» : budget_aux ≤ 2

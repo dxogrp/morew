@@ -145,16 +145,29 @@ private def materializeConic (state : ReformState) (index : Nat)
       let some name := allocation.findName? (i + 1)
         | throwError "internal error: missing conic row allocation"
       rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-    let template := {
+    let originalTypes := typed.presentation.binders.map fun binder => binder.type
+    let binderTypes := match prepared.auxiliary? with
+      | none => originalTypes
+      | some auxiliary => originalTypes.push auxiliary
+    let declarations := binders.mapIdx fun i binder => (binder.name, binderTypes[i]!)
+    let renderedRows ← withLocalDeclsDND declarations fun decisions => do
+      let point ← packPoint decisions
+      let names := decisions.mapIdx fun i decision => (decision.fvarId!, binders[i]!.name)
+      let context ← Simp.mkContext
+        (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
+      rows.mapIdxM fun i row => do
+        -- Generated rows may retain packed-point projections under sum or
+        -- quantified lambdas. Normalize their scaffolding here; a later
+        -- presentation refresh must preserve the untouched user bodies.
+        let (body, _) ← dsimp (mkApp prepared.rowPredicates[i]! point) context
+        pure { row with proposition := ← delabPresentationTerm body names }
+    let view := {
       state.view with
       binders
-      constraints := state.view.constraints.extract 0 index ++ rows ++
+      constraints := state.view.constraints.extract 0 index ++ renderedRows ++
         state.view.constraints.extract (index + 1) state.view.constraints.size
     }
     let targetProblem ← simpOnly replacement.targetProblem
-    let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    let view := { template with constraints := template.constraints.mapIdx fun i row =>
-      if index ≤ i && i < index + rows.size then rendered.constraints[i]! else row }
     let semantic ← exactExpressionSyntax targetProblem
     let primitiveCertificate ← exactExpressionSyntax primitive
     return {

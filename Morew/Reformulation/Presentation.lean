@@ -126,7 +126,10 @@ def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lea
   withOptions (fun options =>
       let options := options.setBool `pp.tagAppFns true
       if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
-        |>.setBool `pp.deepTerms true else options) do
+        |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
+        |>.setBool `pp.numericTypes true |>.setBool `pp.funBinderTypes true
+        |>.setBool `pp.fieldNotation false
+      else options) do
     let (stx, infos) ← PrettyPrinter.delabCore type {}
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
@@ -380,14 +383,22 @@ private def delabConeCarrier : Delab := do
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
-    (binders : Array (FVarId × Name)) (replay : Bool := true) : TermElabM Lean.Syntax :=
+    (binders : Array (FVarId × Name)) (replay : Bool := true) : TermElabM Lean.Syntax := do
+  -- Reserve the displayed names before choosing names for inner binders.
+  -- Generated decisions carry hygiene scopes, which must not make an inner
+  -- lambda appear free to reuse the same visible spelling.
+  withLCtx' (binders.foldl (fun context (id, name) =>
+      context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
   -- Tag application heads as constants even when their arguments are implicit,
   -- so dimensions and coefficients supplied by class projections stay frozen.
   withOptions (fun options =>
       let options := options.setBool coneNotationOption true |>.setBool `pp.tagAppFns true
-        |>.setBool `pp.coercions.types true
+        |>.setBool `pp.coercions.types true |>.setBool `pp.beta false
       if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
-        |>.setBool `pp.deepTerms true else options) do
+        |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
+        |>.setBool `pp.funBinderTypes true |>.setBool `pp.numericTypes true
+        |>.setBool `pp.structureInstanceTypes true |>.setBool `pp.fieldNotation false
+      else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
@@ -417,13 +428,50 @@ def withViewDefinitions (view : Morew.Syntax.ProblemView)
           visit remaining (bindings.push binding)
   visit view.definitions.toList #[]
 
-/-- Reduce applications and decision-product destructuring without erasing the
-model-local let spine. The declaration itself is the closed, parameterized
-carrier of these bindings; no expression-equality search reconstructs names. -/
-private def reduceModelBody (expression : Expr) : MetaM Expr :=
-  withConfig (fun config => { config with
-    zeta := false, zetaDelta := false, zetaUnused := false }) <|
-    whnf expression
+/-- Recognize only projections of the synthetic decision point. A projection
+inside an individual decision's type belongs to the user expression. -/
+private partial def decisionProjection? (point : Expr) (count : Nat)
+    (expression : Expr) : Option (Nat × Nat) := do
+  let expression := expression.consumeMData
+  if expression == point then return (0, count)
+  let (index, argument) ← match expression with
+    | .proj ``Prod index argument => some (index, argument)
+    | _ =>
+        if expression.isAppOfArity ``Prod.fst 3 then
+          some (0, expression.getArg! 2)
+        else if expression.isAppOfArity ``Prod.snd 3 then
+          some (1, expression.getArg! 2)
+        else none
+  let (start, size) ← decisionProjection? point count argument
+  guard (size > 1)
+  match index with
+  | 0 => some (start, size - 1)
+  | 1 => some (start + size - 1, 1)
+  | _ => none
+
+/-- Open exactly the outer decision lambda and the DSL's tuple pattern. Do not
+beta-, zeta-, or projection-reduce user bodies: those reductions can duplicate
+or erase the direct occurrences used by selectors. -/
+private def openPresentationBody (function domain : Expr) (binders : Array Expr) :
+    MetaM Expr := do
+  let .lam _ _ body _ := (← whnf function).consumeMData
+    | throwError "problem presentation field is not a decision function"
+  withLocalDeclD `presentationPoint domain fun point => do
+    let mut body := body.instantiate1 point
+    if binders.size > 1 then
+      if let some matcher ← matchMatcherApp? body.consumeMData then
+        if matcher.discrs == #[point] && matcher.alts.size == 1 &&
+            matcher.remaining.isEmpty && matcher.altNumParams[0]! == binders.size then
+          let mut alternative := matcher.alts[0]!
+          for binder in binders do
+            let .lam _ _ rest _ := alternative.consumeMData
+              | throwError "problem presentation has an invalid decision tuple pattern"
+            alternative := rest.instantiate1 binder
+          body := alternative
+    Meta.transform body (pre := fun expression => do
+      if let some (start, size) := decisionProjection? point binders.size expression then
+        return .done (← packPoint (binders.extract start (start + size)))
+      return .continue)
 
 /-- Read the paired definition spines using the same opaque local for each
 binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
@@ -439,20 +487,16 @@ private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
       TermElabM Morew.Syntax.ProblemView := do
     let definition :: remaining := remaining
       | return ← action definitions objective feasible names
-    let objective ← reduceModelBody objective
-    let feasible ← reduceModelBody feasible
-    let .letE _ type value body _ := objective
+    let .letE _ type value body _ := objective.consumeMData
       | throwError "problem presentation lost model-local definition `{definition.name.eraseMacroScopes}`"
-    let .letE _ feasibleType feasibleValue feasibleBody _ := feasible
+    let .letE _ feasibleType feasibleValue feasibleBody _ := feasible.consumeMData
       | throwError "problem feasibility presentation lost its model-local definition spine"
     unless (← isDefEq type feasibleType) && (← isDefEq value feasibleValue) do
       throwError "problem objective and feasibility disagree on a model-local definition"
-    let displayedType ← simpOnly type
-    let displayedValue ← simpOnly value
     let definition := { definition with
-      value := ← delabPresentationTerm displayedValue names replay
-      typeSyntax? := ← definition.typeSyntax?.mapM fun _ => delabPresentationTerm displayedType names replay
-      inferredTypeSyntax? := some (← delabPresentationTerm displayedType names replay) }
+      value := ← delabPresentationTerm value names replay
+      typeSyntax? := ← definition.typeSyntax?.mapM fun _ => delabPresentationTerm type names replay
+      inferredTypeSyntax? := some (← delabPresentationTerm type names replay) }
     withLocalDeclD definition.name type fun binding =>
       visit remaining (definitions.push definition)
         (body.instantiate1 binding) (feasibleBody.instantiate1 binding)
@@ -470,11 +514,11 @@ def problemViewFromExpression (target : Expr)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `Morew.Problem _ _`"
-  -- Reduce the problem container before preserving the field bodies' model
-  -- lets. Surrounding lets belong to the source declaration, and its head may
+  -- Reduce the problem container before preserving the field bodies.
+  -- Surrounding lets belong to the source declaration, and its head may
   -- be irreducible. Weak-head reduction stops at `Problem.mk`, so it does not
   -- unfold helpers or erase bindings inside the objective and feasibility.
-  let target ← if recoverDefinitions && !template.definitions.isEmpty then
+  let target ← if recoverDefinitions then
       withTransparency .all <| whnf target
     else pure target
   let domain := targetType.getArg! 0
@@ -493,8 +537,8 @@ def problemViewFromExpression (target : Expr)
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
     let render definitions objectiveBody feasibleBody binderNames := do
-      let objectiveBody ← simpOnly objectiveBody
-      let feasibleBody ← simpOnly feasibleBody
+      let objectiveBody ← if recoverDefinitions then pure objectiveBody else simpOnly objectiveBody
+      let feasibleBody ← if recoverDefinitions then pure feasibleBody else simpOnly feasibleBody
       let constraints ← splitConstraintBody feasibleBody template.constraints.size
       let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames (!forRegistration)
       let constraintSyntax ← constraints.mapM fun proposition =>
@@ -507,8 +551,10 @@ def problemViewFromExpression (target : Expr)
         constraints := template.constraints.mapIdx fun index constraint =>
           { constraint with proposition := constraintSyntax[index]! }
       }
-    if recoverDefinitions && !template.definitions.isEmpty then
-      withModelDefinitionBodies template (mkApp objective point) (mkApp feasible point)
+    if recoverDefinitions then
+      let objectiveBody ← openPresentationBody objective domain binders
+      let feasibleBody ← openPresentationBody feasible domain binders
+      withModelDefinitionBodies template objectiveBody feasibleBody
         binderNames (!forRegistration) render
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames

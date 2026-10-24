@@ -63,6 +63,9 @@ import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
 import MorewTest.Reformulation.OccurrenceGeneratedNames
 import MorewTest.Reformulation.OccurrenceGeneric
+import MorewTest.Reformulation.OccurrenceStructure
+import MorewTest.Reformulation.OccurrenceStructure.Defined
+import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
