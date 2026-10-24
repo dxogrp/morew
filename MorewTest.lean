@@ -2,6 +2,7 @@ import MorewTest.Affine.CanonicalInstances
 import MorewTest.Affine.ConstraintNormalization
 import MorewTest.Affine.FiniteIndexing
 import MorewTest.Affine.HelperFixtures
+import MorewTest.Affine.HelperLimits
 import MorewTest.Affine.Helpers
 import MorewTest.Affine.LocalContext
 import MorewTest.Affine.Reification
