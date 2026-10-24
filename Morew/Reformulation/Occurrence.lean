@@ -17,8 +17,9 @@ namespace Morew.Reformulation.Internal
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 open Morew.Elab.Reformulation
 
--- Only computational operands are selectable: type, proof, and instance
--- arguments are not occurrences in the mathematical expression.
+-- Only computational operands and logical predicate operands are selectable.
+-- Type parameters, proof arguments, and instances are not occurrences in the
+-- mathematical expression, even when they contain the selected value.
 private partial def replaceOccurrence (expression needle hole : Expr) (predicate := false) :
     StateT Nat MetaM Expr := do
   if ← Morew.Elab.ObjectiveContext.sameExpression expression needle then
@@ -30,18 +31,29 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       let function := expression.getAppFn
       let arguments := expression.getAppArgs
       let info ← getFunInfoNArgs function arguments.size
-      let function ← if function.isFVar || function.isLambda then
-          replaceOccurrence function needle hole
+      let head := function.consumeMData
+      let function ← if head.isFVar || head.isLambda || head.isLet then
+          replaceOccurrence function needle hole predicate
         else pure function
       let mut updated := #[]
       for argument in arguments, index in [:arguments.size] do
-        if predicate && expression.isAppOfArity ``And 2 then
-          updated := updated.push (← replaceOccurrence argument needle hole true)
-        else if (info.paramInfo[index]?.any (·.binderInfo.isInstImplicit)) ||
-            (← isTypeFormer argument) || (← isProof argument) then
+        let parameter := info.paramInfo[index]?
+        if (parameter.any fun parameter =>
+            parameter.binderInfo.isInstImplicit || parameter.isInstance) ||
+            (← isProof argument) then
           updated := updated.push argument
         else
-          updated := updated.push (← replaceOccurrence argument needle hole)
+          -- `Or`'s propositions and `Exists`' predicate are type-formers too.
+          -- A proposition indexing a later proof or instance remains a type
+          -- parameter: replacing it would also require transporting evidence.
+          let predicateArgument ← if predicate && !(parameter.any (·.hasFwdDeps)) then
+              isPropFormerType (← inferType argument)
+            else pure false
+          if !predicateArgument && (← isTypeFormer argument) then
+            updated := updated.push argument
+          else
+            updated := updated.push
+              (← replaceOccurrence argument needle hole predicateArgument)
       return mkAppN function updated
   | .lam name type body info =>
       let count ← get
@@ -58,8 +70,10 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       set count
       return result
   | .letE name type value body _ =>
-      let value ← if (← isTypeFormer value) || (← isProof value) then pure value
-        else replaceOccurrence value needle hole
+      let predicateValue ← if predicate then isPropFormerType type else pure false
+      let value ← if (← isProof value) ||
+          (!predicateValue && (← isTypeFormer value)) then pure value
+        else replaceOccurrence value needle hole predicateValue
       let count ← get
       let (result, count) ← withLetDecl name type value fun binding => do
         let (body, count) ← (replaceOccurrence (body.instantiate1 binding) needle hole predicate).run count

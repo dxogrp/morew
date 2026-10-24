@@ -62,6 +62,7 @@ import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
 import MorewTest.Reformulation.OccurrenceGeneric
+import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
