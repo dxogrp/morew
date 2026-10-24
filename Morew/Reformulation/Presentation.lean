@@ -91,6 +91,7 @@ private def stabilizeExpressionSyntax (expression : Expr) : TermElabM (TSyntax `
         |>.set `pp.deepTerms true |>.set `pp.structureInstanceTypes true
         |>.set `pp.funBinderTypes true
         |>.set `pp.numericTypes true
+        |>.set `pp.coercions false
         |>.set `pp.maxSteps (1000000 : Nat)
         |>.set `pp.fieldNotation false) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
@@ -103,6 +104,7 @@ def exactExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
       |>.set `pp.explicit true |>.set `pp.instances true
       |>.set `pp.proofs true |>.set `pp.deepTerms true
       |>.set `pp.structureInstances false |>.set `pp.beta true
+      |>.set `pp.coercions false
       |>.set `pp.maxSteps (1000000 : Nat)) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
@@ -129,6 +131,7 @@ def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lea
         |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
         |>.setBool `pp.numericTypes true |>.setBool `pp.funBinderTypes true
         |>.setBool `pp.fieldNotation false
+        |>.setBool `pp.coercions false
       else options) do
     let (stx, infos) ← PrettyPrinter.delabCore type {}
       PrettyPrinter.Delaborator.delab
@@ -400,6 +403,8 @@ def delabPresentationTerm (expression : Expr)
         |>.setBool `pp.structureInstanceTypes true |>.setBool `pp.fieldNotation false
         -- Omitting a field equal to its default can erase direct occurrences.
         |>.setBool `pp.structureInstances.defaults true
+        -- Cast notation would resynthesize coercions in the replaying context.
+        |>.setBool `pp.coercions false
       else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab

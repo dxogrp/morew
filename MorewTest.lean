@@ -30,6 +30,8 @@ import MorewTest.Core
 import MorewTest.ExactConstraintLift
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
+import MorewTest.ImportCompatibility.CoercionReplay
+import MorewTest.ImportCompatibility.CoercionReplay.Defined
 import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
