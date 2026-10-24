@@ -237,7 +237,7 @@ def plan (presentation : PresentationState) (config : Affine.Config := {}) :
         if ← Plan.unresolved expression then
           throwError "terminal conic planning requires fully elaborated expressions"
       Plan.withPresentationFiniteInstances
-        (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars)) presentation do
+        (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
         match ← reifyObjective presentation config with
         | .error error =>
           let bound := match presentation.sense with

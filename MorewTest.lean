@@ -1,6 +1,9 @@
 import MorewTest.Affine.CanonicalInstances
 import MorewTest.Affine.ConstraintNormalization
 import MorewTest.Affine.FiniteIndexing
+import MorewTest.Affine.HelperFixtures
+import MorewTest.Affine.HelperLimits
+import MorewTest.Affine.Helpers
 import MorewTest.Affine.LocalContext
 import MorewTest.Affine.Reification
 import MorewTest.Affine.StateIsolation
@@ -19,6 +22,7 @@ import MorewTest.Conic.ExponentialCone
 import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
+import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Rewrite
@@ -51,6 +55,8 @@ import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
 import MorewTest.ObjectiveContext
 import MorewTest.ObjectiveContextAutomation
+import MorewTest.Reformulation.AffineHelperSource
+import MorewTest.Reformulation.AffineHelpers
 import MorewTest.Reformulation.CanonicalCheckpoint
 import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.Exponential

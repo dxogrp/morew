@@ -38,6 +38,34 @@ example : IsConic conicProb := conicProb.isConic
 
 end Linear
 
+namespace Helpers
+
+def cost (x : ℝ) : ℝ := 2 * x + 1
+
+def residual (x : ℝ) : ℝ := 3 * x - 4
+
+def p :=
+  problem (x : ℝ)
+    minimize cost x
+    subject to
+      budget : residual x ≤ 0
+
+-- Affine certification expands transparent def/abbrev helpers automatically.
+-- The defaults allow 32 nested expansions, 1024 unfoldings, and 100000
+-- cumulative expression nodes per source expression. Set any limit to zero
+-- to disable expansion. `set_option … in` changes only the following command;
+-- this example raises the depth, though these shallow helpers need no override.
+set_option morew.affine.maxExpansionDepth 64 in
+reformulation conicProb : p := by
+  conic
+
+-- Printed objectives and constraints keep their original helper references.
+#printp conicProb
+example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : IsConic conicProb := conicProb.isConic
+
+end Helpers
+
 namespace LogSquared
 
 def p :=

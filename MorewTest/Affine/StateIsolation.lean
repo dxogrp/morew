@@ -19,6 +19,8 @@ namespace MorewTest.Affine.StateIsolation
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab
 
+private noncomputable def quotientHelper (c x : ℝ) : ℝ := x / c
+
 private inductive EntryPoint where
   | affine
   | row
@@ -117,8 +119,9 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     if !cache && names.toList.eraseDups.length != 3 then
       throwError "uncached auxiliary declarations reused a generated name"
 
-private def checkFailure (entry : EntryPoint) (term : TSyntax `term) : TermElabM Unit :=
-  withAuxEvidence term true fun source config generated => do
+private def checkFailure (entry : EntryPoint) (term : TSyntax `term)
+    (cache : Bool := true) : TermElabM Unit :=
+  withAuxEvidence term cache fun source config generated => do
     let unresolved ← mkFreshExprMVar (Lean.mkConst ``Nat)
     let assigned ← mkFreshExprMVar (Lean.mkConst ``Nat)
     assigned.mvarId!.assign (mkNatLit 7)
@@ -157,5 +160,20 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   checkSuccess .row row false
   checkSuccess .objective affine false
   checkSuccess .affine affine false
+
+/-! Helper fallback preserves the same transaction boundary as direct recognition. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let affine ← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) =>
+    fun x : ℝ => quotientHelper c x)
+  let row ← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) =>
+    fun x : ℝ => quotientHelper c x ≤ 1)
+  let nonlinear ← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) =>
+    fun x : ℝ => quotientHelper c x + x * x)
+  checkFailure .affine nonlinear false
+  checkFailure .objective nonlinear false
+  checkSuccess .affine affine false
+  checkSuccess .row row false
+  checkSuccess .objective affine false
 
 end MorewTest.Affine.StateIsolation

@@ -254,7 +254,7 @@ assert_terminal_atomic%
 reformulation noNonlinearEquality : nonlinearEquality := by
   conic
 
-def hiddenAffine (x : ℝ) : ℝ := x + 1
+opaque hiddenAffine (x : ℝ) : ℝ := x + 1
 def opaqueSource :=
   problem (x : ℝ)
     minimize x

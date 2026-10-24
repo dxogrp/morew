@@ -9,6 +9,7 @@ import Morew.Conic.Polyhedral
 import Morew.Conic.SecondOrder
 import Morew.Core
 import Morew.Elab.Affine
+import Morew.Elab.Affine.Expansion
 import Morew.Elab.Affine.Space
 import Morew.Elab.Affine.State
 import Morew.Elab.Atom

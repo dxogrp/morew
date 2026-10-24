@@ -211,7 +211,7 @@ def buildForm (presentation : PresentationState) (config : Affine.Config := {})
   Affine.withIsolatedMVars do
     try
       Plan.withPresentationFiniteInstances
-        (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
+        (fun result oldVars newVars => result.replaceFVars oldVars newVars)
         presentation (buildFormCore presentation config certifiedRows)
     catch error =>
       return .error {
