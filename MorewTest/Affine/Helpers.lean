@@ -69,11 +69,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => vector x))
+  assertAffine (← `(fun x : ℝ => vector x 0))
+  assertAffine (← `(fun x : ℝ => (vector x + vector x) 0))
+  assertAffine (← `(fun i : Fin 2 => fun x : ℝ => vector x i)) 1
   assertAffine (← `(fun point : ℝ × ℝ => productCost point))
   assertAffine (← `(fun m n : ℕ => fun A : Matrix (Fin m) (Fin n) ℝ =>
     fun x : Fin n → ℝ => matrixProduct A x)) 3
   assertAffine (← `(fun m n : ℕ => fun A : Matrix (Fin m) (Fin n) ℝ =>
+    fun i : Fin m => fun x : Fin n → ℝ => matrixProduct A x i)) 4
+  assertAffine (← `(fun m n : ℕ => fun A : Matrix (Fin m) (Fin n) ℝ =>
     fun x : Fin m → ℝ => rowProduct A x)) 3
+  assertAffine (← `(fun m n : ℕ => fun A : Matrix (Fin m) (Fin n) ℝ =>
+    fun i : Fin n => fun x : Fin m → ℝ => rowProduct A x i)) 4
   assertAffine (← `(fun n : ℕ => fun a : Fin n → ℝ =>
     fun x : Fin n → ℝ => dot a x)) 2
   assertAffine (← `(fun n : ℕ => fun x : Fin n → ℝ => total x)) 1
@@ -85,6 +92,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun x : ι → ℝ => finiteCoordinate h i x)) 3
   assertAffine (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (A : Matrix ι ι ℝ) =>
     fun x : ι → ℝ => finiteMatrix e A x)) 3
+  assertAffine (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (A : Matrix ι ι ℝ) (i : ι) =>
+    fun x : ι → ℝ => finiteMatrix e A x i)) 4
   assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) (i : ι) =>
     fun x : ι → ℝ => x i ≤ finiteDot e a x)) 4
   assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) (i : ι) =>

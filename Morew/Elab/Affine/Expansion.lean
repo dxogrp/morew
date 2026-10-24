@@ -122,29 +122,30 @@ private def applicationSize (value : Expr) (arguments : Array Expr) (cap : Nat) 
     size := cappedAdd cap (size + 1) (expressionSize argument cap)
   return size
 
--- The exact prefix is retained for the certifier's canonical instance checks.
--- This is deliberately not a generic traversal of application arguments.
+-- Keep each native operation's type/instance prefix intact, including when
+-- its result is applied to further arguments (for example, a vector index).
+-- Only the value operands and trailing arguments are visited.
 private def operandStart? (name : Name) (arity : Nat) : Option Nat :=
   if ([``HAdd.hAdd, ``HSub.hSub, ``HMul.hMul, ``HDiv.hDiv, ``HSMul.hSMul,
-      ``HPow.hPow].contains name) && arity == 6 then some 4
-  else if name == ``Neg.neg && arity == 3 then some 2
-  else if ([``Prod.mk, ``Matrix.vecCons].contains name) && arity == 4 then some 2
-  else if name == ``Finset.sum && arity == 5 then some 3
-  else if ([`Finset.sup', `Finset.inf'].contains name) && arity == 6 then some 3
-  else if ([``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul].contains name) && arity == 7 then some 5
-  else if ([``WithLp.toLp, ``WithLp.ofLp].contains name) && arity == 3 then some 2
-  else if ([``LE.le, ``GE.ge, ``LT.lt].contains name) && arity == 4 then some 2
-  else if name == ``Eq && arity == 3 then some 1
-  else if name == ``And && arity == 2 then some 0
-  else if name == ``Membership.mem && arity == 5 then some 3
+      ``HPow.hPow].contains name) && arity ≥ 6 then some 4
+  else if name == ``Neg.neg && arity ≥ 3 then some 2
+  else if ([``Prod.mk, ``Matrix.vecCons].contains name) && arity ≥ 4 then some 2
+  else if name == ``Finset.sum && arity ≥ 5 then some 3
+  else if ([`Finset.sup', `Finset.inf'].contains name) && arity ≥ 6 then some 3
+  else if ([``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul].contains name) && arity ≥ 7 then some 5
+  else if ([``WithLp.toLp, ``WithLp.ofLp].contains name) && arity ≥ 3 then some 2
+  else if ([``LE.le, ``GE.ge, ``LT.lt].contains name) && arity ≥ 4 then some 2
+  else if name == ``Eq && arity ≥ 3 then some 1
+  else if name == ``And && arity ≥ 2 then some 0
+  else if name == ``Membership.mem && arity ≥ 5 then some 3
   else if ([`Real.exp, `Real.log, `Real.sqrt, `Real.sin, `Real.cos, `Real.tan,
       `Real.arcsin, `Real.arccos, `Real.arctan, `Real.sinh, `Real.cosh,
-      `Real.tanh, `Complex.exp, `Complex.log].contains name) && arity == 1 then some 0
-  else if name == `Real.rpow && arity == 2 then some 0
+      `Real.tanh, `Complex.exp, `Complex.log].contains name) && arity ≥ 1 then some 0
+  else if name == `Real.rpow && arity ≥ 2 then some 0
   else if ([``Norm.norm, ``NNNorm.nnnorm, ``ENorm.enorm, `Inv.inv, `PosPart.posPart].contains name) &&
-      arity == 3 then some 2
-  else if name == `abs && arity == 4 then some 3
-  else if ([`Min.min, `Max.max].contains name) && arity == 4 then some 2
+      arity ≥ 3 then some 2
+  else if name == `abs && arity ≥ 4 then some 3
+  else if ([`Min.min, `Max.max].contains name) && arity ≥ 4 then some 2
   else none
 
 private def nativeBoundary (name : Name) : Bool :=
