@@ -43,3 +43,14 @@ problem (u t : ℝ)
 ## License
 
 Morew is licensed under the [Apache License, Version 2.0](LICENSE).
+
+Maintained Lean source files in `Morew/`, `MorewTest/`, and `Examples/` begin with this header:
+
+```lean
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+```
+
+For new files, use the year the file is introduced. Preserve existing years rather than updating them automatically each year.
