@@ -56,6 +56,8 @@ import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
+import MorewTest.Reformulation.FunctionDecisionRecovery
+import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution

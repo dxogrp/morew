@@ -511,8 +511,19 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
             alternative := rest.instantiate1 binder
           body := alternative
     Meta.transform body (pre := fun expression => do
-      if let some (start, size) := decisionProjection? point binders.size expression then
-        return .done (← packPoint (binders.extract start (start + size)))
+      -- Application traversal skips intermediate prefixes. A function-valued
+      -- decision can therefore appear as `Prod.snd ... point arg ...`; recover
+      -- its synthetic projection before traversing the remaining arguments.
+      let (projection, arguments) :=
+        if (expression.isAppOf ``Prod.fst || expression.isAppOf ``Prod.snd) &&
+            expression.getAppNumArgs > 3 then
+          let arguments := expression.getAppArgs
+          (mkAppN expression.getAppFn (arguments.extract 0 3), arguments.extract 3 arguments.size)
+        else (expression, #[])
+      if let some (start, size) := decisionProjection? point binders.size projection then
+        let replacement ← packPoint (binders.extract start (start + size))
+        if arguments.isEmpty then return .done replacement
+        return .continue (some (mkAppN replacement arguments))
       return .continue)
 
 /-- Read the paired definition spines using the same opaque local for each
