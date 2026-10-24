@@ -382,7 +382,11 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
     -- A blocked container can still supply a decision-independent coefficient.
     -- Keep an equivalent raw projection: the downstream structural reducer
     -- must not reopen this named field with an unrestricted container whnf.
-    return rawProblemProjections expression
+    -- Its value arguments remain eligible for bounded helper expansion.
+    let mut expanded := arguments
+    for i in [3:arguments.size] do
+      expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
+    return rawProblemProjections (mkAppN head expanded)
   if let some helper ← helperValue? expression then
     let expanded ← unfoldHelper expression helper bounds depth
     return ← visit expanded reduce bounds (depth + 1)

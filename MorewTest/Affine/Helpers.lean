@@ -145,6 +145,19 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun (ι : Type) (h : Finite ι ∧ True) (i : ι) => fun x : ι → ℝ =>
     finiteProofObjective h i x)) 3
 
+/-! A blocked container stays opaque while helper arguments can still expose
+decision-independent coefficients, with or without another expanded helper. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun _x : ℝ => p.objective 7)) 1
+  assertAffine (← `(fun f : ℝ → ℝ => fun x : ℝ => f (ignored x))) 1
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    cost 2 1 x + p.objective (ignored x))) 1
+  assertAffine (← `(fun x : ℝ => coefficientProblem.objective (ignored x)))
+  assertAffine (← `(fun x : ℝ => sealedCoefficientProblem.objective (ignored x)))
+
 /-! Expansion exposes the unsupported expression without crossing native boundaries. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do

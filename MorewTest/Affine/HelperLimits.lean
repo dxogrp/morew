@@ -32,6 +32,8 @@ private noncomputable def projectedDuplicate : (ℝ → ℝ) × ℝ :=
 private noncomputable def projectedApply : ((ℝ → ℝ) → ℝ → ℝ) × ℝ :=
   ((fun f y => f y), 0)
 
+private noncomputable def ignoredThroughHelper (x : ℝ) : ℝ := ignored x
+
 private noncomputable def problemDuplicate (f : Fin 2 → ℝ) :
     Morew.Problem (Fin 2) ℝ :=
   ⟨f + f + f + f, fun _ => True⟩
@@ -71,19 +73,23 @@ private noncomputable def problemReturningProblem (f : Fin 2 → ℝ) :
 private noncomputable def projectedNestedProblemDuplicate (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
   ((problemReturningProblem f).objective ()).objective
 
-private def assertLimit (term : TSyntax `term) (kind : String) : TermElabM Unit := do
+private def assertLimit (term : TSyntax `term) (kind : String)
+    (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate term
-  match ← reifyAffine expression with
-  | .ok _ => throwError "helper expansion exceeded its {kind} budget"
-  | .error error =>
-    let message := (← error.reason.toString).toLower
-    unless message.contains "limit" && message.contains kind do
-      throwError "expected an expansion-{kind} limit diagnostic, got: {message}"
+  lambdaBoundedTelescope expression parameterCount fun _ source => do
+    match ← reifyAffine source with
+    | .ok _ => throwError "helper expansion exceeded its {kind} budget"
+    | .error error =>
+      let message := (← error.reason.toString).toLower
+      unless message.contains "limit" && message.contains kind do
+        throwError "expected an expansion-{kind} limit diagnostic, got: {message}"
 
 set_option morew.affine.maxExpansionDepth 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => 2 * x + 1))
   assertUnsupported (← `(fun x : ℝ => cost 2 1 x))
+  assertUnsupported (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
 
 set_option morew.affine.maxExpansionDepth 1 in
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -100,6 +106,8 @@ set_option morew.affine.maxExpansionSteps 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => 2 * x + 1))
   assertUnsupported (← `(fun x : ℝ => cost 2 1 x))
+  assertUnsupported (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
 
 set_option morew.affine.maxExpansionSteps 1 in
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -114,6 +122,8 @@ set_option morew.affine.maxExpansionNodes 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => 2 * x + 1))
   assertUnsupported (← `(fun x : ℝ => cost 2 1 x))
+  assertUnsupported (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
 
 set_option morew.affine.maxExpansionNodes 1 in
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -194,6 +204,45 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ =>
     ((fun y : ℝ => y + y + y + y), (0 : ℝ)).1
       (x + x + x + x + x + x + x + x)))
+
+/-! Blocked problem containers still visit their trailing value arguments.
+Only those arguments consume helper budgets; the local container stays closed. -/
+
+set_option morew.affine.maxExpansionDepth 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
+  assertLimit (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) "depth" 1
+
+set_option morew.affine.maxExpansionDepth 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) 1
+
+set_option morew.affine.maxExpansionSteps 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
+  assertLimit (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) "step" 1
+
+set_option morew.affine.maxExpansionSteps 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) 1
+
+set_option morew.affine.maxExpansionNodes 16 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignored x))) 1
+  assertLimit (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) "node" 1
+
+set_option morew.affine.maxExpansionNodes 32 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    p.objective (ignoredThroughHelper x))) 1
 
 /-! A helper can expose a problem projection whose container expands into a
 large native objective. Opening that container must consume the same budget. -/
