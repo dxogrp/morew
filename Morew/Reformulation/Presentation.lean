@@ -430,6 +430,41 @@ def withViewDefinitions (view : Morew.Syntax.ProblemView)
           visit remaining (bindings.push binding)
   visit view.definitions.toList #[]
 
+/-- Elaborate a user term against the displayed names of retained bindings.
+Temporary let aliases let Lean handle lexical shadowing and projection notation;
+replacing only those aliases preserves the original binding identities. Global
+references captured by a macro retain their original resolution. -/
+partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
+    (expectedType? : Option Expr := none) : TermElabM Expr := do
+  let names ← bindings.mapM fun binding => do
+    return ((← binding.fvarId!.getDecl).userName, binding)
+  let rec /-- Collect the scoped aliases needed by the term's local references. -/
+      collect (stx : Syntax) (aliases : NameMap Expr) : NameMap Expr := Id.run do
+    let mut aliases := aliases
+    if let .ident _ _ name resolved := stx then
+      unless resolved.any (fun | .decl .. => true | _ => false) do
+        let reference := extractMacroScopes name
+        for (name, binding) in names do
+          let displayName := name.eraseMacroScopes
+          if displayName.isPrefixOf reference.name then
+            let aliasName := { reference with name := displayName }.review
+            if aliasName != name then aliases := aliases.insert aliasName binding
+    for child in stx.getArgs do
+      aliases := collect child aliases
+    return aliases
+  let rec /-- Elaborate under temporary aliases and restore the original bindings. -/
+      elaborate (remaining : List (Name × Expr)) (aliases values : Array Expr) :
+      TermElabM Expr := do
+    match remaining with
+    | [] =>
+        let expression ← elabTerm term expectedType?
+        synthesizeSyntheticMVarsNoPostponing
+        return (← instantiateMVars expression).replaceFVars aliases values
+    | (name, value) :: remaining =>
+        withLetDecl name (← inferType value) value fun temporary =>
+          elaborate remaining (aliases.push temporary) (values.push value)
+  elaborate (collect term.raw {}).toList #[] #[]
+
 /-- Recognize only projections of the synthetic decision point. A projection
 inside an individual decision's type belongs to the user expression. -/
 private partial def decisionProjection? (point : Expr) (count : Nat)

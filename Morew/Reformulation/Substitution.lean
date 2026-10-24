@@ -111,16 +111,33 @@ private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) :
         result.insert value
   | _ => stx.getArgs.foldl (fun result child => collectIdents child result) result
 
+/-- Resolve globals without preempting displayed model bindings. Already
+captured global references remain intact; plain model references are resolved
+later under the retained bindings and their scoped aliases. -/
+private partial def preResolveReplacement (view : Morew.Syntax.ProblemView)
+    (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
+  if stx.isIdent then
+    let name := stx.getId.eraseMacroScopes
+    if view.binders.any (fun binder => binder.name.eraseMacroScopes.isPrefixOf name) ||
+        view.definitions.any (fun definition => definition.name.eraseMacroScopes.isPrefixOf name) then
+      pure stx
+    else
+      Morew.Syntax.preResolveTerm stx
+  else
+    pure <| stx.setArgs (← stx.getArgs.mapM (preResolveReplacement view))
+
 private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Name)
     (replacement : Lean.Syntax) : CommandElabM (Array Name) := do
   let localNames : NameSet := view.binders.foldl
     (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
   let localNames := view.definitions.foldl
     (fun names definition => names.insert definition.name.eraseMacroScopes) localNames
+  let localNames := localNames.toList
   let env ← getEnv
   let candidates := (collectIdents replacement).toList.filter fun name =>
     !name.isAnonymous && !sameUserName name oldName &&
-      !localNames.contains name.eraseMacroScopes && !env.contains name
+      !(localNames.any fun localName => localName.isPrefixOf name.eraseMacroScopes) &&
+      !env.contains name
   pure candidates.toArray
 
 private def findBinderIndex (view : Morew.Syntax.ProblemView) (name : Name) : Option Nat :=
@@ -133,14 +150,13 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
     throwErrorAt replacement
       "cannot determine the new decision variable; the substitution expression must contain one new identifier"
   let usedCandidates ← withTypedPresentation state fun presentation =>
-    withPresentationBinders presentation fun binderTypes _ =>
-      withViewDefinitions state.view fun _ => do
+    withPresentationBinders presentation fun binderTypes binders =>
+      withViewDefinitions state.view fun definitions => do
       let candidateDeclarations := candidates.map fun name =>
         (name, binderTypes[binderIndex]!)
       withLocalDeclsDND candidateDeclarations fun candidateFVars => do
-        let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
-        synthesizeSyntheticMVarsNoPostponing
-        let expression ← instantiateMVars expression
+        let expression ← elabPresentationTerm replacement (binders ++ definitions)
+          (some binderTypes[binderIndex]!)
         pure <| candidates.zip candidateFVars |>.filterMap fun (name, fvar) =>
           if expression.containsFVar fvar.fvarId! then some name else none
   if (← get).messages.hasErrors then
@@ -154,20 +170,19 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
       throwErrorAt replacement
         "ambiguous substitution: expected exactly one new decision variable, found {names}"
 
-/-- A replacement may use an existing model-local definition only when its
-value and type are independent of the variable being replaced. Inline those
-references in the replacement itself: it is inserted into earlier definition
-right-hand sides as well as the final objective and constraints. -/
+/-- Resolve displayed binding names and retain their identities in replacement
+syntax, including when there are no model-local definitions. A replacement may
+use a definition only when its value and type are independent of the replaced
+variable. Inline those references before inserting the replacement into earlier
+definitions, the objective, constraints, and the semantic map. -/
 private def expandReplacementDefinitions (state : ReformState) (binderIndex : Nat)
     (newName : Name) (replacement : TSyntax `term) : CommandElabM (TSyntax `term) := do
-  if state.view.definitions.isEmpty then return replacement
   withTypedPresentation state fun presentation =>
     withPresentationBinders presentation fun binderTypes binders =>
       withViewDefinitions state.view fun definitions =>
         withLocalDeclD newName binderTypes[binderIndex]! fun candidate => do
-          let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
-          synthesizeSyntheticMVarsNoPostponing
-          let expression ← instantiateMVars expression
+          let expression ← elabPresentationTerm replacement (binders ++ definitions)
+            (some binderTypes[binderIndex]!)
           for definition in definitions, view in state.view.definitions do
             if expression.containsFVar definition.fvarId! &&
                 (← Morew.Elab.Affine.depends binders[binderIndex]! definition) then
@@ -444,7 +459,7 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
     (providedCertificate? : Option (TSyntax `term)) :
     CommandElabM SurfaceStepDraft := do
   let replacement : TSyntax `term :=
-    ⟨← liftTermElabM <| Morew.Syntax.preResolveTerm replacement.raw⟩
+    ⟨← liftTermElabM <| preResolveReplacement state.view replacement.raw⟩
   let oldName := oldIdent.getId
   let some binderIndex := findBinderIndex state.view oldName
     | throwErrorAt oldIdent "unknown decision variable `{oldName.eraseMacroScopes}`"

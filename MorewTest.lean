@@ -78,6 +78,7 @@ import MorewTest.Reformulation.SecondOrderCustom
 import MorewTest.Reformulation.SecondOrderFailures
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures
+import MorewTest.Reformulation.SubstitutionGeneratedNames
 import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures

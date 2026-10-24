@@ -120,39 +120,6 @@ private structure SelectedOccurrence where
   context : Expr
   deriving Inhabited
 
-/-- Expose retained bindings under the names used by a new selector. Temporary
-let aliases let Lean handle shadowing and projection notation normally; replacing
-only these aliases afterwards preserves model-definition binding identities. -/
-private partial def elabOccurrenceSelector (term : TSyntax `term) (bindings : Array Expr) :
-    TermElabM Expr := do
-  let names ← bindings.mapM fun binding => do
-    return ((← binding.fvarId!.getDecl).userName, binding)
-  let rec collect (stx : Syntax) (aliases : NameMap Expr) : NameMap Expr := Id.run do
-    let mut aliases := aliases
-    if let .ident _ _ name resolved := stx then
-      -- A global reference captured by a macro must retain its resolution.
-      unless resolved.any (fun | .decl .. => true | _ => false) do
-        let reference := extractMacroScopes name
-        for (name, binding) in names do
-          let displayName := name.eraseMacroScopes
-          if displayName.isPrefixOf reference.name then
-            let aliasName := { reference with name := displayName }.review
-            if aliasName != name then aliases := aliases.insert aliasName binding
-    for child in stx.getArgs do
-      aliases := collect child aliases
-    return aliases
-  let rec elaborate (remaining : List (Name × Expr)) (aliases values : Array Expr) :
-      TermElabM Expr := do
-    match remaining with
-    | [] =>
-        let expression ← elabTerm term none
-        synthesizeSyntheticMVarsNoPostponing
-        return (← instantiateMVars expression).replaceFVars aliases values
-    | (name, value) :: remaining =>
-        withLetDecl name (← inferType value) value fun temporary =>
-          elaborate remaining (aliases.push temporary) (values.push value)
-  elaborate (collect term.raw {}).toList #[] #[]
-
 private def selectOccurrence (state : ReformState) (presentation : PresentationState)
     (selector : TSyntax `boundOccurrence) (row? : Option Nat)
     (binderName boundName : Name) (direction : Morew.BoundDirection) :
@@ -175,7 +142,7 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
             | throwErrorAt name "unknown model-local definition `{name.getId.eraseMacroScopes}`"
           pure definitions[index]!
       | `(boundOccurrence| ($term:term)) =>
-          elabOccurrenceSelector term (binders ++ definitions)
+          elabPresentationTerm term (binders ++ definitions)
       | _ => throwUnsupportedSyntax
     if (← Morew.Elab.Conic.Plan.unresolved body) ||
         (← Morew.Elab.Conic.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
