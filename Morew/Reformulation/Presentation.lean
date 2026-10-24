@@ -470,6 +470,13 @@ def problemViewFromExpression (target : Expr)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `Morew.Problem _ _`"
+  -- Reduce the problem container before preserving the field bodies' model
+  -- lets. Surrounding lets belong to the source declaration, and its head may
+  -- be irreducible. Weak-head reduction stops at `Problem.mk`, so it does not
+  -- unfold helpers or erase bindings inside the objective and feasibility.
+  let target ← if recoverDefinitions && !template.definitions.isEmpty then
+      withTransparency .all <| whnf target
+    else pure target
   let domain := targetType.getArg! 0
   let binderTypes ← splitProductDomain domain template.binders.size
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
