@@ -12,7 +12,7 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 /-!
 # Unsupported affine expressions and diagnostics
 
-Nonlinear expressions, unproved denominators, custom helpers, and altered
+Nonlinear expressions, unproved denominators, and altered
 operation instances must fail with an explanation of the unsupported expression.
 Dimension mismatches remain ordinary Lean elaboration errors.
 -/
@@ -23,8 +23,6 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Affine MorewTest.Affine Matrix
 open scoped BigOperators
 
-noncomputable def customAffine (x : ℝ) : ℝ := 2 * x + 1
-noncomputable abbrev customAlias (x : ℝ) : ℝ := 2 * x
 noncomputable abbrev customCoercion : Coe ℝ ℝ := ⟨fun x => x * x⟩
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -43,8 +41,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℝ => Real.sqrt x))
   assertUnsupported (← `(fun x : ℝ => |x|))
   assertUnsupported (← `(fun x : ℝ => max x 0))
-  assertUnsupported (← `(fun x : ℝ => customAffine x))
-  assertUnsupported (← `(fun x : ℝ => customAlias x))
   assertUnsupported (← `(fun x : ℝ => @Coe.coe ℝ ℝ customCoercion x))
   assertUnsupported (← `(fun x : ℝ => let a := x + 1; a * x))
   assertUnsupported (← `(fun x : ℝ => let a := x; let b := a + 1; b * x))

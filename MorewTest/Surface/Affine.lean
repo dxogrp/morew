@@ -92,13 +92,22 @@ private def checkSource (name : Name) (sense : ObjectiveSense)
 run_cmd Lean.Elab.Command.liftTermElabM do
   checkSource ``minimum .minimize true
   checkSource ``maximum .maximize true
-  checkSource ``customObjective .minimize false
+  checkSource ``customObjective .minimize true
   checkSource ``grouped .minimize true
   checkSource ``groupedEpigraph .minimize true
   checkSource ``MorewTest.Surface.Conic.minimum .minimize true
   checkSource ``MorewTest.Surface.Conic.maximum .maximize true
   checkSource ``MorewTest.Surface.Conic.minimumEpigraph .minimize true
   checkSource ``MorewTest.Surface.Conic.maximumHypograph .maximize true
+
+/--
+info: problem (x : ℝ)
+  minimize customCost x
+  subject to
+    upper : x ≤ 4
+-/
+#guard_msgs in
+#printp customObjective
 
 end
 

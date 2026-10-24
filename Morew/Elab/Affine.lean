@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Affine
 import Morew.Elab.Affine.Space
 import Morew.Elab.Affine.State
+import Morew.Elab.Affine.Expansion
 import Morew.Core
 import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
@@ -15,9 +16,10 @@ import Lean.Meta.Match.MatcherInfo
 # Typed, proof-producing affine reification
 
 This internal API recognizes a bounded fragment of elaborated real arithmetic.
-It builds ordinary affine maps and pointwise proofs, without rewriting models
-or expanding named user functions. Failure means that this fragment did not
-certify the expression, not that the function is mathematically non-affine.
+It builds ordinary affine maps and pointwise proofs without rewriting models.
+When direct recognition fails, bounded expansion of transparent helper definitions
+can expose supported arithmetic. Failure means that this fragment did not certify
+the expression, not that the function is mathematically non-affine.
 -/
 
 namespace Morew.Elab.Affine
@@ -206,6 +208,16 @@ def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
     | .mdata _ value => pending := value :: pending
     | _ => pure ()
   return instances
+
+/-- Discover additional finite-index evidence hidden in transparent value helpers.
+This is used only after a direct certification attempt fails. It never changes
+the predicate or objective retained by the caller. -/
+def helperFiniteInstances (source : Expr) : MetaM (Array Expr) := do
+  unless ← Expansion.enabled do return #[]
+  let prepared ← Expansion.prepare source (fun expression preserve => reduceStructure expression preserve)
+  if prepared.expansions == 0 then return #[]
+  let original ← sourceFiniteInstances source
+  return (← sourceFiniteInstances prepared.expression).filter (!original.contains ·)
 
 private def withFiniteInstances (instances : List Expr) (action : ReifyM Expr) :
     ReifyM Expr := do
@@ -471,7 +483,8 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
       discard <| reifyBody point argument config
   reject expression "unsupported function, coercion, or nonlinear operation"
 
-private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult := do
+private def reifyCore (source : Expr) (config : Config)
+    (original? : Option Expr := none) : ReifyM AffineResult := do
   let source ← instantiateMVars source
   if (← inspectLocals source none).2 then
     reject source "unresolved metavariables are not supported"
@@ -480,7 +493,10 @@ private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult :=
     | reject source "expected a function from a decision space"
   if codomain.hasLooseBVars then
     reject source "dependent result types are not supported"
-  let certificate ← withFiniteInstances (← sourceFiniteInstances source).toList do
+  let original := original?.getD source
+  let instances ← sourceFiniteInstances source
+  let originalInstances ← if original?.isSome then sourceFiniteInstances original else pure #[]
+  let certificate ← withFiniteInstances (instances ++ originalInstances).toList do
     unless ← isSupportedSpace domain do
       reject source m!"unsupported decision space {domain}"
     withLocalDeclD `point domain fun point => do
@@ -493,7 +509,7 @@ private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult :=
     reject source "affine construction left unresolved metavariables"
   let expected ← withLocalDeclD `point domain fun point => do
     let value := mkApp (← mkProjection map `toFun) point
-    mkForallFVars #[point] (← mkEq value (mkApp source point))
+    mkForallFVars #[point] (← mkEq value (mkApp original point))
   unless ← isDefEq (← inferType equality) expected do
     reject source "affine certificate does not establish equality to the original function"
   checkWithKernel map
@@ -502,14 +518,27 @@ private def reifyCore (source : Expr) (config : Config) : ReifyM AffineResult :=
 
 /-- Reify a typed function without modifying caller metavariables.
 
-All success results contain ordinary proof terms. Named user function heads
-are not unfolded. The optional evidence callback is checked against `c ≠ 0`;
-it does not weaken the global pointwise correctness obligation.
+All success results contain ordinary proof terms checked against the original
+function. Transparent helpers are expanded only in a temporary expression after
+direct recognition fails. The optional evidence callback is checked against
+`c ≠ 0`; it does not weaken the global pointwise correctness obligation.
 -/
 def reifyAffine (source : Expr) (config : Config := {}) :
     MetaM (Except AffineError AffineResult) := withIsolatedMVars do
   try
-    (reifyCore source config).run
+    let direct ← withIsolatedMVars <| (reifyCore source config).run
+    if let .ok result := direct then return .ok result
+    unless ← Expansion.enabled do return direct
+    -- Do not expand an incompletely elaborated term or allow expansion to
+    -- discard an unresolved argument before the original input is checked.
+    if (← inspectLocals source none).2 then return direct
+    let prepared ← Expansion.prepare source (fun expression preserve => reduceStructure expression preserve)
+    if prepared.expansions == 0 then return direct
+    match ← (reifyCore prepared.expression config (some source)).run with
+    | .ok result => return .ok result
+    | .error error => return .error { error with
+        reason := ← addMessageContext
+          m!"while expanding affine helpers in {source}: {error.reason}" }
   catch exception =>
     return .error {
       expression := source
