@@ -148,6 +148,185 @@ info: problem (x t : ℝ)
 #guard_msgs in
 #printp nativeAtomsTarget
 
+namespace TypedPlans
+
+open Lean Lean.Meta
+
+private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
+  discard <| Morew.Elab.Conic.Plan.checkLift source result.lift
+  for proof in #[result.lift, result.targetIff] do
+    if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
+    checkWithKernel proof
+  for row in result.certifiedRows do
+    checkWithKernel row.constraint
+    checkWithKernel row.pointwiseIff
+
+-- These APIs receive no presentation state. They must discover hidden evidence
+-- themselves, including evidence present only in an untouched retained row.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) => fun x : ι → ℝ => |finiteDot e a x| ≤ 1))
+  lambdaBoundedTelescope expression 3 fun _ source => do
+    match ← Morew.Elab.Conic.Polyhedral.plan source with
+    | .ok result => checkExact source result
+    | .error error => throwError "hidden finite polyhedral plan failed: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) => fun x : ι → ℝ => ‖(![finiteDot e a x] : Fin 1 → ℝ)‖ ≤ 10))
+  lambdaBoundedTelescope expression 3 fun _ source => do
+    match ← Morew.Elab.Conic.Polyhedral.plan source with
+    | .ok result => checkExact source result
+    | .error error => throwError "hidden finite norm-coordinate plan failed: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) => fun x : ι → ℝ => ({1, 3} : Finset ℕ).sup' (by decide)
+      (fun i => (i : ℝ) * finiteDot e a x) ≤ 10))
+  lambdaBoundedTelescope expression 3 fun _ source => do
+    match ← Morew.Elab.Conic.Polyhedral.plan source with
+    | .ok result => checkExact source result
+    | .error error => throwError "hidden finite supremum-coordinate plan failed: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) => fun x : ι → ℝ => -10 ≤ ({1, 3} : Finset ℕ).inf' (by decide)
+      (fun i => (i : ℝ) * finiteDot e a x)))
+  lambdaBoundedTelescope expression 3 fun _ source => do
+    match ← Morew.Elab.Conic.Polyhedral.plan source with
+    | .ok result => checkExact source result
+    | .error error => throwError "hidden finite infimum-coordinate plan failed: {error.reason}"
+
+def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
+    ExactConstraintLift (fun (_x : ι → ℝ) => True) :=
+  ExactConstraintLift.ofIff
+    (fun x => finiteDot e a x = finiteDot e a x)
+    (fun _ => ⟨fun _ => rfl, fun _ => True.intro⟩)
+
+-- The selected predicate supplies no finite evidence at all. Only the custom
+-- representation's target contains a helper carrying the needed enumeration.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetLift e a)))
+  lambdaBoundedTelescope expression 3 fun _ pair => do
+    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let source := pair.getAppArgs[2]!
+    let rule := pair.getAppArgs[3]!
+    match ← Morew.Elab.Conic.Polyhedral.plan source (some rule) with
+    | .ok result => checkExact source result
+    | .error error => throwError "hidden finite explicit-target plan failed: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) =>
+      ((fun x : ι → ℝ => x (e 0) ^ 2 ≤ 1),
+       (fun x : ι → ℝ => finiteDot e a x ≤ 10))))
+  lambdaBoundedTelescope expression 3 fun _ pair => do
+    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let source := pair.getAppArgs[2]!
+    let retained := #[pair.getAppArgs[3]!]
+    match ← Morew.Elab.Conic.SecondOrder.planReplacement source retained with
+    | .ok (.inl result) => checkExact source result
+    | .ok (.inr _) => throwError "finite evidence changed an unconditional square into a contextual lift"
+    | .error error => throwError "hidden finite second-order plan failed: {error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a : ι → ℝ) =>
+      ((fun x : ι → ℝ => Real.exp (x (e 0)) ≤ 1),
+       (fun x : ι → ℝ => finiteDot e a x ≤ 10))))
+  lambdaBoundedTelescope expression 3 fun _ pair => do
+    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let source := pair.getAppArgs[2]!
+    let retained := #[pair.getAppArgs[3]!]
+    match ← Morew.Elab.Conic.Exponential.plan source retained with
+    | .ok (.inl result) => checkExact source result
+    | .ok (.inr _) => throwError "finite evidence changed an unconditional exponential into a contextual lift"
+    | .error error => throwError "hidden finite exponential plan failed: {error.reason}"
+
+end TypedPlans
+
+namespace HiddenFinite
+
+class Parameter where
+  Index : Type
+  equivalence : Fin 2 ≃ Index
+  coefficients : Index → ℝ
+
+variable [Parameter]
+
+-- No ambient Finite or Fintype instance is installed. The only evidence lies
+-- inside the imported helper in a different row from the objective and abs.
+def anotherRow :=
+  problem (x : Parameter.Index → ℝ) (t : ℝ)
+    minimize x (Parameter.equivalence 0)
+    subject to
+      absolute : |x (Parameter.equivalence 0)| ≤ t
+      witness : finiteDot Parameter.equivalence Parameter.coefficients x ≤ 10
+
+reformulation anotherRowTarget : anotherRow := by
+  conic
+
+reformulation selectedRowTarget : anotherRow := by
+  conic at absolute
+  conic
+
+example : GlobalEquivalence anotherRow anotherRowTarget := anotherRowTarget.equivalence
+example : GlobalEquivalence anotherRow selectedRowTarget := selectedRowTarget.equivalence
+
+-- The left operand also needs finiteness before the helper on the right is
+-- independently certified; discovery must inspect the complete source row.
+def oppositeOperand :=
+  problem (x : Parameter.Index → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      absolute : |x (Parameter.equivalence 0)| ≤
+        finiteDot Parameter.equivalence Parameter.coefficients x
+
+reformulation oppositeOperandTarget : oppositeOperand := by
+  conic at absolute
+  conic
+
+example : GlobalEquivalence oppositeOperand oppositeOperandTarget :=
+  oppositeOperandTarget.equivalence
+
+-- Native nonlinear heads remain recognition boundaries, but evidence discovery
+-- must still reach the affine coordinate stored underneath the absolute value.
+def nativeCoordinate :=
+  problem (x : Parameter.Index → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      absolute : |finiteDot Parameter.equivalence Parameter.coefficients x| ≤ 1
+
+reformulation nativeCoordinateTarget : nativeCoordinate := by
+  conic
+
+example : GlobalEquivalence nativeCoordinate nativeCoordinateTarget :=
+  nativeCoordinateTarget.equivalence
+
+-- Form notation needs an ambient canonical enumeration after the commands
+-- have demonstrated that they recover the helper's evidence themselves.
+local instance : Finite Parameter.Index := by
+  let := Fintype.ofEquiv (Fin 2) Parameter.equivalence
+  infer_instance
+local instance : Fintype Parameter.Index := Fintype.ofFinite Parameter.Index
+
+example : IsConic anotherRowTarget := anotherRowTarget.isConic
+example : IsConic selectedRowTarget := selectedRowTarget.isConic
+example : IsConic oppositeOperandTarget := oppositeOperandTarget.isConic
+example : IsConic nativeCoordinateTarget := nativeCoordinateTarget.isConic
+example : anotherRowTarget.conicForm.data.rowCount = 3 := rfl
+example : oppositeOperandTarget.conicForm.data.rowCount = 2 := rfl
+example : nativeCoordinateTarget.conicForm.data.rowCount = 2 := rfl
+example : anotherRowTarget.conicForm.data.toProblem = anotherRowTarget :=
+  anotherRowTarget.conicForm.represents
+
+example (x : Parameter.Index → ℝ) (t : ℝ) : anotherRowTarget.feasible (x, t) ↔
+    x (Parameter.equivalence 0) ≤ t ∧ -(x (Parameter.equivalence 0)) ≤ t ∧
+      finiteDot Parameter.equivalence Parameter.coefficients x ≤ 10 := Iff.rfl
+
+end HiddenFinite
+
 namespace Boundaries
 
 def wrappedAbs (x : ℝ) := |x|
