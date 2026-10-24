@@ -75,7 +75,7 @@ example (u t : Nat) :
 info: problem (u t : ℕ)
   minimize t
   subject to
-    retained : (fun u => True) u
+    retained : (fun x => True) u
     epigraph_t : u ≤ t
 -/
 #guard_msgs in
