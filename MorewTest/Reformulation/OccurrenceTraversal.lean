@@ -73,6 +73,81 @@ example : GlobalEquivalence existential existentialSplit := existentialSplit.equ
 example (x t : ℝ) : existentialSplit.feasible (x, t) ↔
     (∃ y : ℝ, t ≤ y ∧ y ≤ 1) ∧ x ^ 2 ≤ t := Iff.rfl
 
+def implicationUpper :=
+  problem (x : ℝ)
+    let loss := x ^ 2
+    minimize x
+    subject to cap : 1 ≤ loss → False
+
+theorem implicationUpperContext : ConstraintBoundContext (fun _ : ℝ => True)
+    (fun x => 1 ≤ x ^ 2 → False) (fun x => x ^ 2)
+    (fun _ t => 1 ≤ t → False) .upper where
+  atValue _ := Iff.rfl
+  backward _ _ _ bound target lower := target (lower.trans bound)
+
+reformulation implicationUpperSplit : implicationUpper := by
+  epigraph t at loss in cap using implicationUpperContext
+
+example : GlobalEquivalence implicationUpper implicationUpperSplit :=
+  implicationUpperSplit.equivalence
+example (x t : ℝ) : implicationUpperSplit.feasible (x, t) ↔
+    (1 ≤ t → False) ∧ x ^ 2 ≤ t := Iff.rfl
+
+def implicationLower :=
+  problem (x : ℝ)
+    let loss := x ^ 2
+    minimize x
+    subject to cap : loss ≤ 1 → False
+
+theorem implicationLowerContext : ConstraintBoundContext (fun _ : ℝ => True)
+    (fun x => x ^ 2 ≤ 1 → False) (fun x => x ^ 2)
+    (fun _ t => t ≤ 1 → False) .lower where
+  atValue _ := Iff.rfl
+  backward _ _ _ bound target upper := target (bound.trans upper)
+
+reformulation implicationLowerSplit : implicationLower := by
+  hypograph t at loss in cap using implicationLowerContext
+
+example : GlobalEquivalence implicationLower implicationLowerSplit :=
+  implicationLowerSplit.equivalence
+example (x t : ℝ) : implicationLowerSplit.feasible (x, t) ↔
+    (t ≤ 1 → False) ∧ t ≤ x ^ 2 := Iff.rfl
+
+def implicationRepeated :=
+  problem (x : ℝ)
+    let loss := x ^ 2
+    minimize x
+    subject to cap : loss ≤ 1 → loss ≤ 2
+
+/-- error: ambiguous occurrence selector: found 2 occurrences in the selected location -/
+#guard_msgs in
+reformulation implicationRepeatedSplit : implicationRepeated := by
+  epigraph t at loss in cap
+
+private opaque usesBoundProof {P : Prop} (_ : P) : Prop := True
+
+def dependentImplication :=
+  problem (x : ℝ)
+    let loss := x ^ 2
+    minimize x
+    subject to cap : ∀ h : 1 ≤ loss, usesBoundProof h
+
+-- The antecedent types a proof used by the body, so it remains excluded.
+/-- error: selector has no direct occurrence in the selected location -/
+#guard_msgs in
+reformulation dependentImplicationSplit : dependentImplication := by
+  epigraph t at loss in cap
+
+def quantifiedType :=
+  problem (n : ℕ)
+    minimize n
+    subject to cap : ∀ _ : Fin (n + 1), True
+
+/-- error: selector has no direct occurrence in the selected location -/
+#guard_msgs in
+reformulation quantifiedTypeSplit : quantifiedType := by
+  epigraph t at (n + 1) in cap
+
 def repeated :=
   problem (x : ℝ)
     minimize x

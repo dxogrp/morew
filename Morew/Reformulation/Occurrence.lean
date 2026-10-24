@@ -63,6 +63,13 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       set count
       return result
   | .forallE name type body info =>
+      -- An independent proposition domain is an implication antecedent. A
+      -- dependent proof binder keeps its original type: changing it would
+      -- also require transporting uses of the bound proof in the body.
+      let type ← if predicate && !info.isInstImplicit && !body.hasLooseBVar 0 &&
+          (← isProp type) then
+          replaceOccurrence type needle hole true
+        else pure type
       let count ← get
       let (result, count) ← withLocalDecl name info type fun binding => do
         let (body, count) ← (replaceOccurrence (body.instantiate1 binding) needle hole predicate).run count
