@@ -1,3 +1,8 @@
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+
 import Morew.Transform.Context
 import Mathlib.Data.Int.Cast.Lemmas
 import Mathlib.Algebra.Order.Ring.Basic

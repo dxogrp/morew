@@ -1,3 +1,8 @@
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+
 import Morew.Conic.Basic
 import Morew.Conic.Exponential
 import Morew.Conic.Polyhedral

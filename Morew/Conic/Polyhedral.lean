@@ -1,3 +1,8 @@
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+
 import Mathlib.Algebra.Order.Group.PosPart
 import Mathlib.Analysis.Normed.Lp.PiLp
 import Mathlib.Data.Fintype.EquivFin
