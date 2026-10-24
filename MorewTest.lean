@@ -63,6 +63,7 @@ import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
 import MorewTest.Reformulation.OccurrenceGeneratedNames
 import MorewTest.Reformulation.OccurrenceGeneric
+import MorewTest.Reformulation.OccurrencePredicateContainers
 import MorewTest.Reformulation.OccurrenceStructure
 import MorewTest.Reformulation.OccurrenceStructure.Defined
 import MorewTest.Reformulation.OccurrenceStructureDefaults

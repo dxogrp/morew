@@ -38,22 +38,27 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       let mut updated := #[]
       for argument in arguments, index in [:arguments.size] do
         let parameter := info.paramInfo[index]?
+        let argumentType ← inferType argument
         if (parameter.any fun parameter =>
             parameter.binderInfo.isInstImplicit || parameter.isInstance) ||
-            (← isProof argument) then
+            (← isProof argument) || (← isClass? argumentType).isSome then
+          -- Explicit class operands carry instances too; their internals are
+          -- excluded independently of how the parameter was declared.
           updated := updated.push argument
         else
           -- `Or`'s propositions and `Exists`' predicate are type-formers too.
           -- A proposition indexing a later proof or instance remains a type
           -- parameter: replacing it would also require transporting evidence.
           let predicateArgument ← if predicate && !(parameter.any (·.hasFwdDeps)) then
-              isPropFormerType (← inferType argument)
+              isPropFormerType argumentType
             else pure false
           if !predicateArgument && (← isTypeFormer argument) then
             updated := updated.push argument
           else
+            -- Computational containers may carry predicate operands, as in
+            -- `(P, Q).1`. Keep predicate traversal enabled through the container.
             updated := updated.push
-              (← replaceOccurrence argument needle hole predicateArgument)
+              (← replaceOccurrence argument needle hole predicate)
       return mkAppN function updated
   | .lam name type body info =>
       let count ← get
@@ -78,16 +83,19 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       return result
   | .letE name type value body _ =>
       let predicateValue ← if predicate then isPropFormerType type else pure false
-      let value ← if (← isProof value) ||
+      let value ← if (← isProof value) || (← isClass? type).isSome ||
           (!predicateValue && (← isTypeFormer value)) then pure value
-        else replaceOccurrence value needle hole predicateValue
+        else replaceOccurrence value needle hole predicate
       let count ← get
       let (result, count) ← withLetDecl name type value fun binding => do
         let (body, count) ← (replaceOccurrence (body.instantiate1 binding) needle hole predicate).run count
         return (← mkLetFVars #[binding] body (usedLetOnly := false), count)
       set count
       return result
-  | .proj name index value => return .proj name index (← replaceOccurrence value needle hole)
+  | .proj name index value =>
+      let value ← if (← isClass? (← inferType value)).isSome then pure value
+        else replaceOccurrence value needle hole predicate
+      return .proj name index value
   | other => return other
 
 private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
