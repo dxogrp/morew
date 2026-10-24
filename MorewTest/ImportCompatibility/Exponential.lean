@@ -20,7 +20,7 @@ info: problem (v : Fin Parameter.size → ℝ) (y t : ℝ) (lse_aux : Fin Parame
   minimize t
   subject to
     lse_conic_1 : ∀ (i : Fin Parameter.size), (v i - t, 1, lse_aux i) ∈ EXP
-    lse_conic_2 : ∑ x, lse_aux x ≤ 1
+    lse_conic_2 : ∑ i, lse_aux i ≤ 1
     margin : Parameter.epsilon ≤ y
     logarithm_conic_1 : (t, 1, y) ∈ EXP
     remaining : |t| ≤ 5
@@ -37,7 +37,7 @@ info: problem (v : Fin Parameter.size → ℝ) (y t : ℝ) (lse_aux : Fin Parame
   minimize value
   subject to
     lse_conic_1 : ∀ (i : Fin Parameter.size), (v i - t, 1, lse_aux i) ∈ EXP
-    lse_conic_2 : ∑ x, lse_aux x ≤ 1
+    lse_conic_2 : ∑ i, lse_aux i ≤ 1
     margin : Parameter.epsilon ≤ y
     logarithm_conic_1 : (t, 1, y) ∈ EXP
     remaining_conic_1 : t ≤ 5

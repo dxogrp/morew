@@ -336,7 +336,7 @@ example (u t : Nat) :
     target.feasible (u, t) ↔ Nat.add u 1 ≤ t := Iff.rfl
 
 /--
-info: problem (u : Nat) (t : ℕ)
+info: problem (u t : ℕ)
   minimize t
   subject to
     objective_bound : u + 1 ≤ t
@@ -366,7 +366,7 @@ example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
 
 /--
-info: problem (x : Nat) (t : ℕ)
+info: problem (x t : ℕ)
   minimize t
   subject to
     objective_bound : x + 1 ≤ t

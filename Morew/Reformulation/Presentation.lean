@@ -48,18 +48,19 @@ private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.
 
 private partial def freezePresentationReferences
     (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
+    (sectionReferences : Std.HashMap FVarId Name)
     (stx : Lean.Syntax) : Lean.Syntax :=
   if let some id := annotatedFVarId? infos stx then
     match binders.find? fun entry => entry.1 == id with
     | some (_, name) => mkIdentFrom stx name
-    -- Presentation syntax is persisted and may be used in another section.
-    -- Keep local names instead of capturing the current section's UIDs.
-    | none => stx
+    | none => match sectionReferences.get? id with
+      | some uid => mkCIdentFrom stx uid
+      | none => stx
   else if let some name := annotatedConstName? infos stx then
     freezePresentationConstant stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
-      freezePresentationReferences infos binders child
+      freezePresentationReferences infos binders sectionReferences child
 
 /-- Section variable UIDs survive fresh elaboration contexts, including for
 anonymous instances whose local names receive new macro scopes each time.
@@ -90,6 +91,7 @@ private def stabilizeExpressionSyntax (expression : Expr) : TermElabM (TSyntax `
         |>.set `pp.deepTerms true |>.set `pp.structureInstanceTypes true
         |>.set `pp.funBinderTypes true
         |>.set `pp.numericTypes true
+        |>.set `pp.coercions false
         |>.set `pp.maxSteps (1000000 : Nat)
         |>.set `pp.fieldNotation false) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
@@ -102,6 +104,7 @@ def exactExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
       |>.set `pp.explicit true |>.set `pp.instances true
       |>.set `pp.proofs true |>.set `pp.deepTerms true
       |>.set `pp.structureInstances false |>.set `pp.beta true
+      |>.set `pp.coercions false
       |>.set `pp.maxSteps (1000000 : Nat)) do
     let (stable, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
@@ -119,13 +122,22 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
-def presentationTypeSyntax (type : Expr) : TermElabM Lean.Syntax :=
+def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lean.Syntax :=
   -- Generated auxiliary types need the same fixed class projections as row
   -- bodies, while retaining their readable spelling in imported metadata.
-  withOptions (fun options => options.setBool `pp.tagAppFns true) do
+  withOptions (fun options =>
+      let options := options.setBool `pp.tagAppFns true
+      if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
+        |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
+        |>.setBool `pp.numericTypes true |>.setBool `pp.funBinderTypes true
+        |>.setBool `pp.fieldNotation false
+        |>.setBool `pp.coercions false
+      else options) do
     let (stx, infos) ← PrettyPrinter.delabCore type {}
       PrettyPrinter.Delaborator.delab
-    pure <| freezePresentationReferences infos #[] stx.raw
+    let sectionReferences ← if replay then sectionReferenceNames else pure {}
+    pure <| freezePresentationReferences infos #[]
+      sectionReferences stx.raw
 
 /-- Stable type syntax for the semantic and displayed problem types. -/
 structure ProblemTypeSyntax where
@@ -371,31 +383,202 @@ private def delabConeCarrier : Delab := do
   else
     `(RSOC $dimension)
 
-private def delabPresentationTerm (expression : Expr)
-    (binders : Array (FVarId × Name)) : TermElabM Lean.Syntax :=
+/-- Render a presentation body while freezing global references and retaining
+the supplied decision-variable and model-definition binding names. -/
+def delabPresentationTerm (expression : Expr)
+    (binders : Array (FVarId × Name)) (replay : Bool := true) : TermElabM Lean.Syntax := do
+  -- Reserve the displayed names before choosing names for inner binders.
+  -- Generated decisions carry hygiene scopes, which must not make an inner
+  -- lambda appear free to reuse the same visible spelling.
+  withLCtx' (binders.foldl (fun context (id, name) =>
+      context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
   -- Tag application heads as constants even when their arguments are implicit,
   -- so dimensions and coefficients supplied by class projections stay frozen.
-  withOptions (fun options => options.setBool coneNotationOption true
-      |>.setBool `pp.tagAppFns true) do
+  withOptions (fun options =>
+      let options := options.setBool coneNotationOption true |>.setBool `pp.tagAppFns true
+        |>.setBool `pp.coercions.types true |>.setBool `pp.beta false
+      if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
+        |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
+        |>.setBool `pp.funBinderTypes true |>.setBool `pp.numericTypes true
+        |>.setBool `pp.structureInstanceTypes true |>.setBool `pp.fieldNotation false
+        -- Omitting a field equal to its default can erase direct occurrences.
+        |>.setBool `pp.structureInstances.defaults true
+        -- Cast notation would resynthesize coercions in the replaying context.
+        |>.setBool `pp.coercions false
+      else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
-    pure <| freezePresentationReferences infos binders stx.raw
+    let sectionReferences ← if replay then sectionReferenceNames else pure {}
+    pure <| freezePresentationReferences infos binders
+      sectionReferences stx.raw
+
+/-- Elaborate sequential model-local definitions beneath the current decision
+binders. The callback sees real let-bound locals, so their values remain
+available to type checking while references retain binding identity. -/
+def withViewDefinitions (view : Morew.Syntax.ProblemView)
+    (action : Array Expr → TermElabM α) : TermElabM α := do
+  let rec /-- Elaborate each definition in the scope of its predecessors. -/
+      visit (remaining : List Morew.Syntax.DefinitionView) (bindings : Array Expr) := do
+    match remaining with
+    | [] => action bindings
+    | definition :: remaining =>
+        let type? ← (definition.typeSyntax?.or definition.inferredTypeSyntax?).mapM elabType
+        let value ← match type? with
+          | some type => elabTermEnsuringType definition.value type
+          | none => elabTerm definition.value none
+        synthesizeSyntheticMVarsNoPostponing
+        let value ← instantiateMVars value
+        if value.hasMVar then
+          throwErrorAt definition.value "model-local definition contains unresolved metavariables"
+        let type ← instantiateMVars (← inferType value)
+        withLetDecl definition.name type value fun binding =>
+          visit remaining (bindings.push binding)
+  visit view.definitions.toList #[]
+
+/-- Elaborate a user term against the displayed names of retained bindings.
+Temporary let aliases let Lean handle lexical shadowing and projection notation;
+replacing only those aliases preserves the original binding identities. Global
+references captured by a macro retain their original resolution. -/
+partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
+    (expectedType? : Option Expr := none) : TermElabM Expr := do
+  let names ← bindings.mapM fun binding => do
+    return ((← binding.fvarId!.getDecl).userName, binding)
+  let rec /-- Collect the scoped aliases needed by the term's local references. -/
+      collect (stx : Syntax) (aliases : NameMap Expr) : NameMap Expr := Id.run do
+    let mut aliases := aliases
+    if let .ident _ _ name resolved := stx then
+      unless resolved.any (fun | .decl .. => true | _ => false) do
+        let reference := extractMacroScopes name
+        for (name, binding) in names do
+          let displayName := name.eraseMacroScopes
+          if displayName.isPrefixOf reference.name then
+            let aliasName := { reference with name := displayName }.review
+            if aliasName != name then aliases := aliases.insert aliasName binding
+    for child in stx.getArgs do
+      aliases := collect child aliases
+    return aliases
+  let rec /-- Elaborate under temporary aliases and restore the original bindings. -/
+      elaborate (remaining : List (Name × Expr)) (aliases values : Array Expr) :
+      TermElabM Expr := do
+    match remaining with
+    | [] =>
+        let expression ← elabTerm term expectedType?
+        synthesizeSyntheticMVarsNoPostponing
+        return (← instantiateMVars expression).replaceFVars aliases values
+    | (name, value) :: remaining =>
+        withLetDecl name (← inferType value) value fun temporary =>
+          elaborate remaining (aliases.push temporary) (values.push value)
+  elaborate (collect term.raw {}).toList #[] #[]
+
+/-- Recognize only projections of the synthetic decision point. A projection
+inside an individual decision's type belongs to the user expression. -/
+private partial def decisionProjection? (point : Expr) (count : Nat)
+    (expression : Expr) : Option (Nat × Nat) := do
+  let expression := expression.consumeMData
+  if expression == point then return (0, count)
+  let (index, argument) ← match expression with
+    | .proj ``Prod index argument => some (index, argument)
+    | _ =>
+        if expression.isAppOfArity ``Prod.fst 3 then
+          some (0, expression.getArg! 2)
+        else if expression.isAppOfArity ``Prod.snd 3 then
+          some (1, expression.getArg! 2)
+        else none
+  let (start, size) ← decisionProjection? point count argument
+  guard (size > 1)
+  match index with
+  | 0 => some (start, size - 1)
+  | 1 => some (start + size - 1, 1)
+  | _ => none
+
+/-- Open exactly the outer decision lambda and the DSL's tuple pattern. Do not
+beta-, zeta-, or projection-reduce user bodies: those reductions can duplicate
+or erase the direct occurrences used by selectors. -/
+private def openPresentationBody (function domain : Expr) (binders : Array Expr) :
+    MetaM Expr := do
+  let .lam _ _ body _ := (← whnf function).consumeMData
+    | throwError "problem presentation field is not a decision function"
+  withLocalDeclD `presentationPoint domain fun point => do
+    let mut body := body.instantiate1 point
+    if binders.size > 1 then
+      if let some matcher ← matchMatcherApp? body.consumeMData then
+        if matcher.discrs == #[point] && matcher.alts.size == 1 &&
+            matcher.remaining.isEmpty && matcher.altNumParams[0]! == binders.size then
+          let mut alternative := matcher.alts[0]!
+          for binder in binders do
+            let .lam _ _ rest _ := alternative.consumeMData
+              | throwError "problem presentation has an invalid decision tuple pattern"
+            alternative := rest.instantiate1 binder
+          body := alternative
+    Meta.transform body (pre := fun expression => do
+      -- Application traversal skips intermediate prefixes. A function-valued
+      -- decision can therefore appear as `Prod.snd ... point arg ...`; recover
+      -- its synthetic projection before traversing the remaining arguments.
+      let (projection, arguments) :=
+        if (expression.isAppOf ``Prod.fst || expression.isAppOf ``Prod.snd) &&
+            expression.getAppNumArgs > 3 then
+          let arguments := expression.getAppArgs
+          (mkAppN expression.getAppFn (arguments.extract 0 3), arguments.extract 3 arguments.size)
+        else (expression, #[])
+      if let some (start, size) := decisionProjection? point binders.size projection then
+        let replacement ← packPoint (binders.extract start (start + size))
+        if arguments.isEmpty then return .done replacement
+        return .continue (some (mkAppN replacement arguments))
+      return .continue)
+
+/-- Read the paired definition spines using the same opaque local for each
+binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
+private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
+    (objective feasible : Expr) (names : Array (FVarId × Name))
+    (replay : Bool)
+    (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
+      Array (FVarId × Name) → TermElabM Morew.Syntax.ProblemView) :
+    TermElabM Morew.Syntax.ProblemView := do
+  let rec visit (remaining : List Morew.Syntax.DefinitionView)
+      (definitions : Array Morew.Syntax.DefinitionView)
+      (objective feasible : Expr) (names : Array (FVarId × Name)) :
+      TermElabM Morew.Syntax.ProblemView := do
+    let definition :: remaining := remaining
+      | return ← action definitions objective feasible names
+    let .letE _ type value body _ := objective.consumeMData
+      | throwError "problem presentation lost model-local definition `{definition.name.eraseMacroScopes}`"
+    let .letE _ feasibleType feasibleValue feasibleBody _ := feasible.consumeMData
+      | throwError "problem feasibility presentation lost its model-local definition spine"
+    unless (← isDefEq type feasibleType) && (← isDefEq value feasibleValue) do
+      throwError "problem objective and feasibility disagree on a model-local definition"
+    let definition := { definition with
+      value := ← delabPresentationTerm value names replay
+      typeSyntax? := ← definition.typeSyntax?.mapM fun _ => delabPresentationTerm type names replay
+      inferredTypeSyntax? := some (← delabPresentationTerm type names replay) }
+    withLocalDeclD definition.name type fun binding =>
+      visit remaining (definitions.push definition)
+        (body.instantiate1 binding) (feasibleBody.instantiate1 binding)
+        (names.push (binding.fvarId!, definition.name))
+  visit template.definitions.toList #[] objective feasible names
 
 /-- Recover printable bodies from a checked problem while retaining the supplied
 ordered names. Applied sources also instantiate binder types; existing bare-name
 sources retain their original spelling, including type aliases. -/
 def problemViewFromExpression (target : Expr)
-    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
+    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
+    (recoverDefinitions : Bool := true) (forRegistration : Bool := false) :
     TermElabM Morew.Syntax.ProblemView := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `Morew.Problem _ _`"
+  -- Reduce the problem container before preserving the field bodies.
+  -- Surrounding lets belong to the source declaration, and its head may
+  -- be irreducible. Weak-head reduction stops at `Problem.mk`, so it does not
+  -- unfold helpers or erase bindings inside the objective and feasibility.
+  let target ← if recoverDefinitions then
+      withTransparency .all <| whnf target
+    else pure target
   let domain := targetType.getArg! 0
   let binderTypes ← splitProductDomain domain template.binders.size
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
     if instantiateBinderTypes then
-      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! }
+      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! (!forRegistration) }
     else
       pure binder
   let binderDeclarations := binderTypes.mapIdx fun index type =>
@@ -403,22 +586,31 @@ def problemViewFromExpression (target : Expr)
   withLocalDeclsDND binderDeclarations fun binders => do
     let point ← packPoint binders
     let objective ← mkAppM ``Morew.Problem.objective #[target]
-    let objectiveBody ← simpOnly (mkApp objective point)
     let feasible ← mkAppM ``Morew.Problem.feasible #[target]
-    let feasibleBody ← simpOnly (mkApp feasible point)
-    let constraints ← splitConstraintBody feasibleBody template.constraints.size
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
-    let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
-    let constraintSyntax ← constraints.mapM fun proposition =>
-      delabPresentationTerm proposition binderNames
-    pure {
-      template with
-      binders := displayedBinders
-      objective := objectiveSyntax
-      constraints := template.constraints.mapIdx fun index constraint =>
-        { constraint with proposition := constraintSyntax[index]! }
-    }
+    let render definitions objectiveBody feasibleBody binderNames := do
+      let objectiveBody ← if recoverDefinitions then pure objectiveBody else simpOnly objectiveBody
+      let feasibleBody ← if recoverDefinitions then pure feasibleBody else simpOnly feasibleBody
+      let constraints ← splitConstraintBody feasibleBody template.constraints.size
+      let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames (!forRegistration)
+      let constraintSyntax ← constraints.mapM fun proposition =>
+        delabPresentationTerm proposition binderNames (!forRegistration)
+      pure {
+        template with
+        binders := displayedBinders
+        definitions
+        objective := objectiveSyntax
+        constraints := template.constraints.mapIdx fun index constraint =>
+          { constraint with proposition := constraintSyntax[index]! }
+      }
+    if recoverDefinitions then
+      let objectiveBody ← openPresentationBody objective domain binders
+      let feasibleBody ← openPresentationBody feasible domain binders
+      withModelDefinitionBodies template objectiveBody feasibleBody
+        binderNames (!forRegistration) render
+    else
+      render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
 
 /-- Recover a typed presentation from a checked problem expression. -/
 def typedPresentationFromExpression (target : Expr)
@@ -472,6 +664,8 @@ def refreshProblemView (targetName : Name)
           return (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
         let decisionNames := template.binders.foldl
           (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
+        let decisionNames := template.definitions.foldl
+          (fun names definition => names.insert definition.name.eraseMacroScopes) decisionNames
         let reserved := parameterNames.foldl (fun names name => names.insert name) decisionNames
         let mut occupied := decisionNames
         let mut lctx ← getLCtx
@@ -489,7 +683,7 @@ def refreshProblemView (targetName : Name)
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          problemViewFromExpression target template instantiateBinderTypes)
+          problemViewFromExpression target template instantiateBinderTypes (forRegistration := true))
   Morew.Syntax.registerProblemView targetName refreshed
 
 /-- Rebase a retained presentation into the current section-variable context. -/

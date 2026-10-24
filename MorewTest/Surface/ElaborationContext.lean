@@ -33,7 +33,7 @@ example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
 
 /--
-info: problem (x : Nat) (t : ℕ)
+info: problem (x t : ℕ)
   minimize t
   subject to
     epigraph_t : x + 1 ≤ t
@@ -72,10 +72,10 @@ example (u t : Nat) :
     target.feasible (u, t) ↔ True ∧ u ≤ t := Iff.rfl
 
 /--
-info: problem (u : Nat) (t : ℕ)
+info: problem (u t : ℕ)
   minimize t
   subject to
-    retained : True
+    retained : (fun x => True) u
     epigraph_t : u ≤ t
 -/
 #guard_msgs in
@@ -217,7 +217,7 @@ example (u : Fin 2) (t : Nat) :
 info: problem (u : Fin (1 + 1)) (t : ℕ)
   minimize t
   subject to
-    epigraph_t : ↑u ≤ t
+    epigraph_t : (↑u : ℕ) ≤ t
 -/
 #guard_msgs in
 #printp target
@@ -300,8 +300,8 @@ reformulation target : source := by
 example (u : Nat) : target.objective u = u + 1 := rfl
 
 /--
-info: problem (u : Nat)
-  minimize u + 1
+info: problem (u : ℕ)
+  minimize (fun u_1 => u + u_1) 1
 -/
 #guard_msgs in
 #printp target
@@ -345,7 +345,7 @@ example (u : Nat) : target.objective u = u := rfl
 example (u : Nat) : target.feasible u ↔ 0 < u := Iff.rfl
 
 /--
-info: problem (u : Nat)
+info: problem (u : ℕ)
   minimize Real.log (Real.exp u)
   subject to
     positive : 0 < Real.exp u

@@ -2,7 +2,14 @@
 
 **Morew** (pronounced “MOH-roo”) is a mathematical optimization rewriting system in Lean 4 for expressing optimization problems and certifying their reformulations.
 
-## Example
+Morew is under *active development*.
+Features may be broken and/or missing, and the documentation is still incomplete.
+
+## Quickstart
+
+The following example shows a basic usage of Morew to reformulate a simple optimization problem into an equivalent epigraph form.
+
+More examples can be found in the [Examples](Examples) directory.
 
 ```lean
 import Morew
@@ -32,3 +39,7 @@ problem (u t : ℝ)
   subject to
     epigraph_t : u ^ 2 ≤ t
 ```
+
+## License
+
+Morew is licensed under the [Apache License, Version 2.0](LICENSE).

@@ -188,7 +188,7 @@ info: problem (xs : Fin 2 → ℝ) (t : ℝ) (lse_aux : Fin 2 → ℝ)
   subject to
     before : Real.exp (xs 0 ^ 2) ≤ 100
     lse_conic_1 : ∀ (i : Fin 2), (2 * xs i + 1 - t, 1, lse_aux i) ∈ EXP
-    lse_conic_2 : ∑ x, lse_aux x ≤ 1
+    lse_conic_2 : ∑ i, lse_aux i ≤ 1
     after : xs 0 ≤ 4
 -/
 #guard_msgs in
@@ -227,7 +227,7 @@ info: problem (x t : ℝ) (loss_aux : Fin 2 → ℝ)
   minimize t
   subject to
     loss_conic_1 : ∀ (i : Fin 2), (![0, 2 * x - 1] i - t, 1, loss_aux i) ∈ EXP
-    loss_conic_2 : ∑ x, loss_aux x ≤ 1
+    loss_conic_2 : ∑ i, loss_aux i ≤ 1
 -/
 #guard_msgs in
 #printp softplusTarget
@@ -365,7 +365,7 @@ info: problem (loss_aux x t : ℝ) (loss_aux_1 : Fin 2 → ℝ)
   subject to
     loss_conic_1 : loss_aux ≤ x
     loss_conic_1_1 : ∀ (i : Fin 2), (![0, x] i - t, 1, loss_aux_1 i) ∈ EXP
-    loss_conic_2 : ∑ x, loss_aux_1 x ≤ 1
+    loss_conic_2 : ∑ i, loss_aux_1 i ≤ 1
     cap_conic_1 : (x, 1, 10) ∈ EXP
 -/
 #guard_msgs in

@@ -24,6 +24,22 @@ choosing the generated constraint's presentation label. -/
 syntax (name := hypographStep)
   "hypograph " ident (" as " ident)? : reformulationStep
 
+/-- Select either a direct model-local definition reference or a typed term. -/
+declare_syntax_cat boundOccurrence
+/-- A named selector resolves a model-local definition. -/
+syntax (name := namedBoundOccurrence) ident : boundOccurrence
+/-- Parentheses distinguish expression matching from named selection. -/
+syntax (name := expressionBoundOccurrence) "(" term ")" : boundOccurrence
+
+/-- Lift one occurrence in the objective or a named constraint. -/
+syntax (name := epigraphAtStep)
+  "epigraph " ident " at " boundOccurrence (" in " ident)?
+    (" as " ident)? (" using " term)? : reformulationStep
+/-- Lift one occurrence using a lower bound. -/
+syntax (name := hypographAtStep)
+  "hypograph " ident " at " boundOccurrence (" in " ident)?
+    (" as " ident)? (" using " term)? : reformulationStep
+
 /-- Replace one current constraint by an exact conic representation,
 optionally using an explicitly supplied representation certificate. -/
 syntax (name := conicAtStep)

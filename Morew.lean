@@ -24,6 +24,7 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
+import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
@@ -34,6 +35,7 @@ import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
 import Morew.Reformulation.ObjectiveBound
+import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Presentation
 import Morew.Reformulation.State
 import Morew.Reformulation.StepRunner
@@ -46,3 +48,4 @@ import Morew.Syntax.Grammar
 import Morew.Syntax.Presentation
 import Morew.Syntax.Printer
 import Morew.Transform
+import Morew.Transform.Context

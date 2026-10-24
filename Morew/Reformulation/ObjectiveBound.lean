@@ -1,4 +1,4 @@
-import Morew.Reformulation.State
+import Morew.Reformulation.Presentation
 
 /-!
 # Objective-bound steps
@@ -22,16 +22,42 @@ private def materializeObjectiveBound (state : ReformState)
   let scopedBinderName ← withFreshMacroScope do
     MonadQuotation.addMacroScope binderName
 
-  let valueType : TSyntax `term := ⟨state.presentationValueType⟩
+  let (valueType, order, nextSemantic, nextDomainType, primitiveEquivalence) ←
+    runTermElabM fun sectionVars => do
+      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+        let typed := state.typed.replaceFVars state.sectionFVars sectionVars
+        let equivalenceName := match expectedSense with
+          | .minimize => ``Morew.epigraphEquivalence
+          | .maximize => ``Morew.hypographEquivalence
+        let transformName := match expectedSense with
+          | .minimize => ``Morew.Problem.epigraph
+          | .maximize => ``Morew.Problem.hypograph
+        let equivalence ← mkAppM equivalenceName #[typed.semantic]
+        synthesizeSyntheticMVarsNoPostponing
+        let equivalence ← instantiateMVars equivalence
+        let equivalenceType ← whnf (← inferType equivalence)
+        let next := equivalenceType.getAppArgs.back!
+        unless next.isAppOfArity transformName 4 do
+          throwError "internal error: objective-bound certificate has an unexpected target"
+        -- A maximum removes exactly its outer OrderDual. The remaining value
+        -- type can itself carry a dual order, which whnf would erase.
+        let auxiliaryType := next.getArg! 1
+        let order := next.getArg! 2
+        let nextType ← whnf (← inferType next)
+        pure (← presentationTypeSyntax auxiliaryType, ← exactExpressionSyntax order,
+          ← exactExpressionSyntax next, ← exactExpressionSyntax nextType.getAppArgs[0]!,
+          ← exactExpressionSyntax equivalence)
+  let valueType : TSyntax `term := ⟨valueType⟩
   let newBinder : Morew.Syntax.BinderView := {
     name := scopedBinderName
     typeSyntax := valueType
   }
   let boundName := mkIdent scopedBinderName
   let oldObjective : TSyntax `term := ⟨state.view.objective⟩
+  let lessEqual := mkCIdent ``LE.le
   let proposition ← liftMacroM <| match expectedSense with
-    | .minimize => `($oldObjective ≤ $boundName)
-    | .maximize => `($boundName ≤ $oldObjective)
+    | .minimize => `(@$lessEqual $valueType $order $oldObjective $boundName)
+    | .maximize => `(@$lessEqual $valueType $order $boundName $oldObjective)
   let constraint : Morew.Syntax.ConstraintView := {
     name := constraintName
     proposition
@@ -43,18 +69,8 @@ private def materializeObjectiveBound (state : ReformState)
     constraints := state.view.constraints.push constraint
   }
 
-  let current := state.semantic
-  let nextSemantic ← liftMacroM <| match expectedSense with
-    | .minimize => `(Morew.Problem.epigraph $current)
-    | .maximize => `(Morew.Problem.hypograph $current)
-  let primitiveEquivalence ← liftMacroM <| match expectedSense with
-    | .minimize => `(Morew.epigraphEquivalence $current)
-    | .maximize => `(Morew.hypographEquivalence $current)
   let primitive ← liftMacroM <|
     liftCertificateEquivalence state.runner primitiveEquivalence
-  let currentDomainType := state.semanticDomainType
-  let valueType := state.semanticValueType
-  let nextDomainType ← liftMacroM `($currentDomainType × $valueType)
   pure {
     view := newView
     semantic := nextSemantic

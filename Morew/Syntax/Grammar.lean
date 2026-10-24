@@ -21,24 +21,30 @@ declare_syntax_cat problemConstraint
 /-- Parse a constraint label followed by its proposition. -/
 syntax (name := problemConstraintStx) ident " : " term : problemConstraint
 
+/-- A sequential, nonrecursive definition local to a problem. -/
+declare_syntax_cat problemDefinition
+/-- Local definitions may optionally declare their value type. -/
+syntax (name := problemDefinitionStx)
+  "let " ident (" : " term)? " := " term : problemDefinition
+
 /-- An unconstrained minimization problem with one or more explicitly typed,
 nondependent decision-variable binders. -/
 syntax (name := minimizeProblemTerm)
-  "problem " problemBinder+ ppLine "minimize " term : term
+  "problem " problemBinder+ (ppLine problemDefinition)* ppLine "minimize " term : term
 /-- A constrained minimization problem with explicitly typed, nondependent
 decision-variable binders and an indented block of named constraints. -/
 syntax (name := minimizeConstrainedProblemTerm)
-  "problem " problemBinder+ ppLine "minimize " term ppLine
+  "problem " problemBinder+ (ppLine problemDefinition)* ppLine "minimize " term ppLine
   "subject " "to" ppLine
     ppIndent(many1Indent(problemConstraint)) : term
 /-- An unconstrained maximization problem with one or more explicitly typed,
 nondependent decision-variable binders. -/
 syntax (name := maximizeProblemTerm)
-  "problem " problemBinder+ ppLine "maximize " term : term
+  "problem " problemBinder+ (ppLine problemDefinition)* ppLine "maximize " term : term
 /-- A constrained maximization problem with explicitly typed, nondependent
 decision-variable binders and an indented block of named constraints. -/
 syntax (name := maximizeConstrainedProblemTerm)
-  "problem " problemBinder+ ppLine "maximize " term ppLine
+  "problem " problemBinder+ (ppLine problemDefinition)* ppLine "maximize " term ppLine
   "subject " "to" ppLine
     ppIndent(many1Indent(problemConstraint)) : term
 

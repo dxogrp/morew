@@ -144,6 +144,9 @@ private def reportNamePreflightError {α}
           if state.usedSourceParameterNames.any (sameUserName · name) then
             throwErrorAt request.ref
               "decision variable `{name}` conflicts with a source parameter; rename the outer parameter or choose a different decision name"
+          if state.view.definitions.any (fun definition => sameUserName definition.name name) then
+            throwErrorAt request.ref
+              "decision variable `{name}` conflicts with a model-local definition; choose a different decision name"
           throwErrorAt request.ref "decision variable `{name}` already exists"
       | .explicitConstraintLabel =>
           throwErrorAt request.ref "constraint name `{name}` already exists"
@@ -162,6 +165,8 @@ def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
   let active := state.usedSourceParameterNames.foldl
     (fun inventory name => inventory.insert .decisionBinder name)
     state.typed.presentation.nameInventory
+  let active := state.view.definitions.foldl
+    (fun inventory definition => inventory.insert .decisionBinder definition.name) active
   let (outcome, materialization?) ← (plan.run active).run.run none
   let result ← match outcome with
     | .ok result => pure result

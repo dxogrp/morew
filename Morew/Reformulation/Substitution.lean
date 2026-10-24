@@ -1,4 +1,5 @@
 import Morew.Elab.Atom
+import Morew.Elab.Affine
 import Morew.Reformulation.Presentation
 
 /-!
@@ -10,23 +11,6 @@ Inference, rule selection, and proof-producing substitution materialization.
 namespace Morew.Reformulation.Internal
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
-
-private partial def replaceIdent (stx : Lean.Syntax) (oldName : Name)
-    (replacement : Lean.Syntax) : Lean.Syntax :=
-  if stx.isIdent && stx.getId == oldName then
-    replacement
-  else
-    stx.setArgs (stx.getArgs.map fun child => replaceIdent child oldName replacement)
-
-/-- Give every occurrence of a newly introduced decision variable the same
-fresh hygiene scope.  This keeps it distinct from an existing nested binder
-with the same source spelling when the replacement is inserted into stored
-presentation syntax. -/
-private partial def scopeIdent (stx : Lean.Syntax) (name scopedName : Name) : Lean.Syntax :=
-  if stx.isIdent && sameUserName stx.getId name then
-    mkIdentFrom stx scopedName
-  else
-    stx.setArgs (stx.getArgs.map fun child => scopeIdent child name scopedName)
 
 private def resolvedDeclName? : Lean.Syntax → Option Name
   | .ident _ _ _ preResolved => preResolved.findSome? fun
@@ -110,14 +94,33 @@ private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) :
         result.insert value
   | _ => stx.getArgs.foldl (fun result child => collectIdents child result) result
 
+/-- Resolve globals without preempting displayed model bindings. Already
+captured global references remain intact; plain model references are resolved
+later under the retained bindings and their scoped aliases. -/
+private partial def preResolveReplacement (view : Morew.Syntax.ProblemView)
+    (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
+  if stx.isIdent then
+    let name := stx.getId.eraseMacroScopes
+    if view.binders.any (fun binder => binder.name.eraseMacroScopes.isPrefixOf name) ||
+        view.definitions.any (fun definition => definition.name.eraseMacroScopes.isPrefixOf name) then
+      pure stx
+    else
+      Morew.Syntax.preResolveTerm stx
+  else
+    pure <| stx.setArgs (← stx.getArgs.mapM (preResolveReplacement view))
+
 private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Name)
     (replacement : Lean.Syntax) : CommandElabM (Array Name) := do
   let localNames : NameSet := view.binders.foldl
     (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
+  let localNames := view.definitions.foldl
+    (fun names definition => names.insert definition.name.eraseMacroScopes) localNames
+  let localNames := localNames.toList
   let env ← getEnv
   let candidates := (collectIdents replacement).toList.filter fun name =>
     !name.isAnonymous && !sameUserName name oldName &&
-      !localNames.contains name.eraseMacroScopes && !env.contains name
+      !(localNames.any fun localName => localName.isPrefixOf name.eraseMacroScopes) &&
+      !env.contains name
   pure candidates.toArray
 
 private def findBinderIndex (view : Morew.Syntax.ProblemView) (name : Name) : Option Nat :=
@@ -130,13 +133,13 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
     throwErrorAt replacement
       "cannot determine the new decision variable; the substitution expression must contain one new identifier"
   let usedCandidates ← withTypedPresentation state fun presentation =>
-    withPresentationBinders presentation fun binderTypes _ => do
+    withPresentationBinders presentation fun binderTypes binders =>
+      withViewDefinitions state.view fun definitions => do
       let candidateDeclarations := candidates.map fun name =>
         (name, binderTypes[binderIndex]!)
       withLocalDeclsDND candidateDeclarations fun candidateFVars => do
-        let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
-        synthesizeSyntheticMVarsNoPostponing
-        let expression ← instantiateMVars expression
+        let expression ← elabPresentationTerm replacement (binders ++ definitions)
+          (some binderTypes[binderIndex]!)
         pure <| candidates.zip candidateFVars |>.filterMap fun (name, fvar) =>
           if expression.containsFVar fvar.fvarId! then some name else none
   if (← get).messages.hasErrors then
@@ -149,6 +152,97 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
   | names =>
       throwErrorAt replacement
         "ambiguous substitution: expected exactly one new decision variable, found {names}"
+
+/-- Resolve displayed binding names and retain their identities in replacement
+syntax, including when there are no model-local definitions. A replacement may
+use a definition only when its value and type are independent of the replaced
+variable. Inline those references before inserting the replacement into earlier
+definitions, the objective, constraints, and the semantic map. -/
+private def expandReplacementDefinitions (state : ReformState) (binderIndex : Nat)
+    (newName scopedNewName : Name) (replacement : TSyntax `term) :
+    CommandElabM (TSyntax `term) := do
+  withTypedPresentation state fun presentation =>
+    withPresentationBinders presentation fun binderTypes binders =>
+      withViewDefinitions state.view fun definitions =>
+        withLocalDeclD newName binderTypes[binderIndex]! fun candidate => do
+          let expression ← elabPresentationTerm replacement (binders ++ definitions)
+            (some binderTypes[binderIndex]!)
+          for definition in definitions, view in state.view.definitions do
+            if expression.containsFVar definition.fvarId! &&
+                (← Morew.Elab.Affine.depends binders[binderIndex]! definition) then
+              throwErrorAt replacement
+                "substitution replacement uses model-local definition `{view.name.eraseMacroScopes}`, which depends on the decision variable being replaced"
+          if ← Morew.Elab.Affine.depends binders[binderIndex]! expression then
+            throwErrorAt replacement
+              "substitution replacement depends on the decision variable being replaced"
+          let mut expression := expression
+          for definition in definitions.reverse do
+            let some value := (← definition.fvarId!.getDecl).value?
+              | throwError "internal error: a model-local definition is not let-bound"
+            expression := expression.replaceFVar definition value
+          let names := binders.mapIdx fun index binder =>
+            (binder.fvarId!, presentation.binders[index]!.name)
+          return ⟨← delabPresentationTerm expression
+            (names.push (candidate.fvarId!, scopedNewName))⟩
+
+/-- Substitute the decision's free variable, preserving nested lexical binders
+and fixed global references. Recreate the sequential definition environment so
+later types, proofs, and bodies refer to the substituted bindings. No reduction
+is needed, so lets and direct occurrences retain their original structure. -/
+private def substitutePresentation (state : ReformState) (binderIndex : Nat)
+    (newName : Name) (replacement : TSyntax `term) :
+    CommandElabM Morew.Syntax.ProblemView :=
+  withTypedPresentation state fun presentation =>
+    withPresentationBinders presentation fun binderTypes binders =>
+      withViewDefinitions state.view fun definitions => do
+        let elaborate (term : Lean.Syntax) (type : Expr) : TermElabM Expr := do
+          let expression ← elabTermEnsuringType term type
+          synthesizeSyntheticMVarsNoPostponing
+          instantiateMVars expression
+        -- Elaborate all original bodies before introducing replacement definitions
+        -- with the same source names into the local context.
+        let objective ← elaborate state.view.objective presentation.valueType
+        let constraints ← state.view.constraints.mapM fun constraint =>
+          elaborate constraint.proposition (mkSort Level.zero)
+        withLocalDeclD newName binderTypes[binderIndex]! fun candidate => do
+          let replacement ← elaborate replacement binderTypes[binderIndex]!
+          let names := binders.mapIdx fun index binder =>
+            if index == binderIndex then (candidate.fvarId!, newName)
+            else (binder.fvarId!, presentation.binders[index]!.name)
+          let rec visit (remaining : List (Morew.Syntax.DefinitionView × Expr))
+              (oldBindings newBindings : Array Expr)
+              (names : Array (FVarId × Name))
+              (rewritten : Array Morew.Syntax.DefinitionView) :
+              TermElabM Morew.Syntax.ProblemView := do
+            let substitute (expression : Expr) := expression.replaceFVars oldBindings newBindings
+            match remaining with
+            | [] =>
+                let objective ← delabPresentationTerm (substitute objective) names
+                let constraints ← state.view.constraints.mapIdxM fun index constraint => do
+                  return { constraint with
+                    proposition := ← delabPresentationTerm (substitute constraints[index]!) names }
+                let oldBinder := state.view.binders[binderIndex]!
+                return { state.view with
+                  binders := state.view.binders.set! binderIndex { oldBinder with name := newName }
+                  definitions := rewritten
+                  objective
+                  constraints }
+            | (view, original) :: remaining =>
+                let declaration ← original.fvarId!.getDecl
+                let some value := declaration.value?
+                  | throwError "internal error: a model-local definition is not let-bound"
+                let type := substitute declaration.type
+                let value := substitute value
+                let typeSyntax ← delabPresentationTerm type names
+                let view := { view with
+                  value := ← delabPresentationTerm value names
+                  typeSyntax? := view.typeSyntax?.map fun _ => typeSyntax
+                  inferredTypeSyntax? := some typeSyntax }
+                withLetDecl view.name type value fun binding =>
+                  visit remaining (oldBindings.push original) (newBindings.push binding)
+                    (names.push (binding.fvarId!, view.name)) (rewritten.push view)
+          visit (state.view.definitions.zip definitions).toList
+            #[binders[binderIndex]!] #[replacement] names #[]
 
 private def replacementIsRealExpOf (state : ReformState)
     (binderIndex : Nat) (newName : Name) (replacement : TSyntax `term) :
@@ -202,6 +296,49 @@ private def constraintIsTypedTrue (state : ReformState)
     withLocalDeclD `point presentation.domainType fun point =>
       isDefEq (mkApp presentation.constraints[index]!.predicate point) (mkConst ``True)
 
+/-- Keep dependent definition blocks source-aligned under substitution. Even
+simplifying an earlier scalar alias can change a later proof or data type, so
+preserve the complete block whenever one definition is proof-valued or has a
+type depending on the replaced decision. Checked pointwise normalization
+relates this presentation to the canonical target. -/
+private def preserveDefinitionExpressions (state : ReformState)
+    (binderIndex : Nat) : CommandElabM Bool := do
+  if state.view.definitions.isEmpty then return false
+  withTypedPresentation state fun presentation =>
+    withPresentationBinders presentation fun _ binders =>
+      withViewDefinitions state.view fun definitions => do
+        definitions.anyM fun definition => do
+          return (← isProof definition) ||
+            (← Morew.Elab.Affine.depends binders[binderIndex]! (← inferType definition))
+
+/-- Check the complete proposed presentation before retaining simplification.
+Proof-bearing data can occur in definitions, the objective, or constraints;
+simplifying one expression may change the type expected by another. The probe
+leaves no declarations, messages, or elaboration state behind. -/
+private def simplifiedPresentationCheck (state : ReformState)
+    (view : Morew.Syntax.ProblemView) :
+    CommandElabM Bool :=
+  withTypedPresentation state fun presentation => do
+    let saved ← Term.saveState
+    try
+      withoutErrToSorry do
+        let term ← liftMacroM view.toTermSyntax
+        let type ← mkAppM ``Morew.Problem
+          #[presentation.domainType, presentation.valueType]
+        let value ← elabTermEnsuringType term type
+        synthesizeSyntheticMVarsNoPostponing
+        let value ← instantiateMVars value
+        withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+          checkWithKernel value
+        pure !(← getThe Core.State).messages.hasErrors
+    catch exception =>
+      if exception.isInterrupt || exception.isMaxRecDepth || exception.isMaxHeartbeat then
+        throw exception
+      pure false
+    finally
+      saved.restore (restoreInfo := true)
+      setEnv saved.meta.core.env
+
 private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))
@@ -212,8 +349,8 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     | throwErrorAt replacement "internal error: missing substitution binder allocation"
   let scopedNewName ← withFreshMacroScope do
     MonadQuotation.addMacroScope newName
-  let replacement : TSyntax `term :=
-    ⟨scopeIdent replacement.raw newName scopedNewName⟩
+  let replacement ← expandReplacementDefinitions state binderIndex
+    newName scopedNewName replacement
 
   let oldBinder := state.view.binders[binderIndex]!
   let newBinders := state.view.binders.set! binderIndex {
@@ -239,27 +376,53 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let mapResult ← liftMacroM <| mkProduct mapComponents
   let mapTerm ← liftMacroM `(fun ($domainPattern : $domainType) => $mapResult)
 
-  let objective ← liftMacroM <|
-    simplifyExpLog (replaceIdent state.view.objective oldBinder.name replacement)
+  let substitutedView ← substitutePresentation state binderIndex scopedNewName replacement
+  let substitutedObjective := substitutedView.objective
+  let objective ← liftMacroM <| simplifyExpLog substitutedObjective
+  let preserveDefinitions ← preserveDefinitionExpressions state binderIndex
+  let substitutedDefinitions := substitutedView.definitions
+  let definitions ← if preserveDefinitions || substitutedDefinitions.isEmpty then
+      pure substitutedDefinitions
+    else do
+      substitutedDefinitions.mapM fun definition => do
+        let simplify (term : Lean.Syntax) : CommandElabM Lean.Syntax :=
+          liftMacroM <| simplifyExpLog term
+        let value ← simplify definition.value
+        let typeSyntax? ← definition.typeSyntax?.mapM simplify
+        let inferredTypeSyntax? ← definition.inferredTypeSyntax?.mapM simplify
+        pure { definition with value, typeSyntax?, inferredTypeSyntax? }
   let mut constraints : Array Morew.Syntax.ConstraintView := #[]
+  let mut substitutedConstraints : Array Morew.Syntax.ConstraintView := #[]
   let mut removedConstraintNames := state.removedConstraintNames
   for index in [:state.view.constraints.size] do
     let constraint := state.view.constraints[index]!
     let wasPresentedAsTrue ← constraintIsTypedTrue state index
-    let proposition ← liftMacroM <|
-      simplifyExpLog (replaceIdent constraint.proposition oldBinder.name replacement)
+    let substitutedProposition := substitutedView.constraints[index]!.proposition
+    let proposition ← liftMacroM <| simplifyExpLog substitutedProposition
     let provedTrue := isTrueSyntax proposition || positiveIndex? == some index
     if provedTrue && !wasPresentedAsTrue then
       removedConstraintNames :=
         removedConstraintNames.insert constraint.name.eraseMacroScopes
     else
       constraints := constraints.push { constraint with proposition }
-  let newView : Morew.Syntax.ProblemView := {
+      substitutedConstraints := substitutedConstraints.push
+        { constraint with proposition := substitutedProposition }
+  let simplifiedView : Morew.Syntax.ProblemView := {
     state.view with
     binders := newBinders
+    definitions
     objective
     constraints
   }
+  let newView ← if ← simplifiedPresentationCheck state simplifiedView then
+      pure simplifiedView
+    else
+      -- Keep dependent uses aligned with their definitions. Positivity rows
+      -- removed above still have the same checked normalization evidence.
+      pure { simplifiedView with
+        definitions := substitutedDefinitions
+        objective := substitutedObjective
+        constraints := substitutedConstraints }
 
   let stepCertificate ← match providedCertificate? with
     | some proofTerm =>
@@ -336,7 +499,7 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
     (providedCertificate? : Option (TSyntax `term)) :
     CommandElabM SurfaceStepDraft := do
   let replacement : TSyntax `term :=
-    ⟨← liftTermElabM <| Morew.Syntax.preResolveTerm replacement.raw⟩
+    ⟨← liftTermElabM <| preResolveReplacement state.view replacement.raw⟩
   let oldName := oldIdent.getId
   let some binderIndex := findBinderIndex state.view oldName
     | throwErrorAt oldIdent "unknown decision variable `{oldName.eraseMacroScopes}`"
