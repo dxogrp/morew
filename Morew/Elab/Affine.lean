@@ -20,6 +20,34 @@ It builds ordinary affine maps and pointwise proofs without rewriting models.
 When direct recognition fails, bounded expansion of transparent helper definitions
 can expose supported arithmetic. Failure means that this fragment did not certify
 the expression, not that the function is mathematically non-affine.
+
+Transparent, nonrecursive `def` and `abbrev` helpers may contain scalar,
+vector, and matrix operations already supported by this certifier. Imported
+helpers and their actual parameters are supported. Expansion affects proof
+construction only: models and `#printp` retain their original helper references.
+
+Helper expansion reads three locally scoped Lean options:
+
+* `morew.affine.maxExpansionDepth` defaults to `32` nested helper expansions.
+* `morew.affine.maxExpansionSteps` defaults to `1024` helper unfoldings, shared
+  across branches of one source expression.
+* `morew.affine.maxExpansionNodes` defaults to `100000` cumulative expanded
+  expression nodes, counting duplicated arguments and intermediate expansions.
+
+Setting any limit to zero disables helper expansion; direct affine recognition
+remains available. Limits apply separately to each source expression, including
+its evidence discovery. An exhausted limit reports the helper and option name.
+For example, raise the depth for just one reformulation with:
+
+```lean
+set_option morew.affine.maxExpansionDepth 64 in
+reformulation conicProb : p := by
+  conic
+```
+
+Expansion does not open opaque, irreducible, or recursive helpers, unfold custom
+constraint predicates, or add nonlinear rules. Native operations keep their
+existing instance and evidence requirements, including nonzero denominators.
 -/
 
 namespace Morew.Elab.Affine
