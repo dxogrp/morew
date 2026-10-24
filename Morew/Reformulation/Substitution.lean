@@ -252,27 +252,26 @@ private def preserveDefinitionExpressions (state : ReformState)
           return (← isProof definition) ||
             (← Morew.Elab.Affine.depends binders[binderIndex]! (← inferType definition))
 
-/-- Check a proposed simplified definition block before retaining it. Fixed
-data types can contain proof fields whose propositions change when an earlier
-field or a subtype predicate is simplified. Elaborating the complete block
-also checks dependencies between definitions without classifying every data
-type. The probe leaves no declarations, messages, or elaboration state behind. -/
-private def simplifiedDefinitionsCheck (state : ReformState) (binderIndex : Nat)
-    (newName : Name) (definitions : Array Morew.Syntax.DefinitionView) :
+/-- Check the complete proposed presentation before retaining simplification.
+Proof-bearing data can occur in definitions, the objective, or constraints;
+simplifying one expression may change the type expected by another. The probe
+leaves no declarations, messages, or elaboration state behind. -/
+private def simplifiedPresentationCheck (state : ReformState)
+    (view : Morew.Syntax.ProblemView) :
     CommandElabM Bool :=
   withTypedPresentation state fun presentation => do
-    let oldBinder := presentation.binders[binderIndex]!
-    let presentation := { presentation with
-      binders := presentation.binders.set! binderIndex { oldBinder with name := newName } }
     let saved ← Term.saveState
     try
       withoutErrToSorry do
-        withPresentationBinders presentation fun _ _ =>
-          withViewDefinitions { state.view with definitions } fun bindings => do
-            let body ← mkLetFVars bindings (mkConst ``True) (usedLetOnly := false)
-            withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-              checkWithKernel body
-            pure !(← getThe Core.State).messages.hasErrors
+        let term ← liftMacroM view.toTermSyntax
+        let type ← mkAppM ``Morew.Problem
+          #[presentation.domainType, presentation.valueType]
+        let value ← elabTermEnsuringType term type
+        synthesizeSyntheticMVarsNoPostponing
+        let value ← instantiateMVars value
+        withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+          checkWithKernel value
+        pure !(← getThe Core.State).messages.hasErrors
     catch exception =>
       if exception.isInterrupt || exception.isMaxRecDepth || exception.isMaxHeartbeat then
         throw exception
@@ -318,8 +317,8 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let mapResult ← liftMacroM <| mkProduct mapComponents
   let mapTerm ← liftMacroM `(fun ($domainPattern : $domainType) => $mapResult)
 
-  let objective ← liftMacroM <|
-    simplifyExpLog (replaceIdent state.view.objective oldBinder.name replacement)
+  let substitutedObjective := replaceIdent state.view.objective oldBinder.name replacement
+  let objective ← liftMacroM <| simplifyExpLog substitutedObjective
   let preserveDefinitions ← preserveDefinitionExpressions state binderIndex
   let substitutedDefinitions := state.view.definitions.map fun definition =>
     let substitute := fun term => replaceIdent term oldBinder.name replacement
@@ -330,37 +329,45 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let definitions ← if preserveDefinitions || substitutedDefinitions.isEmpty then
       pure substitutedDefinitions
     else do
-      let simplified ← substitutedDefinitions.mapM fun definition => do
+      substitutedDefinitions.mapM fun definition => do
         let simplify (term : Lean.Syntax) : CommandElabM Lean.Syntax :=
           liftMacroM <| simplifyExpLog term
         let value ← simplify definition.value
         let typeSyntax? ← definition.typeSyntax?.mapM simplify
         let inferredTypeSyntax? ← definition.inferredTypeSyntax?.mapM simplify
         pure { definition with value, typeSyntax?, inferredTypeSyntax? }
-      if ← simplifiedDefinitionsCheck state binderIndex scopedNewName simplified then
-        pure simplified
-      else
-        pure substitutedDefinitions
   let mut constraints : Array Morew.Syntax.ConstraintView := #[]
+  let mut substitutedConstraints : Array Morew.Syntax.ConstraintView := #[]
   let mut removedConstraintNames := state.removedConstraintNames
   for index in [:state.view.constraints.size] do
     let constraint := state.view.constraints[index]!
     let wasPresentedAsTrue ← constraintIsTypedTrue state index
-    let proposition ← liftMacroM <|
-      simplifyExpLog (replaceIdent constraint.proposition oldBinder.name replacement)
+    let substitutedProposition := replaceIdent constraint.proposition oldBinder.name replacement
+    let proposition ← liftMacroM <| simplifyExpLog substitutedProposition
     let provedTrue := isTrueSyntax proposition || positiveIndex? == some index
     if provedTrue && !wasPresentedAsTrue then
       removedConstraintNames :=
         removedConstraintNames.insert constraint.name.eraseMacroScopes
     else
       constraints := constraints.push { constraint with proposition }
-  let newView : Morew.Syntax.ProblemView := {
+      substitutedConstraints := substitutedConstraints.push
+        { constraint with proposition := substitutedProposition }
+  let simplifiedView : Morew.Syntax.ProblemView := {
     state.view with
     binders := newBinders
     definitions
     objective
     constraints
   }
+  let newView ← if ← simplifiedPresentationCheck state simplifiedView then
+      pure simplifiedView
+    else
+      -- Keep dependent uses aligned with their definitions. Positivity rows
+      -- removed above still have the same checked normalization evidence.
+      pure { simplifiedView with
+        definitions := substitutedDefinitions
+        objective := substitutedObjective
+        constraints := substitutedConstraints }
 
   let stepCertificate ← match providedCertificate? with
     | some proofTerm =>

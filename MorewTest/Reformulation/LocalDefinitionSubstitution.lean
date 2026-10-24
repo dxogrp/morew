@@ -219,6 +219,80 @@ example : Conic.Form fixedSubtypeConic := fixedSubtypeConic.conicForm
 example : fixedSubtypeConic.conicForm.data.toProblem = fixedSubtypeConic :=
   fixedSubtypeConic.conicForm.represents
 
+def dependentValue (value : ℝ) (certified : { y : ℝ // y = value }) : ℝ :=
+  certified.val
+
+def inlineObjectiveSource :=
+  problem (x : ℝ)
+    let loss := Real.log (Real.exp x)
+    minimize dependentValue loss ⟨x, (Real.log_exp x).symm⟩
+    subject to
+      positive : 0 < x
+
+-- Checking just the simplified definitions would accept loss := exp u,
+-- leaving the constructor's proof incompatible with its dependent argument.
+reformulation inlineObjectiveTarget : inlineObjectiveSource := by
+  substitute x := Real.exp u
+
+example : GlobalEquivalence inlineObjectiveSource inlineObjectiveTarget :=
+  inlineObjectiveTarget.equivalence
+example (u : ℝ) : inlineObjectiveTarget.objective u = Real.exp u := rfl
+example (u : ℝ) : inlineObjectiveTarget.feasible u := True.intro
+
+def inlineMaxObjectiveSource :=
+  problem (x : ℝ)
+    let loss := Real.log (Real.exp x)
+    maximize dependentValue loss ⟨x, (Real.log_exp x).symm⟩
+    subject to
+      positive : 0 < x
+
+-- The complete-presentation check must preserve the maximization value type.
+reformulation inlineMaxObjectiveTarget : inlineMaxObjectiveSource := by
+  substitute x := Real.exp u
+
+example : GlobalEquivalence inlineMaxObjectiveSource inlineMaxObjectiveTarget :=
+  inlineMaxObjectiveTarget.equivalence
+example (u : ℝ) : inlineMaxObjectiveTarget.objective u = Real.exp u := rfl
+
+reformulation inlineObjectiveLifted : inlineObjectiveTarget := by
+  epigraph t at (dependentValue loss ⟨Real.exp u, (Real.log_exp (Real.exp u)).symm⟩)
+
+example : GlobalEquivalence inlineObjectiveTarget inlineObjectiveLifted :=
+  inlineObjectiveLifted.equivalence
+example (u t : ℝ) : inlineObjectiveLifted.objective (u, t) = t := rfl
+example (u t : ℝ) : inlineObjectiveLifted.feasible (u, t) ↔ Real.exp u ≤ t := Iff.rfl
+
+def inlineConstraintSource :=
+  problem (x : ℝ)
+    let loss := Real.log (Real.exp x)
+    minimize Real.log x
+    subject to
+      positive : 0 < x
+      cap : dependentValue loss ⟨x, (Real.log_exp x).symm⟩ ≤ 10
+
+reformulation inlineConstraintTarget : inlineConstraintSource := by
+  substitute x := Real.exp u
+
+example : GlobalEquivalence inlineConstraintSource inlineConstraintTarget :=
+  inlineConstraintTarget.equivalence
+example (u : ℝ) : inlineConstraintTarget.objective u = u := by
+  simp [inlineConstraintTarget]
+example (u : ℝ) : inlineConstraintTarget.feasible u ↔ Real.exp u ≤ 10 := Iff.rfl
+
+-- Continue in the same script as well as from a separately emitted target.
+-- The whole presentation must remain coherent when the unchanged objective
+-- also contains an expression that could have been simplified independently.
+reformulation inlineConstraintLifted : inlineConstraintSource := by
+  substitute x := Real.exp u
+  epigraph t at (dependentValue loss ⟨Real.exp u, (Real.log_exp (Real.exp u)).symm⟩) in cap
+
+example : GlobalEquivalence inlineConstraintSource inlineConstraintLifted :=
+  inlineConstraintLifted.equivalence
+example (u t : ℝ) : inlineConstraintLifted.objective (u, t) = u := by
+  simp [inlineConstraintLifted]
+example (u t : ℝ) : inlineConstraintLifted.feasible (u, t) ↔
+    t ≤ 10 ∧ Real.exp u ≤ t := Iff.rfl
+
 /-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : source := by
