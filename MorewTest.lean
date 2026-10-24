@@ -93,6 +93,7 @@ import MorewTest.Surface.Conic
 import MorewTest.Surface.Diagnostics
 import MorewTest.Surface.ElaborationContext
 import MorewTest.Surface.Fixtures
+import MorewTest.Surface.LocalDefinitionInference
 import MorewTest.Surface.LocalDefinitions
 import MorewTest.Surface.NameResolution
 import MorewTest.Surface.Reformulation

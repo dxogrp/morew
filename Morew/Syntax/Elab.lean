@@ -64,6 +64,16 @@ private def decisionProjections (point : Expr) : Nat → MetaM (Array Expr)
       let previous ← decisionProjections first (count + 1)
       return previous.push (← mkAppM ``Prod.snd #[point])
 
+private def decisionTypes (domain : Expr) : Nat → MetaM (Array Expr)
+  | 0 => throwError "a problem requires at least one decision variable"
+  | 1 => pure #[domain]
+  | count + 2 => do
+      let domain ← whnf domain
+      unless domain.isAppOfArity ``Prod 2 do
+        throwError "internal error: model decision domain is not a product"
+      let previous ← decisionTypes (domain.getArg! 0) (count + 1)
+      return previous.push (domain.getArg! 1)
+
 private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr) := do
   match expression with
   | .letE name type value body nondep =>
@@ -97,25 +107,34 @@ private def elaborateModelBody (view : Morew.Syntax.ProblemView)
     (productType objective feasible : TSyntax `term) (expectedType? : Option Expr) :
     TermElabM (Expr × Array Morew.Syntax.DefinitionView) := do
   let domain ← elabType productType
-  let types ← view.binders.mapM fun binder => elabType binder.typeSyntax
+  let expectedProblem? : Option Expr ← expectedType?.mapM fun type => whnf type
+  let expectedProblem? := expectedProblem?.filter (·.isAppOfArity ``Morew.Problem 2)
+  if let some expected := expectedProblem? then
+    unless ← isDefEq domain (expected.getArg! 0) do
+      throwErrorAt productType
+        "problem decision domain is{indentExpr domain}\nbut is expected to be{indentExpr (expected.getArg! 0)}"
+  -- Share the domain's metavariables with the local decision binders. In
+  -- particular, an inferred annotation must not be elaborated a second time.
+  let types ← decisionTypes domain view.binders.size
   let declarations := view.binders.mapIdx fun index binder => (binder.name, types[index]!)
-  let expectedValue? : Option Expr ← expectedType?.mapM fun type => whnf type
-  let expectedValue? := expectedValue?.bind fun expected =>
-    if expected.isAppOfArity ``Morew.Problem 2 then some (expected.getArg! 1) else none
+  let expectedValue? := expectedProblem?.map (·.getArg! 1)
   let expectedValue? := expectedValue?.map fun value =>
     if view.sense == .maximize && value.isAppOfArity ``OrderDual 1 then value.getArg! 0
     else value
   let pairType? ← expectedValue?.mapM fun value => mkAppM ``Prod #[value, mkSort Level.zero]
-  withLocalDeclD `point domain fun point => do
-    let projections ← decisionProjections point view.binders.size
-    withLocalDeclsDND declarations fun binders => do
-      let pair ← `(($objective, ($feasible : Prop)))
-      let pair ← liftMacroM <| view.wrapDefinitions pair
-      let pair ← elabTerm pair pairType?
-      synthesizeSyntheticMVarsNoPostponing
-      let pair ← instantiateMVars pair
-      let definitions ← inferredDefinitionTypes view.definitions.toList pair
-      let (objective, feasible) ← splitModelPair pair
+  withLocalDeclsDND declarations fun binders => do
+    let pair ← `(($objective, ($feasible : Prop)))
+    let pair ← liftMacroM <| view.wrapDefinitions pair
+    let pair ← elabTerm pair pairType?
+    synthesizeSyntheticMVarsNoPostponing
+    let pair ← instantiateMVars pair
+    let definitions ← inferredDefinitionTypes view.definitions.toList pair
+    let (objective, feasible) ← splitModelPair pair
+    -- The bodies can infer decision types even without an expected Problem
+    -- type. Build checked projections only after those types are resolved.
+    let domain ← instantiateMVars domain
+    withLocalDeclD `point domain fun point => do
+      let projections ← decisionProjections point view.binders.size
       let objective ← mkLambdaFVars #[point] (objective.replaceFVars binders projections)
       let feasible ← mkLambdaFVars #[point] (feasible.replaceFVars binders projections)
       let .forallE _ _ valueType _ ← whnf (← inferType objective)
