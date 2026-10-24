@@ -1,3 +1,8 @@
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+
 import Morew.Elab.Conic.Automatic
 import Morew.Elab.Conic.Rewrite
 import Morew.Reformulation.Presentation

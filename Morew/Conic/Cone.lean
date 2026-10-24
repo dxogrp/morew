@@ -1,3 +1,8 @@
+/-
+Copyright 2026 Hao Zhu
+SPDX-License-Identifier: Apache-2.0
+-/
+
 import Mathlib.Algebra.Order.Pi
 import Mathlib.Analysis.Normed.Module.Basic
 import Mathlib.Geometry.Convex.Cone.Basic
