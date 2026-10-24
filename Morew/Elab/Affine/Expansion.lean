@@ -290,7 +290,11 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       let body ← visit (body.instantiate1 binding) reduce bounds depth
       return .letE name type value (body.abstract #[binding]) nondep
   | .proj name index value =>
-    return .proj name index (← visit value reduce bounds depth)
+    let rebuilt := Expr.proj name index (← visit value reduce bounds depth)
+    let reduced ← reduceChecked rebuilt reduce bounds
+    -- Expanding the tuple can expose a function or another helper at its field.
+    if reduced != rebuilt then return ← visit reduced reduce bounds depth
+    return rebuilt
   | _ => pure ()
   let head := expression.getAppFn
   let arguments := expression.getAppArgs
@@ -324,8 +328,14 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   -- constant heads remain boundaries, including predicates and native atoms.
   if !head.isConst then
     if let .app function argument := expression then
-      return mkApp (← visit function reduce bounds depth)
+      let rebuilt := mkApp (← visit function reduce bounds depth)
         (← visit argument reduce bounds depth)
+      -- Child expansion can expose a beta redex, including through a projection.
+      -- Charge its substitution before constructing the result, then visit any
+      -- helpers that become applicable only after that substitution.
+      let reduced ← reduceChecked rebuilt reduce bounds
+      if reduced != rebuilt then return ← visit reduced reduce bounds depth
+      return rebuilt
   return expression
 
 /-- Prepare one source expression with one shared budget. The supplied reducer
