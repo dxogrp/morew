@@ -252,6 +252,35 @@ private def preserveDefinitionExpressions (state : ReformState)
           return (← isProof definition) ||
             (← Morew.Elab.Affine.depends binders[binderIndex]! (← inferType definition))
 
+/-- Check a proposed simplified definition block before retaining it. Fixed
+data types can contain proof fields whose propositions change when an earlier
+field or a subtype predicate is simplified. Elaborating the complete block
+also checks dependencies between definitions without classifying every data
+type. The probe leaves no declarations, messages, or elaboration state behind. -/
+private def simplifiedDefinitionsCheck (state : ReformState) (binderIndex : Nat)
+    (newName : Name) (definitions : Array Morew.Syntax.DefinitionView) :
+    CommandElabM Bool :=
+  withTypedPresentation state fun presentation => do
+    let oldBinder := presentation.binders[binderIndex]!
+    let presentation := { presentation with
+      binders := presentation.binders.set! binderIndex { oldBinder with name := newName } }
+    let saved ← Term.saveState
+    try
+      withoutErrToSorry do
+        withPresentationBinders presentation fun _ _ =>
+          withViewDefinitions { state.view with definitions } fun bindings => do
+            let body ← mkLetFVars bindings (mkConst ``True) (usedLetOnly := false)
+            withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+              checkWithKernel body
+            pure !(← getThe Core.State).messages.hasErrors
+    catch exception =>
+      if exception.isInterrupt || exception.isMaxRecDepth || exception.isMaxHeartbeat then
+        throw exception
+      pure false
+    finally
+      saved.restore (restoreInfo := true)
+      setEnv saved.meta.core.env
+
 private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))
@@ -292,14 +321,26 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let objective ← liftMacroM <|
     simplifyExpLog (replaceIdent state.view.objective oldBinder.name replacement)
   let preserveDefinitions ← preserveDefinitionExpressions state binderIndex
-  let definitions ← state.view.definitions.mapM fun definition => do
-    let transformDefinitionTerm (term : Lean.Syntax) : CommandElabM Lean.Syntax := do
-      let replaced := replaceIdent term oldBinder.name replacement
-      if preserveDefinitions then pure replaced else liftMacroM <| simplifyExpLog replaced
-    let value ← transformDefinitionTerm definition.value
-    let typeSyntax? ← definition.typeSyntax?.mapM transformDefinitionTerm
-    let inferredTypeSyntax? ← definition.inferredTypeSyntax?.mapM transformDefinitionTerm
-    pure { definition with value, typeSyntax?, inferredTypeSyntax? }
+  let substitutedDefinitions := state.view.definitions.map fun definition =>
+    let substitute := fun term => replaceIdent term oldBinder.name replacement
+    { definition with
+      value := substitute definition.value
+      typeSyntax? := definition.typeSyntax?.map substitute
+      inferredTypeSyntax? := definition.inferredTypeSyntax?.map substitute }
+  let definitions ← if preserveDefinitions || substitutedDefinitions.isEmpty then
+      pure substitutedDefinitions
+    else do
+      let simplified ← substitutedDefinitions.mapM fun definition => do
+        let simplify (term : Lean.Syntax) : CommandElabM Lean.Syntax :=
+          liftMacroM <| simplifyExpLog term
+        let value ← simplify definition.value
+        let typeSyntax? ← definition.typeSyntax?.mapM simplify
+        let inferredTypeSyntax? ← definition.inferredTypeSyntax?.mapM simplify
+        pure { definition with value, typeSyntax?, inferredTypeSyntax? }
+      if ← simplifiedDefinitionsCheck state binderIndex scopedNewName simplified then
+        pure simplified
+      else
+        pure substitutedDefinitions
   let mut constraints : Array Morew.Syntax.ConstraintView := #[]
   let mut removedConstraintNames := state.removedConstraintNames
   for index in [:state.view.constraints.size] do

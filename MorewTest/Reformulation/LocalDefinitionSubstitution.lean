@@ -159,6 +159,66 @@ example : Conic.Form proofConic := proofConic.conicForm
 example : proofConic.conicForm.data.toProblem = proofConic :=
   proofConic.conicForm.represents
 
+def fixedSubtypeSource :=
+  problem (x : ℝ)
+    let certified : { y : ℝ // Real.log (Real.exp y) = y } := ⟨x, Real.log_exp x⟩
+    minimize Real.log certified.val
+    subject to
+      positive : 0 < x
+
+-- This is data with a fixed type, not a proof-valued definition or a type
+-- depending on x. Simplifying its predicate would invalidate its proof field.
+reformulation fixedSubtypeTarget : fixedSubtypeSource := by
+  substitute x := Real.exp u
+
+example : GlobalEquivalence fixedSubtypeSource fixedSubtypeTarget :=
+  fixedSubtypeTarget.equivalence
+example (u : ℝ) : fixedSubtypeTarget.objective u = u := by
+  simp [fixedSubtypeTarget]
+example (u : ℝ) : fixedSubtypeTarget.feasible u := by
+  simp [fixedSubtypeTarget]
+
+/--
+info: problem (u : ℝ)
+  let certified : { y // Real.log (Real.exp y) = y } := ⟨Real.exp u, ⋯⟩
+  minimize Real.log (↑certified : ℝ)
+-/
+#guard_msgs in
+#printp fixedSubtypeTarget
+
+structure EqualPair where
+  left : ℝ
+  right : ℝ
+  equal : left = right
+
+def fixedRecordSource :=
+  problem (x : ℝ)
+    let certified : EqualPair := ⟨Real.log (Real.exp x), x, Real.log_exp x⟩
+    minimize Real.log certified.left
+    subject to
+      positive : 0 < x
+
+-- The record's type does not change at all, but simplifying its first field
+-- also changes the expected type of the stored equality proof.
+reformulation fixedRecordTarget : fixedRecordSource := by
+  substitute x := Real.exp u
+
+example : GlobalEquivalence fixedRecordSource fixedRecordTarget :=
+  fixedRecordTarget.equivalence
+example (u : ℝ) : fixedRecordTarget.objective u = u := by
+  simp [fixedRecordTarget]
+
+reformulation fixedSubtypeConic : fixedSubtypeSource := by
+  substitute x := Real.exp u
+  epigraph t
+  conic
+
+example : GlobalEquivalence fixedSubtypeSource fixedSubtypeConic :=
+  fixedSubtypeConic.equivalence
+example : Conic.Form fixedSubtypeConic := fixedSubtypeConic.conicForm
+example : fixedSubtypeConic.conicForm.data.toProblem = fixedSubtypeConic :=
+  fixedSubtypeConic.conicForm.represents
+
 /-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : source := by
