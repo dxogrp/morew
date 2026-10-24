@@ -7,19 +7,32 @@ import Morew.Elab.Conic.Polyhedral
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Exponential
 import MorewTest.Affine.HelperFixtures
+import MorewTest.Affine.Support
 import Lean.Meta.Tactic.AuxLemma
 
 /-!
-# Helper-expansion failures at conic planning entry points
+# Helper-expansion retries and failures at conic planning entry points
 
 Budget failures return ordinary error results and roll back speculative evidence
-before a later, independent planning call succeeds.
+before a later, independent planning call succeeds. Hidden finite evidence also
+remains available when constructing a row after its coordinates have certified.
 -/
 
 namespace MorewTest.Conic.HelperLimits
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab MorewTest.Affine.HelperFixtures
+
+-- Each operand or coordinate map can certify using its own helper's finite
+-- evidence. Row construction then needs that evidence in the enclosing scope;
+-- its synthesis failure must trigger the same retry as an explicit error result.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  MorewTest.Affine.assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a b : ι → ℝ) => fun x : ι → ℝ => finiteDot e a x ≤ finiteDot e b x)) 4
+  MorewTest.Affine.assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
+    (a b : ι → ℝ) => fun x : ι → ℝ =>
+      (finiteDot e a x, (1 : ℝ), finiteDot e b x) ∈
+        Morew.Conic.Cone.exponential.carrier)) 4
 
 private inductive Planner where
   | polyhedral | secondOrder | exponential

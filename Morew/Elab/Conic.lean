@@ -365,7 +365,11 @@ def normalizeRow (predicate : Expr) (config : Affine.Config := {})
     (label? : Option Name := none) : MetaM (Except Affine.AffineError RowResult) :=
   Affine.withIsolatedMVars do
     try
-      let direct ← Affine.withIsolatedMVars <| normalizeRowCore predicate config label?
+      let direct ← Affine.withIsolatedMVars do
+        try
+          normalizeRowCore predicate config label?
+        catch error =>
+          return .error (← rowError predicate error.toMessageData label?)
       if let .ok result := direct then return .ok result
       if ← hasUnresolved predicate then return direct
       let instances ← Affine.helperFiniteInstances predicate
