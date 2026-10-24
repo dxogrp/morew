@@ -47,8 +47,20 @@ example (x t s : ℝ) : generatedLift.feasible ((x, t), s) ↔
       LocalDefinitions.Defined.External.score 4 x ≤ t) ∧
         LocalDefinitions.Defined.External.score 4 x ≤ s := Iff.rfl
 
+-- Generated decision names remain usable after importing an applied family.
+reformulation generatedObjective : (LocalDefinitions.Defined.generated 4) := by
+  epigraph s at (t)
+
+example : GlobalEquivalence (LocalDefinitions.Defined.generated 4) generatedObjective :=
+  generatedObjective.equivalence
+example (x t s : ℝ) : generatedObjective.objective ((x, t), s) = s := rfl
+example (x t s : ℝ) : generatedObjective.feasible ((x, t), s) ↔
+    LocalDefinitions.Defined.External.score 4 x ≤ 10 ∧
+      (LocalDefinitions.Defined.External.score 4 x +
+        LocalDefinitions.Defined.External.score 4 x ≤ t) ∧ t ≤ s := Iff.rfl
+
 run_cmd do
-  for name in #[``constraintLift, ``objectiveLift, ``generatedLift] do
+  for name in #[``constraintLift, ``objectiveLift, ``generatedLift, ``generatedObjective] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) name
       | Lean.throwError "occurrence lift lost imported local definitions"
     unless view.definitions.map (·.name.eraseMacroScopes) == #[`loss, `same, `total, `unused] do

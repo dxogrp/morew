@@ -61,6 +61,7 @@ import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
+import MorewTest.Reformulation.OccurrenceGeneratedNames
 import MorewTest.Reformulation.OccurrenceGeneric
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
