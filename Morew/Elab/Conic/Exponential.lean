@@ -245,7 +245,7 @@ private def withRowDiagnostics {α : Type} (source : Expr) (action : MetaM α) :
   catch error =>
     throwError "exponential rewrite was not certified for {source}: {error.toMessageData}"
 
-private def planCore (source : Expr) (retained : Array Expr)
+private def planCoreDirect (source : Expr) (retained : Array Expr)
     (config : Affine.Config) (preferLog : Bool) (selected? : Option Rule := none) :
     MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
@@ -288,6 +288,13 @@ private def planCore (source : Expr) (retained : Array Expr)
       return .ok result
     catch error =>
       return .error { expression := source, reason := ← addMessageContext error.toMessageData }
+
+private def planCore (source : Expr) (retained : Array Expr)
+    (config : Affine.Config) (preferLog : Bool) (selected? : Option Rule := none) :
+    MetaM (Except Affine.AffineError Plan.Prepared) :=
+  Affine.withIsolatedMVars do
+    Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained)
+      (planCoreDirect source retained config preferLog selected?)
 
 /-- Certify an exponential replacement, using only the supplied retained entries
 for decision-dependent domains. The selected row must be excluded from them.

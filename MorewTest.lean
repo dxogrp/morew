@@ -22,6 +22,7 @@ import MorewTest.Conic.ExponentialCone
 import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
+import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Rewrite

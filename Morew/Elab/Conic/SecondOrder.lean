@@ -165,7 +165,7 @@ private def automaticProof (point body : Expr) (retained : Array Expr)
 
 /-- Certify one native upper bound under exactly the supplied retained rows.
 The selected predicate must not be included among `retained`. -/
-def plan (source : Expr) (retained : Array Expr := #[])
+private def planDirect (source : Expr) (retained : Array Expr := #[])
     (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
@@ -195,6 +195,14 @@ def plan (source : Expr) (retained : Array Expr := #[])
       return .ok result
     catch error =>
       return .error { expression := source, reason := ← addMessageContext error.toMessageData }
+
+/-- Certify a native second-order row with bounded discovery of hidden finite
+evidence. Neither the selected row nor retained predicates are unfolded. -/
+def plan (source : Expr) (retained : Array Expr := #[])
+    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
+  Affine.withIsolatedMVars do
+    Plan.withHelperFiniteInstances Plan.ContextualResult.replaceFVars (#[source] ++ retained)
+      (planDirect source retained config)
 
 /-- Use the ordinary exact-lift path when the checked proof does not use the
 retained rows. This keeps unconditional certificates small in long scripts;

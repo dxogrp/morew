@@ -87,19 +87,52 @@ def withScopedFiniteInstances {α : Type}
       let result ← withScopedFiniteInstances replace rest action
       return replace result #[binding] #[inst]
 
+/-- Retry a failed certificate with safe finite evidence exposed by helpers.
+Direct recognition keeps its original fast path; speculative declarations and
+metavariables are discarded before retrying the unchanged source predicates. -/
+def withHelperFiniteInstances {α : Type}
+    (replace : α → Array Expr → Array Expr → α)
+    (sources : Array Expr)
+    (action : MetaM (Except Affine.AffineError α)) :
+    MetaM (Except Affine.AffineError α) := Affine.withIsolatedMVars do
+  let failure (error : Exception) : MetaM (Except Affine.AffineError α) := do
+    return Except.error ({
+      expression := sources[0]?.getD (mkConst ``True)
+      reason := ← addMessageContext error.toMessageData } : Affine.AffineError)
+  try
+    let replaceResult := fun result oldVars newVars =>
+      result.map (fun value => replace value oldVars newVars)
+    let direct ← Affine.withIsolatedMVars do
+      try action catch error => failure error
+    if let .ok result := direct then return .ok result
+    let mut additional := #[]
+    for source in sources do
+      for inst in ← Affine.helperFiniteInstances source do
+        unless additional.contains inst do
+          additional := additional.push inst
+    if additional.isEmpty then return direct
+    withScopedFiniteInstances replaceResult additional.toList action
+  catch error => failure error
+
 /-- Retain finite-index evidence from the entire presentation while constructing
 certificates. A row can carry the only explicit indexing instance needed by the
 objective or another row. Duplicate proofs are scoped once, and all temporary
 bindings are substituted through the completed result before leaving scope. -/
 def withPresentationFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
-    (presentation : Reformulation.PresentationState) (action : MetaM α) : MetaM α := do
+    (presentation : Reformulation.PresentationState)
+    (action : MetaM (Except Affine.AffineError α)) :
+    MetaM (Except Affine.AffineError α) := do
   let mut instances := #[]
-  for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
+  let sources := #[presentation.objective] ++ presentation.constraints.map (·.predicate)
+  for source in sources do
     for inst in ← Affine.sourceFiniteInstances source do
       unless instances.contains inst do
         instances := instances.push inst
-  withScopedFiniteInstances replace instances.toList action
+  withHelperFiniteInstances replace sources do
+    withScopedFiniteInstances
+      (fun result oldVars newVars => result.map (fun value => replace value oldVars newVars))
+      instances.toList action
 
 /-- Retain independent source lets throughout certificate construction. -/
 partial def withScopedEvidence {α : Type}
@@ -265,8 +298,13 @@ private def finishCore (source domain lift : Expr) (config : Affine.Config) : Me
 /-- Split and certify every row of an exact lift. -/
 def finish (source domain lift : Expr) (config : Affine.Config) : MetaM Result := do
   let target ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
-  withFiniteInstances (← Affine.sourceFiniteInstances target).toList do
-    finishCore source domain lift config
+  let result ← withHelperFiniteInstances Result.replaceFVars #[target] do
+    let result ← withFiniteInstances (← Affine.sourceFiniteInstances target).toList do
+      finishCore source domain lift config
+    return .ok result
+  match result with
+  | .ok result => return result
+  | .error error => throwError error.reason
 
 /-- Discard unused retained assumptions while reusing the already certified rows.
 An unconditional same-domain proof becomes an ordinary exact lift; otherwise
@@ -301,7 +339,8 @@ def prepareContextual (source : Expr) (retained : Array Expr)
 /-- Plan one entire selected predicate. A supplied record bypasses automatic
 operation matching, but every resulting row still undergoes affine checking.
 Caller metavariables and the environment are restored on failure. -/
-def plan (automaticLift : Expr → Expr → MetaM Expr) (sourcePredicate : Expr) (rule? : Option Expr := none)
+private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
+    (sourcePredicate : Expr) (rule? : Option Expr := none)
     (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
@@ -321,5 +360,14 @@ def plan (automaticLift : Expr → Expr → MetaM Expr) (sourcePredicate : Expr)
         expression := sourcePredicate
         reason := ← addMessageContext error.toMessageData
       }
+
+/-- Certify a selected predicate, exposing finite evidence from helpers only if
+the direct attempt fails. Matching always uses the original predicate. -/
+def plan (automaticLift : Expr → Expr → MetaM Expr) (sourcePredicate : Expr)
+    (rule? : Option Expr := none) (config : Affine.Config := {}) :
+    MetaM (Except Affine.AffineError Result) :=
+  Affine.withIsolatedMVars do
+    withHelperFiniteInstances Result.replaceFVars #[sourcePredicate]
+      (planDirect automaticLift sourcePredicate rule? config)
 
 end Morew.Elab.Conic.Plan

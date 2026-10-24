@@ -212,13 +212,15 @@ def prepareConic (state : ReformState) (step : Syntax)
         | exception => throw exception
     let predicate := presentation.constraints[index]!.predicate
     let result : Except Morew.Elab.Affine.AffineError Prepared ←
-      if rule?.isSome then do
-        let result ← Morew.Elab.Conic.Polyhedral.plan predicate rule?
-        pure (result.map Sum.inl)
-      else do
-        let retained := presentation.constraints.extract 0 index ++
-          presentation.constraints.extract (index + 1) presentation.constraints.size
-        Morew.Elab.Conic.Automatic.planFirst predicate (retained.map (·.predicate))
+      Morew.Elab.Conic.Plan.withPresentationFiniteInstances
+        Morew.Elab.Conic.Plan.Prepared.replaceFVars presentation do
+        if rule?.isSome then do
+          let result ← Morew.Elab.Conic.Polyhedral.plan predicate rule?
+          pure (result.map Sum.inl)
+        else do
+          let retained := presentation.constraints.extract 0 index ++
+            presentation.constraints.extract (index + 1) presentation.constraints.size
+          Morew.Elab.Conic.Automatic.planFirst predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"
