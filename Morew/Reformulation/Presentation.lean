@@ -398,6 +398,8 @@ def delabPresentationTerm (expression : Expr)
         |>.setBool `pp.deepTerms true |>.setBool `pp.explicit true
         |>.setBool `pp.funBinderTypes true |>.setBool `pp.numericTypes true
         |>.setBool `pp.structureInstanceTypes true |>.setBool `pp.fieldNotation false
+        -- Omitting a field equal to its default can erase direct occurrences.
+        |>.setBool `pp.structureInstances.defaults true
       else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
