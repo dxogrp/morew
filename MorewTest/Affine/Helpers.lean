@@ -22,6 +22,35 @@ open Morew.Elab.Affine MorewTest.Affine HelperFixtures Matrix
 noncomputable def customAffine (x : ℝ) : ℝ := 2 * x + 1
 noncomputable abbrev customAlias (x : ℝ) : ℝ := 2 * x
 
+private opaque coefficientProblem : Morew.Problem ℝ ℝ := ⟨id, fun _ => True⟩
+
+@[irreducible] private def sealedCoefficientProblem : Morew.Problem ℝ ℝ :=
+  ⟨id, fun _ => True⟩
+
+private noncomputable def evidenceProblem (c : ℝ) (h : c ≠ 0 ∧ True) :
+    Morew.Problem ℝ ℝ :=
+  let _nonzero : c ≠ 0 := h.1
+  ⟨fun x => x / c, fun _ => True⟩
+
+private noncomputable def evidenceObjective (c : ℝ) (h : c ≠ 0 ∧ True) : ℝ → ℝ :=
+  (evidenceProblem c h).objective
+
+private noncomputable def finiteProblem {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
+    Morew.Problem (ι → ℝ) ℝ :=
+  letI := Fintype.ofEquiv (Fin 2) e
+  ⟨fun x => dotProduct a x, fun _ => True⟩
+
+private noncomputable def finiteObjective {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
+    (ι → ℝ) → ℝ := (finiteProblem e a).objective
+
+private noncomputable def finiteProofProblem {ι : Type} (h : Finite ι ∧ True) (i : ι) :
+    Morew.Problem (ι → ℝ) ℝ :=
+  let _finite : Finite ι := h.1
+  ⟨fun x => x i + 1, fun _ => True⟩
+
+private noncomputable def finiteProofObjective {ι : Type} (h : Finite ι ∧ True) (i : ι) :
+    (ι → ℝ) → ℝ := (finiteProofProblem h i).objective
+
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ => customAffine x))
   assertAffine (← `(fun x : ℝ => customAlias x))
@@ -98,6 +127,23 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun x : ι → ℝ => x i ≤ finiteDot e a x)) 4
   assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) (i : ι) =>
     fun x : ι → ℝ => finiteDot e a x ≤ x i)) 4
+
+/-! Bounded container selection retains proof/instance lets and independent
+coefficients whose containers cannot be unfolded. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun p : Morew.Problem ℝ ℝ => fun x : ℝ =>
+    cost 2 1 x + p.objective 0)) 1
+  assertAffine (← `(fun x : ℝ => cost 2 1 x + coefficientProblem.objective 0))
+  assertAffine (← `(fun x : ℝ => cost 2 1 x + sealedCoefficientProblem.objective 0))
+  assertAffine (← `(fun (b : Bool) (p q : Morew.Problem ℝ ℝ) => fun x : ℝ =>
+    cost 2 1 x + (if b then p else q).objective 0)) 3
+  assertAffine (← `(fun c : ℝ => fun h : c ≠ 0 ∧ True => fun x : ℝ =>
+    evidenceObjective c h x)) 2
+  assertAffine (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) => fun x : ι → ℝ =>
+    finiteObjective e a x)) 3
+  assertAffine (← `(fun (ι : Type) (h : Finite ι ∧ True) (i : ι) => fun x : ι → ℝ =>
+    finiteProofObjective h i x)) 3
 
 /-! Expansion exposes the unsupported expression without crossing native boundaries. -/
 

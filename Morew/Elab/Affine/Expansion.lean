@@ -199,6 +199,67 @@ private def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Limits)
     exhausted (state.helper?.getD value) `morew.affine.maxExpansionNodes bounds.nodes
   modify fun state => { state with nodes := state.nodes + cost }
 
+-- Ordinary helpers and helpers exposing a problem container use the same
+-- eligibility, cache, and pre-substitution accounting.
+private def unfoldHelper (expression : Expr) (helper : Helper) (bounds : Limits)
+    (depth : Nat) : ExpandM Expr := do
+  if depth ≥ bounds.depth then
+    exhausted expression `morew.affine.maxExpansionDepth bounds.depth
+  let state ← get
+  if state.steps ≥ bounds.steps then
+    exhausted expression `morew.affine.maxExpansionSteps bounds.steps
+  let arguments := expression.getAppArgs
+  let cost := applicationSize helper.value arguments (bounds.nodes - state.nodes)
+  if cost > bounds.nodes - state.nodes then
+    exhausted expression `morew.affine.maxExpansionNodes bounds.nodes
+  let expanded := match state.cache[expression]? with
+    | some expanded => expanded
+    | none =>
+      let value := helper.value.instantiateLevelParams helper.levelParams helper.levels
+      value.beta arguments
+  modify fun state => { state with
+    steps := state.steps + 1
+    nodes := state.nodes + cost
+    cache := state.cache.insert expression expanded
+    helper? := some expression }
+  return expanded
+
+-- Preserve blocked field selections without leaving named inner projections
+-- for the downstream structural reducer to open through unrestricted whnf.
+private partial def rawProblemProjections (source : Expr) : Expr :=
+  source.replace fun expression =>
+    let head := expression.getAppFn
+    let arguments := expression.getAppArgs
+    if (head.isConstOf ``Morew.Problem.objective ||
+        head.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
+      let index := if head.isConstOf ``Morew.Problem.objective then 0 else 1
+      some (mkAppN (.proj ``Morew.Problem index (rawProblemProjections arguments[2]!))
+        ((arguments.extract 3 arguments.size).map rawProblemProjections))
+    else none
+
+-- Expose a container by opening exactly one eligible helper along its head.
+-- Rebuilding projections/applications lets visit keep the increased depth for
+-- the entire field selection, without traversing unused constructor fields.
+private partial def unfoldContainer? (expression : Expr) (bounds : Limits)
+    (depth : Nat) : ExpandM (Option Expr) := do
+  if let some helper ← helperValue? expression then
+    return some (← unfoldHelper expression helper bounds depth)
+  let head := expression.getAppFn
+  let arguments := expression.getAppArgs
+  if (head.isConstOf ``Morew.Problem.objective ||
+      head.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
+    return (← unfoldContainer? arguments[2]! bounds depth).map fun container =>
+      mkAppN head (arguments.set! 2 container)
+  match expression with
+  | .fvar _ => return none
+  | .proj name index value =>
+    return (← unfoldContainer? value bounds depth).map (.proj name index ·)
+  | .app function argument =>
+    if !expression.getAppFn.isConst then
+      return (← unfoldContainer? function bounds depth).map (mkApp · argument)
+  | _ => pure ()
+  return none
+
 -- A helper can expose a higher-order beta redex, for example
 -- `apply (fun x => x + x) largeArgument`. Check that substitution as well as
 -- the initial delta-beta step; otherwise its duplicated arguments evade the
@@ -260,14 +321,18 @@ private partial def reduceChecked (source : Expr) (reduce : Expr → Bool → Me
         reduce bounds
     if (function.isConstOf ``Morew.Problem.objective ||
         function.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
-      -- Match the existing container-field reduction even after earlier
-      -- branches have expanded helpers. Visit the selected function so its
-      -- beta reductions and helper applications still consume this budget.
-      let problem ← whnf arguments[2]!
-      if problem.isAppOf ``Morew.Problem.mk then
+      -- Select only an exposed constructor. Named container definitions must
+      -- go through bounded helper unfolding in visit, never unrestricted whnf.
+      let problem ← reduceChecked arguments[2]! reduce bounds
+      if let .letE name type value body nondep := problem then
+        -- Keep container-local proofs and instances in scope around the field.
+        let inner := (arguments.map (·.liftLooseBVars 0 1)).set! 2 body
+        return .letE name type value (mkAppN function inner) nondep
+      if problem.isAppOfArity ``Morew.Problem.mk 4 then
         let index := if function.isConstOf ``Morew.Problem.objective then 2 else 3
         return ← reduceChecked (mkAppN problem.getAppArgs[index]!
           (arguments.extract 3 arguments.size)) reduce bounds
+      return mkAppN function (arguments.set! 2 problem)
     return mkAppN function arguments
   | _ => return expression
 
@@ -285,7 +350,10 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       return .forallE name type (body.abstract #[binding]) info
   | .letE name type value body nondep =>
     -- Evidence and instances must stay in scope, including unused proof lets.
-    let value ← if (← isProp type) || (← isClass? type).isSome then pure value
+    -- A container's selected field must be visited inside the depth of the
+    -- helper that produces it, even when the container has a local name.
+    let isContainer := (← whnf type).isAppOfArity ``Morew.Problem 2
+    let value ← if (← isProp type) || (← isClass? type).isSome || isContainer then pure value
       else visit value reduce bounds depth
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let body ← visit (body.instantiate1 binding) reduce bounds depth
@@ -305,25 +373,18 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       for i in [first:arguments.size] do
         expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
       return mkAppN head expanded
+  if (head.isConstOf ``Morew.Problem.objective ||
+      head.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
+    if let some expanded ← unfoldContainer? arguments[2]! bounds depth then
+      -- Revisit the whole projection at the increased depth so helpers in the
+      -- selected field remain nested under the container's unfolding.
+      return ← visit (mkAppN head (arguments.set! 2 expanded)) reduce bounds (depth + 1)
+    -- A blocked container can still supply a decision-independent coefficient.
+    -- Keep an equivalent raw projection: the downstream structural reducer
+    -- must not reopen this named field with an unrestricted container whnf.
+    return rawProblemProjections expression
   if let some helper ← helperValue? expression then
-    if depth ≥ bounds.depth then
-      exhausted expression `morew.affine.maxExpansionDepth bounds.depth
-    let state ← get
-    if state.steps ≥ bounds.steps then
-      exhausted expression `morew.affine.maxExpansionSteps bounds.steps
-    let cost := applicationSize helper.value arguments (bounds.nodes - state.nodes)
-    if cost > bounds.nodes - state.nodes then
-      exhausted expression `morew.affine.maxExpansionNodes bounds.nodes
-    let expanded := match state.cache[expression]? with
-      | some expanded => expanded
-      | none =>
-        let value := helper.value.instantiateLevelParams helper.levelParams helper.levels
-        value.beta arguments
-    modify fun state => { state with
-      steps := state.steps + 1
-      nodes := state.nodes + cost
-      cache := state.cache.insert expression expanded
-      helper? := some expression }
+    let expanded ← unfoldHelper expression helper bounds depth
     return ← visit expanded reduce bounds (depth + 1)
   -- An applied local vector or lambda may contain helper expressions. Unknown
   -- constant heads remain boundaries, including predicates and native atoms.

@@ -32,6 +32,45 @@ private noncomputable def projectedDuplicate : (ℝ → ℝ) × ℝ :=
 private noncomputable def projectedApply : ((ℝ → ℝ) → ℝ → ℝ) × ℝ :=
   ((fun f y => f y), 0)
 
+private noncomputable def problemDuplicate (f : Fin 2 → ℝ) :
+    Morew.Problem (Fin 2) ℝ :=
+  ⟨f + f + f + f, fun _ => True⟩
+
+private noncomputable def projectedProblemDuplicate (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  (problemDuplicate f).objective
+
+private noncomputable def pairedProblemDuplicate (f : Fin 2 → ℝ) :
+    Morew.Problem (Fin 2) ℝ × Unit :=
+  (problemDuplicate f, ())
+
+private noncomputable def projectedPairedProblemDuplicate (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  (pairedProblemDuplicate f).1.objective
+
+private noncomputable def problemWithOtherHelpers (f : Fin 2 → ℝ) :
+    Morew.Problem (Fin 2) ℝ :=
+  ⟨f, fun i => nestedCost 2 1 (f i) ≤ 0⟩
+
+private noncomputable def projectedProblemObjective (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  (problemWithOtherHelpers f).objective
+
+private noncomputable def problemWithSelectedHelper (f : Fin 2 → ℝ) :
+    Morew.Problem (Fin 2) ℝ :=
+  ⟨fun i => cost 2 1 (f i), fun _ => True⟩
+
+private noncomputable def projectedProblemHelper (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  (problemWithSelectedHelper f).objective
+
+private noncomputable def letProjectedProblemHelper (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  let problem := problemWithSelectedHelper f
+  problem.objective
+
+private noncomputable def problemReturningProblem (f : Fin 2 → ℝ) :
+    Morew.Problem Unit (Morew.Problem (Fin 2) ℝ) :=
+  ⟨fun _ => problemDuplicate f, fun _ => True⟩
+
+private noncomputable def projectedNestedProblemDuplicate (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  ((problemReturningProblem f).objective ()).objective
+
 private def assertLimit (term : TSyntax `term) (kind : String) : TermElabM Unit := do
   let expression ← elaborate term
   match ← reifyAffine expression with
@@ -155,6 +194,59 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ =>
     ((fun y : ℝ => y + y + y + y), (0 : ℝ)).1
       (x + x + x + x + x + x + x + x)))
+
+/-! A helper can expose a problem projection whose container expands into a
+large native objective. Opening that container must consume the same budget. -/
+
+set_option morew.affine.maxExpansionNodes 100 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let term ← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x)
+  unless (← elaborate term).sizeWithoutSharing < 100 do
+    throwError "problem projection regression no longer starts below the node limit"
+  assertLimit term "node"
+  assertLimit (← `(fun x : Fin 2 → ℝ => projectedNestedProblemDuplicate x)) "node"
+
+set_option morew.affine.maxExpansionNodes 1000 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let term ← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x)
+  let source ← elaborate term
+  let prepared ← Expansion.prepare source fun expression preserve =>
+    reduceStructure expression preserve
+  unless prepared.expression.sizeWithoutSharing > 100 do
+    throwError "problem projection regression no longer expands beyond the smaller limit"
+  assertAffine term
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedPairedProblemDuplicate x))
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedNestedProblemDuplicate x))
+
+set_option morew.affine.maxExpansionDepth 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x)) "depth"
+
+set_option morew.affine.maxExpansionDepth 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x))
+  assertLimit (← `(fun x : Fin 2 → ℝ => projectedProblemHelper x)) "depth"
+  assertLimit (← `(fun x : Fin 2 → ℝ => letProjectedProblemHelper x)) "depth"
+
+set_option morew.affine.maxExpansionDepth 3 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedProblemHelper x))
+  assertAffine (← `(fun x : Fin 2 → ℝ => letProjectedProblemHelper x))
+
+set_option morew.affine.maxExpansionSteps 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x)) "step"
+
+set_option morew.affine.maxExpansionSteps 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x))
+  -- Helpers in the unselected feasible field do not consume expansion steps.
+  assertAffine (← `(fun x : Fin 2 → ℝ => projectedProblemObjective x))
+
+-- Existing direct problem projections still certify without helper expansion.
+set_option morew.affine.maxExpansionNodes 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : Fin 2 → ℝ => (problemDuplicate x).objective))
 
 /-! A failed attempt must not consume the budget of a later independent call. -/
 
