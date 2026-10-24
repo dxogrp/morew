@@ -32,6 +32,9 @@ private noncomputable def projectedDuplicate : (ℝ → ℝ) × ℝ :=
 private noncomputable def projectedApply : ((ℝ → ℝ) → ℝ → ℝ) × ℝ :=
   ((fun f y => f y), 0)
 
+private noncomputable def projectedPartialAdd (x : ℝ) : (ℝ → ℝ) × ℝ :=
+  (HAdd.hAdd (shift x), 0)
+
 private noncomputable def ignoredThroughHelper (x : ℝ) : ℝ := ignored x
 
 private noncomputable def problemDuplicate (f : Fin 2 → ℝ) :
@@ -204,6 +207,36 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ =>
     ((fun y : ℝ => y + y + y + y), (0 : ℝ)).1
       (x + x + x + x + x + x + x + x)))
+
+/-! A projected partial native operation retains the depth and shared step
+budget of the helper nested in its already supplied operand. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : ℝ => (projectedPartialAdd x).1 x))
+
+set_option morew.affine.maxExpansionDepth 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun x : ℝ => (projectedPartialAdd x).1 x)) "depth"
+
+set_option morew.affine.maxExpansionDepth 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : ℝ => (projectedPartialAdd x).1 x))
+
+set_option morew.affine.maxExpansionSteps 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun x : ℝ => (projectedPartialAdd x).1 x)) "step"
+
+set_option morew.affine.maxExpansionSteps 2 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : ℝ => (projectedPartialAdd x).1 x))
+
+set_option morew.affine.maxExpansionNodes 40 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun x : ℝ => (projectedPartialAdd x).1 x)) "node"
+
+set_option morew.affine.maxExpansionNodes 128 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : ℝ => (projectedPartialAdd x).1 x))
 
 /-! Blocked problem containers still visit their trailing value arguments.
 Only those arguments consume helper budgets; the local container stays closed. -/

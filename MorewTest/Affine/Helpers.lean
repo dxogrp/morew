@@ -22,6 +22,21 @@ open Morew.Elab.Affine MorewTest.Affine HelperFixtures Matrix
 noncomputable def customAffine (x : ℝ) : ℝ := 2 * x + 1
 noncomputable abbrev customAlias (x : ℝ) : ℝ := 2 * x
 
+private noncomputable def partialAdd (x : ℝ) : ℝ → ℝ := HAdd.hAdd (shift x)
+
+private noncomputable def projectedPartialAdd (x : ℝ) : (ℝ → ℝ) × ℝ :=
+  (HAdd.hAdd (shift x), 0)
+
+private noncomputable def projectedPartialSub (x : ℝ) : ℝ × (ℝ → ℝ) :=
+  (0, HSub.hSub (shift x))
+
+private noncomputable def projectedPartialMul (x : ℝ) : (ℝ → ℝ) × ℝ :=
+  (HMul.hMul (constantFactor 2 x), 0)
+
+private noncomputable def projectedPartialVectorAdd (x : ℝ) :
+    ((Fin 2 → ℝ) → Fin 2 → ℝ) × ℝ :=
+  (HAdd.hAdd (vector x), 0)
+
 private opaque coefficientProblem : Morew.Problem ℝ ℝ := ⟨id, fun _ => True⟩
 
 @[irreducible] private def sealedCoefficientProblem : Morew.Problem ℝ ℝ :=
@@ -127,6 +142,17 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun x : ι → ℝ => x i ≤ finiteDot e a x)) 4
   assertRow (← `(fun (ι : Type) (e : Fin 2 ≃ ι) (a : ι → ℝ) (i : ι) =>
     fun x : ι → ℝ => finiteDot e a x ≤ x i)) 4
+
+/-! Helpers in supplied native operands are expanded before a tuple projection
+supplies the remaining operands, including a subsequent vector index. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun x : ℝ => partialAdd x x))
+  assertAffine (← `(fun x : ℝ => ((fun y => shift x + y), (0 : ℝ)).1 x))
+  assertAffine (← `(fun x : ℝ => (projectedPartialAdd x).1 x))
+  assertAffine (← `(fun x : ℝ => (projectedPartialSub x).2 x))
+  assertAffine (← `(fun x : ℝ => (projectedPartialMul x).1 x))
+  assertAffine (← `(fun x : ℝ => (projectedPartialVectorAdd x).1 ![x, -x] 0))
 
 /-! Bounded container selection retains proof/instance lets and independent
 coefficients whose containers cannot be unfolded. -/
