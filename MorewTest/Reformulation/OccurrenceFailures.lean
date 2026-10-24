@@ -21,6 +21,14 @@ private def assertAbsent (target aliasName : Lean.Name) :
   if (Morew.Syntax.getProblemView? env target).isSome then
     Lean.throwError "failed occurrence lift registered presentation metadata"
 
+elab "assert_occurrence_atomic% " nested:command : command => do
+  let before ← Lean.getEnv
+  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  let after ← Lean.getEnv
+  for (name, _) in after.constants.toList do
+    unless before.contains name do
+      Lean.throwError m!"failed occurrence lift leaked declaration {name}"
+
 def source :=
   problem (x : ℝ)
     let loss := x ^ 2
@@ -165,6 +173,7 @@ reformulation mismatchedEvidence : source certificate mismatchedEvidenceAlias :=
 
 /-- error: constraint name `shared` already exists -/
 #guard_msgs in
+assert_occurrence_atomic%
 reformulation lateFailure : source certificate lateFailureAlias := by
   epigraph t at loss as shared
   epigraph s at penalty as shared

@@ -165,6 +165,47 @@ info: problem (x y a : ℝ)
 #guard_msgs in
 #printp constraintSplit
 
+def budgeted :=
+  problem (x y : ℝ)
+    let abs_y := |y|
+    minimize x ^ 2 + y
+    subject to
+      budget : |x| + y ^ 2 ≤ 10
+      bound : abs_y ≤ 5
+
+-- Keep this chain within Lean's default heartbeat budget. Re-elaborating each
+-- complete occurrence certificate used to exhaust that budget for this chain.
+reformulation budgetedConic : budgeted := by
+  epigraph a at (x ^ 2) as epi_sq_x
+  epigraph b at (|x|) in budget as magnitude_bound
+  epigraph c at (y ^ 2) in budget as square_bound
+  epigraph d at abs_y in bound as abs_bound
+  conic
+
+example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
+example : Conic.Form budgetedConic := budgetedConic.conicForm
+example : IsConic budgetedConic := budgetedConic.isConic
+example : budgetedConic.conicForm.data.rowCount = 8 := rfl
+example (x y a b c d : ℝ) :
+    budgetedConic.objective (((((x, y), a), b), c), d) = a + y := rfl
+
+/--
+info: problem (x y a b c d : ℝ)
+  let abs_y := |y|
+  minimize a + y
+  subject to
+    budget : b + c ≤ 10
+    bound : d ≤ 5
+    epi_sq_x_conic_1 : (a, 1 / 2, ![x]) ∈ RSOC 1
+    magnitude_bound_conic_1 : x ≤ b
+    magnitude_bound_conic_2 : -x ≤ b
+    square_bound_conic_1 : (c, 1 / 2, ![y]) ∈ RSOC 1
+    abs_bound_conic_1 : y ≤ d
+    abs_bound_conic_2 : -y ≤ d
+-/
+#guard_msgs in
+#printp budgetedConic
+
 def maximum :=
   problem (x : ℝ)
     let score := min x (2 * x)

@@ -328,6 +328,13 @@ private def materializeOccurrenceBound (state : ReformState)
     let primitive ← state.runner.liftEquivalence equivalence
     let primitive ← instantiateMVars primitive
     checkWithKernel primitive
+    -- Keep the checked certificate behind a constant so chained lifts do not
+    -- repeatedly elaborate its expanded proof. Section parameters are retained,
+    -- and the enclosing command transaction rolls it back if a later step fails.
+    let primitiveName ← mkAuxDeclName (kind := `_occurrenceCertificate)
+    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
+      (compile := false)
+    modifyEnv (addNoncomputable · primitiveName)
     let semantic ← exactExpressionSyntax target
     return {
       view := selected.view
