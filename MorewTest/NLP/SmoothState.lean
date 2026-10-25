@@ -346,16 +346,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 /-! Ambient analytic instances do not change the fixed native certificate. -/
 
-private def checkAmbient (term : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Unit := do
+private def checkAmbient (term : TSyntax `term) (parameterCount : Nat := 0)
+    (instanceType? : Option Expr := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
     let baseline ← checkSuccess source
     let baselineType ← inferType baseline
     let .forallE _ decision _ _ ← whnf (← inferType source)
       | throwError "ambient-instance control is not a function"
-    let groupType ← mkAppM ``NormedAddCommGroup #[decision]
+    let instanceType := instanceType?.getD decision
+    let groupType ← mkAppM ``NormedAddCommGroup #[instanceType]
     withLocalDecl `ambientGroup .instImplicit groupType fun ambientGroup => do
-      let spaceType ← mkAppM ``NormedSpace #[Lean.mkConst ``Real, decision]
+      let spaceType ← mkAppM ``NormedSpace #[Lean.mkConst ``Real, instanceType]
       withLocalDecl `ambientSpace .instImplicit spaceType fun ambientSpace => do
         let proof ← checkSuccess source
         if proof.containsFVar ambientGroup.fvarId! || proof.containsFVar ambientSpace.fvarId! then
@@ -379,5 +381,48 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "coordinate smoothness captured an unrelated finite enumeration"
     unless ← isDefEq (← inferType proof) baselineType do
       throwError "ambient enumeration changed coordinate smoothness"
+
+/-! Intermediate vectors need the same canonical enumeration even when their
+index type does not occur in the scalar decision or result space. -/
+
+private def checkIntermediateEnumeration (source indexType : Expr) : MetaM Unit := do
+  let baseline ← checkSuccess source
+  let baselineType ← inferType baseline
+  let finiteType ← mkAppM ``Fintype #[indexType]
+  withLocalDecl `ambientFintype .instImplicit finiteType fun ambient => do
+    let before ← getMCtx
+    let .ok proof ← certifyGlobal source
+      | throwError "an ambient enumeration prevented intermediate-vector certification"
+    checkUnchanged before
+    checkCertificate source proof
+    let proofType ← inferType proof
+    if proof.containsFVar ambient.fvarId! || proofType.containsFVar ambient.fvarId! then
+      throwError "intermediate-vector smoothness captured an ambient enumeration"
+    unless ← isDefEq proofType baselineType do
+      throwError "ambient enumeration changed the intermediate-vector certificate"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let indexType ← elaborate (← `(Fin 2))
+  for term in [
+    ← `(fun x : ℝ =>
+      (((fun _ : Fin 2 => x) + (fun _ => x)) : Fin 2 → ℝ) 0),
+    ← `(fun x : ℝ =>
+      (((fun (_ : Fin 2) (_ : Fin 2) => x) + (fun _ _ => x)) :
+        Fin 2 → Fin 2 → ℝ) 0 1),
+    ← `(fun x : ℝ =>
+      (((x, fun _ : Fin 2 => x) + (x, fun _ => x)) : ℝ × (Fin 2 → ℝ)).1)
+  ] do
+    checkIntermediateEnumeration (← elaborate term) indexType
+  let expression ← elaborate (← `(fun n : ℕ => fun i : Fin n => fun x : ℝ =>
+    (((fun _ : Fin n => x) + (fun _ => x)) : Fin n → ℝ) i))
+  lambdaBoundedTelescope expression 2 fun parameters source => do
+    checkIntermediateEnumeration source (← inferType parameters[1]!)
+  let componentType ← elaborate (← `(Fin 2 → ℝ))
+  checkAmbient (← `(fun x : ℝ =>
+    (((x, fun _ : Fin 2 => x) + (x, fun _ => x)) : ℝ × (Fin 2 → ℝ)).1))
+    0 (some componentType)
+  checkAmbient (← `(fun x : ℝ =>
+    (((fun _ : Fin 2 => x, x) + (fun _ => x, x)) : (Fin 2 → ℝ) × ℝ).2))
+    0 (some componentType)
 
 end MorewTest.NLP.Smooth

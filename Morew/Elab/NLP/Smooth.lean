@@ -148,10 +148,14 @@ private def reduceLocalStructure (point expression : Expr) : MetaM Expr := do
   Meta.transform expression (pre := step) (post := step)
 
 private def construct (point expression : Expr) (name : Name) (args : Array Expr)
-    (operands? : Option Nat := none) : CertifyM Expr := do
+    (operands? : Option Nat := none) (intermediateSpaces : Array Expr := #[]) : CertifyM Expr := do
   let proof ← try
     let valueType ← reduceLocalStructure point (← inferType expression)
-    Space.withCanonicalSpaces #[← inferType point, valueType] <|
+    let intermediateSpaces ←
+      (intermediateSpaces.mapM (reduceLocalStructure point) : MetaM (Array Expr))
+    -- Projections also need the operand's structures, even when its finite
+    -- index or unused product component is absent from the decision/result.
+    Space.withCanonicalSpaces (#[← inferType point, valueType] ++ intermediateSpaces) <|
       mkAppM name args
   catch exception =>
     reject expression .invalidInstance
@@ -189,6 +193,7 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
     let proof ← certifyBody point domain value
     let name := if index == 0 then ``Morew.NLP.Smooth.fst else ``Morew.NLP.Smooth.snd
     return ← construct point expression name #[← functionOf point value, proof]
+      (intermediateSpaces := #[← inferType value])
   if let .lam name index body info := expression then
     let index ← fixedArgument point index "the vector index type"
     let proof ← withLocalDecl name info index fun i => do
@@ -271,6 +276,7 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
       let proof ← certifyBody point domain vector
       return ← construct point expression ``Morew.NLP.Smooth.apply
         #[← functionOf point vector, index, proof]
+        (intermediateSpaces := #[vectorType])
   -- A supported scalar operand can carry a more precise obstruction than its
   -- enclosing unknown application. This inspection never unfolds that head.
   for argument in args do
