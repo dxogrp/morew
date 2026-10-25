@@ -97,6 +97,19 @@ run_cmd liftTermElabM do
   expectUnique (← `(fun p : ℝ × ℝ => Real.log (1 + Real.exp p.1) ≤ p.2)) 2
   expectUnique (← `(fun t : ℝ => Morew.Fn.relativeEntropy 0 2 ≤ t)) 1
 
+-- Recognizing additional smooth atoms must not register new conic rules.
+run_cmd liftTermElabM do
+  for term in #[← `(fun x : ℝ => Real.sin x ≤ 1),
+      ← `(fun x : ℝ => Real.cos x ≤ 1),
+      ← `(fun x : ℝ => Real.sinh x ≤ 1),
+      ← `(fun x : ℝ => Real.cosh x ≤ 1),
+      ← `(fun x : ℝ => Real.tanh x ≤ 1)] do
+    let source ← elaborate term
+    if ← Exponential.isCandidate source then
+      throwError "a smooth-only atom became an exponential cone candidate"
+    let .error _ ← Automatic.planUnique source
+      | throwError "a smooth-only atom acquired an automatic conic rule"
+
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1))
   let .error error ← Automatic.planUnique source

@@ -26,6 +26,8 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
+import Morew.Elab.NLP.Smooth
+import Morew.Elab.NLP.Space
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
@@ -35,6 +37,7 @@ import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP
 import Morew.NLP.Basic
+import Morew.NLP.Smooth
 import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic

@@ -20,6 +20,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAtom (← `(fun x : ℝ => Real.exp x)) .exp #[0]
   assertAtom (← `(fun x : ℝ => Real.log x)) .log #[0]
   assertAtom (← `(fun x : ℝ => Real.sqrt x)) .sqrt #[0]
+  assertAtom (← `(fun x : ℝ => Real.sin x)) .sin #[0]
+  assertAtom (← `(fun x : ℝ => Real.cos x)) .cos #[0]
+  assertAtom (← `(fun x : ℝ => Real.sinh x)) .sinh #[0]
+  assertAtom (← `(fun x : ℝ => Real.cosh x)) .cosh #[0]
+  assertAtom (← `(fun x : ℝ => Real.tanh x)) .tanh #[0]
   assertAtom (← `(fun x : ℝ => x⁻¹)) .inv #[0]
   assertAtom (← `(fun x : ℝ => Inv.inv x)) .inv #[0]
   assertAtom (← `(fun x : ℝ => |x|)) .abs #[0]
@@ -34,6 +39,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAtom (← `(fun x : ℝ => exp x)) .exp #[0]
   assertAtom (← `(fun x : ℝ => log x)) .log #[0]
   assertAtom (← `(fun x : ℝ => sqrt x)) .sqrt #[0]
+  assertAtom (← `(fun x : ℝ => sin x)) .sin #[0]
+  assertAtom (← `(fun x : ℝ => cos x)) .cos #[0]
+  assertAtom (← `(fun x : ℝ => sinh x)) .sinh #[0]
+  assertAtom (← `(fun x : ℝ => cosh x)) .cosh #[0]
+  assertAtom (← `(fun x : ℝ => tanh x)) .tanh #[0]
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun x : ℝ => Real.log (Real.exp x)))
@@ -46,6 +56,17 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "did not preserve the nested exponential"
     unless inner.kind == .exp && inner.operands == binders do
       throwError "changed the nested exponential operand"
+
+  let expression ← elaborate (← `(fun x : ℝ => Real.tanh (Real.sin x)))
+  lambdaTelescope expression fun binders body => do
+    let some outer ← recognizeAtom? body
+      | throwError "did not recognize a hyperbolic tangent with a nested operand"
+    unless outer.kind == .tanh && outer.original == body && outer.operands.size == 1 do
+      throwError "changed the outer hyperbolic tangent"
+    let some inner ← recognizeAtom? outer.operands[0]!
+      | throwError "did not preserve the nested sine"
+    unless inner.kind == .sin && inner.operands == binders do
+      throwError "changed the nested sine operand"
 
   let expression ← elaborate (← `(fun x : ℝ => max x 0))
   lambdaTelescope expression fun binders body => do
