@@ -114,6 +114,11 @@ local declaration values and types as well as resolved metavariables. -/
 def depends (point expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression (some point.fvarId!)).1
 
+/-- Check for unresolved metavariables, including those hidden in the types or
+values of referenced local declarations. Shared by proof-producing recognizers. -/
+def hasUnresolved (expression : Expr) : MetaM Bool := do
+  return (← inspectLocals expression none).2
+
 /-- Reduce local lets, applications, projections, and compiler-generated tuple
 matches while preserving named arithmetic and user function heads.
 
