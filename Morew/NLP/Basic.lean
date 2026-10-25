@@ -8,9 +8,9 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Morew.Core
 
 /-!
-# Smooth nonlinear-program bounds and rows
+# Certified smooth nonlinear programs
 
-Closed residual bounds and domain-indexed C² rows for manual NLP representations.
+Manual smooth-NLP data and exact representations of ordinary problems.
 -/
 
 namespace Morew
@@ -103,6 +103,74 @@ def Row.Holds {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
     {domain : Set X} (row : Row X domain) (x : X) : Prop :=
   row.bounds.Contains (row.residual x)
 
+/-- Finite-dimensional smooth nonlinear-program data.
+The rows alone define feasibility and must imply membership in the open domain. -/
+structure Data [FiniteDimensional ℝ X] where
+  /-- Whether consumers should minimize or maximize the objective. -/
+  sense : ObjectiveSense
+  /-- The common domain on which all stored smoothness proofs apply. -/
+  domain : Set X
+  /-- The evaluation domain is open. -/
+  domain_isOpen : IsOpen domain
+  /-- The total real-valued objective, with no sign change for maximization. -/
+  objective : X → ℝ
+  /-- The objective is twice continuously differentiable on the domain. -/
+  objective_smooth : ContDiffOn ℝ 2 objective domain
+  /-- The number of scalar rows, possibly zero. -/
+  rowCount : Nat
+  /-- Every row uses the same evaluation domain. -/
+  rows : Fin rowCount → Row X domain
+  /-- Row feasibility supplies the domain needed by the smoothness proofs. -/
+  feasible_mem_domain : ∀ x, (∀ i, (rows i).Holds x) → x ∈ domain
+
+variable [FiniteDimensional ℝ X]
+
+namespace Data
+
+variable {X}
+
+/-- The ordinary problem with the unchanged objective and exactly the stored rows.
+The domain is not conjoined to feasibility. The returned type does not encode
+`sense`; maximizing declarations retain an explicit `OrderDual ℝ` value type. -/
+def toProblem (data : Data X) : Problem X ℝ where
+  objective := data.objective
+  feasible x := ∀ i, (data.rows i).Holds x
+
+/-- Conversion preserves objective values at every point. -/
+@[simp]
+theorem toProblem_objective (data : Data X) (x : X) :
+    data.toProblem.objective x = data.objective x := rfl
+
+/-- Conversion requires exactly the rows, without an additional domain test. -/
+@[simp]
+theorem toProblem_feasible (data : Data X) (x : X) :
+    data.toProblem.feasible x ↔ ∀ i, (data.rows i).Holds x := Iff.rfl
+
+end Data
+
+variable {X}
+
+/-- Concrete smooth-NLP data representing an entire problem exactly.
+Equality includes the objective outside the domain, but cannot certify agreement
+of the separately recorded objective sense with a source declaration. -/
+structure Form (p : Problem X ℝ) where
+  /-- The concrete smooth nonlinear-program representation. -/
+  data : Data X
+  /-- The objective and feasible predicate represent the problem exactly. -/
+  represents : data.toProblem = p
+
 end NLP
+
+variable {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+  [FiniteDimensional ℝ X]
+
+/-- Existence of a certified smooth-NLP representation.
+Retain an `NLP.Form` directly when the concrete data is needed. -/
+def IsSmoothNLP (p : Problem X ℝ) : Prop :=
+  Nonempty (NLP.Form p)
+
+/-- A concrete certified form witnesses smooth-NLP representability. -/
+theorem NLP.Form.isSmoothNLP {p : Problem X ℝ} (form : NLP.Form p) : IsSmoothNLP p :=
+  ⟨form⟩
 
 end Morew
