@@ -70,12 +70,12 @@ example (v : Fin Parameter.size → ℝ) (y t : ℝ) (u : Fin Parameter.size →
 
 example (v : Fin Parameter.size → ℝ) (y t : ℝ) (u : Fin Parameter.size → ℝ)
     (value : ℝ) : continuedMinimum.feasible ((((v, y), t), u), value) ↔
-      (∀ i, (v i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 ∧
-        Parameter.epsilon ≤ y ∧ (t, 1, y) ∈ EXP ∧ t ≤ value := Iff.rfl
+      (∀ i, (v i - t, 1, u i) ∈ EXP) ∧ 1 - (∑ i, u i) ∈ ℝ₊ ∧
+        y - Parameter.epsilon ∈ ℝ₊ ∧ (t, 1, y) ∈ EXP ∧ value - t ∈ ℝ₊ := Iff.rfl
 
 example (y t value : ℝ) : continuedMaximum.objective ((y, t), value) = value := rfl
 example (y t value : ℝ) : continuedMaximum.feasible ((y, t), value) ↔
-    Parameter.epsilon ≤ y ∧ (t, 1, y) ∈ EXP ∧ value ≤ t := Iff.rfl
+    y - Parameter.epsilon ∈ ℝ₊ ∧ (t, 1, y) ∈ EXP ∧ t - value ∈ ℝ₊ := Iff.rfl
 
 run_cmd do
   let env ← Lean.getEnv

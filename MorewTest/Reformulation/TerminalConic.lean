@@ -8,8 +8,8 @@ import Morew.Reformulation
 /-!
 # Complete conic reformulations
 
-Terminal validation preserves conic groups, lowers nonlinear leaves in place,
-and retains exact structural data independently of the printed presentation.
+Terminal conversion preserves conic groups, lowers nonlinear leaves in place,
+and writes affine memberships with exact structural data for the final target.
 -/
 
 namespace MorewTest.Reformulation.TerminalConic
@@ -47,8 +47,8 @@ example (x y : ℝ) :
 info: problem (x y : ℝ)
   minimize x + y
   subject to
-    bounds : 0 ≤ x ∧ True ∧ y ≤ 5
-    equal : x = y
+    bounds : x ∈ ℝ₊ ∧ True ∧ 5 - y ∈ ℝ₊
+    equal : x - y ∈ ({0} : Set ℝ)
 -/
 #guard_msgs in
 #printp linearTarget
@@ -104,13 +104,13 @@ reformulation groupedTarget : grouped := by
 info: problem (x y t : ℝ)
   minimize t
   subject to
-    first : x = y
-    bounds_conic_1 : x ≤ t
-    bounds_conic_2 : -x ≤ t
-    bounds_conic_3 : y ≤ 1
-    domainLog_conic_1 : 1 ≤ x
+    first : x - y ∈ ({0} : Set ℝ)
+    bounds_conic_1 : t - x ∈ ℝ₊
+    bounds_conic_2 : t - -x ∈ ℝ₊
+    bounds_conic_3 : 1 - y ∈ ℝ₊
+    domainLog_conic_1 : x - 1 ∈ ℝ₊
     domainLog_conic_2 : (t, 1, x) ∈ EXP
-    last : t ≤ 10
+    last : 10 - t ∈ ℝ₊
 -/
 #guard_msgs in
 #printp groupedTarget
@@ -159,12 +159,12 @@ example : collisionsTarget.conicForm.data.rowCount = 6 := rfl
 info: problem (x t loss_aux : ℝ) (loss_aux_1 loss_aux_2 : Fin 2 → ℝ)
   minimize t
   subject to
-    loss_conic_1 : 0 ≤ loss_aux
+    loss_conic_1 : loss_aux ∈ ℝ₊
     loss_conic_1_1 : ∀ (i : Fin 2), (![0, x] i - t, 1, loss_aux_1 i) ∈ EXP
-    loss_conic_2 : ∑ x, loss_aux_1 x ≤ 1
+    loss_conic_2 : 1 - ∑ x, loss_aux_1 x ∈ ℝ₊
     loss_conic_3 : ∀ (i : Fin 2), (![0, -x] i - t, 1, loss_aux_2 i) ∈ EXP
-    loss_conic_4 : ∑ x, loss_aux_2 x ≤ 1
-    last : t ≤ 10
+    loss_conic_4 : 1 - ∑ x, loss_aux_2 x ∈ ℝ₊
+    last : 10 - t ∈ ℝ₊
 -/
 #guard_msgs in
 #printp collisionsTarget
@@ -303,11 +303,11 @@ example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     automaticTarget.feasible x ↔
-      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     selectedTarget.feasible x ↔
-      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
 
 end FiniteInstances
 

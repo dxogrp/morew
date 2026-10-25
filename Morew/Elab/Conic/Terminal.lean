@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Automatic
 import Morew.Elab.Conic.Decomposition
 import Morew.Elab.Conic.Form
+import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Rewrite
 
 /-!
@@ -33,6 +34,9 @@ structure Result where
   rowOrigins : Array Nat
   /-- Original entries replaced by splitting or exact automatic lowering. -/
   replacedIndices : Array Nat
+  /-- Original entries changed by final membership normalization. This alone
+  does not require allocating new labels. -/
+  changedBodies : Array Nat
   /-- Original entry and auxiliary type, in decision-binder append order. -/
   auxiliaries : Array (Nat × Expr)
 
@@ -52,6 +56,7 @@ private structure Work where
   rowOrigins : Array Nat
   certifiedRows : Array (Option (Array RowResult))
   replacedIndices : Array Nat := #[]
+  changedBodies : Array Nat := #[]
   auxiliaries : Array (Nat × Expr) := #[]
   nextName : Nat := 0
 
@@ -148,6 +153,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     rowOrigins := splice work.rowOrigins index (rows.map fun _ => origin)
     certifiedRows := splice retainedCertificates index certificates
     replacedIndices
+    changedBodies := work.changedBodies
     auxiliaries
     nextName
   }
@@ -224,6 +230,60 @@ private partial def lower (original : PresentationState) (work : Work)
   | some error => return .error error
   | none => return .ok work
 
+-- Retain the accepted affine maps and their local evidence. Only their
+-- equivalence endpoints change from the original leaves to membership leaves.
+private def transportRows (domain source target : Expr) (rows : Array RowResult) :
+    MetaM (Array RowResult) := do
+  let (oldLeaves, _) ← decomposePredicate source
+  let (newLeaves, _) ← decomposePredicate target
+  unless oldLeaves.size == rows.size && newLeaves.size == rows.size do
+    throwError "membership normalization changed the number of conic leaves"
+  (rows.zip (oldLeaves.zip newLeaves)).mapM fun (row, original, normalized) => do
+    let conversion ← normalizePredicate original
+    unless ← isDefEq conversion.predicate normalized do
+      throwError "membership normalization changed the order of conic leaves"
+    let pointwiseIff ← withLocalDeclD `point domain fun point => do
+      mkLambdaFVars #[point] (← mkAppM ``Iff.trans
+        #[mkApp row.pointwiseIff point, mkApp conversion.pointwiseIff point])
+    checkWithKernel pointwiseIff
+    return { row with pointwiseIff }
+
+/-- Normalize the actual final target and transport the already accepted row
+certificates. Presentation-entry boundaries and provenance remain unchanged. -/
+private def normalizeFinal (work : Work) : MetaM Work := do
+  let mut work := work
+  for index in [:work.presentation.constraints.size] do
+    let source := work.presentation.constraints[index]!.predicate
+    let normalized ← normalizePredicate source
+    unless normalized.changed do continue
+    let presentation := work.presentation
+    let retained := splice (presentation.constraints.map (·.predicate)) index #[]
+    let conditional ← withLocalDeclD `point presentation.domainType fun point => do
+      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      withLocalDeclD `retained remainder fun hypothesis =>
+        mkLambdaFVars #[point, hypothesis] (mkApp normalized.pointwiseIff point)
+    let rewrite ← rewriteConstraintContextual presentation index
+      #[normalized.predicate] conditional
+    let some rows := work.certifiedRows[index]!
+      | throwError "final membership normalization requires accepted conic rows"
+    let rows ← transportRows presentation.domainType source normalized.predicate rows
+    let constraints := presentation.constraints.modify index fun entry =>
+      { entry with predicate := normalized.predicate }
+    let presentation := { presentation with constraints }
+    unless ← isDefEq (← presentation.canonicalProblem) rewrite.targetProblem do
+      throwError "normalized conic presentation does not match its checked target"
+    let equivalence ← instantiateMVars (← mkAppM ``Morew.GlobalEquivalence.trans
+      #[work.equivalence, rewrite.equivalence])
+    let origin := work.rowOrigins[index]!
+    work := { work with
+      presentation
+      equivalence
+      certifiedRows := work.certifiedRows.set! index (some rows)
+      changedBodies := if work.changedBodies.contains origin then work.changedBodies
+        else work.changedBodies.push origin
+    }
+  return work
+
 /-- Plan an entire conic terminal step without allocating visible names or
 emitting declarations. Failed attempts restore caller metavariables and the
 environment. The first unresolved row is reported only after all later rows
@@ -258,6 +318,7 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
         let work ← match ← lower presentation work provider with
           | .ok work => pure work
           | .error error => return .error error
+        let work ← normalizeFinal work
         let form ← match ← buildForm work.presentation provider work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
@@ -269,6 +330,7 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
           form
           rowOrigins := work.rowOrigins
           replacedIndices := work.replacedIndices.qsort (· < ·)
+          changedBodies := work.changedBodies.qsort (· < ·)
           auxiliaries := work.auxiliaries
         }
     catch error =>

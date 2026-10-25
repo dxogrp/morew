@@ -11,8 +11,8 @@ import MorewTest.Reformulation.AffineHelperSource
 /-!
 # Affine helper certification in conic reformulations
 
-Helper expansion supplies affine certificates without changing model-local
-definitions, printed expressions, or the native heads accepted by conic rules.
+Helper expansion supplies affine certificates while preserving model-local
+definitions, helper references, and the native heads accepted by conic rules.
 Finite evidence inside imported helpers remains available across the model.
 -/
 
@@ -40,7 +40,7 @@ example : minimumTarget.conicForm.data.sense = .minimize := rfl
 example : minimumTarget.conicForm.data.rowCount = 2 := rfl
 example (x : ℝ) : minimumTarget.objective x = cost 2 1 x + residual 3 2 x := rfl
 example (x : ℝ) : minimumTarget.feasible x ↔
-    cost 2 1 x ≤ 10 ∧ -5 ≤ residual 3 2 x := Iff.rfl
+    10 - cost 2 1 x ∈ ℝ₊ ∧ residual 3 2 x - -5 ∈ ℝ₊ := Iff.rfl
 
 /--
 info: problem (x : ℝ)
@@ -48,8 +48,8 @@ info: problem (x : ℝ)
   let penalty := Affine.HelperFixtures.residual 3 2 x
   minimize loss + penalty
   subject to
-    cap : loss ≤ 10
-    lower : -5 ≤ penalty
+    cap : 10 - loss ∈ ℝ₊
+    lower : penalty - -5 ∈ ℝ₊
 -/
 #guard_msgs in
 #printp minimumTarget
@@ -81,7 +81,7 @@ reformulation concreteMaximum : (maximum 4) := by
 info: problem (x : ℝ)
   maximize cost 2 4 x
   subject to
-    cap : Affine.HelperFixtures.residual 3 4 x ≤ 10
+    cap : 10 - Affine.HelperFixtures.residual 3 4 x ∈ ℝ₊
 -/
 #guard_msgs in
 #printp concreteMaximum
@@ -93,15 +93,16 @@ example : GlobalEquivalence (AffineHelperSource.source 2 3) importedTarget :=
   importedTarget.equivalence
 example : IsConic importedTarget := importedTarget.isConic
 example (x : ℝ) : importedTarget.objective x = cost 2 3 x := rfl
-example (x : ℝ) : importedTarget.feasible x ↔ cost 2 3 x ≤ 10 ∧ 0 ≤ cost 1 0 x := Iff.rfl
+example (x : ℝ) : importedTarget.feasible x ↔
+    10 - cost 2 3 x ∈ ℝ₊ ∧ cost 1 0 x ∈ ℝ₊ := Iff.rfl
 
 /--
 info: problem (x : ℝ)
   let loss := cost 2 3 x
   minimize loss
   subject to
-    cap : loss ≤ 10
-    lower : 0 ≤ cost 1 0 x
+    cap : 10 - loss ∈ ℝ₊
+    lower : cost 1 0 x ∈ ℝ₊
 -/
 #guard_msgs in
 #printp importedTarget
@@ -132,7 +133,7 @@ example : GlobalEquivalence nativeAtoms nativeAtomsTarget := nativeAtomsTarget.e
 example : IsConic nativeAtomsTarget := nativeAtomsTarget.isConic
 example : nativeAtomsTarget.conicForm.data.rowCount = 4 := rfl
 example (x t : ℝ) : nativeAtomsTarget.feasible (x, t) ↔
-    residual 2 1 x ≤ cost 1 0 t ∧ -(residual 2 1 x) ≤ cost 1 0 t ∧
+    cost 1 0 t - residual 2 1 x ∈ ℝ₊ ∧ cost 1 0 t - -(residual 2 1 x) ∈ ℝ₊ ∧
       (cost 1 0 t, 1 / 2, ![cost 2 1 x]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
       (residual 2 1 x, 1, cost 1 0 t) ∈ EXP := Iff.rfl
 
@@ -140,8 +141,8 @@ example (x t : ℝ) : nativeAtomsTarget.feasible (x, t) ↔
 info: problem (x t : ℝ)
   minimize cost 2 1 x
   subject to
-    absolute_conic_1 : Affine.HelperFixtures.residual 2 1 x ≤ cost 1 0 t
-    absolute_conic_2 : -Affine.HelperFixtures.residual 2 1 x ≤ cost 1 0 t
+    absolute_conic_1 : cost 1 0 t - Affine.HelperFixtures.residual 2 1 x ∈ ℝ₊
+    absolute_conic_2 : cost 1 0 t - -Affine.HelperFixtures.residual 2 1 x ∈ ℝ₊
     square_conic_1 : (cost 1 0 t, 1 / 2, ![cost 2 1 x]) ∈ RSOC 1
     exponential_conic_1 : (Affine.HelperFixtures.residual 2 1 x, 1, cost 1 0 t) ∈ EXP
 -/
@@ -322,8 +323,8 @@ example : anotherRowTarget.conicForm.data.toProblem = anotherRowTarget :=
   anotherRowTarget.conicForm.represents
 
 example (x : Parameter.Index → ℝ) (t : ℝ) : anotherRowTarget.feasible (x, t) ↔
-    x (Parameter.equivalence 0) ≤ t ∧ -(x (Parameter.equivalence 0)) ≤ t ∧
-      finiteDot Parameter.equivalence Parameter.coefficients x ≤ 10 := Iff.rfl
+    t - x (Parameter.equivalence 0) ∈ ℝ₊ ∧ t - -(x (Parameter.equivalence 0)) ∈ ℝ₊ ∧
+      10 - finiteDot Parameter.equivalence Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
 
 end HiddenFinite
 

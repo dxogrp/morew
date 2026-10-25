@@ -378,15 +378,108 @@ private def delabConeCarrier : Delab := do
   let cone := expression.getAppArgs[0]!
   if cone.isConstOf ``Morew.Conic.Cone.exponential then
     return ← `(EXP)
+  if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar then
+    return ← `(ℝ₊)
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
-    cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1
+    cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
+    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1
   -- Keep the original subexpression position, so dimension references are
   -- frozen by the same pass as the rest of the generated presentation.
   let dimension ← withAppArg <| withAppArg delab
   if cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 then
     `(SOC $dimension)
-  else
+  else if cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 then
     `(RSOC $dimension)
+  else
+    `(ℝ₊^$dimension)
+
+-- Readable metadata is elaborated again in the declaration's parameter
+-- context. Generated operations use fixed instances, which can differ from
+-- ambient instance parameters retained elsewhere in an otherwise unused let.
+-- Keep ordinary notation only when it reconstructs the same stored instance.
+private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
+  withoutModifyingState do
+    match ← trySynthInstance (← inferType stored) with
+    | .some inferred => isDefEq stored inferred
+    | _ => pure false
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+private def delabStoredInstance (arity instanceIndex : Nat) : Delab := do
+  unless (← getOptions).getBool coneNotationOption &&
+      !(← getOptions).getBool `pp.explicit do failure
+  withOverApp arity do
+    let stored := (← getExpr).getAppArgs[instanceIndex]!
+    if ← presentationInstanceResynthesizes stored then failure
+    withOptions (fun options => options.setBool `pp.explicit true
+      |>.setBool `pp.instances true) delabApp
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.HSub.hSub]
+private def delabStoredSubtraction : Delab := delabStoredInstance 6 3
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.Neg.neg]
+private def delabStoredNegation : Delab := delabStoredInstance 3 1
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.Zero.zero]
+private def delabStoredZero : Delab := delabStoredInstance 2 1
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.OfNat.ofNat]
+private def delabStoredNumeral : Delab := delabStoredInstance 3 2
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.Membership.mem]
+private def delabStoredMembership : Delab := delabStoredInstance 5 2
+
+open Lean.PrettyPrinter.Delaborator in
+@[delab app.Singleton.singleton]
+private def delabStoredSingleton : Delab := delabStoredInstance 4 2
+
+private def presentationSingletonMembership {Y : Type} (value zero : Y) : Prop :=
+  value ∈ ({zero} : Set Y)
+
+-- A readable singleton needs its container type when the stored view is
+-- elaborated again: `value ∈ {0}` alone leaves Set versus Finset ambiguous.
+-- Replay syntax already keeps explicit instances; only annotate the readable
+-- canonical set spelling, preserving both subexpression positions and values.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Membership.mem]
+private def delabZeroConeMembership : Delab := do
+  unless (← getOptions).getBool coneNotationOption &&
+      !(← getOptions).getBool `pp.explicit do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Membership.mem 5
+  let args := expression.getAppArgs
+  guard <| args[1]!.isAppOfArity ``Set 1
+  let target ← whnf args[0]!
+  unless target.isConstOf ``Real do
+    let .forallE _ index range _ := target | failure
+    guard <| !range.hasLooseBVars && (← whnf range).isConstOf ``Real &&
+      (← whnf index).isAppOfArity ``Fin 1
+  let singleton := args[3]!.consumeMData
+  guard <| singleton.isAppOfArity ``Singleton.singleton 4
+  let singletonArgs := singleton.getAppArgs
+  let zero := singletonArgs[3]!.consumeMData
+  guard <| zero.isAppOfArity ``Zero.zero 2 ||
+    (zero.isAppOfArity ``OfNat.ofNat 3 &&
+      (zero.getAppArgs[1]! == mkRawNatLit 0 || zero.getAppArgs[1]! == mkNatLit 0))
+  let template ← mkAppM ``presentationSingletonMembership #[args[4]!, zero]
+  let some template ← unfoldDefinition? template | failure
+  let canonical := template.getAppArgs
+  guard (← isDefEq args[2]! canonical[2]!)
+  guard (← isDefEq singletonArgs[2]! canonical[3]!.getAppArgs[2]!)
+  let zeroInstance := zero.getAppArgs[if zero.isAppOfArity ``Zero.zero 2 then 1 else 2]!
+  unless (← presentationInstanceResynthesizes args[2]!) &&
+      (← presentationInstanceResynthesizes singletonArgs[2]!) &&
+      (← presentationInstanceResynthesizes zeroInstance) do
+    return ← withOptions (fun options => options.setBool `pp.explicit true
+      |>.setBool `pp.instances true) delabApp
+  let value ← withNaryArg 4 delab
+  let set ← withNaryArg 3 delab
+  let type ← withNaryArg 1 delab
+  `($value ∈ ($set : $type))
 
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/

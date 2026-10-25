@@ -7,12 +7,13 @@ import Morew.Elab.Conic.Terminal
 import Morew.Reformulation.Conic
 
 /-!
-# Terminal conic validation
+# Terminal cone-membership conversion
 
-Bare `conic` certifies the entire final problem. It preserves already-conic
-presentation groups, lowers nonlinear conjunction leaves exactly, and retains
-the structural form for emission beside the named target. All generated local
-names are allocated together before the terminal result is materialized.
+Bare `conic` lowers nonlinear conjunction leaves exactly and converts affine
+comparisons to nonnegative- or zero-cone memberships. Named affine groups and
+their local-definition references are preserved. The checked structural form
+is emitted beside the normalized target. All generated local names are
+allocated together before the terminal result is materialized.
 -/
 
 namespace Morew.Reformulation.Internal
@@ -25,6 +26,34 @@ private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM Str
   let .str _ stem := name
     | throwError "cannot derive a generated-name family from constraint `{name}`"
   return stem
+
+-- Retained source entries carry binding identities that the canonical semantic
+-- predicates may have reduced away. Normalize them in their original local-let
+-- scope; generated entries instead use the checked planner's actual expressions.
+-- Target emission subsequently checks this complete view against the canonical
+-- problem, including any identities established by preceding substitutions.
+private def normalizeRetainedView (prepared : Morew.Elab.Conic.Terminal.Result)
+    (template rendered : Morew.Syntax.ProblemView) : TermElabM Morew.Syntax.ProblemView := do
+  let declarations := template.binders.mapIdx fun i binder =>
+    (binder.name, prepared.presentation.binders[i]!.type)
+  withLocalDeclsDND declarations fun decisions =>
+    withViewDefinitions template fun definitions => do
+      let bindings := decisions ++ definitions
+      let names := bindings.mapIdx fun i binding =>
+        (binding.fvarId!, if i < decisions.size then template.binders[i]!.name
+          else template.definitions[i - decisions.size]!.name)
+      let constraints ← template.constraints.mapIdxM fun i row => do
+        let origin := prepared.rowOrigins[i]!
+        if prepared.replacedIndices.contains origin then
+          return rendered.constraints[i]!
+        unless prepared.changedBodies.contains origin do return row
+        let body ← elabPresentationTerm ⟨row.proposition⟩ bindings (some (mkSort .zero))
+        synthesizeSyntheticMVarsNoPostponing
+        let body ← instantiateMVars body
+        let normalized ← Morew.Elab.Conic.normalizeBody body
+        checkWithKernel normalized.iff
+        return { row with proposition := ← delabPresentationTerm normalized.body names }
+      return { template with constraints }
 
 private def materializeTerminalConic (state : ReformState)
     (prepared : Morew.Elab.Conic.Terminal.Result) (preparedVars : Array Expr)
@@ -67,13 +96,16 @@ private def materializeTerminalConic (state : ReformState)
         rows := rows.push state.view.constraints[origin]!
     let template := { state.view with binders, constraints := rows }
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    let view := { template with constraints := rows.mapIdx fun i row =>
-      if prepared.replacedIndices.contains prepared.rowOrigins[i]! then
-        rendered.constraints[i]! else row }
+    let view ← normalizeRetainedView prepared template rendered
     let semantic ← exactExpressionSyntax targetProblem
     let formName ← mkAuxDeclName (kind := `_terminalConicForm)
     let form ← mkAuxDefinitionFor formName prepared.form (zetaDelta := true) (compile := false)
     modifyEnv (addNoncomputable · formName)
+    -- Canonical predicates may have reduced a zero-valued model definition,
+    -- while the retained view deliberately still refers to its binding. These
+    -- equalities check their agreement without rewriting the displayed body.
+    let normalizationLemmas := state.normalizationLemmas ++
+      #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩]
     return {
       view
       semantic
@@ -82,7 +114,7 @@ private def materializeTerminalConic (state : ReformState)
       simplifyExpLogTerms := state.simplifyExpLogTerms
       hasSubstitution := state.hasSubstitution
       removedConstraintNames := {}
-      normalizationLemmas := state.normalizationLemmas
+      normalizationLemmas
       checkpoint? := some { semantic, view }
       constraintSplices := prepared.replacedIndices.map fun index =>
         { index, count := (prepared.rowOrigins.filter (· == index)).size }

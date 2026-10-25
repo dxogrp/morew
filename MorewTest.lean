@@ -61,6 +61,8 @@ import MorewTest.Reformulation.AffineHelperSource
 import MorewTest.Reformulation.AffineHelpers
 import MorewTest.Reformulation.CanonicalCheckpoint
 import MorewTest.Reformulation.Composition
+import MorewTest.Reformulation.ConeMembership
+import MorewTest.Reformulation.ConeMembership.Defined
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
