@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.NLP.Basic
 import Morew.NLP.Smooth
+import Morew.NLP.Domain
 
 /-!
 # Certified smooth-NLP forms

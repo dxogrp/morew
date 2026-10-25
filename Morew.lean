@@ -37,6 +37,7 @@ import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP
 import Morew.NLP.Basic
+import Morew.NLP.Domain
 import Morew.NLP.Smooth
 import Morew.Reformulation
 import Morew.Reformulation.Command
