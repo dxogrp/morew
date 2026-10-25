@@ -63,9 +63,12 @@ structure AffineError where
 
 instance : ToMessageData AffineError := ⟨(·.reason)⟩
 
-/-- Optional proof provision for the deliberately restricted division rule. -/
+/-- Optional proof provision for metaprogram authors using the restricted division
+rule. The default provider relies on local hypotheses and bounded evaluation. -/
 structure EvidenceProvider where
-  /-- Given the proposition `c ≠ 0`, optionally supply a checked proof. -/
+  /-- Given the proposition `c ≠ 0`, optionally return a proof term. The certifier
+  checks its type, decision independence, and absence of unresolved metavariables.
+  Returning `none` leaves bounded numeral/rational evaluation available. -/
   nonzeroEvidence? : Option (Expr → MetaM (Option Expr)) := none
 
 /-- A real affine map and its pointwise agreement with the supplied function. -/
@@ -548,7 +551,10 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
 
 All success results contain ordinary proof terms checked against the original
 function. Transparent helpers are expanded only in a temporary expression after
-direct recognition fails. The optional evidence callback is checked against
+direct recognition fails. Metaprograms can use
+`reifyAffine source (provider := evidence)` to supply nonzero proofs. Matching
+local hypotheses take precedence over the provider, which is consulted before
+bounded numeral/rational evaluation. Supplied evidence is checked against
 `c ≠ 0`; it does not weaken the global pointwise correctness obligation.
 -/
 def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
