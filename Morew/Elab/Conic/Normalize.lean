@@ -103,7 +103,8 @@ private def nonnegativeCone (type : Expr) : MetaM Expr := do
     return mkConst ``Morew.Conic.Cone.nonnegativeScalar
   let .forallE _ index target _ := type
     | throwError "expected real scalar or finite-vector comparison operands"
-  unless !target.hasLooseBVars && (← whnf target).isConstOf ``Real do
+  let target ← whnf target
+  unless !target.hasLooseBVars && target.isConstOf ``Real do
     throwError "expected real scalar or finite-vector comparison operands"
   let index ← whnf index
   unless index.isAppOfArity ``Fin 1 do

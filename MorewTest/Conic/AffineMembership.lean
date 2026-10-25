@@ -48,6 +48,17 @@ def explicitSingleton : CertifiedRow (fun x : ℝ => x ∈ Set.singleton (0 : �
 def explicitZero : CertifiedRow (fun x : ℝ => x ∈ ({Zero.zero} : Set ℝ)) :=
   certified_membership% (fun x : ℝ => x ∈ ({Zero.zero} : Set ℝ))
 
+private abbrev Reals := Set ℝ
+private abbrev Coordinate {n : Nat} (_ : Fin n) := ℝ
+private abbrev Vectors (n : Nat) := Set ((i : Fin n) → Coordinate i)
+
+def scalarZeroAlias : CertifiedRow (fun x : ℝ => x ∈ ({0} : Reals)) :=
+  certified_membership% (fun x : ℝ => x ∈ ({0} : Reals))
+
+def vectorZeroAlias (n : Nat) : CertifiedRow
+    (fun x : (i : Fin n) → Coordinate i => x ∈ ({0} : Vectors n)) :=
+  certified_membership% (fun x : (i : Fin n) → Coordinate i => x ∈ ({0} : Vectors n))
+
 def vector (n : Nat) : CertifiedRow (fun x : Fin n → ℝ => x ∈ ℝ₊^n) :=
   certified_membership% (fun x : Fin n → ℝ => x ∈ ℝ₊^n)
 
@@ -60,6 +71,8 @@ def bundledVectorZero (n : Nat) : CertifiedRow
 
 example : scalar.row.cone.Space = ℝ := rfl
 example : scalarZero.row.cone.Space = ℝ := rfl
+example : scalarZeroAlias.row.cone.Space = ℝ := rfl
+example (n : Nat) : (vectorZeroAlias n).row.cone.Space = (Fin n → ℝ) := rfl
 example (n : Nat) : (vector n).row.cone.Space = (Fin n → ℝ) := rfl
 example (n : Nat) : (vectorZero n).row.cone.Space = (Fin n → ℝ) := rfl
 
@@ -91,6 +104,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     @Membership.mem ℝ (Set ℝ) ⟨fun _ _ => True⟩ ({0} : Set ℝ) x))
     "unsupported membership instance"
   expectRejected (← `(fun x : ℝ =>
+    @Membership.mem ℝ Reals ⟨fun _ _ => True⟩ ({0} : Reals) x))
+    "unsupported membership instance"
+  expectRejected (← `(fun x : ℝ =>
     x ∈ @Singleton.singleton ℝ (Set ℝ) ⟨fun _ => {0}⟩ 0))
     "unsupported singleton instance"
   expectRejected (← `(fun x : ℝ =>
@@ -101,8 +117,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ =>
     x ∈ ({@Zero.zero ℝ ⟨1⟩} : Set ℝ))) "canonical zero"
   expectRejected (← `(fun x : ℝ =>
+    x ∈ ({@Zero.zero ℝ ⟨1⟩} : Reals))) "canonical zero"
+  expectRejected (← `(fun x : ℝ =>
     (fun _ : Fin (if x ≤ 0 then 1 else 2) => x) ∈ ℝ₊^(if x ≤ 0 then 1 else 2)))
     "dimension depends"
+  expectRejected (← `(fun x : ℝ =>
+    (fun _ : Fin (if x ≤ 0 then 1 else 2) => x) ∈
+      ({0} : Vectors (if x ≤ 0 then 1 else 2)))) "dimension depends"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let predicate ← elabTerm (← `(fun x : ℝ => x ∈ ({0} : Set ℝ))) none

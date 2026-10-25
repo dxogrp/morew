@@ -33,6 +33,15 @@ private def assertNormalization (sourceSyntax targetSyntax : TSyntax `term)
       throwError "membership normalization returned incomplete evidence"
     checkWithKernel result.pointwiseIff
 
+-- A syntactically dependent codomain can reduce to the supported real space.
+private abbrev Coordinate {n : Nat} (_ : Fin n) := ℝ
+
+run_cmd liftTermElabM do
+  assertNormalization
+    (← `(fun n : Nat => fun x : (i : Fin n) → Coordinate i => 0 ≤ x ∧ x = 0))
+    (← `(fun n : Nat => fun x : (i : Fin n) → Coordinate i =>
+      x ∈ ℝ₊^n ∧ x ∈ ({0} : Set ((i : Fin n) → Coordinate i)))) 1
+
 run_cmd liftTermElabM do
   assertNormalization
     (← `(fun p : ℝ × ℝ => 2 * p.1 + 1 ≤ 3 * p.2 + 4))

@@ -223,7 +223,8 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
     else do
       let .forallE _ index range _ := target
         | return .error (← rowError body "expected a real scalar or finite-vector zero singleton" label?)
-      unless !range.hasLooseBVars && (← whnf range).isConstOf ``Real do
+      let range ← whnf range
+      unless !range.hasLooseBVars && range.isConstOf ``Real do
         return .error (← rowError body "expected a real scalar or finite-vector zero singleton" label?)
       let index ← whnf index
       unless index.isAppOfArity ``Fin 1 do
@@ -394,7 +395,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
     -- wrappers, including the product patterns used by the surface DSL.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOfArity ``Membership.mem 5 then
-        if (← Affine.reduceStructure body.getAppArgs[1]!).isAppOfArity ``Set 1 then
+        if (← whnfUntil body.getAppArgs[1]! ``Set).isSome then
           return ← normalizeZeroMembershipRow predicate domain point body provider label?
         return ← normalizeMembershipRow predicate domain point body provider label?
       if body.isForall then

@@ -452,11 +452,12 @@ private def delabZeroConeMembership : Delab := do
   let expression ← getExpr
   guard <| expression.isAppOfArity ``Membership.mem 5
   let args := expression.getAppArgs
-  guard <| args[1]!.isAppOfArity ``Set 1
+  guard <| (← whnfUntil args[1]! ``Set).isSome
   let target ← whnf args[0]!
   unless target.isConstOf ``Real do
     let .forallE _ index range _ := target | failure
-    guard <| !range.hasLooseBVars && (← whnf range).isConstOf ``Real &&
+    let range ← whnf range
+    guard <| !range.hasLooseBVars && range.isConstOf ``Real &&
       (← whnf index).isAppOfArity ``Fin 1
   let singleton := args[3]!.consumeMData
   guard <| singleton.isAppOfArity ``Singleton.singleton 4
