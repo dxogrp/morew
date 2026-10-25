@@ -138,6 +138,7 @@ private def reduceLocalStructure (point expression : Expr) : MetaM Expr := do
   let step (value : Expr) : MetaM TransformStep := do
     if !(← Affine.depends point value) then return .done value
     let reduced ← Affine.reduceStructure value
+      (opaqueProblemDependencies? := some point)
     let reduced := if reduced.isAppOfArity ``Function.comp 6 then
         let args := reduced.getAppArgs
         mkApp args[3]! (mkApp args[4]! args[5]!)
@@ -170,17 +171,18 @@ private def fixedArgument (point expression : Expr) (what : String) : CertifyM E
 
 private partial def certifyBody (point domain expression : Expr) : CertifyM Expr := do
   let expression ← Affine.reduceStructure expression (preserveLets := true)
+    (opaqueProblemDependencies? := some point)
   if let .letE name type value body nondep := expression then
     if (← Affine.depends point type) || (← Affine.depends point value) then
       return ← certifyBody point domain (body.instantiate1 value)
     return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
       certifyBody point domain (body.instantiate1 binding)
+  let expression ← reduceLocalStructure point expression
   let type ← fixedArgument point (← inferType expression) "the value type"
   unless ← supportedSpace type do
     reject expression .unsupportedSpace m!"unsupported smooth value type {type}"
-  let constant ← reduceLocalStructure point expression
-  if !(← Affine.depends point constant) then
-    return ← construct point expression ``Morew.NLP.Smooth.const #[domain, constant]
+  if !(← Affine.depends point expression) then
+    return ← construct point expression ``Morew.NLP.Smooth.const #[domain, expression]
   if expression == point then
     return ← construct point expression ``Morew.NLP.Smooth.id #[domain]
   if let .proj ``Prod index value := expression then

@@ -125,39 +125,42 @@ matches while preserving named arithmetic and user function heads.
 Only problem-container fields and single-alternative product matchers may
 unfold named declarations. This is internal support for typed presentations.
 With `preserveLets`, stop at a head let so the caller can retain its evidence
-and local instances while recognizing the body.
+and local instances while recognizing the body. When `opaqueProblemDependencies?`
+is supplied, named problem containers depending on that local variable remain
+opaque; inline structural containers are still reduced.
 -/
-partial def reduceStructure (expression : Expr) (preserveLets : Bool := false) :
-    MetaM Expr := do
+partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
+    (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr := do
   let expression := (← instantiateMVars expression).consumeMData
   match expression with
   | .letE _ _ value body _ =>
     if preserveLets then pure expression
-    else reduceStructure (body.instantiate1 value)
+    else reduceStructure (body.instantiate1 value) false opaqueProblemDependencies?
   | .fvar id =>
     if let some value := (← id.getDecl).value? (allowNondep := true) then
-      reduceStructure value preserveLets
+      reduceStructure value preserveLets opaqueProblemDependencies?
     else pure expression
   | .proj name index value =>
-    let value ← reduceStructure value preserveLets
+    let value ← reduceStructure value preserveLets opaqueProblemDependencies?
     if value.isAppOf ``Prod.mk then
-      reduceStructure value.getAppArgs[index + 2]! preserveLets
+      reduceStructure value.getAppArgs[index + 2]! preserveLets opaqueProblemDependencies?
     else pure (.proj name index value)
   | .app .. =>
     let arguments := expression.getAppArgs
-    let function ← reduceStructure expression.getAppFn preserveLets
+    let function ← reduceStructure expression.getAppFn preserveLets opaqueProblemDependencies?
     if let .letE name type value body nondep := function then
       return ← reduceStructure (.letE name type value
-        (mkAppN body (arguments.map (·.liftLooseBVars 0 1))) nondep) preserveLets
+        (mkAppN body (arguments.map (·.liftLooseBVars 0 1))) nondep)
+        preserveLets opaqueProblemDependencies?
     if function.isLambda then
-      return ← reduceStructure (function.beta arguments) preserveLets
+      return ← reduceStructure (function.beta arguments) preserveLets opaqueProblemDependencies?
     if (function.isConstOf ``Prod.casesOn || function.isConstOf ``Prod.rec) &&
         arguments.size >= 5 then
       let value := arguments[if function.isConstOf ``Prod.casesOn then 3 else 4]!
       let branch := arguments[if function.isConstOf ``Prod.casesOn then 4 else 3]!
       let fields := #[Expr.proj ``Prod 0 value, Expr.proj ``Prod 1 value]
       return ← reduceStructure (mkAppN (branch.beta fields)
-        (arguments.extract 5 arguments.size)) preserveLets
+        (arguments.extract 5 arguments.size)) preserveLets opaqueProblemDependencies?
     if let some name := function.constName? then
       if let some matcher ← getMatcherInfo? name then
         if matcher.numAlts == 1 && arguments.size >= matcher.arity then
@@ -170,22 +173,28 @@ partial def reduceStructure (expression : Expr) (preserveLets : Bool := false) :
             if let some value := declaration.value? then
               let value := value.instantiateLevelParams
                 declaration.levelParams function.constLevels!
-              return ← reduceStructure (value.beta arguments) preserveLets
+              return ← reduceStructure (value.beta arguments)
+                preserveLets opaqueProblemDependencies?
     if (function.isConstOf ``Prod.fst || function.isConstOf ``Prod.snd) &&
         arguments.size >= 3 then
       let projection := .proj ``Prod
         (if function.isConstOf ``Prod.fst then 0 else 1) arguments[2]!
       return ← reduceStructure (mkAppN projection (arguments.extract 3 arguments.size))
-        preserveLets
+        preserveLets opaqueProblemDependencies?
     if (function.isConstOf ``Morew.Problem.objective ||
         function.isConstOf ``Morew.Problem.feasible) && arguments.size >= 3 then
       -- The model declaration is the container being inspected; its objective
       -- and constraint function heads remain intact after selecting the field.
-      let problem ← whnf arguments[2]!
+      let problem ← match opaqueProblemDependencies? with
+        | some point =>
+          if ← depends point arguments[2]! then
+            reduceStructure arguments[2]! preserveLets opaqueProblemDependencies?
+          else whnf arguments[2]!
+        | none => whnf arguments[2]!
       if problem.isAppOf ``Morew.Problem.mk then
         let index := if function.isConstOf ``Morew.Problem.objective then 2 else 3
         return ← reduceStructure (mkAppN problem.getAppArgs[index]!
-          (arguments.extract 3 arguments.size)) preserveLets
+          (arguments.extract 3 arguments.size)) preserveLets opaqueProblemDependencies?
     return mkAppN function arguments
   | _ => pure expression
 

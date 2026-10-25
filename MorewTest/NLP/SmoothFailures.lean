@@ -67,6 +67,51 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun c : ℝ => fun x : ℝ => hiddenSquare c + x)) 1
   assertSmooth (← `(fun x : ℝ => let f := fun y : ℝ => y * y; f x))
 
+/-! Selecting a model field must not unfold a named decision-dependent model
+builder. Independent models and literal local containers remain structural. -/
+
+private noncomputable def squareModel (c : ℝ) : Morew.Problem ℝ ℝ where
+  objective := fun y => c * c + y * y
+  feasible := fun _ => True
+
+private noncomputable abbrev inlineSquareModel (c : ℝ) : Morew.Problem ℝ ℝ :=
+  ⟨fun y => c * c + y * y, fun _ => True⟩
+
+private noncomputable def constantModel (_c : ℝ) : Morew.Problem ℝ ℝ where
+  objective := fun _ => 1
+  feasible := fun _ => True
+
+private def exponentModel (_c : ℝ) : Morew.Problem ℝ ℕ where
+  objective := fun _ => 2
+  feasible := fun _ => True
+
+private noncomputable def independentModel : Morew.Problem ℝ ℝ where
+  objective := fun x => x * x
+  feasible := fun _ => True
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun x : ℝ => (squareModel x).objective 0)) .unknownHead
+  assertRejected (← `(fun x : ℝ => (inlineSquareModel x).objective 0)) .unknownHead
+  assertRejected (← `(fun x : ℝ => let p := squareModel x; p.objective 0)) .unknownHead
+  assertRejected (← `(fun x : ℝ => Real.log ((constantModel x).objective 0)))
+    .restrictedDomain 0 (some ``Real.log)
+  assertRejected (← `(fun x : ℝ => x ^ (exponentModel x).objective 0)) .dependency
+  assertSmooth (← `(fun x : ℝ =>
+    (Morew.Problem.mk (fun y : ℝ => x * y) (fun _ => True)).objective x))
+  assertSmooth (← `(fun x : ℝ =>
+    let p : Morew.Problem ℝ ℝ := ⟨fun y => x * y, fun _ => True⟩
+    p.objective x))
+  assertSmooth (← `(independentModel.objective))
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => (squareModel c).objective x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => (inlineSquareModel c).objective x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => Real.log ((constantModel c).objective x))) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => x ^ (exponentModel c).objective 0)) 1
+  assertSmooth (← `(fun x : ℝ => (squareModel ((fun _ : ℝ => 2) x)).objective x))
+  assertSmooth (← `(fun x : ℝ => (squareModel (let _y := x; 2)).objective x))
+  assertSmooth (← `(fun x : ℝ => (squareModel ((2 : ℝ), x).1).objective x))
+  assertSmooth (← `(fun x : ℝ =>
+    (squareModel (((fun _ : ℝ => 2) ∘ (fun y => y * y)) x)).objective x))
+
 /-! Different operation instances cannot borrow native smoothness theorems. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
