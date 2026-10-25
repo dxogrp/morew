@@ -133,6 +133,24 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomain (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => setHelper (Set.Ici (Real.log 0)) + x])))
 
+-- Fixed product/vector arithmetic keeps operand obligations without requiring
+-- a scalar multiplication or power lemma for the intermediate value space.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertDomain (← `(fun n : Nat => ((fun _x : ℝ => True),
+    #[fun x : ℝ => vectorHelper
+      ((fun _i : Fin n => Real.log 1) * (fun _i => (2 : ℝ))) + x]))) 1
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => pairHelper ((Real.log 1, (2 : ℝ)) * (3, Real.sqrt 1)) + x])))
+  assertDomain (← `(fun n k : Nat => ((fun _x : ℝ => True),
+    #[fun x : ℝ => vectorHelper ((fun _i : Fin n => Real.log 1) ^ k) + x]))) 2
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => pairHelper ((Real.log 1, Real.sqrt 1) ^ (2 : Nat)) + x])))
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => vectorHelper
+      ((fun _i : Fin 0 => Real.log 0) * (fun _i => (2 : ℝ))) + x])))
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => (((fun _i : Fin 2 => (2 : ℝ)) ^ (2 : Nat)) 0) + x])))
+
 /-- Test-only packaging of the API's two-source result. -/
 structure PairCertificate (feasible : ℝ → Prop) (objective residual : ℝ → ℝ) where
   domain : Set ℝ

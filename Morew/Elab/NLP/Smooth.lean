@@ -164,6 +164,62 @@ private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Uni
     unless ← isDefEq actualArgs[i]! expectedArgs[i]! do
       reject source .invalidInstance "expected canonical real arithmetic instances"
 
+-- Fixed product/vector coefficients need no multiplication calculus rule, but
+-- their operation instances and visible operand domains must still be checked.
+-- Fix these instances at declaration time, independently of ambient instances.
+private structure PointwiseArithmetic (X : Type*) where
+  mul : Mul X
+  pow : Pow X ℕ
+
+private noncomputable abbrev PointwiseArithmetic.real : PointwiseArithmetic ℝ :=
+  ⟨inferInstance, inferInstance⟩
+
+private abbrev PointwiseArithmetic.prod {X Y : Type*}
+    (left : PointwiseArithmetic X) (right : PointwiseArithmetic Y) :
+    PointwiseArithmetic (X × Y) := by
+  letI := left.mul
+  letI := left.pow
+  letI := right.mul
+  letI := right.pow
+  exact ⟨inferInstance, inferInstance⟩
+
+private abbrev PointwiseArithmetic.pi (n : Nat) {Y : Type*}
+    (target : PointwiseArithmetic Y) : PointwiseArithmetic (Fin n → Y) := by
+  letI := target.mul
+  letI := target.pow
+  exact ⟨inferInstance, inferInstance⟩
+
+private partial def pointwiseArithmetic (type : Expr) : MetaM Expr := do
+  let shape ← whnf type
+  if shape.isConstOf ``Real then
+    return mkConst ``PointwiseArithmetic.real
+  if shape.isAppOfArity ``Prod 2 then
+    return ← mkAppM ``PointwiseArithmetic.prod
+      #[← pointwiseArithmetic shape.getAppArgs[0]!,
+        ← pointwiseArithmetic shape.getAppArgs[1]!]
+  if let .forallE name index body info := shape then
+    let indexShape ← whnf index
+    if indexShape.isAppOfArity ``Fin 1 then
+      return ← withLocalDecl name info index fun i => do
+        let target ← pointwiseArithmetic (body.instantiate1 i)
+        mkAppM ``PointwiseArithmetic.pi #[indexShape.getAppArgs[0]!, target]
+  throwError "unsupported pointwise arithmetic space {type}"
+
+private def checkPointwisePrefix (expression type : Expr) (power : Bool) : CertifyM Unit := do
+  let data ← pointwiseArithmetic type
+  let args := expression.getAppArgs
+  let expected ← if power then do
+      let pow ← mkAppM ``PointwiseArithmetic.pow #[data]
+      let inst ← mkAppOptM ``instHPow #[some type, some (mkConst ``Nat), some pow]
+      pure <| mkAppN expression.getAppFn
+        #[type, mkConst ``Nat, type, inst, args[4]!, args[5]!]
+    else do
+      let mul ← mkAppM ``PointwiseArithmetic.mul #[data]
+      let inst ← mkAppOptM ``instHMul #[some type, some mul]
+      pure <| mkAppN expression.getAppFn
+        #[type, type, type, inst, args[4]!, args[5]!]
+  checkPrefix expression expected 2
+
 -- Reduce local structural forms wherever they can hide decision independence.
 -- Independent terms retain their spelling and named helpers remain boundaries.
 -- Use the reduced expression in constructors as well as dependency checks, so
@@ -370,6 +426,9 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     let left ← certifyBody point lhs
     let right ← after left <| certifyBody point rhs
     let (info, proofs) ← combine point #[left, right]
+    if name == some ``HMul.hMul && independent && !(← whnf type).isConstOf ``Real then
+      checkPointwisePrefix expression type false
+      return ← constant point expression info
     let constructor := if name == some ``HAdd.hAdd then ``Morew.NLP.Smooth.add
       else if name == some ``HSub.hSub then ``Morew.NLP.Smooth.sub
       else if name == some ``HMul.hMul then ``Morew.NLP.Smooth.mul
@@ -389,6 +448,9 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if ← isDefEq (← inferType args[5]!) (mkConst ``Nat) then
       let exponent ← fixedArgument point args[5]! "the exponent"
       let child ← certifyBody point args[4]!
+      if independent && !(← whnf type).isConstOf ``Real then
+        checkPointwisePrefix expression type true
+        return ← constant point expression child.toDomainInfo
       return { child with
         smooth := ← construct point expression ``Morew.NLP.Smooth.pow
           #[← functionOf point args[4]!, exponent, child.smooth] (some 2) }

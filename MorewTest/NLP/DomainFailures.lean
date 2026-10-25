@@ -138,6 +138,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun _x : ℝ => ignoredVector (fun _i => Real.log 0)]))) .feasibleInclusion
   assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector
+      ((fun _i => Real.log 0) * (fun _i => (0 : ℝ))) + x]))) .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector ((fun _i => Real.log 0) ^ (0 : Nat)) + x])))
+    .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredPair ((Real.log 0, (1 : ℝ)) * (0, 0)) + x])))
+    .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredPair (((1 : ℝ), Real.sqrt 0) ^ (0 : Nat)) + x])))
+    .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), hiddenSquare x]))) .unknownHead
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), |x|]))) .nonsmooth
@@ -156,6 +168,34 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => Real.log (x + x)]))) .invalidInstance 1
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => @HDiv.hDiv ℝ ℝ ℝ ⟨fun a _ => |a|⟩ x 1]))) .invalidInstance
+  assertDomainRejected (← `(fun [HMul (Fin 2 → ℝ) (Fin 2 → ℝ) (Fin 2 → ℝ)] =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => ignoredVector
+      ((fun _i : Fin 2 => (2 : ℝ)) * (fun _i : Fin 2 => (3 : ℝ))) + x])))
+    .invalidInstance 1
+  assertDomainRejected (← `(fun [Mul ℝ] => ((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredPair (((2 : ℝ), (3 : ℝ)) * (4, 5)) + x]))) .invalidInstance 1
+  assertDomainRejected (← `(fun [Pow (Fin 2 → ℝ) Nat] => ((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector ((fun _i => (2 : ℝ)) ^ (2 : Nat)) + x])))
+    .invalidInstance 1
+  assertDomainRejected (← `(fun [HPow (ℝ × ℝ) Nat (ℝ × ℝ)] => ((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredPair (((2 : ℝ), (3 : ℝ)) ^ (2 : Nat)) + x])))
+    .invalidInstance 1
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector
+      (@HMul.hMul (Fin 2 → ℝ) (Fin 2 → ℝ) (Fin 2 → ℝ)
+        ⟨fun _ _ => fun _ => 0⟩ (fun _ => 0) (fun _ => 0)) + x]))) .invalidInstance
+  -- The fallback is only for fixed values; it adds no vector calculus rule.
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector ((fun _i => x) * (fun _i => (2 : ℝ)))])))
+    .invalidInstance
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  withInput (← `(fun [Pow (Fin 2 → ℝ) Nat] => ((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector ((fun _i => (2 : ℝ)) ^ (2 : Nat)) + x]))) 1
+      fun feasible sources => do
+    discard <| checkFailure feasible sources .invalidInstance (some 0)
+    -- The global API still treats fixed operations as arbitrary constants.
+    discard <| MorewTest.NLP.Smooth.checkSuccess sources[0]!
 
 /-! Empty source arrays still require a supported analytic decision space. -/
 
