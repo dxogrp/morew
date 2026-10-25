@@ -117,7 +117,9 @@ partial def rowFacts (point feasibleProof : Expr) : MetaM (Array Expr) := do
     let right ← rowFacts point (← mkAppM ``And.right #[feasibleProof])
     return left ++ right
   if type.isConstOf ``True then return #[]
-  return #[feasibleProof]
+  -- Preserve the admitted structural view for tactics that do not unfold
+  -- named model containers when inspecting a proof's type.
+  return #[← mkAppOptM ``id #[some type, some feasibleProof]]
 
 -- Domain membership unfolds to conjunctions. Unlike row admission, these are
 -- already proved facts supplied by the caller, so inspecting their definition

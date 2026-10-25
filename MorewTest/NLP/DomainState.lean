@@ -189,6 +189,43 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   unless (← getConstInfo ``MorewTest.NLP.logProblem).value? == declaration.value? do
     throwError "certification changed an imported model declaration"
 
+/-! Imported/applied feasibility fields expose exactly their admitted row facts.
+The result still proves inclusion for the original model-field expression. -/
+
+private noncomputable def groupedLogProblem : Morew.Problem ℝ ℝ where
+  objective := Real.log
+  feasible x := True ∧ (1 ≤ x ∧ x ≤ 3)
+
+private def wrappedLowerBound (x : ℝ) : Prop := 1 ≤ x
+
+private noncomputable def wrappedLogProblem : Morew.Problem ℝ ℝ where
+  objective := Real.log
+  feasible := wrappedLowerBound
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let feasible ← elaborate (← `(closedLogProblem.feasible))
+  let objective ← elaborate (← `(closedLogProblem.objective))
+  let originalFeasible ← ppExpr feasible
+  let originalObjective ← ppExpr objective
+  discard <| isolatedSuccess feasible #[objective]
+  unless (← ppExpr feasible).pretty == originalFeasible.pretty &&
+      (← ppExpr objective).pretty == originalObjective.pretty do
+    throwError "certification changed imported model fields"
+  withInput (← `(fun lower : ℝ => fun _h : 0 < lower =>
+    ((lowerBoundLogProblem lower).feasible, #[(lowerBoundLogProblem lower).objective]))) 2
+      fun feasible sources => do
+    discard <| isolatedSuccess feasible sources
+  withInput (← `((groupedLogProblem.feasible,
+    #[groupedLogProblem.objective, fun x : ℝ => Real.sqrt (4 - x)]))) 0
+      fun feasible sources => do
+    discard <| isolatedSuccess feasible sources
+  withInput (← `(((lowerBoundLogProblem 0).feasible,
+    #[(lowerBoundLogProblem 0).objective]))) 0 fun feasible sources => do
+    discard <| isolatedFailure feasible sources .feasibleInclusion
+  withInput (← `((wrappedLogProblem.feasible, #[wrappedLogProblem.objective]))) 0
+      fun feasible sources => do
+    discard <| isolatedFailure feasible sources .unsupportedRow
+
 /-! Unused ambient analytic instances do not enter the returned domain proofs. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
