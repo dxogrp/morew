@@ -246,7 +246,7 @@ private def withRowDiagnostics {α : Type} (source : Expr) (action : MetaM α) :
     throwError "exponential rewrite was not certified for {source}: {error.toMessageData}"
 
 private def planCoreDirect (source : Expr) (retained : Array Expr)
-    (config : Affine.Config) (preferLog : Bool) (selected? : Option Rule := none) :
+    (provider : Affine.EvidenceProvider) (preferLog : Bool) (selected? : Option Rule := none) :
     MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     try
@@ -277,9 +277,9 @@ private def planCoreDirect (source : Expr) (retained : Array Expr)
                 let pointwise ← mkLambdaFVars #[point] proof
                 let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[args[0]!, target, pointwise]
                 let lift ← Plan.checkLift source lift
-                return .inl (← withRowDiagnostics source (Plan.finish source domain lift config))
+                return .inl (← withRowDiagnostics source (Plan.finish source domain lift provider))
               let rowPredicates := #[← instantiateMVars (← mkLambdaFVars #[point] target)]
-              let certifiedRows ← withRowDiagnostics source (Plan.certifyRows rowPredicates config)
+              let certifiedRows ← withRowDiagnostics source (Plan.certifyRows rowPredicates provider)
               let conditionalIff ← instantiateMVars (← mkLambdaFVars #[point, evidence] proof)
               if ← Plan.unresolved conditionalIff then
                 throwError "exponential certificate contains unresolved metavariables"
@@ -290,11 +290,11 @@ private def planCoreDirect (source : Expr) (retained : Array Expr)
       return .error { expression := source, reason := ← addMessageContext error.toMessageData }
 
 private def planCore (source : Expr) (retained : Array Expr)
-    (config : Affine.Config) (preferLog : Bool) (selected? : Option Rule := none) :
+    (provider : Affine.EvidenceProvider) (preferLog : Bool) (selected? : Option Rule := none) :
     MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained)
-      (planCoreDirect source retained config preferLog selected?)
+      (planCoreDirect source retained provider preferLog selected?)
 
 /-- Certify an exponential replacement, using only the supplied retained entries
 for decision-dependent domains. The selected row must be excluded from them.
@@ -303,18 +303,18 @@ Each orientation is accepted only after certifying all its rows. An independent
 exponential expression can itself be an affine logarithmic lower bound, so a
 failed upper-bound attempt must not hide a successful logarithmic rewrite. -/
 def plan (source : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Plan.Prepared) := do
-  match ← planCore source retained config false with
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) := do
+  match ← planCore source retained provider false with
   | .ok result => return .ok result
   | .error error =>
-    match ← planCore source retained config true with
+    match ← planCore source retained provider true with
     | .ok result => return .ok result
     | .error _ => return .error error
 
 /-- Certify exactly one native rule, without treating a lower-log fallback as
 another upper rule or counting a composite's alternate spelling twice. -/
 def planRule (rule : Rule) (source : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  planCore source retained config (rule == .logarithm) (some rule)
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+  planCore source retained provider (rule == .logarithm) (some rule)
 
 end Morew.Elab.Conic.Exponential

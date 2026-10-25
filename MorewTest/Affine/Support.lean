@@ -42,10 +42,10 @@ def checkResult (source : Expr) (result : AffineResult) : MetaM Unit := do
     throwError "affine certificate proves the wrong statement"
 
 def assertAffine (term : TSyntax `term) (parameterCount : Nat := 0)
-    (config : Morew.Elab.Affine.Config := {}) : TermElabM Unit := do
+    (provider : Morew.Elab.Affine.EvidenceProvider := {}) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
-    match ← reifyAffine source config with
+    match ← reifyAffine source provider with
     | .ok result => checkResult source result
     | .error error =>
       throwError "expected affine recognition of {source}\n{error.reason}"

@@ -27,14 +27,14 @@ private inductive EntryPoint where
   | objective
   deriving Repr
 
-private def recognize (entry : EntryPoint) (source : Expr) (config : Affine.Config) :
+private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Affine.AffineError (Array Expr)) := do
   match entry with
   | .affine =>
-    return (← Affine.reifyAffine source config).map fun result =>
+    return (← Affine.reifyAffine source provider).map fun result =>
       #[result.map, result.pointwiseEquality]
   | .row =>
-    return (← Conic.normalizeRow source config).map fun result =>
+    return (← Conic.normalizeRow source provider).map fun result =>
       #[result.constraint, result.pointwiseIff]
   | .objective =>
     let real := Lean.mkConst ``Real
@@ -45,11 +45,11 @@ private def recognize (entry : EntryPoint) (source : Expr) (config : Affine.Conf
       binders := #[{ name := `x, type := real }]
       objective := source
     }
-    return (← Conic.reifyObjective presentation config).map fun result =>
+    return (← Conic.reifyObjective presentation provider).map fun result =>
       #[result.map, result.pointwiseEquality]
 
 private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
-    (action : Expr → Affine.Config → IO.Ref (Array Name) → TermElabM Unit) :
+    (action : Expr → Affine.EvidenceProvider → IO.Ref (Array Name) → TermElabM Unit) :
     TermElabM Unit := do
   let expression ← elabTerm term none
   synthesizeSyntheticMVarsNoPostponing
@@ -58,7 +58,7 @@ private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
     throwError "state regression did not fully elaborate its source"
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
-    let config : Morew.Elab.Affine.Config := {
+    let provider : Morew.Elab.Affine.EvidenceProvider := {
       nonzeroEvidence? := some fun obligation => do
         let proof ← mkAppM ``And.left #[parameters[1]!]
         unless ← isDefEq (← inferType proof) obligation do return none
@@ -72,7 +72,7 @@ private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
         scratch.mvarId!.assign (mkAppN (Lean.mkConst name) parameters)
         return some (← instantiateMVars scratch)
     }
-    action source config generated
+    action source provider generated
 
 private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx
@@ -88,13 +88,13 @@ private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
 
 private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     (cache : Bool := true) : TermElabM Unit :=
-  withAuxEvidence term cache fun source config generated => do
+  withAuxEvidence term cache fun source provider generated => do
     let unresolved ← mkFreshExprMVar (Lean.mkConst ``Nat)
     let assigned ← mkFreshExprMVar (Lean.mkConst ``Nat)
     assigned.mvarId!.assign (mkNatLit 7)
     for _ in [:3] do
       let before ← getMCtx
-      let result ← recognize entry source config
+      let result ← recognize entry source provider
       let .ok expressions := result
         | match result with
           | .error error => throwError
@@ -121,14 +121,14 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
 
 private def checkFailure (entry : EntryPoint) (term : TSyntax `term)
     (cache : Bool := true) : TermElabM Unit :=
-  withAuxEvidence term cache fun source config generated => do
+  withAuxEvidence term cache fun source provider generated => do
     let unresolved ← mkFreshExprMVar (Lean.mkConst ``Nat)
     let assigned ← mkFreshExprMVar (Lean.mkConst ``Nat)
     assigned.mvarId!.assign (mkNatLit 7)
     -- A second attempt also checks that the auxiliary-lemma cache rolled back.
     for _ in [:2] do
       let before ← getMCtx
-      let .error error ← recognize entry source config
+      let .error error ← recognize entry source provider
         | throwError "nonlinear expression was accepted"
       checkUnchanged before
       unless (← error.reason.toString).contains "both factors of multiplication" do

@@ -59,13 +59,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate
     (← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) => fun x : ℝ => x / c))
   lambdaBoundedTelescope expression 2 fun parameters source => do
-    let config : Morew.Elab.Affine.Config := {
+    let provider : Morew.Elab.Affine.EvidenceProvider := {
       nonzeroEvidence? := some fun obligation => do
         let proof ← mkAppM ``And.left #[parameters[1]!]
         unless ← isDefEq (← inferType proof) obligation do return none
         return some proof
     }
-    match ← reifyAffine source config with
+    match ← reifyAffine source (provider := provider) with
     | .ok result => checkResult source result
     | .error error => throwError "did not use supplied nonzero evidence: {error.reason}"
 

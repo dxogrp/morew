@@ -118,7 +118,7 @@ private def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
   let expression ← elaborate stx
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
-    let config : Morew.Elab.Affine.Config := {
+    let provider : Morew.Elab.Affine.EvidenceProvider := {
       nonzeroEvidence? := some fun obligation => do
         let proof ← mkAppM ``And.left #[parameters[1]!]
         unless ← isDefEq (← inferType proof) obligation do return none
@@ -127,7 +127,7 @@ private def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
         generated.modify (·.push name)
         return some (mkAppN (mkConst name) parameters)
     }
-    let result ← Automatic.planUnique source #[] config
+    let result ← Automatic.planUnique source #[] provider
     match result with
     | .ok result =>
       unless success do throwError "nonlinear replacement was accepted"

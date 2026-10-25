@@ -166,7 +166,7 @@ private def automaticProof (point body : Expr) (retained : Array Expr)
 /-- Certify one native upper bound under exactly the supplied retained rows.
 The selected predicate must not be included among `retained`. -/
 private def planDirect (source : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
       if ← Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
@@ -186,7 +186,7 @@ private def planDirect (source : Expr) (retained : Array Expr := #[])
                 throwError "generated cone row depends on feasibility evidence"
               return (← mkLambdaFVars #[point] target, ← mkLambdaFVars #[point, evidence] proof)
             let rowPredicates := #[← instantiateMVars row]
-            let certifiedRows ← Plan.certifyRows rowPredicates config
+            let certifiedRows ← Plan.certifyRows rowPredicates provider
             let conditionalIff ← instantiateMVars conditionalIff
             if ← Plan.unresolved conditionalIff then
               throwError "second-order certificate contains unresolved metavariables"
@@ -199,19 +199,19 @@ private def planDirect (source : Expr) (retained : Array Expr := #[])
 /-- Certify a native second-order row with bounded discovery of hidden finite
 evidence. Neither the selected row nor retained predicates are unfolded. -/
 def plan (source : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.ContextualResult.replaceFVars (#[source] ++ retained)
-      (planDirect source retained config)
+      (planDirect source retained provider)
 
 /-- Use the ordinary exact-lift path when the checked proof does not use the
 retained rows. This keeps unconditional certificates small in long scripts;
 only denominator evidence extracted from retained constraints is contextual. -/
 def planReplacement (source : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) :
+    (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Affine.AffineError (Sum Plan.Result Result)) :=
   Affine.withIsolatedMVars do
-    match ← plan source retained config with
+    match ← plan source retained provider with
     | .error error => return .error error
     | .ok result =>
       try

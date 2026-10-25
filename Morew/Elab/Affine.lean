@@ -63,9 +63,12 @@ structure AffineError where
 
 instance : ToMessageData AffineError := ⟨(·.reason)⟩
 
-/-- Optional proof provision for the deliberately restricted division rule. -/
-structure Config where
-  /-- Given the proposition `c ≠ 0`, optionally supply a checked proof. -/
+/-- Optional proof provision for metaprogram authors using the restricted division
+rule. The default provider relies on local hypotheses and bounded evaluation. -/
+structure EvidenceProvider where
+  /-- Given the proposition `c ≠ 0`, optionally return a proof term. The certifier
+  checks its type, decision independence, and absence of unresolved metavariables.
+  Returning `none` leaves bounded numeral/rational evaluation available. -/
   nonzeroEvidence? : Option (Expr → MetaM (Option Expr)) := none
 
 /-- A real affine map and its pointwise agreement with the supplied function. -/
@@ -309,7 +312,7 @@ private def construct (point source : Expr) (name : Name) (args : Array Expr)
     reject source m!"unsupported types or instances: {exception.toMessageData}"
   finish point source certificate operandCount?
 
-private def nonzeroProof (point divisor : Expr) (config : Config) : ReifyM Expr := do
+private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
   if ← depends point divisor then
     reject divisor "the divisor depends on a decision variable"
   let zero : Expr := q((0 : ℝ))
@@ -323,7 +326,7 @@ private def nonzeroProof (point divisor : Expr) (config : Config) : ReifyM Expr 
         if unresolved then
           reject divisor "nonzero evidence contains unresolved metavariables"
         return declaration.toExpr
-  if let some provide := config.nonzeroEvidence? then
+  if let some provide := provider.nonzeroEvidence? then
     if let some proof ← provide obligation then
       unless ← isDefEq (← inferType proof) obligation do
         reject divisor "supplied evidence does not prove that the divisor is nonzero"
@@ -350,15 +353,15 @@ private def nonzeroProof (point divisor : Expr) (config : Config) : ReifyM Expr 
   catch _ => pure ()
   reject divisor m!"missing nonzero evidence; required {obligation}"
 
-private partial def reifyBody (point expression : Expr) (config : Config) : ReifyM Expr := do
+private partial def reifyBody (point expression : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
   let expression ← reduceStructure expression (preserveLets := true)
   if let .letE name type value body nondep := expression then
     -- A local alias of the decision point must be substituted before building
     -- a new function binder. Independent lets retain useful proof/instance scope.
     if (← depends point type) || (← depends point value) then
-      return ← reifyBody point (body.instantiate1 value) config
+      return ← reifyBody point (body.instantiate1 value) provider
     return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
-      reifyBody point (body.instantiate1 binding) config
+      reifyBody point (body.instantiate1 binding) provider
   let type ← inferType expression
   unless ← isSupportedSpace type do
     reject expression m!"unsupported affine value type {type}"
@@ -369,16 +372,16 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
     return ← construct point expression ``Morew.Affine.Certified.id #[domain]
   if let .proj ``WithLp 0 value := expression then
     if (← Space.euclideanDimension? (← inferType value)).isSome then
-      let value ← reifyBody point value config
+      let value ← reifyBody point value provider
       return ← construct point expression ``Morew.Affine.Certified.ofEuclidean #[value]
   if let .proj ``Prod index value := expression then
-    let value ← reifyBody point value config
+    let value ← reifyBody point value provider
     let constructor := if index == 0 then
       ``Morew.Affine.Certified.fst else ``Morew.Affine.Certified.snd
     return ← construct point expression constructor #[value]
   if let .lam name index body info := expression then
     let family ← withLocalDecl name info index fun i => do
-      let certificate ← reifyBody point (body.instantiate1 i) config
+      let certificate ← reifyBody point (body.instantiate1 i) provider
       mkLambdaFVars #[i] certificate
     return ← construct point expression ``Morew.Affine.Certified.pi #[family]
   let head := expression.getAppFn
@@ -386,47 +389,47 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
   let name := head.constName?
   if name == some ``WithLp.toLp && args.size == 3 then
     if (← Space.euclideanDimension? type).isSome then
-      let value ← reifyBody point args[2]! config
+      let value ← reifyBody point args[2]! provider
       return ← construct point expression ``Morew.Affine.Certified.toEuclidean #[value]
   if name == some ``WithLp.ofLp && args.size == 3 then
     if (← Space.euclideanDimension? (← inferType args[2]!)).isSome then
-      let value ← reifyBody point args[2]! config
+      let value ← reifyBody point args[2]! provider
       return ← construct point expression ``Morew.Affine.Certified.ofEuclidean #[value]
   if name == some ``HAdd.hAdd && args.size == 6 then
-    let left ← reifyBody point args[4]! config
-    let right ← reifyBody point args[5]! config
+    let left ← reifyBody point args[4]! provider
+    let right ← reifyBody point args[5]! provider
     return ← construct point expression ``Morew.Affine.Certified.add #[left, right] (some 2)
   if name == some ``HSub.hSub && args.size == 6 then
-    let left ← reifyBody point args[4]! config
-    let right ← reifyBody point args[5]! config
+    let left ← reifyBody point args[4]! provider
+    let right ← reifyBody point args[5]! provider
     return ← construct point expression ``Morew.Affine.Certified.sub #[left, right] (some 2)
   if name == some ``Neg.neg && args.size == 3 then
-    let value ← reifyBody point args[2]! config
+    let value ← reifyBody point args[2]! provider
     return ← construct point expression ``Morew.Affine.Certified.neg #[value] (some 1)
   if name == some ``HMul.hMul && args.size == 6 then
     let left := args[4]!
     let right := args[5]!
     if !(← depends point left) then
-      let rightMap ← reifyBody point right config
+      let rightMap ← reifyBody point right provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstLeft
         #[left, rightMap] (some 2)
     if !(← depends point right) then
-      let leftMap ← reifyBody point left config
+      let leftMap ← reifyBody point left provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstRight
         #[leftMap, right] (some 2)
-    discard <| reifyBody point left config
-    discard <| reifyBody point right config
+    discard <| reifyBody point left provider
+    discard <| reifyBody point right provider
     reject expression "both factors of multiplication depend on decision variables"
   if name == some ``HSMul.hSMul && args.size == 6 then
     let coefficient := args[4]!
     if ← depends point coefficient then
       if !(← depends point args[5]!) && (← isDefEq type (mkConst ``Real)) &&
           (← isDefEq (← inferType coefficient) (mkConst ``Real)) then
-        let scalar ← reifyBody point coefficient config
+        let scalar ← reifyBody point coefficient provider
         return ← construct point expression ``Morew.Affine.Certified.smulConst
           #[scalar, args[5]!] (some 2)
       reject coefficient "the scalar coefficient depends on a decision variable"
-    let value ← reifyBody point args[5]! config
+    let value ← reifyBody point args[5]! provider
     let scalarType ← inferType coefficient
     let constructor ← if ← isDefEq scalarType (mkConst ``Real) then
         pure ``Morew.Affine.Certified.realSMul
@@ -435,8 +438,8 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
       else reject coefficient "only real and natural scalar coefficients are supported"
     return ← construct point expression constructor #[coefficient, value] (some 2)
   if name == some ``HDiv.hDiv && args.size == 6 then
-    let numerator ← reifyBody point args[4]! config
-    let proof ← nonzeroProof point args[5]! config
+    let numerator ← reifyBody point args[4]! provider
+    let proof ← nonzeroProof point args[5]! provider
     return ← construct point expression ``Morew.Affine.Certified.divConst
       #[numerator, args[5]!, proof] (some 2)
   if name == some ``HPow.hPow && args.size == 6 then
@@ -447,23 +450,23 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
         return ← construct point expression ``Morew.Affine.Certified.powZeroSource
           #[source] (some 2)
       if (← getNatValue? exponent) == some 1 then
-        let base ← reifyBody point args[4]! config
+        let base ← reifyBody point args[4]! provider
         return ← construct point expression ``Morew.Affine.Certified.powOne #[base] (some 2)
     reject expression "a decision-dependent power is supported only with natural exponent 0 or 1"
   if name == some ``Prod.mk && args.size == 4 then
-    let left ← reifyBody point args[2]! config
-    let right ← reifyBody point args[3]! config
+    let left ← reifyBody point args[2]! provider
+    let right ← reifyBody point args[3]! provider
     return ← construct point expression ``Morew.Affine.Certified.pair #[left, right]
   if name == some ``Matrix.vecCons && args.size == 4 then
-    let first ← reifyBody point args[2]! config
-    let rest ← reifyBody point args[3]! config
+    let first ← reifyBody point args[2]! provider
+    let rest ← reifyBody point args[3]! provider
     return ← construct point expression ``Morew.Affine.Certified.vecCons #[first, rest]
   if name == some ``Finset.sum && args.size == 5 then
     let set := args[3]!
     if ← depends point set then
       reject set "the finite sum's index set depends on a decision variable"
     let family ← withLocalDeclD `i args[0]! fun i => do
-      let certificate ← reifyBody point (mkApp args[4]! i) config
+      let certificate ← reifyBody point (mkApp args[4]! i) provider
       mkLambdaFVars #[i] certificate
     return ← construct point expression ``Morew.Affine.Certified.sum #[set, family] (some 2)
   if name == some ``dotProduct && args.size == 7 then
@@ -471,15 +474,15 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
       let left := args[5]!
       let right := args[6]!
       if !(← depends point left) then
-        let rightMap ← reifyBody point right config
+        let rightMap ← reifyBody point right provider
         return ← construct point expression ``Morew.Affine.Certified.dotConstLeft
           #[left, rightMap] (some 2)
       if !(← depends point right) then
-        let leftMap ← reifyBody point left config
+        let leftMap ← reifyBody point left provider
         return ← construct point expression ``Morew.Affine.Certified.dotConstRight
           #[leftMap, right] (some 2)
-      discard <| reifyBody point left config
-      discard <| reifyBody point right config
+      discard <| reifyBody point left provider
+      discard <| reifyBody point right provider
       reject expression "both dot-product factors depend on decision variables"
   if (name == some ``Matrix.mulVec || name == some ``Matrix.vecMul) && args.size == 7 then
     return ← withIndexInstance point args[4]! do
@@ -487,9 +490,9 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
       let vector := if name == some ``Matrix.mulVec then args[6]! else args[5]!
       if ← depends point matrix then
         -- Diagnose an unsupported entry first, then the coefficient's dependence.
-        discard <| reifyBody point matrix config
+        discard <| reifyBody point matrix provider
         reject matrix "the coefficient matrix depends on a decision variable"
-      let vectorMap ← reifyBody point vector config
+      let vectorMap ← reifyBody point vector provider
       if name == some ``Matrix.mulVec then
         return ← construct point expression ``Morew.Affine.Certified.mulVec
           #[matrix, vectorMap] (some 2)
@@ -503,15 +506,15 @@ private partial def reifyBody (point expression : Expr) (config : Config) : Reif
     if vectorType.isForall && (← isSupportedSpace vectorType) then
       if ← depends point index then
         reject index "the vector index depends on a decision variable"
-      let vectorMap ← reifyBody point vector config
+      let vectorMap ← reifyBody point vector provider
       return ← construct point expression ``Morew.Affine.Certified.eval #[vectorMap, index]
   -- Prefer a failing inner operand to its enclosing unsupported application.
   for argument in args do
     if (← depends point argument) && (← isSupportedSpace (← inferType argument)) then
-      discard <| reifyBody point argument config
+      discard <| reifyBody point argument provider
   reject expression "unsupported function, coercion, or nonlinear operation"
 
-private def reifyCore (source : Expr) (config : Config)
+private def reifyCore (source : Expr) (provider : EvidenceProvider)
     (original? : Option Expr := none) : ReifyM AffineResult := do
   let source ← instantiateMVars source
   if (← inspectLocals source none).2 then
@@ -528,7 +531,7 @@ private def reifyCore (source : Expr) (config : Config)
     unless ← isSupportedSpace domain do
       reject source m!"unsupported decision space {domain}"
     withLocalDeclD `point domain fun point => do
-      reifyBody point (mkApp source point) config
+      reifyBody point (mkApp source point) provider
   let map ← mkProjection certificate `map
   let equality ← mkProjection certificate `correct
   let map ← instantiateMVars map
@@ -548,13 +551,16 @@ private def reifyCore (source : Expr) (config : Config)
 
 All success results contain ordinary proof terms checked against the original
 function. Transparent helpers are expanded only in a temporary expression after
-direct recognition fails. The optional evidence callback is checked against
+direct recognition fails. Metaprograms can use
+`reifyAffine source (provider := evidence)` to supply nonzero proofs. Matching
+local hypotheses take precedence over the provider, which is consulted before
+bounded numeral/rational evaluation. Supplied evidence is checked against
 `c ≠ 0`; it does not weaken the global pointwise correctness obligation.
 -/
-def reifyAffine (source : Expr) (config : Config := {}) :
+def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
     MetaM (Except AffineError AffineResult) := withIsolatedMVars do
   try
-    let direct ← withIsolatedMVars <| (reifyCore source config).run
+    let direct ← withIsolatedMVars <| (reifyCore source provider).run
     if let .ok result := direct then return .ok result
     unless ← Expansion.enabled do return direct
     -- Do not expand an incompletely elaborated term or allow expansion to
@@ -562,7 +568,7 @@ def reifyAffine (source : Expr) (config : Config := {}) :
     if (← inspectLocals source none).2 then return direct
     let prepared ← Expansion.prepare source (fun expression preserve => reduceStructure expression preserve)
     if prepared.expansions == 0 then return direct
-    match ← (reifyCore prepared.expression config (some source)).run with
+    match ← (reifyCore prepared.expression provider (some source)).run with
     | .ok result => return .ok result
     | .error error => return .error { error with
         reason := ← addMessageContext

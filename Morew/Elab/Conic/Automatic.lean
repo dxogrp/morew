@@ -46,19 +46,19 @@ def RuleId.description : RuleId → String
 
 /-- Preserve targeted rewriting's family order and certified fallback behavior. -/
 def planFirst (predicate : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     let mut candidateError? := none
     if ← Exponential.isCandidate predicate then
-      match ← Exponential.plan predicate retained config with
+      match ← Exponential.plan predicate retained provider with
       | .ok result => return .ok result
       | .error error => candidateError? := some error
     if ← SecondOrder.isCandidate predicate then
-      match ← SecondOrder.planReplacement predicate retained config with
+      match ← SecondOrder.planReplacement predicate retained provider with
       | .ok result => return .ok result
       | .error error =>
         if candidateError?.isNone then candidateError? := some error
-    match ← Polyhedral.plan predicate none config with
+    match ← Polyhedral.plan predicate none provider with
     | .ok result => return .ok (.inl result)
     | .error error => return .error (candidateError?.getD error)
 
@@ -70,18 +70,18 @@ real rule ambiguity when this lower-level interface is called directly.
 Candidate heads and failed obligations never count as successful matches.
 No custom rules are searched, and no objective or nested expression is lifted. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     let mut successes : Array (RuleId × Plan.Prepared) := #[]
     if ← Exponential.isCandidate predicate then
       for rule in Exponential.rules do
-        if let .ok result ← Exponential.planRule rule predicate retained config then
+        if let .ok result ← Exponential.planRule rule predicate retained provider then
           successes := successes.push (.exponential rule, result)
     if ← SecondOrder.isCandidate predicate then
-      if let .ok result ← SecondOrder.planReplacement predicate retained config then
+      if let .ok result ← SecondOrder.planReplacement predicate retained provider then
         successes := successes.push (.secondOrder, result)
     for rule in Polyhedral.rules do
-      if let .ok result ← Polyhedral.planRule rule predicate config then
+      if let .ok result ← Polyhedral.planRule rule predicate provider then
         successes := successes.push (.polyhedral rule, .inl result)
     if let [(_, result)] := successes.toList then
       return .ok result
@@ -94,7 +94,7 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
       }
     -- Reuse the established, source-specific diagnostic rather than reporting
     -- a rejected attempt for an unrelated operation earlier in the rule table.
-    match ← planFirst predicate retained config with
+    match ← planFirst predicate retained provider with
     | .error error => return .error error
     | .ok _ => return .error {
         expression := predicate
