@@ -33,6 +33,8 @@ import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Runner
 import Morew.Fn
 import Morew.Fn.Exponential
+import Morew.NLP
+import Morew.NLP.Basic
 import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
