@@ -71,6 +71,17 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     #[fun x : ℝ => let log := fun y : ℝ => Real.log y; log x])))
   assertDomain (← `(fun x : ℝ => fun _hx : 0 < x =>
     ((fun _y : ℝ => True), #[fun x : ℝ => x + Real.log 1]))) 2
+  assertDomain (← `(fun p : ℝ × Nat =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => x + p.1]))) 1
+  assertDomain (← `(fun p : Nat × ℝ =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => x + p.2]))) 1
+  assertDomain (← `(fun n : Nat => fun i : Fin n => fun p : (Fin n → ℝ) × Nat =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => x + p.1 i]))) 3
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => x + ((1 : ℝ), Real.log 0).1])))
+  assertDomain (← `(fun c : { r : ℝ // 0 < r } => ((fun _x : ℝ => True),
+    #[fun x : ℝ => x + (let _hc : 0 < c.val := c.property;
+      (Real.log c.val, (0 : Nat))).1]))) 1
 
 /-! Finite support controls obligations even when the ambient index type is infinite. -/
 

@@ -286,9 +286,19 @@ private def restrictDomain (point expression value : Expr) (positive : Bool)
   let proofs ← proofs.mapM fun proof => restrictProof point proof domain subset
   return ({ domain, isOpen, included }, proofs, holds)
 
+-- Bring structural bindings in a projection operand into the traversal's
+-- scope. Unlike zeta reduction, this retains independent proof lets/instances.
+private def hoistProjectionLets : Expr → Expr
+  | .proj name index value =>
+    match hoistProjectionLets value with
+    | .letE binding type value body nondep =>
+      .letE binding type value (.proj name index body) nondep
+    | value => .proj name index value
+  | expression => expression
+
 private partial def certifyBody (point expression : Expr) : CertifyM Certificate := do
-  let expression ← Affine.reduceStructure expression (preserveLets := true)
-    (opaqueProblemDependencies? := some point)
+  let expression := hoistProjectionLets (← Affine.reduceStructure expression (preserveLets := true)
+    (opaqueProblemDependencies? := some point))
   if let .letE name type value body nondep := expression then
     if (← Affine.depends point type) || (← Affine.depends point value) then
       return ← certifyBody point (body.instantiate1 value)
@@ -313,6 +323,11 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     return { info with
       smooth := ← construct point expression ``Morew.NLP.Smooth.id #[info.domain] }
   if let .proj ``Prod index value := expression then
+    -- A fixed scalar/vector component need not give the whole parameter an
+    -- analytic structure. Unsupported value spaces remain opaque, after the
+    -- structural reductions above have exposed any selected tuple component.
+    if independent && !(← supportedSpace (← inferType value)) then
+      return ← constant point expression (← univInfo point)
     let child ← certifyBody point value
     let name := if index == 0 then ``Morew.NLP.Smooth.fst else ``Morew.NLP.Smooth.snd
     return { child with

@@ -102,6 +102,15 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ((fun _y : ℝ => True), #[fun x : ℝ => Real.log x]))) .feasibleInclusion 2
   assertDomainRejected (← `(((fun x : ℝ => 0 ≤ x),
     #[fun x : ℝ => let log := fun y : ℝ => Real.log y; log x]))) .feasibleInclusion
+  -- Structural reduction must still expose selected restricted tuple values.
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => x + (Real.log 0, (0 : Nat)).1]))) .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => let p := ((0 : Nat), Real.log 0); x + p.2]))) .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => x + (let p := (Real.log 0, (0 : Nat)); p).1]))) .feasibleInclusion
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => x + (let p := ((0 : Nat), Real.log 0); p).2]))) .feasibleInclusion
 
 private noncomputable def hiddenSquare (x : ℝ) : ℝ := x * x
 private noncomputable abbrev inlineSquare (x : ℝ) : ℝ := x * x
