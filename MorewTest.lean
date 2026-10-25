@@ -56,7 +56,9 @@ import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
 import MorewTest.NLP
+import MorewTest.NLP.Domain
 import MorewTest.NLP.DomainLemmas
+import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Smooth
 import MorewTest.NLP.SmoothFailures
 import MorewTest.NLP.SmoothLemmas
