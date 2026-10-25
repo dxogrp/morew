@@ -130,10 +130,27 @@ private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Uni
     unless ← isDefEq actualArgs[i]! expectedArgs[i]! do
       reject source .invalidInstance "expected canonical real arithmetic instances"
 
+-- Reduce local structural forms wherever they can hide decision independence.
+-- Independent terms retain their spelling and named helpers remain boundaries.
+-- Use the reduced expression in constructors as well as dependency checks, so
+-- an erased decision reference cannot escape through a fixed argument or type.
+private def reduceLocalStructure (point expression : Expr) : MetaM Expr := do
+  let step (value : Expr) : MetaM TransformStep := do
+    if !(← Affine.depends point value) then return .done value
+    let reduced ← Affine.reduceStructure value
+    let reduced := if reduced.isAppOfArity ``Function.comp 6 then
+        let args := reduced.getAppArgs
+        mkApp args[3]! (mkApp args[4]! args[5]!)
+      else reduced
+    if reduced == value then return .continue
+    return .visit reduced
+  Meta.transform expression (pre := step) (post := step)
+
 private def construct (point expression : Expr) (name : Name) (args : Array Expr)
     (operands? : Option Nat := none) : CertifyM Expr := do
   let proof ← try
-    Space.withCanonicalSpaces #[← inferType point, ← inferType expression] <|
+    let valueType ← reduceLocalStructure point (← inferType expression)
+    Space.withCanonicalSpaces #[← inferType point, valueType] <|
       mkAppM name args
   catch exception =>
     reject expression .invalidInstance
@@ -145,25 +162,8 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
     reject expression .invalidInstance "smoothness construction does not match this typed expression"
   return proof
 
-private def independent (point expression : Expr) (what : String) : CertifyM Unit := do
-  if ← Affine.depends point expression then
-    reject expression .dependency m!"{what} depends on a decision variable"
-
--- Fixed arguments may mention the decision only in an unused local argument or
--- let value. Normalize those structural forms, including nested occurrences,
--- without unfolding named helpers or evaluating native operations. The reduced
--- argument must also be used in the proof, so no temporary point escapes.
 private def fixedArgument (point expression : Expr) (what : String) : CertifyM Expr := do
-  let step (value : Expr) : MetaM TransformStep := do
-    if !(← Affine.depends point value) then return .done value
-    let reduced ← Affine.reduceStructure value
-    let reduced := if reduced.isAppOfArity ``Function.comp 6 then
-        let args := reduced.getAppArgs
-        mkApp args[3]! (mkApp args[4]! args[5]!)
-      else reduced
-    if reduced == value then return .continue
-    return .visit reduced
-  let reduced ← Meta.transform (m := MetaM) expression (pre := step) (post := step)
+  let reduced ← reduceLocalStructure point expression
   if ← Affine.depends point reduced then
     reject expression .dependency m!"{what} depends on a decision variable"
   return reduced
@@ -175,12 +175,12 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
       return ← certifyBody point domain (body.instantiate1 value)
     return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
       certifyBody point domain (body.instantiate1 binding)
-  let type ← inferType expression
-  independent point type "the value type"
+  let type ← fixedArgument point (← inferType expression) "the value type"
   unless ← supportedSpace type do
     reject expression .unsupportedSpace m!"unsupported smooth value type {type}"
-  if !(← Affine.depends point expression) then
-    return ← construct point expression ``Morew.NLP.Smooth.const #[domain, expression]
+  let constant ← reduceLocalStructure point expression
+  if !(← Affine.depends point constant) then
+    return ← construct point expression ``Morew.NLP.Smooth.const #[domain, constant]
   if expression == point then
     return ← construct point expression ``Morew.NLP.Smooth.id #[domain]
   if let .proj ``Prod index value := expression then
@@ -188,6 +188,7 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
     let name := if index == 0 then ``Morew.NLP.Smooth.fst else ``Morew.NLP.Smooth.snd
     return ← construct point expression name #[← functionOf point value, proof]
   if let .lam name index body info := expression then
+    let index ← fixedArgument point index "the vector index type"
     let proof ← withLocalDecl name info index fun i => do
       let proof ← certifyBody point domain (body.instantiate1 i)
       mkLambdaFVars #[i] proof
@@ -226,7 +227,8 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
   if name == some ``Finset.sum && args.size == 5 then
     let indices ← fixedArgument point args[3]! "the finite sum's index set"
     discard <| fixedArgument point args[2]! "the finite sum's arithmetic instance"
-    let (family, proof) ← withLocalDeclD `i args[0]! fun i => do
+    let indexType ← fixedArgument point args[0]! "the finite sum's index type"
+    let (family, proof) ← withLocalDeclD `i indexType fun i => do
       let body := mkApp args[4]! i
       let proof ← certifyBody point domain body
       return (← mkLambdaFVars #[i] (← functionOf point body),
@@ -296,8 +298,8 @@ private def certifyCore (source : Expr) : CertifyM Expr := do
   let type ← whnf (← inferType source)
   let .forallE _ decision result _ := type
     | reject source .unsupportedSpace "expected a function from a decision space to ℝ"
-  if result.hasLooseBVars then
-    reject source .dependency "dependent result types are not supported"
+  let result ← withLocalDeclD `point decision fun point =>
+    fixedArgument point (result.instantiate1 point) "the result type"
   unless (← supportedSpace decision) && (← isDefEq result (mkConst ``Real)) do
     reject source .unsupportedSpace "expected a supported real decision space and scalar result"
   let domain ← mkAppOptM ``Set.univ #[some decision]

@@ -242,6 +242,55 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   ] do
     checkStructuralSource (← elaborate term)
 
+/-! Decision-independent real values stay constant after local structural
+reductions, including underneath operations outside the smooth fragment. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  for term in [
+    ← `(fun x : ℝ => Real.log ((fun _ : ℝ => (1 : ℝ)) x)),
+    ← `(fun x : ℝ => Real.log (let _y := x; (1 : ℝ))),
+    ← `(fun x : ℝ => Real.log ((1 : ℝ), x).1),
+    ← `(fun x : ℝ => Real.log (((fun _ : ℝ => (1 : ℝ)) ∘ (fun y => y * y)) x)),
+    ← `(fun x : ℝ => |(fun _ : ℝ => (1 : ℝ)) x|),
+    ← `(fun x : ℝ => |(let _y := x; (1 : ℝ))|),
+    ← `(fun x : ℝ => |((1 : ℝ), x).1|),
+    ← `(fun x : ℝ => |((fun _ : ℝ => (1 : ℝ)) ∘ (fun y => y * y)) x|)
+  ] do
+    checkStructuralSource (← elaborate term)
+  for term in [
+    ← `(fun f : ℝ → ℝ => fun x : ℝ => f ((fun _ : ℝ => (1 : ℝ)) x)),
+    ← `(fun f : ℝ → ℝ => fun x : ℝ => f (let _y := x; (1 : ℝ))),
+    ← `(fun f : ℝ → ℝ => fun x : ℝ => f ((1 : ℝ), x).1),
+    ← `(fun f : ℝ → ℝ => fun x : ℝ =>
+      f (((fun _ : ℝ => (1 : ℝ)) ∘ (fun y => y * y)) x))
+  ] do
+    let expression ← elaborate term
+    lambdaBoundedTelescope expression 1 fun _ source => checkStructuralSource source
+
+/-! The same local reductions can occur in value types, vector dimensions, and
+finite-sum binder types. The original source remains the certificate's target. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  for term in [
+    ← `(fun x : ℝ =>
+      (((fun _ : Fin ((fun _ : ℝ => 2) x) => x) + (fun _ => x) :
+        Fin ((fun _ : ℝ => 2) x) → ℝ)) 0),
+    ← `(fun x : ℝ => (show ((fun _ : ℝ => ℝ) x) from x * x)),
+    ← `(fun x : ℝ => ∑ i : Fin ((fun _ : ℝ => (2 : ℕ)) x), x ^ i.val),
+    ← `(fun x : ℝ => ∑ _i : Fin ((fun _ : ℝ => (2 : ℕ)) x), (1 : ℝ))
+  ] do
+    checkStructuralSource (← elaborate term)
+  for term in [
+    ← `(fun n : ℕ => fun x : ℝ => ∑ i : Fin ((fun _ : ℝ => n) x), x ^ i.val),
+    ← `(fun n : ℕ => fun x : ℝ => ∑ _i : Fin ((fun _ : ℝ => n) x), (1 : ℝ))
+  ] do
+    let expression ← elaborate term
+    lambdaBoundedTelescope expression 1 fun _ source => checkStructuralSource source
+  let expression ← elaborate (← `(fun n : ℕ => fun i : Fin n => fun x : ℝ =>
+    (((fun _ : Fin ((fun _ : ℝ => n) x) => x) + (fun _ => x) :
+      Fin ((fun _ : ℝ => n) x) → ℝ)) i))
+  lambdaBoundedTelescope expression 2 fun _ source => checkStructuralSource source
+
 /-! Local function declarations and aliases may expose the same reductions. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -266,8 +315,19 @@ named value helpers, even when an abbreviation ignores its argument. -/
 private abbrev hiddenExponent (_ : ℝ) : ℕ := 2
 private abbrev hiddenIndex (_ : ℝ) : Fin 2 := 0
 private def hiddenIndices (_ : ℝ) : Finset ℕ := {0, 1}
+private abbrev hiddenValue (_ : ℝ) : ℝ := 1
 
 run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun x : ℝ => Real.log ((fun y : ℝ => y) x)))
+    .restrictedDomain 0 (some ``Real.log)
+  assertRejected (← `(fun x : ℝ => |(fun y : ℝ => y) x|))
+    .nonsmooth 0 (some ``abs)
+  assertRejected (← `(fun f : ℝ → ℝ => fun x : ℝ => f ((fun y : ℝ => y) x)))
+    .unknownHead 1
+  assertRejected (← `(fun x : ℝ => hiddenValue x)) .unknownHead 0 (some ``hiddenValue)
+  assertRejected (← `(fun x : ℝ => Real.log (hiddenValue x)))
+    .restrictedDomain 0 (some ``Real.log)
+  assertRejected (← `(fun x : ℝ => |hiddenValue x|)) .nonsmooth 0 (some ``abs)
   assertRejected (← `(fun x : ℝ =>
     x ^ ((fun y : ℝ => (if y ≤ 0 then 1 else 2 : ℕ)) x))) .dependency
   assertRejected (← `(fun x : ℝ =>
