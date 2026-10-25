@@ -7,7 +7,7 @@ import MorewTest.NLP.SmoothSupport
 import Morew.NLP
 
 /-!
-# Globally smooth expressions
+# Globally smooth expressions and manual NLP forms
 
 The certifier recognizes a fixed collection of real operations, preserves the
 source function, and does not install the problem or reformulation language.
@@ -88,5 +88,42 @@ elab "test_global_smooth" : term <= expected => do
 example (ι : Type u) (s : Finset ι) (a : ι → ℝ) :
     ContDiffOn ℝ 2 (fun x : ℝ => ∑ i ∈ s, a i * x) Set.univ :=
   test_global_smooth
+
+noncomputable def generatedData : Data (ℝ × ℝ) where
+  sense := .minimize
+  domain := Set.univ
+  domain_isOpen := isOpen_univ
+  objective := fun x => x.1 ^ 4 - x.2 ^ 2
+  objective_smooth := test_global_smooth
+  rowCount := 1
+  rows := fun _ => {
+    residual := fun x => x.1 * x.2
+    bounds := Bounds.fixed 1
+    smooth := test_global_smooth
+  }
+  feasible_mem_domain := fun _ _ => Set.mem_univ _
+
+noncomputable def generatedProblem : Problem (ℝ × ℝ) ℝ := generatedData.toProblem
+
+noncomputable def generatedForm : Form generatedProblem where
+  data := generatedData
+  represents := rfl
+
+example : IsSmoothNLP generatedProblem := generatedForm.isSmoothNLP
+example (x : ℝ × ℝ) : generatedProblem.objective x = x.1 ^ 4 - x.2 ^ 2 := rfl
+
+noncomputable def generatedMaximumData : Data (ℝ × ℝ) :=
+  { generatedData with sense := .maximize }
+
+noncomputable def generatedMaximum : Problem (ℝ × ℝ) (OrderDual ℝ) :=
+  generatedMaximumData.toProblem
+
+noncomputable def generatedMaximumForm : Form generatedMaximum where
+  data := generatedMaximumData
+  represents := rfl
+
+example : generatedMaximumForm.data.sense = .maximize := rfl
+example : IsSmoothNLP generatedMaximum := generatedMaximumForm.isSmoothNLP
+example (x : ℝ × ℝ) : generatedMaximum.objective x = x.1 ^ 4 - x.2 ^ 2 := rfl
 
 end MorewTest.NLP.Smooth
