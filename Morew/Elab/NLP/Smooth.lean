@@ -26,8 +26,10 @@ not unfold. A decision-independent expression is a constant even if its internal
 operations would require domain evidence when applied to decisions.
 
 The returned proof mentions the original function and is checked by the kernel.
-Restricted-domain operations and nonsmooth rewrites belong to later NLP passes.
-Affine helper-expansion options do not affect this certifier.
+The companion `Morew.Elab.NLP.Domain` API shares this traversal and infers open
+domains for restricted operations. Its stricter constant policy leaves the
+global API unchanged. Nonsmooth rewrites remain separate, and affine
+helper-expansion options do not affect either smoothness certifier.
 
 Metaprograms pass a fully elaborated `Expr` representing a function `X → ℝ` to
 `Morew.Elab.NLP.Smooth.certifyGlobal`. On `.ok proof`, the ordinary Lean proof
@@ -39,7 +41,7 @@ rendering: the latter captures the local context of `error.expression` and
 For example, `fun x : ℝ => x ^ 4 - 3 * x ^ 2 + Real.sin x` is supported.
 Both factors in `x * x` may depend on decisions. Natural exponents and finite
 indices must be fixed with respect to decisions. Real logarithms, division,
-inverse and square roots need a later domain-aware pass; absolute values and
+inverse and square roots need the domain-aware API; absolute values and
 min/max need separate treatment. No convexity conclusion follows from C²
 smoothness, and no derivative expressions are generated.
 -/
