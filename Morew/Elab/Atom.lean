@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Algebra.Order.Group.PosPart
 import Lean.Meta.Basic
 
@@ -51,6 +52,8 @@ inductive AtomKind where
   | cosh
   /-- The real hyperbolic tangent function. -/
   | tanh
+  /-- Mathlib's totalized real power with a real exponent. -/
+  | rpow
   deriving Inhabited, BEq, Repr
 
 /-- A recognized application, retaining its original expression for consumers
@@ -82,7 +85,9 @@ private def atomHeads : Array AtomHead := #[
   ⟨``Real.cos, .cos, 1, 1⟩,
   ⟨``Real.sinh, .sinh, 1, 1⟩,
   ⟨``Real.cosh, .cosh, 1, 1⟩,
-  ⟨``Real.tanh, .tanh, 1, 1⟩
+  ⟨``Real.tanh, .tanh, 1, 1⟩,
+  ⟨``Real.rpow, .rpow, 2, 2⟩,
+  ⟨``HPow.hPow, .rpow, 6, 2⟩
 ]
 
 -- Ignore metadata on the application spine, but retain it on operands and
@@ -97,12 +102,17 @@ private def applicationParts (expression : Expr) : Expr × Array Expr :=
 
 -- These instances are fixed explicitly. In particular, recognition must not
 -- synthesize a potentially overridden local instance as its expected value.
-private def canonicalPrefix (kind : AtomKind) : Array Expr :=
+private def canonicalPrefix (head : AtomHead) : Array Expr :=
   let real := mkConst ``Real
   let lattice := mkConst ``Real.lattice
   let addGroup := mkConst ``Real.instAddGroup
-  match kind with
+  match head.kind with
   | .exp | .log | .sqrt | .sin | .cos | .sinh | .cosh | .tanh => #[]
+  | .rpow =>
+      if head.name == ``Real.rpow then #[] else
+        let power := mkApp3 (mkConst ``instHPow [.zero, .zero])
+          real real (mkConst ``Real.instPow)
+        #[real, real, real, power]
   | .inv => #[real, mkConst ``Real.instInv]
   | .abs => #[real, lattice, addGroup]
   | .pos =>
@@ -121,7 +131,7 @@ private def recognizeApplication? (original : Expr) : MetaM (Option AtomApplicat
   let .const name _ := function | return none
   let some head := atomHeads.find? (·.name == name) | return none
   unless arguments.size == head.arity do return none
-  let expectedArguments := canonicalPrefix head.kind
+  let expectedArguments := canonicalPrefix head
   for expected in expectedArguments, actual in arguments do
     unless ← isDefEq actual expected do return none
   let operands := arguments.extract (head.arity - head.operandCount) head.arity
