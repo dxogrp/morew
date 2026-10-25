@@ -10,7 +10,23 @@ import Morew.Core
 /-!
 # Certified smooth nonlinear programs
 
-Manual smooth-NLP data and exact representations of ordinary problems.
+NLP data stores a real objective, finitely many scalar residuals with closed
+bounds, and their C² proofs on a common open evaluation domain. Every point
+satisfying the rows must belong to that domain. The domain is proof data: it
+is not an extra constraint in `Data.toProblem`.
+
+Objectives and residuals remain total functions. `Form.represents` equates the
+entire represented problem, including objective values outside the evaluation
+domain. No convexity assumption is imposed on either the objective or the rows.
+
+With zero rows, every point is feasible, so the domain must contain all points.
+An empty domain is permitted when the rows are infeasible; smoothness on that
+domain is vacuous. Inconsistent bounds are therefore valid representations.
+
+Objective sense follows the conic API: maximizing problems retain an explicit
+`Problem X (OrderDual ℝ)` type and data with sense `.maximize`. Since `OrderDual`
+is a reducible synonym, representation equality alone does not certify the
+recorded sense. Conversion never negates the objective.
 -/
 
 namespace Morew
