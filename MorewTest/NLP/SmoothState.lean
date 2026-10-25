@@ -206,6 +206,84 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun i : Fin 2 => fun x : Fin 2 → ℝ => x i)) 1
   assertSmooth (← `(fun n : ℕ => fun x : ℝ => x ^ n)) 1
 
+/-! Local structural reductions can expose fixed exponents, coordinates, and
+finite sets. These certificates must still prove smoothness of the original
+source and leave caller metavariables untouched. -/
+
+private def checkStructuralSource (source : Expr) : MetaM Unit := do
+  let before ← getMCtx
+  let result ← certifyGlobal source
+  checkUnchanged before
+  match result with
+  | .ok proof => checkCertificate source proof
+  | .error error => throwError "expected structural smoothness of {source}\n{error.reason}"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  for term in [
+    ← `(fun x : ℝ => x ^ ((fun _ : ℝ => (2 : ℕ)) x)),
+    ← `(fun x : ℝ => x ^ (let _y := x; (2 : ℕ))),
+    ← `(fun x : ℝ => x ^ ((2 : ℕ), x).1),
+    ← `(fun x : ℝ => x ^ (((fun _ : ℝ => (2 : ℕ)) ∘ (fun y => y * y)) x)),
+    ← `(fun x : ℝ => x ^ Nat.succ ((fun _ : ℝ => (1 : ℕ)) x)),
+    ← `(fun x : ℝ => x ^ (1 + (let _y := x; (1 : ℕ)))),
+    ← `(fun x : Fin 2 → ℝ => x ((fun _ : ℝ => (0 : Fin 2)) (x 1))),
+    ← `(fun x : Fin 2 → ℝ => x (let _y := x 1; (0 : Fin 2))),
+    ← `(fun x : Fin 2 → ℝ => x ((0 : Fin 2), x 1).1),
+    ← `(fun x : Fin 2 → ℝ =>
+      x (((fun _ : ℝ => (0 : Fin 2)) ∘ (fun y => y * y)) (x 1))),
+    ← `(fun x : Fin 2 → ℝ =>
+      x ⟨((fun _ : ℝ => (0 : ℕ)) (x 1)), by change (0 : ℕ) < 2; decide⟩),
+    ← `(fun x : ℝ => ∑ _i ∈ ((fun _ : ℝ => ({0, 1} : Finset ℕ)) x), x),
+    ← `(fun x : ℝ => ∑ _i ∈ (let _y := x; ({0, 1} : Finset ℕ)), x),
+    ← `(fun x : ℝ => ∑ _i ∈ (({0, 1} : Finset ℕ), x).1, x),
+    ← `(fun x : ℝ =>
+      ∑ _i ∈ (((fun _ : ℝ => ({0, 1} : Finset ℕ)) ∘ (fun y => y * y)) x), x),
+    ← `(fun x : ℝ => ∑ _i ∈ ({Nat.succ ((fun _ : ℝ => (0 : ℕ)) x)} : Finset ℕ), x)
+  ] do
+    checkStructuralSource (← elaborate term)
+
+/-! Local function declarations and aliases may expose the same reductions. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  for (builderTerm, valueTerm) in [
+    (← `(fun n : ℝ → ℕ => fun x : ℝ => x ^ n x),
+      ← `(fun y : ℝ => (let _z := y; (2 : ℕ)))),
+    (← `(fun i : ℝ → Fin 2 => fun x : Fin 2 → ℝ => x (i (x 1))),
+      ← `(fun y : ℝ => ((0 : Fin 2), y).1)),
+    (← `(fun s : ℝ → Finset ℕ => fun x : ℝ => ∑ _i ∈ s x, x),
+      ← `(fun y : ℝ => (fun _ : ℝ => ({0, 1} : Finset ℕ)) y))
+  ] do
+    let builder ← elaborate builderTerm
+    let value ← elaborate valueTerm
+    let type ← inferType value
+    withLetDecl `fixedArgument type value fun binding =>
+      withLetDecl `fixedArgumentAlias type binding fun aliasBinding =>
+        checkStructuralSource (mkApp builder aliasBinding)
+
+/-! Structural reduction must retain actual dependencies and must not unfold
+named value helpers, even when an abbreviation ignores its argument. -/
+
+private abbrev hiddenExponent (_ : ℝ) : ℕ := 2
+private abbrev hiddenIndex (_ : ℝ) : Fin 2 := 0
+private def hiddenIndices (_ : ℝ) : Finset ℕ := {0, 1}
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun x : ℝ =>
+    x ^ ((fun y : ℝ => (if y ≤ 0 then 1 else 2 : ℕ)) x))) .dependency
+  assertRejected (← `(fun x : ℝ =>
+    x ^ Nat.succ ((fun y : ℝ => (if y ≤ 0 then 1 else 2 : ℕ)) x))) .dependency
+  assertRejected (← `(fun x : Fin 2 → ℝ =>
+    x ((fun y : ℝ => if y ≤ 0 then (0 : Fin 2) else 1) (x 1)))) .dependency
+  assertRejected (← `(fun x : ℝ =>
+    ∑ _i ∈ ((fun y : ℝ => ({0, 1} : Finset ℕ).filter (fun _ => y ≤ 0)) x), x))
+    .dependency
+  assertRejected (← `(fun x : ℝ => x ^ hiddenExponent x)) .dependency
+  assertRejected (← `(fun x : Fin 2 → ℝ => x (hiddenIndex (x 1)))) .dependency
+  assertRejected (← `(fun x : ℝ => ∑ _i ∈ hiddenIndices x, x)) .dependency
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => x ^ hiddenExponent c)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : Fin 2 → ℝ => x (hiddenIndex c))) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => ∑ _i ∈ hiddenIndices c, x)) 1
+
 /-! Ambient analytic instances do not change the fixed native certificate. -/
 
 private def checkAmbient (term : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Unit := do

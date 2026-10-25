@@ -149,6 +149,25 @@ private def independent (point expression : Expr) (what : String) : CertifyM Uni
   if ← Affine.depends point expression then
     reject expression .dependency m!"{what} depends on a decision variable"
 
+-- Fixed arguments may mention the decision only in an unused local argument or
+-- let value. Normalize those structural forms, including nested occurrences,
+-- without unfolding named helpers or evaluating native operations. The reduced
+-- argument must also be used in the proof, so no temporary point escapes.
+private def fixedArgument (point expression : Expr) (what : String) : CertifyM Expr := do
+  let step (value : Expr) : MetaM TransformStep := do
+    if !(← Affine.depends point value) then return .done value
+    let reduced ← Affine.reduceStructure value
+    let reduced := if reduced.isAppOfArity ``Function.comp 6 then
+        let args := reduced.getAppArgs
+        mkApp args[3]! (mkApp args[4]! args[5]!)
+      else reduced
+    if reduced == value then return .continue
+    return .visit reduced
+  let reduced ← Meta.transform (m := MetaM) expression (pre := step) (post := step)
+  if ← Affine.depends point reduced then
+    reject expression .dependency m!"{what} depends on a decision variable"
+  return reduced
+
 private partial def certifyBody (point domain expression : Expr) : CertifyM Expr := do
   let expression ← Affine.reduceStructure expression (preserveLets := true)
   if let .letE name type value body nondep := expression then
@@ -193,27 +212,27 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
     return ← construct point expression ``Morew.NLP.Smooth.neg
       #[← functionOf point args[2]!, proof] (some 1)
   if name == some ``HPow.hPow && args.size == 6 then
-    independent point args[5]! "the exponent"
-    unless ← isDefEq (← inferType args[5]!) (mkConst ``Nat) do
+    let exponent ← fixedArgument point args[5]! "the exponent"
+    unless ← isDefEq (← inferType exponent) (mkConst ``Nat) do
       reject expression .unknownHead "only natural powers are supported"
     let proof ← certifyBody point domain args[4]!
     return ← construct point expression ``Morew.NLP.Smooth.pow
-      #[← functionOf point args[4]!, args[5]!, proof] (some 2)
+      #[← functionOf point args[4]!, exponent, proof] (some 2)
   if name == some ``Prod.mk && args.size == 4 then
     let left ← certifyBody point domain args[2]!
     let right ← certifyBody point domain args[3]!
     return ← construct point expression ``Morew.NLP.Smooth.pair
       #[← functionOf point args[2]!, ← functionOf point args[3]!, left, right]
   if name == some ``Finset.sum && args.size == 5 then
-    independent point args[3]! "the finite sum's index set"
-    independent point args[2]! "the finite sum's arithmetic instance"
+    let indices ← fixedArgument point args[3]! "the finite sum's index set"
+    discard <| fixedArgument point args[2]! "the finite sum's arithmetic instance"
     let (family, proof) ← withLocalDeclD `i args[0]! fun i => do
       let body := mkApp args[4]! i
       let proof ← certifyBody point domain body
       return (← mkLambdaFVars #[i] (← functionOf point body),
         ← mkLambdaFVars #[i] proof)
     return ← construct point expression ``Morew.NLP.Smooth.sum
-      #[args[3]!, family, proof] (some 2)
+      #[indices, family, proof] (some 2)
   if let some atom ← Atom.recognizeAtom? expression then
     let constructor ← match atom.kind with
       | .exp => pure ``Morew.NLP.Smooth.exp
@@ -244,7 +263,7 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← supportedSpace vectorType) then
-      independent point index "the vector index"
+      let index ← fixedArgument point index "the vector index"
       let proof ← certifyBody point domain vector
       return ← construct point expression ``Morew.NLP.Smooth.apply
         #[← functionOf point vector, index, proof]
