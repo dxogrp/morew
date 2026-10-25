@@ -253,9 +253,24 @@ private partial def certifyBody (point domain expression : Expr) : CertifyM Expr
       discard <| certifyBody point domain argument
   reject expression .unknownHead "unsupported function, coercion, or operation"
 
+-- A placeholder may be hidden in a local value or type even when the source
+-- contains no sorryAx application directly. Inspect referenced locals only;
+-- unrelated declarations do not affect certification.
+private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM Bool := do
+  let expression ← instantiateMVars expression
+  if expression.hasSorry then return true
+  for id in (collectFVars {} expression).fvarIds do
+    unless (← get).contains id do
+      modify (·.insert id)
+      if let some declaration := (← getLCtx).find? id then
+        if ← hasPlaceholders declaration.type then return true
+        if let some value := declaration.value? (allowNondep := true) then
+          if ← hasPlaceholders value then return true
+  return false
+
 private def certifyCore (source : Expr) : CertifyM Expr := do
   let source ← instantiateMVars source
-  if source.hasSorry || (← Affine.hasUnresolved source) then
+  if (← (hasPlaceholders source).run' {}) || (← Affine.hasUnresolved source) then
     reject source .unresolved "unresolved metavariables or placeholders are not supported"
   let type ← whnf (← inferType source)
   let .forallE _ decision result _ := type
@@ -268,7 +283,7 @@ private def certifyCore (source : Expr) : CertifyM Expr := do
   let proof ← withLocalDeclD `point decision fun point =>
     certifyBody point domain (mkApp source point)
   let proof ← instantiateMVars proof
-  if proof.hasSorry || (← Affine.hasUnresolved proof) then
+  if (← (hasPlaceholders proof).run' {}) || (← Affine.hasUnresolved proof) then
     reject source .unresolved "smoothness construction left unresolved metavariables or placeholders"
   let function ← certificateFunction proof
   unless ← isDefEq function source do

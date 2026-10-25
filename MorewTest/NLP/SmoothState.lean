@@ -86,6 +86,65 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   if ← missingType.mvarId!.isAssigned then
     throwError "certification assigned a missing coefficient type"
 
+/-! Placeholders hidden in local values and types receive the same rejection
+as direct placeholders, including through chains of local definitions. -/
+
+private def rejectHiddenPlaceholder (source : Expr) : MetaM Unit := do
+  if source.hasSorry || source.hasMVar then
+    throwError "hidden-placeholder regression no longer hides its placeholder"
+  rejectUnresolved source
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let nat := Lean.mkConst ``Nat
+  let type := mkSort (.succ .zero)
+  let builder ← elaborate (← `(fun n : ℕ => fun x : ℝ => x ^ n))
+  let typeBuilder ← elaborate (← `(fun _ : ℕ => ℕ))
+  let unrelated ← mkFreshExprMVar nat
+  let assigned ← mkFreshExprMVar nat
+  assigned.mvarId!.assign (mkNatLit 7)
+  for synthetic in [false, true] do
+    let placeholder ← mkSorry nat synthetic
+    rejectUnresolved (mkApp builder placeholder)
+    withLetDecl `exponent nat placeholder fun exponent => do
+      rejectHiddenPlaceholder (mkApp builder exponent)
+      withLetDecl `exponentAlias nat exponent fun binding =>
+        rejectHiddenPlaceholder (mkApp builder binding)
+    -- This type reduces to Nat, so only inspecting its normal form would
+    -- erase the placeholder before the local declaration is checked.
+    let hiddenType := mkApp typeBuilder placeholder
+    withLocalDeclD `exponent hiddenType fun exponent =>
+      rejectHiddenPlaceholder (mkApp builder exponent)
+    withLetDecl `exponentType type hiddenType fun exponentType =>
+      withLetDecl `typeAlias type exponentType fun typeAlias =>
+        withLocalDeclD `exponent typeAlias fun exponent =>
+          rejectHiddenPlaceholder (mkApp builder exponent)
+  if ← unrelated.mvarId!.isAssigned then
+    throwError "placeholder rejection assigned an unrelated caller hole"
+  unless (← instantiateMVars assigned) == mkNatLit 7 do
+    throwError "placeholder rejection lost a caller assignment"
+
+/-! Complete values and types remain valid through the same local-let chains. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let nat := Lean.mkConst ``Nat
+  let type := mkSort (.succ .zero)
+  let builder ← elaborate (← `(fun n : ℕ => fun x : ℝ => x ^ n))
+  let typeBuilder ← elaborate (← `(fun _ : ℕ => ℕ))
+  let accept := fun source => do
+    let before ← getMCtx
+    let .ok proof ← certifyGlobal source
+      | throwError "a complete exponent hidden in local declarations was rejected"
+    checkUnchanged before
+    checkCertificate source proof
+  accept (mkApp builder (mkNatLit 7))
+  withLetDecl `exponent nat (mkNatLit 7) fun exponent =>
+    withLetDecl `exponentAlias nat exponent fun binding =>
+      accept (mkApp builder binding)
+  withLetDecl `exponentType type (mkApp typeBuilder (mkNatLit 7)) fun exponentType =>
+    withLetDecl `typeAlias type exponentType fun typeAlias =>
+      withLocalDeclD `exponent typeAlias fun exponent =>
+        accept (mkApp builder exponent)
+
 /-! An unresolved native-operation instance is not canonical evidence. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
