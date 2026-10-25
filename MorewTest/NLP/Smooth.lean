@@ -61,6 +61,21 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ∑ i ∈ s, a i * x ^ i)) 2
   assertSmooth (← `(fun x : ℝ => ∑ _i ∈ (∅ : Finset ℕ), x))
 
+/-! Definitionally constant finite-vector fibers normalize before dependency checks. -/
+
+private abbrev ScalarFiber {n : ℕ} (_ : Fin n) := ℝ
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSmooth (← `(fun x : (i : Fin 2) → (fun _ : Fin 2 => ℝ) i => x 0))
+  assertSmooth (← `(fun n : ℕ => fun i : Fin n =>
+    fun x : (j : Fin n) → (fun _ : Fin n => ℝ) j => x i)) 2
+  assertSmooth (← `(fun n : ℕ => fun i : Fin n =>
+    fun x : (j : Fin n) → (let _k := j; ℝ) => x i)) 2
+  assertSmooth (← `(fun n : ℕ => fun i : Fin n =>
+    fun x : (j : Fin n) → ScalarFiber j => x i)) 2
+  assertRejected (← `(fun _x : (i : Fin 2) →
+    (if i = 0 then ℝ else ℝ × ℝ) => (0 : ℝ))) .unsupportedSpace
+
 /-! Ambient scalar fields cannot change a certificate's native analytic instances. -/
 
 private def checkAmbientScalarField (term : TSyntax `term)

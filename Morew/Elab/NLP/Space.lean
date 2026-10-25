@@ -84,22 +84,23 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
     let right ← buildSpace shape.getAppArgs[1]!
     let data ← mkAppM ``Structure.prod #[left.data, right.data]
     finishSpace type data (left.instances ++ right.instances)
-  else if let .forallE _ index body _ := shape then
-    let body ← Core.betaReduce (← whnf body)
-    if body.hasLooseBVars then
-      throwError "smooth certification requires a nondependent finite function space, got {type}"
+  else if let .forallE name index body info := shape then
     let indexShape ← whnf index
     unless indexShape.isAppOfArity ``Fin 1 do
       throwError "smooth certification requires a Fin n function index, got {type}"
-    let target ← buildSpace body
-    let data ← mkAppM ``Structure.pi #[indexShape.getAppArgs[0]!, target.data]
-    -- Projection and componentwise calculus lemmas carry their own Fintype
-    -- argument. Keep it aligned with the enumeration chosen by Structure.pi;
-    -- source operations still retain their original explicit finite sets.
-    let fintype ← mkAppM ``Fin.fintype #[indexShape.getAppArgs[0]!]
-    let fintypeType ← mkAppM ``Fintype #[index]
-    let fintype ← mkAppOptM ``id #[some fintypeType, some fintype]
-    finishSpace type data (target.instances.push fintype)
+    withLocalDecl name info index fun i => do
+      let body ← Core.betaReduce (← whnf (body.instantiate1 i))
+      if body.containsFVar i.fvarId! then
+        throwError "smooth certification requires a nondependent finite function space, got {type}"
+      let target ← buildSpace body
+      let data ← mkAppM ``Structure.pi #[indexShape.getAppArgs[0]!, target.data]
+      -- Projection and componentwise calculus lemmas carry their own Fintype
+      -- argument. Keep it aligned with the enumeration chosen by Structure.pi;
+      -- source operations still retain their original explicit finite sets.
+      let fintype ← mkAppM ``Fin.fintype #[indexShape.getAppArgs[0]!]
+      let fintypeType ← mkAppM ``Fintype #[index]
+      let fintype ← mkAppOptM ``id #[some fintypeType, some fintype]
+      finishSpace type data (target.instances.push fintype)
   else
     throwError "unsupported smooth decision or value space {type}; expected ℝ, a product, or a Fin n function space"
 

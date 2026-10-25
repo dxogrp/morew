@@ -99,10 +99,12 @@ private partial def supportedSpace (type : Expr) : MetaM Bool := do
   if type.isAppOfArity ``Prod 2 then
     return (← supportedSpace type.getAppArgs[0]!) &&
       (← supportedSpace type.getAppArgs[1]!)
-  if let .forallE _ index body _ := type then
-    if body.hasLooseBVars then return false
+  if let .forallE name index body info := type then
     unless (← whnf index).isAppOfArity ``Fin 1 do return false
-    return ← supportedSpace body
+    return ← withLocalDecl name info index fun i => do
+      let body ← Core.betaReduce (← whnf (body.instantiate1 i))
+      if body.containsFVar i.fvarId! then return false
+      supportedSpace body
   return false
 
 private def functionOf (point body : Expr) : MetaM Expr :=
