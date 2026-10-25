@@ -18,6 +18,10 @@ open Morew Morew.Elab.Atom
 
 noncomputable def equivalentExponential (x : ℝ) : ℝ := Real.exp (x + 0)
 
+noncomputable abbrev sineAlias (x : ℝ) : ℝ := Real.sin x
+
+noncomputable abbrev hyperbolicTangentAlias (x : ℝ) : ℝ := Real.tanh x
+
 theorem equivalentExponential_eq (x : ℝ) :
     equivalentExponential x = Real.exp x := by
   simp [equivalentExponential]
@@ -26,20 +30,39 @@ namespace Shadowed
 
 def exp (x : ℝ) : ℝ := x
 
+def sin (x : ℝ) : ℝ := x
+
+def tanh (x : ℝ) : ℝ := x
+
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℝ => exp x))
+  assertUnsupported (← `(fun x : ℝ => sin x))
+  assertUnsupported (← `(fun x : ℝ => tanh x))
 
 end Shadowed
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℝ => exponentialAlias x))
   assertUnsupported (← `(fun x : ℝ => equivalentExponential x))
+  assertUnsupported (← `(fun x : ℝ => sineAlias x))
+  assertUnsupported (← `(fun x : ℝ => hyperbolicTangentAlias x))
+  assertUnsupported (← `(fun x : ℝ => Real.tan x))
+  assertUnsupported (← `(fun x : ℂ => Complex.sin x))
+  assertUnsupported (← `(fun x : ℂ => Complex.cos x))
+  assertUnsupported (← `(fun x : ℂ => Complex.sinh x))
+  assertUnsupported (← `(fun x : ℂ => Complex.cosh x))
+  assertUnsupported (← `(fun x : ℂ => Complex.tanh x))
   assertUnsupported (← `(fun x : ℚ => x⁻¹))
   assertUnsupported (← `(fun x : ℤ => |x|))
   assertUnsupported (← `(fun x : ℤ => x⁺))
   assertUnsupported (← `(fun x y : ℕ => max x y))
   assertUnsupported (← `(fun x y : ℕ => min x y))
   assertUnsupported (← `(Real.exp))
+  assertUnsupported (← `(Real.sin))
+  assertUnsupported (← `(Real.cos))
+  assertUnsupported (← `(Real.sinh))
+  assertUnsupported (← `(Real.cosh))
+  assertUnsupported (← `(Real.tanh))
   assertUnsupported (← `((Inv.inv : ℝ → ℝ)))
   assertUnsupported (← `((abs : ℝ → ℝ)))
   assertUnsupported (← `((posPart : ℝ → ℝ)))

@@ -22,7 +22,7 @@ namespace Morew.Elab.Atom
 
 open Lean Lean.Meta
 
-/-- An operation understood by the initial native-operation recognizer.
+/-- An operation understood by the native-operation recognizer.
 This is an internal implementation interface, not a public modeling type. -/
 inductive AtomKind where
   /-- The real exponential function. -/
@@ -41,6 +41,16 @@ inductive AtomKind where
   | maximum
   /-- The standard binary real minimum. -/
   | minimum
+  /-- The real sine function. -/
+  | sin
+  /-- The real cosine function. -/
+  | cos
+  /-- The real hyperbolic sine function. -/
+  | sinh
+  /-- The real hyperbolic cosine function. -/
+  | cosh
+  /-- The real hyperbolic tangent function. -/
+  | tanh
   deriving Inhabited, BEq, Repr
 
 /-- A recognized application, retaining its original expression for consumers
@@ -67,7 +77,12 @@ private def atomHeads : Array AtomHead := #[
   ⟨``abs, .abs, 4, 1⟩,
   ⟨``PosPart.posPart, .pos, 3, 1⟩,
   ⟨``Max.max, .maximum, 4, 2⟩,
-  ⟨``Min.min, .minimum, 4, 2⟩
+  ⟨``Min.min, .minimum, 4, 2⟩,
+  ⟨``Real.sin, .sin, 1, 1⟩,
+  ⟨``Real.cos, .cos, 1, 1⟩,
+  ⟨``Real.sinh, .sinh, 1, 1⟩,
+  ⟨``Real.cosh, .cosh, 1, 1⟩,
+  ⟨``Real.tanh, .tanh, 1, 1⟩
 ]
 
 -- Ignore metadata on the application spine, but retain it on operands and
@@ -87,7 +102,7 @@ private def canonicalPrefix (kind : AtomKind) : Array Expr :=
   let lattice := mkConst ``Real.lattice
   let addGroup := mkConst ``Real.instAddGroup
   match kind with
-  | .exp | .log | .sqrt => #[]
+  | .exp | .log | .sqrt | .sin | .cos | .sinh | .cosh | .tanh => #[]
   | .inv => #[real, mkConst ``Real.instInv]
   | .abs => #[real, lattice, addGroup]
   | .pos =>
