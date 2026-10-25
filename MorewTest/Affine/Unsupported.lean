@@ -59,9 +59,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun c : ℝ => fun x : ℝ => x / c))
   lambdaBoundedTelescope expression 1 fun _ source => do
-    let config : Morew.Elab.Affine.Config :=
+    let provider : Morew.Elab.Affine.EvidenceProvider :=
       { nonzeroEvidence? := some fun _ => return some (mkConst ``True.intro) }
-    if (← reifyAffine source config).isOk then
+    if (← reifyAffine source provider).isOk then
       throwError "accepted evidence that does not establish divisor nonzeroness"
 
 /-! Matching the operation spelling alone is not a semantic guarantee. -/

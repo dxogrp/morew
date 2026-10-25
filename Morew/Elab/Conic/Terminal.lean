@@ -65,12 +65,12 @@ private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) :
   else
     (name, index + 1)
 
-private def certifyPredicate (predicate : Expr) (config : Affine.Config) :
+private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Option (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate
   let mut rows := #[]
   for leaf in leaves do
-    match ← normalizeRow leaf config with
+    match ← normalizeRow leaf provider with
     | .error _ => return none
     | .ok row => rows := rows.push row
   return some rows
@@ -154,13 +154,13 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
 
 /-- Split all nonlinear groups before searching for exact rewrites. This makes
 affine domain margins in the same original group available to sibling leaves. -/
-private def splitNonconicGroups (work : Work) (config : Affine.Config) : MetaM Work := do
+private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvider) : MetaM Work := do
   let mut work := work
   let mut index := 0
   while index < work.presentation.constraints.size do
     let source := work.presentation.constraints[index]!.predicate
     let (leaves, decomposition) ← decomposePredicate source
-    if let some rows ← certifyPredicate source config then
+    if let some rows ← certifyPredicate source provider then
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       index := index + 1
       continue
@@ -201,22 +201,22 @@ private def originalError (original : PresentationState) (origin : Nat)
   return { error with reason }
 
 private partial def lower (original : PresentationState) (work : Work)
-    (config : Affine.Config) : MetaM (Except Affine.AffineError Work) := do
+    (provider : Affine.EvidenceProvider) : MetaM (Except Affine.AffineError Work) := do
   let mut work := work
   let mut firstError? := none
   for index in [:work.presentation.constraints.size] do
     let predicate := work.presentation.constraints[index]!.predicate
     if work.certifiedRows[index]!.isSome then continue
-    if let some rows ← certifyPredicate predicate config then
+    if let some rows ← certifyPredicate predicate provider then
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       continue
     let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
-    match ← Automatic.planUnique predicate retained config with
+    match ← Automatic.planUnique predicate retained provider with
     | .ok prepared =>
       let next ← applyPrepared work index prepared
       -- Every successful automatic plan certifies its generated rows. Therefore
       -- each restart removes one unresolved row and cannot create a cycle.
-      return ← lower original next config
+      return ← lower original next provider
     | .error error =>
       if firstError?.isNone then
         firstError? := some (← originalError original work.rowOrigins[index]! error)
@@ -228,7 +228,7 @@ private partial def lower (original : PresentationState) (work : Work)
 emitting declarations. Failed attempts restore caller metavariables and the
 environment. The first unresolved row is reported only after all later rows
 have had an opportunity to supply a newly exposed retained margin. -/
-def plan (presentation : PresentationState) (config : Affine.Config := {}) :
+def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
@@ -238,7 +238,7 @@ def plan (presentation : PresentationState) (config : Affine.Config := {}) :
           throwError "terminal conic planning requires fully elaborated expressions"
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
-        match ← reifyObjective presentation config with
+        match ← reifyObjective presentation provider with
         | .error error =>
           let bound := match presentation.sense with
             | .minimize => "epigraph t"
@@ -254,11 +254,11 @@ def plan (presentation : PresentationState) (config : Affine.Config := {}) :
           rowOrigins := presentation.constraints.mapIdx fun index _ => index
           certifiedRows := presentation.constraints.map fun _ => none
         }
-        let work ← splitNonconicGroups work config
-        let work ← match ← lower presentation work config with
+        let work ← splitNonconicGroups work provider
+        let work ← match ← lower presentation work provider with
           | .ok work => pure work
           | .error error => return .error error
-        let form ← match ← buildForm work.presentation config work.certifiedRows with
+        let form ← match ← buildForm work.presentation provider work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
         checkWithKernel work.equivalence

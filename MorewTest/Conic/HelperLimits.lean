@@ -38,12 +38,12 @@ private inductive Planner where
   | polyhedral | secondOrder | exponential
   deriving Repr
 
-private def plan (planner : Planner) (source : Expr) (config : Affine.Config) :
+private def plan (planner : Planner) (source : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Affine.AffineError Unit) := do
   match planner with
-  | .polyhedral => return (← Conic.Polyhedral.plan source none config).map fun _ => ()
-  | .secondOrder => return (← Conic.SecondOrder.plan source #[] config).map fun _ => ()
-  | .exponential => return (← Conic.Exponential.plan source #[] config).map fun _ => ()
+  | .polyhedral => return (← Conic.Polyhedral.plan source none provider).map fun _ => ()
+  | .secondOrder => return (← Conic.SecondOrder.plan source #[] provider).map fun _ => ()
+  | .exponential => return (← Conic.Exponential.plan source #[] provider).map fun _ => ()
 
 private def elaborate (term : TSyntax `term) : TermElabM Expr := do
   let expression ← elabTerm term none
@@ -57,7 +57,7 @@ private def checkFailure (planner : Planner) (term : TSyntax `term) : TermElabM 
   let expression ← elaborate term
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
-    let config : Affine.Config := {
+    let provider : Affine.EvidenceProvider := {
       nonzeroEvidence? := some fun obligation => do
         let proof ← mkAppM ``And.left #[parameters[1]!]
         unless ← isDefEq (← inferType proof) obligation do return none
@@ -71,7 +71,7 @@ private def checkFailure (planner : Planner) (term : TSyntax `term) : TermElabM 
       let before ← getMCtx
       -- An escaping exception fails the regression instead of being accepted
       -- as equivalent to the public API's explicit error result.
-      let .error error ← plan planner source config
+      let .error error ← plan planner source provider
         | throwError "{repr planner} exceeded the helper-depth limit"
       unless (← error.reason.toString).contains "maxExpansionDepth" do
         throwError "{repr planner} lost the budget diagnostic: {error.reason}"

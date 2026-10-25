@@ -259,14 +259,14 @@ def customLift (source domain rule : Expr) : MetaM Expr := do
   throwError "expected an ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation for the entire selected predicate"
 
 /-- Certify each replacement row without changing its presentation predicate. -/
-def certifyRows (predicates : Array Expr) (config : Affine.Config := {}) :
+def certifyRows (predicates : Array Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Array RowResult) := do
   predicates.mapM fun predicate => do
-    match ← normalizeRow predicate config with
+    match ← normalizeRow predicate provider with
     | .ok row => pure row
     | .error error => throwError "generated row: {error.reason}"
 
-private def finishCore (source domain lift : Expr) (config : Affine.Config) : MetaM Result := do
+private def finishCore (source domain lift : Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let auxiliary ← whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
   let auxiliary? := if noAuxiliary then none else some auxiliary
@@ -280,7 +280,7 @@ private def finishCore (source domain lift : Expr) (config : Affine.Config) : Me
     let (bodies, proof) ← splitTarget target
     let rows ← bodies.toArray.mapM fun body => mkLambdaFVars #[point] body
     return (rows, ← mkLambdaFVars #[point] proof)
-  let certifiedRows ← certifyRows rowPredicates config
+  let certifiedRows ← certifyRows rowPredicates provider
   checkWithKernel targetIff
   let expected ← withLocalDeclD `point nextDomain fun point => do
     let target ← if noAuxiliary then
@@ -296,11 +296,11 @@ private def finishCore (source domain lift : Expr) (config : Affine.Config) : Me
   return { lift, auxiliary?, nextDomain, rowPredicates, targetIff, certifiedRows }
 
 /-- Split and certify every row of an exact lift. -/
-def finish (source domain lift : Expr) (config : Affine.Config) : MetaM Result := do
+def finish (source domain lift : Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let target ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
   let result ← withHelperFiniteInstances Result.replaceFVars #[target] do
     let result ← withFiniteInstances (← Affine.sourceFiniteInstances target).toList do
-      finishCore source domain lift config
+      finishCore source domain lift provider
     return .ok result
   match result with
   | .ok result => return result
@@ -341,7 +341,7 @@ operation matching, but every resulting row still undergoes affine checking.
 Caller metavariables and the environment are restored on failure. -/
 private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
     (sourcePredicate : Expr) (rule? : Option Expr := none)
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
       let source ← instantiateMVars sourcePredicate
@@ -353,7 +353,7 @@ private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
             let lift ← match rule? with
               | none => automaticLift source domain
               | some rule => customLift source domain (← instantiateMVars rule)
-            finish source domain lift config
+            finish source domain lift provider
       return .ok result
     catch error =>
       return .error {
@@ -364,10 +364,10 @@ private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
 /-- Certify a selected predicate, exposing finite evidence from helpers only if
 the direct attempt fails. Matching always uses the original predicate. -/
 def plan (automaticLift : Expr → Expr → MetaM Expr) (sourcePredicate : Expr)
-    (rule? : Option Expr := none) (config : Affine.Config := {}) :
+    (rule? : Option Expr := none) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     withHelperFiniteInstances Result.replaceFVars #[sourcePredicate]
-      (planDirect automaticLift sourcePredicate rule? config)
+      (planDirect automaticLift sourcePredicate rule? provider)
 
 end Morew.Elab.Conic.Plan

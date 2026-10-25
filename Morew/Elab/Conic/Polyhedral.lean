@@ -164,12 +164,12 @@ private def automaticLift (selected? : Option Rule) (source domain : Expr) : Met
 
 /-- Plan an exact polyhedral replacement or certify an explicit representation. -/
 def plan (sourcePredicate : Expr) (rule? : Option Expr := none)
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Result) :=
-  Plan.plan (automaticLift none) sourcePredicate rule? config
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
+  Plan.plan (automaticLift none) sourcePredicate rule? provider
 
 /-- Certify one native rule without falling through to another operation. -/
-def planRule (rule : Rule) (sourcePredicate : Expr) (config : Affine.Config := {}) :
+def planRule (rule : Rule) (sourcePredicate : Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Affine.AffineError Result) :=
-  Plan.plan (automaticLift (some rule)) sourcePredicate none config
+  Plan.plan (automaticLift (some rule)) sourcePredicate none provider
 
 end Morew.Elab.Conic.Polyhedral

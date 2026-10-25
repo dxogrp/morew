@@ -119,7 +119,7 @@ private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     throwError "cached row certificate does not match its decomposed predicate"
   return row
 
-private def buildFormCore (presentation : PresentationState) (config : Affine.Config)
+private def buildFormCore (presentation : PresentationState) (provider : Affine.EvidenceProvider)
     (certifiedRows : Array (Option (Array RowResult))) :
     MetaM (Except Affine.AffineError Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
@@ -132,7 +132,7 @@ private def buildFormCore (presentation : PresentationState) (config : Affine.Co
   unless certifiedRows.isEmpty || certifiedRows.size == presentation.constraints.size do
     throwError "cached row entry count does not match the typed presentation"
   let canonical ← presentation.canonicalProblem
-  let objective ← match ← reifyObjective presentation config with
+  let objective ← match ← reifyObjective presentation provider with
     | .error error => return .error error
     | .ok result => pure result
   let mut blocks := #[]
@@ -159,7 +159,7 @@ private def buildFormCore (presentation : PresentationState) (config : Affine.Co
         }
     else
       for predicate in predicates do
-        match ← normalizeRow predicate config (some entry.name) with
+        match ← normalizeRow predicate provider (some entry.name) with
         | .error error => return .error error
         | .ok row => rows := rows.push row
     blocks := blocks.push { predicates, decomposition, rows : RowBlock }
@@ -205,14 +205,14 @@ retains the explicit objective sense, including maximizing declarations.
 An optional nonempty cache has one slot per presentation entry. Each `some`
 contains checked rows in decomposed predicate order; `none` normalizes the entry.
 Cached constraints and proofs are checked against their current predicates. -/
-def buildForm (presentation : PresentationState) (config : Affine.Config := {})
+def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Affine.AffineError Expr) :=
   Affine.withIsolatedMVars do
     try
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars)
-        presentation (buildFormCore presentation config certifiedRows)
+        presentation (buildFormCore presentation provider certifiedRows)
     catch error =>
       return .error {
         expression := presentation.objective

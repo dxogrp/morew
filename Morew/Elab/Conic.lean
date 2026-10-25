@@ -174,14 +174,14 @@ private def membershipData (point body : Expr) (label? : Option Name) :
   return .ok (cone, value)
 
 private def normalizeMembershipRow (predicate domain point body : Expr)
-    (config : Affine.Config) (label? : Option Name) :
+    (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Affine.AffineError RowResult) := do
   let data ← membershipData point body label?
   if let .error error := data then return .error error
   let .ok (cone, value) := data
     | throwError "internal error: missing checked membership"
   let source ← mkLambdaFVars #[point] value
-  let affine ← Affine.reifyAffine source config
+  let affine ← Affine.reifyAffine source provider
   if let .error error := affine then
     return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
   let .ok affine := affine
@@ -226,7 +226,7 @@ private partial def exponentialFamilyCoordinates (point body : Expr)
       return .ok coordinates
 
 private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
-    (config : Affine.Config) (label? : Option Name) :
+    (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Affine.AffineError RowResult) := do
   let .forallE name index rest info := body
     | return .error (← rowError body "expected a finite quantified membership" label?)
@@ -243,7 +243,7 @@ private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
   if let .error error := coordinates then return .error error
   let .ok source := coordinates
     | throwError "internal error: missing exponential family coordinates"
-  let affine ← Affine.reifyAffine source config
+  let affine ← Affine.reifyAffine source provider
   if let .error error := affine then
     return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
   let .ok affine := affine
@@ -265,7 +265,7 @@ private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
     return (constraint, pointwiseIff)
   return .ok { constraint, pointwiseIff }
 
-private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config)
+private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.EvidenceProvider)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type
@@ -277,9 +277,9 @@ private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config
     -- wrappers, including the product patterns used by the surface DSL.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOfArity ``Membership.mem 5 then
-        return ← normalizeMembershipRow predicate domain point body config label?
+        return ← normalizeMembershipRow predicate domain point body provider label?
       if body.isForall then
-        return ← normalizeExponentialFamilyRow predicate domain point body config label?
+        return ← normalizeExponentialFamilyRow predicate domain point body provider label?
       let args := body.getAppArgs
       let equality := body.isAppOfArity ``Eq 3
       let greaterEqual := body.isAppOfArity ``GE.ge 4
@@ -298,12 +298,12 @@ private def normalizeRowWithInstances (predicate : Expr) (config : Affine.Config
           return .error (← rowError body m!"unsupported order instance {args[1]!}" label?)
       let lhs ← mkLambdaFVars #[point] lhs
       let rhs ← mkLambdaFVars #[point] rhs
-      let left ← Affine.reifyAffine lhs config
+      let left ← Affine.reifyAffine lhs provider
       if let .error error := left then
         return .error (← rowError error.expression m!"left-hand side: {error.reason}" label?)
       let .ok left := left
         | return .error (← rowError body "failed to recognize the left-hand side" label?)
-      let right ← Affine.reifyAffine rhs config
+      let right ← Affine.reifyAffine rhs provider
       if let .error error := right then
         return .error (← rowError error.expression m!"right-hand side: {error.reason}" label?)
       let .ok right := right
@@ -348,26 +348,26 @@ private def withFiniteInstances (instances : List Expr)
           pointwiseIff := ← result.pointwiseIff.replaceFVarsM #[binding] #[inst]
         }
 
-private def normalizeRowCore (predicate : Expr) (config : Affine.Config)
+private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvider)
     (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
   let predicate ← instantiateMVars predicate
   if ← hasUnresolved predicate then
     return .error (← rowError predicate "unresolved metavariables in predicate" label?)
   withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
-    normalizeRowWithInstances predicate config label?
+    normalizeRowWithInstances predicate provider label?
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, native
 second-order or exponential cone membership, or one finite quantified family
 of exponential memberships. Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
-def normalizeRow (predicate : Expr) (config : Affine.Config := {})
+def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
     (label? : Option Name := none) : MetaM (Except Affine.AffineError RowResult) :=
   Affine.withIsolatedMVars do
     try
       let direct ← Affine.withIsolatedMVars do
         try
-          normalizeRowCore predicate config label?
+          normalizeRowCore predicate provider label?
         catch error =>
           return .error (← rowError predicate error.toMessageData label?)
       if let .ok result := direct then return .ok result
@@ -375,14 +375,14 @@ def normalizeRow (predicate : Expr) (config : Affine.Config := {})
       let instances ← Affine.helperFiniteInstances predicate
       if instances.isEmpty then return direct
       withFiniteInstances instances.toList do
-        normalizeRowCore predicate config label?
+        normalizeRowCore predicate provider label?
     catch error =>
       return .error (← rowError predicate error.toMessageData label?)
 
 /-- Recognize the real objective retained by a typed presentation. The explicit
 optimization sense and order-dual annotation remain in the presentation. -/
 def reifyObjective (presentation : Reformulation.PresentationState)
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError Affine.AffineResult) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Affine.AffineResult) :=
   Affine.withIsolatedMVars do
     let fail (expression : Expr) (reason : MessageData) :
         MetaM (Except Affine.AffineError Affine.AffineResult) := do
@@ -401,7 +401,7 @@ def reifyObjective (presentation : Reformulation.PresentationState)
       unless ← isDefEq (← inferType presentation.objective) expected do
         return ← fail presentation.objective
           "objective function does not match its presentation domain and value type"
-      match ← Affine.reifyAffine presentation.objective config with
+      match ← Affine.reifyAffine presentation.objective provider with
       | .ok result => return .ok result
       | .error error => fail error.expression error.reason
     catch error =>
@@ -409,7 +409,7 @@ def reifyObjective (presentation : Reformulation.PresentationState)
 
 /-- Normalize a typed named constraint, retaining its label in diagnostics. -/
 def normalizeConstraint (entry : Reformulation.ConstraintEntry)
-    (config : Affine.Config := {}) : MetaM (Except Affine.AffineError RowResult) :=
-  normalizeRow entry.predicate config (some entry.name)
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError RowResult) :=
+  normalizeRow entry.predicate provider (some entry.name)
 
 end Morew.Elab.Conic
