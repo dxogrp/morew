@@ -39,6 +39,15 @@ attribute [instance] Cone.instNormedAddCommGroup Cone.instNormedSpace
 
 namespace Cone
 
+/-- The nonnegative cone in the real line, without a vector embedding. -/
+noncomputable def nonnegativeScalar : Cone where
+  Space := ℝ
+  carrier := ConvexCone.positive ℝ ℝ
+
+/-- The scalar carrier with its real coordinate type explicit for elaboration. -/
+noncomputable abbrev nonnegativeScalarCarrier : ConvexCone ℝ ℝ :=
+  nonnegativeScalar.carrier
+
 /-- The zero cone in `Fin n → ℝ`. Its carrier is the singleton zero vector,
 not the empty cone denoted by mathlib's `⊥`. -/
 noncomputable def zero (n : Nat) : Cone where
@@ -62,5 +71,22 @@ theorem mem_nonnegative {n : Nat} (x : Fin n → ℝ) :
     x ∈ (nonnegative n).carrier ↔ ∀ i, 0 ≤ x i :=
   Iff.rfl
 
+/-- Membership in the scalar nonnegative cone is ordinary nonnegativity. -/
+@[simp]
+theorem mem_nonnegativeScalar (x : ℝ) :
+    x ∈ nonnegativeScalar.carrier ↔ 0 ≤ x :=
+  Iff.rfl
+
 end Cone
+
+set_option quotPrecheck false in
+/-- The scalar nonnegative cone carrier. -/
+notation (name := nonnegativeScalarCarrier) "ℝ₊" =>
+  Morew.Conic.Cone.nonnegativeScalarCarrier
+
+set_option quotPrecheck false in
+/-- The coordinatewise nonnegative cone carrier in dimension `n`. -/
+notation:max (name := nonnegativeCarrier) "ℝ₊^" n:arg =>
+  (Morew.Conic.Cone.nonnegative n).carrier
+
 end Morew.Conic

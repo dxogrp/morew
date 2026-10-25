@@ -116,8 +116,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (Morew.Conic.Cone.rotatedSecondOrder 0).carrier)) "cone coordinates"
   expectRejected (← `(fun x : ℝ =>
     (x, (0 : Fin 2 → ℝ)) ∈ (coneAlias 2).carrier)) "unsupported cone"
-  expectRejected (← `(fun x : Fin 2 → ℝ =>
-    x ∈ (Morew.Conic.Cone.nonnegative 2).carrier)) "unsupported cone"
   expectRejected (← `(fun x : ℝ =>
     @Membership.mem (ℝ × (Fin 2 → ℝ)) (ConvexCone ℝ (ℝ × (Fin 2 → ℝ)))
       ⟨fun _ _ => True⟩ (Morew.Conic.Cone.secondOrder 2).carrier

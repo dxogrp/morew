@@ -15,6 +15,7 @@ import MorewTest.Atom.Recognition
 import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
 import MorewTest.Conic
+import MorewTest.Conic.AffineMembership
 import MorewTest.Conic.Automatic
 import MorewTest.Conic.EuclideanAffine
 import MorewTest.Conic.Exponential
