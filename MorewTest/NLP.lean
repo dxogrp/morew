@@ -301,33 +301,46 @@ example : True := by
   trivial
 
 -- A closed feasible region does not supply the required open evaluation domain.
-example : True := by
-  fail_if_success
-    let _ : Data ℝ := { polynomialData with
-      domain := Set.Icc (-2) 2
-      domain_isOpen := isOpen_Ioi
-      objective_smooth := ((contDiff_id.pow 4).sub (contDiff_id.pow 2)).contDiffOn
-      rows := fun _ => {
-        residual := fun x => x
-        bounds := Bounds.between (-2) 2
-        smooth := contDiffOn_id
-      }
-      feasible_mem_domain := fun _ h => h 0
-    }
-  trivial
+/--
+error: Type mismatch
+  isOpen_Ioi
+has type
+  IsOpen (Set.Ioi 0)
+but is expected to have type
+  IsOpen (Set.Icc (-2) 2)
+-/
+#guard_msgs in
+example : Data ℝ := { polynomialData with
+  domain := Set.Icc (-2) 2
+  domain_isOpen := (isOpen_Ioi : IsOpen (Set.Ioi (0 : ℝ)))
+  objective_smooth := ((contDiff_id.pow 4).sub (contDiff_id.pow 2)).contDiffOn
+  rows := fun _ => {
+    residual := fun x => x
+    bounds := Bounds.between (-2) 2
+    smooth := contDiffOn_id
+  }
+  feasible_mem_domain := fun _ h => h (0 : Fin 1)
+}
 
 -- Nonnegativity does not justify the strict positivity needed for log.
-example : True := by
-  fail_if_success
-    let _ : Data ℝ := { logData with
-      rows := fun _ => {
-        residual := fun x => x
-        bounds := Bounds.lowerBound 0
-        smooth := contDiffOn_id
-      }
-      feasible_mem_domain := fun x h => by simpa [Row.Holds] using h 0
-    }
-  trivial
+/--
+error: Type mismatch: After simplification, term
+  h 0
+ has type
+  0 ≤ x
+but is expected to have type
+  0 < x
+-/
+#guard_msgs in
+example : Data ℝ := { logData with
+  rows := fun _ => {
+    residual := fun x => x
+    bounds := Bounds.lowerBound 0
+    smooth := contDiffOn_id
+  }
+  feasible_mem_domain := fun x h => by
+    simpa [Row.Holds, logData] using h (0 : Fin 1)
+}
 
 example : True := by
   fail_if_success
