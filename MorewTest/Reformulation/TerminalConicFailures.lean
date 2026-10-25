@@ -301,6 +301,18 @@ assert_terminal_atomic%
 reformulation noCustomOrder : customOrder := by
   conic
 
+def groupedCustomOrder :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      fake : @LE.le ℝ incompatibleOrder x 1 ∧ x = 0
+
+/-- error: terminal conic validation is uncertified: constraint `fake`: -/
+#guard_msgs (substring := true) in
+assert_terminal_atomic%
+reformulation noGroupedCustomOrder : groupedCustomOrder := by
+  conic
+
 private opaque incompatibleMembership :
     Membership (ℝ × ℝ × ℝ) (ConvexCone ℝ (ℝ × ℝ × ℝ)) := ⟨fun _ _ => True⟩
 
@@ -334,6 +346,77 @@ reformulation constantRelationsTarget : reducibleConstantRelations := by
 example : constantRelationsTarget.conicForm.data.rowCount = 0 := rfl
 example : GlobalEquivalence reducibleConstantRelations constantRelationsTarget :=
   constantRelationsTarget.equivalence
+
+-- Normalizing an affine sibling must not reinterpret a constant relation that
+-- the semantic checkpoint already reduced to True. Keep its original leaf,
+-- the nested conjunctions, and the separate model-local binding identities.
+structure PropositionHolder where
+  proposition : Prop
+
+def groupedConstantRelations :=
+  problem (x y : ℝ)
+    let first := x
+    let second := y
+    minimize first
+    subject to
+      grouped : (@LE.le ℝ ⟨fun _ _ => True⟩ first 1 ∧ first = second) ∧
+        (let order : LE ℝ := ⟨fun _ _ => True⟩;
+          @LE.le ℝ order second 0 ∧ @LE.le ℝ Real.instLE second 5)
+      emptyConjunction : @LE.le ℝ ⟨fun _ _ => True ∧ True⟩ first 1 ∧ second = 0
+      affineConjunction : @LE.le ℝ ⟨fun a b => (a ≤ b) ∧ True⟩ first second ∧ True
+      customMembership : @Membership.mem ℝ (Set ℝ) ⟨fun _ value => value ≤ 0⟩
+        ({0} : Set ℝ) first ∧ second = 0
+      membershipConjunction : @Membership.mem ℝ (Set ℝ)
+        ⟨fun _ value => value ≤ 0 ∧ True⟩ ({0} : Set ℝ) first ∧ True
+      reverseRelation : @LE.le ℝ ⟨fun a b => b ≤ a⟩ first second ∧ True
+      nativeMembership : (first, 1, second) ∈ Conic.Cone.exponential.carrier ∧ first ≤ second
+      constantMatch : (match true with | true => first ≤ 0 | false => first = 1) ∧ second = 0
+      fieldProjection : (PropositionHolder.mk (first ≤ 0)).proposition ∧ second = 0
+
+reformulation groupedConstantTarget : groupedConstantRelations := by
+  conic
+
+example : GlobalEquivalence groupedConstantRelations groupedConstantTarget :=
+  groupedConstantTarget.equivalence
+example : groupedConstantTarget.conicForm.data.rowCount = 14 := rfl
+example : groupedConstantTarget.conicForm.data.toProblem = groupedConstantTarget :=
+  groupedConstantTarget.conicForm.represents
+example (x y : ℝ) : groupedConstantTarget.feasible (x, y) ↔
+    ((True ∧ x - y ∈ ({0} : Set ℝ)) ∧ (True ∧ 5 - y ∈ ℝ₊)) ∧
+      ((True ∧ True) ∧ y ∈ ({0} : Set ℝ)) ∧ ((y - x ∈ ℝ₊ ∧ True) ∧ True) ∧
+        (-x ∈ ℝ₊ ∧ y ∈ ({0} : Set ℝ)) ∧ ((-x ∈ ℝ₊ ∧ True) ∧ True) ∧
+          (x - y ∈ ℝ₊ ∧ True) ∧ ((x, 1, y) ∈ Conic.Cone.exponential.carrier ∧ y - x ∈ ℝ₊) ∧
+            (-x ∈ ℝ₊ ∧ y ∈ ({0} : Set ℝ)) ∧
+            (-x ∈ ℝ₊ ∧ y ∈ ({0} : Set ℝ)) := Iff.rfl
+
+run_cmd do
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``groupedConstantTarget
+    | Lean.throwError "missing grouped constant-relation presentation"
+  unless view.constraints.map (·.name.eraseMacroScopes) ==
+      #[`grouped, `emptyConjunction, `affineConjunction, `customMembership,
+        `membershipConjunction, `reverseRelation, `nativeMembership, `constantMatch,
+        `fieldProjection] &&
+      view.definitions.map (·.name.eraseMacroScopes) == #[`first, `second] do
+    Lean.throwError "constant-relation normalization changed presentation bindings"
+  Lean.Elab.Command.liftTermElabM do
+    let some value := (← Lean.getConstInfo ``groupedConstantTarget).value?
+      | Lean.throwError "missing grouped constant-relation target"
+    unless (value.find? (·.isAppOfArity ``LE.le 4)).isSome do
+      Lean.throwError "constant-relation normalization erased the retained comparison leaf"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  let name := Lean.mkIdent `groupedConstantReplayed
+  Lean.Elab.Command.elabCommand (← `(noncomputable def $name := $term))
+
+example (x y : ℝ) : groupedConstantReplayed.feasible (x, y) ↔
+    groupedConstantTarget.feasible (x, y) := Iff.rfl
+
+reformulation groupedConstantAgain : groupedConstantTarget := by
+  epigraph t
+  conic
+
+example : groupedConstantAgain.conicForm.data.rowCount = 15 := rfl
+example : GlobalEquivalence groupedConstantTarget groupedConstantAgain :=
+  groupedConstantAgain.equivalence
 
 def liftedThenFailure :=
   problem (x t : ℝ)
