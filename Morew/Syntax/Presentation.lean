@@ -19,6 +19,25 @@ namespace Morew.Syntax
 
 open Lean Lean.Elab Lean.Elab.Term Lean.Parser
 
+/-- Internal replay reference to a formal instance parameter. Its original
+local name is preferred, but later sections may supply the class anonymously
+or under another name. Concrete operation instances never use this syntax. -/
+syntax (name := replayInstance) "morew_replay_instance% " ident " : " term : term
+
+@[term_elab replayInstance]
+private def elabReplayInstance : TermElab := fun stx expectedType? => do
+  let `(morew_replay_instance% $name:ident : $type) := stx | throwUnsupportedSyntax
+  let type ← elabType type
+  let result ← match ← resolveLocalName name.getId with
+    | some (candidate, []) =>
+        -- A failed candidate must not constrain the subsequent class search.
+        if ← withoutModifyingState <| Meta.isDefEq (← Meta.inferType candidate) type then
+          pure candidate
+        else
+          Meta.synthInstance type
+    | _ => Meta.synthInstance type
+  ensureHasType expectedType? result
+
 /-- Presentation data for one (nondependent) decision-variable binder. -/
 structure BinderView where
   /-- The source-level name of the decision variable. -/

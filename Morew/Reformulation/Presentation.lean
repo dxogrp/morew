@@ -828,15 +828,19 @@ def refreshProblemView (targetName : Name)
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          -- Only formal parameters without a usable caller-visible name are
-          -- synthesized. Stored operation instances remain explicit constants.
-          -- Parameter order also freezes dependencies on earlier instances.
-          let mut parameterInstances := namedInstanceReferences
-          for parameter in parameters do
-            unless synthesizedInstanceIds.contains parameter.fvarId! do continue
+          -- Replay named formal instances by local identity when available,
+          -- and by class type after import or a change of section names.
+          -- Concrete operation instances remain explicit constants. Parameter
+          -- order also freezes dependencies on earlier formal instances.
+          let mut parameterInstances : Std.HashMap FVarId Lean.Syntax := {}
+          for parameter in parameters, name in parameterNames do
+            unless (← parameter.fvarId!.getDecl).binderInfo == .instImplicit do continue
             let type : TSyntax `term := ⟨← presentationTypeSyntax (← inferType parameter)
               (parameterInstances := parameterInstances)⟩
-            let reference ← `((inferInstance : $type))
+            let reference ← if synthesizedInstanceIds.contains parameter.fvarId! then
+                `((inferInstance : $type))
+              else
+                `(morew_replay_instance% $(mkIdent name) : $type)
             parameterInstances := parameterInstances.insert parameter.fvarId! reference.raw
           let replay ← problemViewFromExpression target replayTemplate (instantiateBinderTypes := true)
             (parameterInstances := parameterInstances)

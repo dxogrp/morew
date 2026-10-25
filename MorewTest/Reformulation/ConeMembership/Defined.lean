@@ -35,5 +35,22 @@ example : (target.conicForm offset).data.toProblem = target offset :=
   (target.conicForm offset).represents
 
 end
+
+class NamedParameter where
+  value : ℝ
+
+section
+variable [configuration : NamedParameter]
+
+def namedSource :=
+  problem (x : ℝ)
+    let coefficient := NamedParameter.value
+    minimize coefficient + x
+    subject to bound : x ≤ coefficient
+
+reformulation namedTarget : namedSource := by
+  conic
+
+end
 end
 end MorewTest.Reformulation.ConeMembership.Defined
