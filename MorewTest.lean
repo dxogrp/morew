@@ -64,6 +64,7 @@ import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.ConeMembership
 import MorewTest.Reformulation.ConeMembership.Defined
 import MorewTest.Reformulation.ConeMembershipAliases
+import MorewTest.Reformulation.ConeMembershipReplay
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures

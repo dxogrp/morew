@@ -54,18 +54,19 @@ private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.
 private partial def freezePresentationReferences
     (infos : SubExpr.PosMap Elab.Info) (binders : Array (FVarId × Name))
     (sectionReferences : Std.HashMap FVarId Name)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (stx : Lean.Syntax) : Lean.Syntax :=
   if let some id := annotatedFVarId? infos stx then
     match binders.find? fun entry => entry.1 == id with
     | some (_, name) => mkIdentFrom stx name
     | none => match sectionReferences.get? id with
       | some uid => mkCIdentFrom stx uid
-      | none => stx
+      | none => (parameterInstances.get? id).getD stx
   else if let some name := annotatedConstName? infos stx then
     freezePresentationConstant stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
-      freezePresentationReferences infos binders sectionReferences child
+      freezePresentationReferences infos binders sectionReferences parameterInstances child
 
 /-- Section variable UIDs survive fresh elaboration contexts, including for
 anonymous instances whose local names receive new macro scopes each time.
@@ -127,7 +128,8 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
-def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lean.Syntax :=
+def presentationTypeSyntax (type : Expr) (replay : Bool := true)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax :=
   -- Generated auxiliary types need the same fixed class projections as row
   -- bodies, while retaining their readable spelling in imported metadata.
   withOptions (fun options =>
@@ -142,7 +144,7 @@ def presentationTypeSyntax (type : Expr) (replay : Bool := true) : TermElabM Lea
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
     pure <| freezePresentationReferences infos #[]
-      sectionReferences stx.raw
+      sectionReferences parameterInstances stx.raw
 
 /-- Stable type syntax for the semantic and displayed problem types. -/
 structure ProblemTypeSyntax where
@@ -393,10 +395,9 @@ private def delabConeCarrier : Delab := do
   else
     `(ℝ₊^$dimension)
 
--- Readable metadata is elaborated again in the declaration's parameter
--- context. Generated operations use fixed instances, which can differ from
--- ambient instance parameters retained elsewhere in an otherwise unused let.
--- Keep ordinary notation only when it reconstructs the same stored instance.
+-- Display generated operations explicitly when their instances differ from
+-- the declaration's parameter context. Exact replay is stored separately and
+-- keeps all instances, including when a later context changes typeclass search.
 private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
   withoutModifyingState do
     match ← trySynthInstance (← inferType stored) with
@@ -485,7 +486,8 @@ private def delabZeroConeMembership : Delab := do
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
-    (binders : Array (FVarId × Name)) (replay : Bool := true) : TermElabM Lean.Syntax := do
+    (binders : Array (FVarId × Name)) (replay : Bool := true)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
   -- Reserve the displayed names before choosing names for inner binders.
   -- Generated decisions carry hygiene scopes, which must not make an inner
   -- lambda appear free to reuse the same visible spelling.
@@ -509,7 +511,7 @@ def delabPresentationTerm (expression : Expr)
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
     pure <| freezePresentationReferences infos binders
-      sectionReferences stx.raw
+      sectionReferences parameterInstances stx.raw
 
 /-- Elaborate sequential model-local definitions beneath the current decision
 binders. The callback sees real let-bound locals, so their values remain
@@ -629,7 +631,7 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
 binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
 private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
     (objective feasible : Expr) (names : Array (FVarId × Name))
-    (replay : Bool)
+    (replay : Bool) (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
       Array (FVarId × Name) → TermElabM Morew.Syntax.ProblemView) :
     TermElabM Morew.Syntax.ProblemView := do
@@ -646,9 +648,10 @@ private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
     unless (← isDefEq type feasibleType) && (← isDefEq value feasibleValue) do
       throwError "problem objective and feasibility disagree on a model-local definition"
     let definition := { definition with
-      value := ← delabPresentationTerm value names replay
-      typeSyntax? := ← definition.typeSyntax?.mapM fun _ => delabPresentationTerm type names replay
-      inferredTypeSyntax? := some (← delabPresentationTerm type names replay) }
+      value := ← delabPresentationTerm value names replay parameterInstances
+      typeSyntax? := ← definition.typeSyntax?.mapM fun _ =>
+        delabPresentationTerm type names replay parameterInstances
+      inferredTypeSyntax? := some (← delabPresentationTerm type names replay parameterInstances) }
     withLocalDeclD definition.name type fun binding =>
       visit remaining (definitions.push definition)
         (body.instantiate1 binding) (feasibleBody.instantiate1 binding)
@@ -660,7 +663,8 @@ ordered names. Applied sources also instantiate binder types; existing bare-name
 sources retain their original spelling, including type aliases. -/
 def problemViewFromExpression (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
-    (recoverDefinitions : Bool := true) (forRegistration : Bool := false) :
+    (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
     TermElabM Morew.Syntax.ProblemView := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
@@ -677,7 +681,9 @@ def problemViewFromExpression (target : Expr)
   let binderTypes ← splitProductDomain domain template.binders.size
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
     if instantiateBinderTypes then
-      pure { binder with typeSyntax := ← presentationTypeSyntax binderTypes[index]! (!forRegistration) }
+      pure { binder with
+        typeSyntax := ← presentationTypeSyntax binderTypes[index]!
+          (!forRegistration) parameterInstances }
     else
       pure binder
   let binderDeclarations := binderTypes.mapIdx fun index type =>
@@ -692,9 +698,10 @@ def problemViewFromExpression (target : Expr)
       let objectiveBody ← if recoverDefinitions then pure objectiveBody else simpOnly objectiveBody
       let feasibleBody ← if recoverDefinitions then pure feasibleBody else simpOnly feasibleBody
       let constraints ← splitConstraintBody feasibleBody template.constraints.size
-      let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames (!forRegistration)
+      let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
+        (!forRegistration) parameterInstances
       let constraintSyntax ← constraints.mapM fun proposition =>
-        delabPresentationTerm proposition binderNames (!forRegistration)
+        delabPresentationTerm proposition binderNames (!forRegistration) parameterInstances
       pure {
         template with
         binders := displayedBinders
@@ -707,7 +714,7 @@ def problemViewFromExpression (target : Expr)
       let objectiveBody ← openPresentationBody objective domain binders
       let feasibleBody ← openPresentationBody feasible domain binders
       withModelDefinitionBodies template objectiveBody feasibleBody
-        binderNames (!forRegistration) render
+        binderNames (!forRegistration) parameterInstances render
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
 
@@ -743,11 +750,12 @@ def typedPresentationFromExpression (target : Expr)
     }
   }
 
-/-- Register a presentation recovered from an emitted target declaration. -/
+/-- Register exact replay syntax and a readable presentation recovered from the
+same emitted declaration and parameter telescope. -/
 def refreshProblemView (targetName : Name)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
     CommandElabM Unit := do
-  let refreshed ← runTermElabM fun _ => do
+  let (refreshed, displayed) ← runTermElabM fun _ => do
     -- Inspect the declaration's own parameters, independently of the section
     -- that emitted it. Fresh universe metavariables or ambient local names
     -- must not leak into persistent presentation metadata.
@@ -755,6 +763,18 @@ def refreshProblemView (targetName : Name)
     let target := Lean.mkConst targetName (info.levelParams.map Level.param)
     withLCtx {} {} do
       forallTelescopeReducing info.type (fun parameters _ => do
+        -- Anonymous instance names are fresh in each elaboration context.
+        -- Record their identities before choosing printable parameter names.
+        -- Named instance identities remain explicit even when a model binding
+        -- has the same display name; replay scopes that model binding instead.
+        let anonymousInstances ← parameters.filterM fun parameter => do
+          let declaration ← parameter.fvarId!.getDecl
+          pure <| declaration.binderInfo == .instImplicit &&
+            declaration.userName.hasMacroScopes &&
+            declaration.userName.eraseMacroScopes == `inst
+        let mut synthesizedInstanceIds : Std.HashSet FVarId := {}
+        for parameter in anonymousInstances do
+          synthesizedInstanceIds := synthesizedInstanceIds.insert parameter.fvarId!
         -- Distinct section variables can have the same declaration binder name.
         -- Choose one consistent display name per parameter before rendering any
         -- binder type or body. Reserve existing names before adding suffixes, so
@@ -765,6 +785,29 @@ def refreshProblemView (targetName : Name)
           (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
         let decisionNames := template.definitions.foldl
           (fun names definition => names.insert definition.name.eraseMacroScopes) decisionNames
+        -- Hygiene separates colliding model bindings from named parameters in
+        -- exact syntax without changing either displayed name. Other bindings
+        -- remain untouched, so ordinary edits using their names still elaborate.
+        let mut namedInstanceReferences : Std.HashMap FVarId Lean.Syntax := {}
+        let mut replayScopedNames : NameSet := {}
+        for parameter in parameters, name in parameterNames do
+          let declaration ← parameter.fvarId!.getDecl
+          if declaration.binderInfo == .instImplicit &&
+              !synthesizedInstanceIds.contains parameter.fvarId! &&
+              decisionNames.contains name then
+            namedInstanceReferences := namedInstanceReferences.insert parameter.fvarId!
+              (mkIdent name)
+            replayScopedNames := replayScopedNames.insert name
+        let replayBinders ← template.binders.mapM fun binder => do
+          unless replayScopedNames.contains binder.name.eraseMacroScopes do return binder
+          let name ← withFreshMacroScope do MonadQuotation.addMacroScope binder.name
+          return { binder with name }
+        let replayDefinitions ← template.definitions.mapM fun definition => do
+          unless replayScopedNames.contains definition.name.eraseMacroScopes do return definition
+          let name ← withFreshMacroScope do MonadQuotation.addMacroScope definition.name
+          return { definition with name }
+        let replayTemplate := { template with
+          binders := replayBinders, definitions := replayDefinitions }
         let reserved := parameterNames.foldl (fun names name => names.insert name) decisionNames
         let mut occupied := decisionNames
         let mut lctx ← getLCtx
@@ -776,14 +819,31 @@ def refreshProblemView (targetName : Name)
             while reserved.contains displayName || occupied.contains displayName do
               index := index + 1
               displayName := name.appendIndexAfter index
+            if (← parameter.fvarId!.getDecl).binderInfo == .instImplicit &&
+                !namedInstanceReferences.contains parameter.fvarId! then
+              synthesizedInstanceIds := synthesizedInstanceIds.insert parameter.fvarId!
           occupied := occupied.insert displayName
           lctx := lctx.setUserName parameter.fvarId! displayName
         let target := mkAppN target parameters
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          problemViewFromExpression target template instantiateBinderTypes (forRegistration := true))
-  Morew.Syntax.registerProblemView targetName refreshed
+          -- Only formal parameters without a usable caller-visible name are
+          -- synthesized. Stored operation instances remain explicit constants.
+          -- Parameter order also freezes dependencies on earlier instances.
+          let mut parameterInstances := namedInstanceReferences
+          for parameter in parameters do
+            unless synthesizedInstanceIds.contains parameter.fvarId! do continue
+            let type : TSyntax `term := ⟨← presentationTypeSyntax (← inferType parameter)
+              (parameterInstances := parameterInstances)⟩
+            let reference ← `((inferInstance : $type))
+            parameterInstances := parameterInstances.insert parameter.fvarId! reference.raw
+          let replay ← problemViewFromExpression target replayTemplate (instantiateBinderTypes := true)
+            (parameterInstances := parameterInstances)
+          let display ← problemViewFromExpression target template instantiateBinderTypes
+            (forRegistration := true)
+          pure (replay, display))
+  Morew.Syntax.registerProblemView targetName refreshed (some displayed)
 
 /-- Rebase a retained presentation into the current section-variable context. -/
 def withTypedPresentation (state : ReformState)

@@ -132,7 +132,7 @@ def elabPrintProblem : CommandElab := fun stx => do
   let `(#printp $name:ident) := stx | throwUnsupportedSyntax
   let declName ← resolveGlobalConstNoOverload name
   let env ← getEnv
-  let some view := Morew.Syntax.getProblemView? env declName
+  let some view := Morew.Syntax.getProblemDisplayView? env declName
     | throwErrorAt name "declaration `{declName}` has no registered problem presentation"
   -- A `problem` term can occur as a proper subterm of another declaration.
   -- During elaboration it still sees the enclosing declaration name, so such
