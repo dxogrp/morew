@@ -56,6 +56,7 @@ import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
 import MorewTest.NLP
+import MorewTest.NLP.SmoothLemmas
 import MorewTest.ObjectiveContext
 import MorewTest.ObjectiveContextAutomation
 import MorewTest.Reformulation.AffineHelperSource
