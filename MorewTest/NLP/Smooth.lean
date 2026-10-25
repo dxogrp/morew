@@ -61,6 +61,29 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ∑ i ∈ s, a i * x ^ i)) 2
   assertSmooth (← `(fun x : ℝ => ∑ _i ∈ (∅ : Finset ℕ), x))
 
+/-! Ambient scalar fields cannot change a certificate's native analytic instances. -/
+
+private def checkAmbientScalarField (term : TSyntax `term)
+    (parameterCount : Nat := 0) : TermElabM Unit := do
+  let expression ← elaborate term
+  lambdaBoundedTelescope expression parameterCount fun _ source => do
+    let baseline ← checkSuccess source
+    let baselineType ← inferType baseline
+    let fieldType ← mkAppM ``NontriviallyNormedField #[Lean.mkConst ``Real]
+    withLocalDecl `ambientField .instImplicit fieldType fun ambient => do
+      let proof ← checkSuccess source
+      let proofType ← inferType proof
+      if proof.containsFVar ambient.fvarId! || proofType.containsFVar ambient.fvarId! then
+        throwError "smoothness certificate captured an unrelated ambient scalar field"
+      unless ← isDefEq proofType baselineType do
+        throwError "ambient scalar field changed the native smoothness proposition"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  checkAmbientScalarField (← `(fun x : ℝ => x * x))
+  checkAmbientScalarField (← `(fun x : Fin 2 → ℝ => (x + x) 0))
+  checkAmbientScalarField (← `(fun n : ℕ => fun i : Fin n =>
+    fun x : Fin n → ℝ => x i ^ 2)) 2
+
 /-! Only local structural reductions are needed for these equivalent spellings. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do

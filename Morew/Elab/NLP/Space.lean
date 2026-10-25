@@ -56,6 +56,10 @@ noncomputable abbrev pi (n : Nat) {Y : Type u} (target : Structure Y) :
 
 end Structure
 
+-- Fix the scalar field at declaration time, just as Structure.real fixes its
+-- analytic structures. Ambient field instances need not agree with those data.
+private noncomputable abbrev realField : NontriviallyNormedField ℝ := inferInstance
+
 private structure BuiltSpace where
   data : Expr
   instances : Array Expr
@@ -108,13 +112,14 @@ private def installInstances (remaining : List Expr) (action : MetaM Expr) : Met
 
 /-- Construct a proof using canonical analytic structures on the supplied spaces.
 
-The real scalars and every component space receive canonical normed-group,
+The scalar field is fixed to the standard real field. The real scalars and
+every component space receive canonical normed-group,
 normed-space, and finite-dimensionality instances. Finite-function calculus uses
 the matching standard Fin enumeration. Temporary instances are substituted into
 the returned expression before leaving their scopes.
 -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
-  let mut instances := #[]
+  let mut instances := #[mkConst ``realField]
   for type in #[mkConst ``Real] ++ types do
     let result ← buildSpace type
     for inst in result.instances do
