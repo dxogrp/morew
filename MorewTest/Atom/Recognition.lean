@@ -25,6 +25,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAtom (← `(fun x : ℝ => Real.sinh x)) .sinh #[0]
   assertAtom (← `(fun x : ℝ => Real.cosh x)) .cosh #[0]
   assertAtom (← `(fun x : ℝ => Real.tanh x)) .tanh #[0]
+  assertAtom (← `(fun x y : ℝ => Real.rpow x y)) .rpow #[0, 1]
+  assertAtom (← `(fun x y : ℝ => x ^ y)) .rpow #[0, 1]
+  assertAtom (← `(fun x y : ℝ => y ^ x)) .rpow #[1, 0]
+  -- Atom identity imposes neither exponent independence nor domain evidence.
+  assertAtom (← `(fun x : ℝ => x ^ x)) .rpow #[0, 0]
   assertAtom (← `(fun x : ℝ => x⁻¹)) .inv #[0]
   assertAtom (← `(fun x : ℝ => Inv.inv x)) .inv #[0]
   assertAtom (← `(fun x : ℝ => |x|)) .abs #[0]
@@ -44,6 +49,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAtom (← `(fun x : ℝ => sinh x)) .sinh #[0]
   assertAtom (← `(fun x : ℝ => cosh x)) .cosh #[0]
   assertAtom (← `(fun x : ℝ => tanh x)) .tanh #[0]
+  assertAtom (← `(fun x y : ℝ => rpow x y)) .rpow #[0, 1]
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun x : ℝ => Real.log (Real.exp x)))
@@ -86,5 +92,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "application metadata prevented recognition"
     unless atom.kind == .exp && atom.original == expression && atom.operands == #[operand] do
       throwError "recognition changed application or operand metadata"
+
+  withLocalDeclD `x (mkConst ``Real) fun x =>
+    withLocalDeclD `y (mkConst ``Real) fun y => do
+      let base := mkMData {} x
+      let exponent := mkMData {} y
+      let function := mkMData {} (Lean.mkConst ``Real.rpow)
+      let appliedBase := mkMData {} (mkApp function base)
+      let expression := mkMData {} (mkApp appliedBase exponent)
+      let some atom ← recognizeAtom? expression
+        | throwError "application metadata prevented real-power recognition"
+      unless atom.kind == .rpow && atom.original == expression &&
+          atom.operands == #[base, exponent] do
+        throwError "real-power recognition changed its expression or operands"
 
 end MorewTest.Atom.Recognition

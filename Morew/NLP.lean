@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.NLP.Basic
 import Morew.NLP.Smooth
+import Morew.NLP.Domain
 
 /-!
 # Certified smooth-NLP forms
@@ -14,8 +15,9 @@ without installing the problem or reformulation DSL.
 
 `Morew.NLP.Smooth` supplies C² closure rules for arithmetic, finite sums,
 product and finite-function components, and globally smooth elementary
-functions. The rules retain a common evaluation domain and can be used in
-manual representations or by a separate expression certifier.
+functions. `Morew.NLP.Domain` adds open domain intersections, finite families,
+and rules for logarithms, square roots, reciprocals, and fixed real powers.
+These rules can be used in manual representations or by expression certifiers.
 
 To construct a representation manually, supply each row's residual, closed
 bounds, and `ContDiffOn ℝ 2` proof on a common domain. Assemble the rows and an
@@ -39,6 +41,7 @@ For maximization, keep the problem explicitly typed as
 `Problem X (OrderDual ℝ)` and set `data.sense` to `.maximize`. The objective is
 unchanged, and representation equality alone does not determine its sense.
 Native global smoothness certification is available through the separate
-`Morew.Elab.NLP.Smooth` import. Domain inference and the `nlp` command remain
-later extensions to this semantic API.
+`Morew.Elab.NLP.Smooth` import. The separate `Morew.Elab.NLP.Domain` import
+infers domains and proves inclusion from existing feasibility. The `nlp` command
+remains a later extension to this semantic API.
 -/
