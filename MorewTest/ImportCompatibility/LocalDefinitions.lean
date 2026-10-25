@@ -119,6 +119,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless ← Lean.Meta.isDefEq (← Lean.Meta.inferType parameters[2]!) (Lean.mkConst ``True) do
       Lean.throwError "generic local-definition carrier changed its proof parameter"
 
+private partial def containsIdentifier (stx : Lean.Syntax) (name : Lean.Name) : Bool :=
+  (stx.isIdent && stx.getId.eraseMacroScopes == name) ||
+    stx.getArgs.any (containsIdentifier · name)
+
 open Lean in
 run_cmd do
   for name in #[``applied, ``continued] do
@@ -126,12 +130,11 @@ run_cmd do
       | throwError "local-definition presentation missing"
     unless view.definitions.map (·.name.eraseMacroScopes) == #[`loss, `same, `total, `unused] do
       throwError "local-definition identity or order changed across import"
-    unless view.definitions[2]!.value.reprint == some "loss + same" do
-      -- Pretty-printer syntax often has synthetic source ranges; inspect the
-      -- identifiers structurally instead of relying on source text below.
-      let names := view.definitions[2]!.value.getArgs
-      unless names.any (fun stx => stx.isIdent && stx.getId.eraseMacroScopes == `loss) do
-        throwError "chained local definition lost its first binding reference"
+    -- Exact replay can expose implicit application arguments. Inspect binding
+    -- references recursively instead of depending on readable notation's shape.
+    for binding in #[`loss, `same] do
+      unless containsIdentifier view.definitions[2]!.value binding do
+        throwError "chained local definition lost a distinct binding reference"
   let some terminal := Syntax.getProblemView? (← getEnv) ``Defined.terminal
     | throwError "terminal conic target lost its presentation"
   unless terminal.definitions.map (·.name.eraseMacroScopes) == #[`score, `magnitude] do

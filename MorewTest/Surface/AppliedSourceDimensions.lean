@@ -46,7 +46,7 @@ example : (symbolic.conicForm rows columns design response).data.toProblem =
 
 example (x : Fin columns → ℝ) (t : ℝ) :
     (symbolic rows columns design response).feasible (x, t) ↔
-      0 ≤ x ∧ (t, 1 / 2, fun i => (∑ j, design i j * x j) - response i) ∈
+      x ∈ ℝ₊^columns ∧ (t, 1 / 2, fun i => (∑ j, design i j * x j) - response i) ∈
         (Cone.rotatedSecondOrder rows).carrier := Iff.rfl
 
 reformulation continued : (symbolic rows columns design response) := by
@@ -64,7 +64,7 @@ end
 info: problem (x : Fin columns → ℝ) (t : ℝ)
   minimize t
   subject to
-    nonnegative : 0 ≤ x
+    nonnegative : x ∈ ℝ₊^columns
     residual_conic_1 : (t, 1 / 2, fun i => ∑ x_1, design i x_1 * x x_1 - response i) ∈ RSOC rows
 -/
 #guard_msgs in
@@ -84,7 +84,7 @@ example : IsConic concrete := concrete.isConic
 info: problem (x : Fin 3 → ℝ) (t : ℝ)
   minimize t
   subject to
-    nonnegative : 0 ≤ x
+    nonnegative : x ∈ ℝ₊^3
     residual_conic_1 : (t, 1 / 2, fun i => ∑ x_1, ![![1, 2, 3], ![4, 5, 6]] i x_1 * x x_1 - ![7, 8] i) ∈ RSOC 2
 -/
 #guard_msgs in

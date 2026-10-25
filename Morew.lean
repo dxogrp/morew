@@ -19,6 +19,7 @@ import Morew.Elab.Conic.Decomposition
 import Morew.Elab.Conic.Domain
 import Morew.Elab.Conic.Exponential
 import Morew.Elab.Conic.Form
+import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Polyhedral
 import Morew.Elab.Conic.Rewrite

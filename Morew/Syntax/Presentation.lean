@@ -19,6 +19,25 @@ namespace Morew.Syntax
 
 open Lean Lean.Elab Lean.Elab.Term Lean.Parser
 
+/-- Internal replay reference to a formal instance parameter. Its original
+local name is preferred, but later sections may supply the class anonymously
+or under another name. Concrete operation instances never use this syntax. -/
+syntax (name := replayInstance) "morew_replay_instance% " ident " : " term : term
+
+@[term_elab replayInstance]
+private def elabReplayInstance : TermElab := fun stx expectedType? => do
+  let `(morew_replay_instance% $name:ident : $type) := stx | throwUnsupportedSyntax
+  let type ← elabType type
+  let result ← match ← resolveLocalName name.getId with
+    | some (candidate, []) =>
+        -- A failed candidate must not constrain the subsequent class search.
+        if ← withoutModifyingState <| Meta.isDefEq (← Meta.inferType candidate) type then
+          pure candidate
+        else
+          Meta.synthInstance type
+    | _ => Meta.synthInstance type
+  ensureHasType expectedType? result
+
 /-- Presentation data for one (nondependent) decision-variable binder. -/
 structure BinderView where
   /-- The source-level name of the decision variable. -/
@@ -64,28 +83,41 @@ structure ProblemView where
   constraints : Array ConstraintView := #[]
   deriving Inhabited
 
+-- Keep display syntax outside the replay view. A transformation can edit an
+-- ordinary ProblemView without retaining a stale cached reconstruction term.
+private structure RegisteredProblemView where
+  view : ProblemView
+  displayView : ProblemView
+  deriving Inhabited
+
 private initialize problemViewExtension :
-    SimplePersistentEnvExtension (Name × ProblemView) (NameMap ProblemView) ←
+    SimplePersistentEnvExtension (Name × RegisteredProblemView) (NameMap RegisteredProblemView) ←
   registerSimplePersistentEnvExtension {
     addImportedFn := mkStateFromImportedEntries
       (fun state entry => state.insert entry.1 entry.2) {}
     addEntryFn := fun state entry => state.insert entry.1 entry.2
   }
 
-/-- Add presentation metadata to an environment.  Transformation commands use
-this function when they generate a new problem declaration. -/
+/-- Add presentation metadata to an environment. Transformation commands can
+supply a separate readable display while retaining exact syntax for replay.
+Without a display override, the supplied view serves both purposes. -/
 def addProblemView (env : Environment) (declName : Name)
-    (view : ProblemView) : Environment :=
-  problemViewExtension.addEntry env (declName, view)
+    (view : ProblemView) (displayView? : Option ProblemView := none) : Environment :=
+  problemViewExtension.addEntry env (declName, ⟨view, displayView?.getD view⟩)
 
-/-- Look up the presentation metadata registered for a problem declaration. -/
+/-- Look up the syntax view registered for reconstructing a problem.
+Refreshed reformulation targets retain explicit instances in this view. -/
 def getProblemView? (env : Environment) (declName : Name) : Option ProblemView :=
-  (problemViewExtension.getState env).find? declName
+  ((problemViewExtension.getState env).find? declName).map (·.view)
+
+/-- Look up the readable presentation used by `#printp`. -/
+def getProblemDisplayView? (env : Environment) (declName : Name) : Option ProblemView :=
+  ((problemViewExtension.getState env).find? declName).map (·.displayView)
 
 /-- Register presentation metadata in any elaborator with environment access. -/
 def registerProblemView [MonadEnv m] (declName : Name)
-    (view : ProblemView) : m Unit :=
-  modifyEnv fun env => addProblemView env declName view
+    (view : ProblemView) (displayView? : Option ProblemView := none) : m Unit :=
+  modifyEnv fun env => addProblemView env declName view displayView?
 
 /-- Structurally replace occurrences of a source identifier in a syntax tree.
 This low-level helper does not interpret nested binders; transformation

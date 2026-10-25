@@ -76,6 +76,34 @@ private theorem nonnegativeOfMargin {epsilon value : ℝ}
     (nonnegative : 0 ≤ epsilon) (bound : epsilon ≤ value) : 0 ≤ value :=
   le_trans nonnegative bound
 
+private def canonicalDifference (value epsilon : ℝ) : ℝ := value - epsilon
+
+private theorem marginOfNonnegativeDifference {epsilon value : ℝ}
+    (bound : value - epsilon ∈ ℝ₊) : epsilon ≤ value :=
+  sub_nonneg.mp bound
+
+private theorem nonnegativeOfMembership {value : ℝ} (bound : value ∈ ℝ₊) :
+    0 ≤ value := bound
+
+private def signInMembership? (point value body evidence : Expr) (strict : Bool) :
+    MetaM (Option Expr) := do
+  let some coordinate ← nonnegativeScalarValue? point body | return none
+  let coordinate ← Affine.reduceStructure coordinate
+  if !strict && (← isDefEq coordinate value) then
+    return some (← mkAppM ``nonnegativeOfMembership #[evidence])
+  unless coordinate.isAppOfArity ``HSub.hSub 6 do return none
+  let args := coordinate.getAppArgs
+  let upper := args[4]!
+  let epsilon := args[5]!
+  let canonical := (mkAppN (← getConstInfo ``canonicalDifference).value!
+    #[upper, epsilon]).headBeta
+  unless (← isDefEq args[3]! canonical.getAppArgs[3]!) &&
+      (← isDefEq coordinate canonical) && (← isDefEq upper value) do return none
+  let some sign ← constantSign? point epsilon strict | return none
+  let bound ← mkAppM ``marginOfNonnegativeDifference #[evidence]
+  return some (← mkAppM
+    (if strict then ``positiveOfMargin else ``nonnegativeOfMargin) #[sign, bound])
+
 private partial def signInRow? (point value body evidence : Expr) (strict : Bool) :
     MetaM (Option Expr) := do
   let body ← Affine.reduceStructure body (preserveLets := true)
@@ -91,6 +119,8 @@ private partial def signInRow? (point value body evidence : Expr) (strict : Bool
         (← mkAppM ``And.left #[evidence]) strict then return some proof
     return ← signInRow? point value args[1]!
       (← mkAppM ``And.right #[evidence]) strict
+  if body.isAppOfArity ``Membership.mem 5 then
+    return ← signInMembership? point value body evidence strict
   let ge := body.isAppOfArity ``GE.ge 4
   unless ge || body.isAppOfArity ``LE.le 4 do return none
   let args := body.getAppArgs

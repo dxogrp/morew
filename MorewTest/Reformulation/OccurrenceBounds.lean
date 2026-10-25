@@ -199,14 +199,14 @@ info: problem (x y a b c d : ℝ)
   let abs_y := |y|
   minimize a + y
   subject to
-    budget : b + c ≤ 10
-    bound : d ≤ 5
+    budget : 10 - (b + c) ∈ ℝ₊
+    bound : 5 - d ∈ ℝ₊
     epi_sq_x_conic_1 : (a, 1 / 2, ![x]) ∈ RSOC 1
-    magnitude_bound_conic_1 : x ≤ b
-    magnitude_bound_conic_2 : -x ≤ b
+    magnitude_bound_conic_1 : b - x ∈ ℝ₊
+    magnitude_bound_conic_2 : b - -x ∈ ℝ₊
     square_bound_conic_1 : (c, 1 / 2, ![y]) ∈ RSOC 1
-    abs_bound_conic_1 : y ≤ d
-    abs_bound_conic_2 : -y ≤ d
+    abs_bound_conic_1 : d - y ∈ ℝ₊
+    abs_bound_conic_2 : d - -y ∈ ℝ₊
 -/
 #guard_msgs in
 #printp budgetedConic

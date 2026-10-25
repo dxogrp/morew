@@ -8,8 +8,9 @@ import Morew
 /-!
 # Certified complete conic reformulations
 
-Bare `conic` finishes a script and stores the affine cone program data. Objective
-bounds and coordinate substitutions remain explicit steps chosen by the user.
+Bare `conic` finishes a script, writes affine constraints as cone memberships,
+and stores the matching affine cone program data. Objective bounds and
+coordinate substitutions remain explicit steps chosen by the user.
 -/
 
 namespace Examples.Conic

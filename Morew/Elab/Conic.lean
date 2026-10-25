@@ -77,6 +77,26 @@ private theorem normalizeMembership
   change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
   rw [h x]
 
+private def canonicalScalarZeroMembership (value : ℝ) : Prop :=
+  value ∈ ({0} : Set ℝ)
+
+private def canonicalVectorZeroMembership (n : Nat) (value : Fin n → ℝ) : Prop :=
+  value ∈ ({0} : Set (Fin n → ℝ))
+
+private def canonicalScalarZero : ℝ := @Zero.zero ℝ inferInstance
+
+private def canonicalVectorZero (n : Nat) : Fin n → ℝ :=
+  @Zero.zero (Fin n → ℝ) inferInstance
+
+private theorem normalizeZeroMembership
+    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+    [FiniteDimensional ℝ Y] (map : X →ᵃ[ℝ] Y)
+    (source : X → Y) (h : ∀ x, map x = source x) :
+    ∀ x, (Morew.Conic.Constraint.eqZero map).Holds x ↔ source x ∈ ({0} : Set Y) := by
+  intro x
+  rw [Morew.Conic.Constraint.holds_eqZero, h x, Set.mem_singleton_iff]
+
 private theorem normalizeExponentialFamily
     {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
     (n : Nat) (map : X →ᵃ[ℝ] (Morew.Conic.Cone.exponentialProduct n).Space)
@@ -153,11 +173,18 @@ private def membershipData (point body : Expr) (label? : Option Name) :
     MetaM (Except Affine.AffineError (Expr × Expr)) := do
   let args := body.getAppArgs
   let carrier ← Affine.reduceStructure args[3]!
+  let carrier := if carrier.isConstOf ``Morew.Conic.Cone.nonnegativeScalarCarrier then
+      mkApp (mkConst ``Morew.Conic.Cone.carrier)
+        (mkConst ``Morew.Conic.Cone.nonnegativeScalar)
+    else carrier
   unless carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 do
     return .error (← rowError body "expected native supported cone membership" label?)
   let cone ← Affine.reduceStructure carrier.getAppArgs[0]!
   unless cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
       cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
+      cone.isAppOfArity ``Morew.Conic.Cone.zero 1 ||
+      cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
+      cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
       cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
@@ -172,6 +199,97 @@ private def membershipData (point body : Expr) (label? : Option Name) :
   unless ← isDefEq body canonical do
     return .error (← rowError body "membership does not match the canonical cone" label?)
   return .ok (cone, value)
+
+/-- Recover a native scalar nonnegative-cone coordinate after checking its
+membership instance. This does not unfold wrappers or certify affinity. -/
+def nonnegativeScalarValue? (point body : Expr) : MetaM (Option Expr) := do
+  let result : Except Unit Expr ← Affine.withIsolatedMVars do
+    if !(body.isAppOfArity ``Membership.mem 5) || (← hasUnresolved body) then
+      return .error ()
+    match ← membershipData point body none with
+    | .ok (cone, value) =>
+        return if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar then .ok value else .error ()
+    | .error _ => return .error ()
+  return result.toOption
+
+private def singletonZeroData (point body : Expr) (label? : Option Name) :
+    MetaM (Except Affine.AffineError Expr) := do
+  let args := body.getAppArgs
+  let value := args[4]!
+  let target ← whnf args[0]!
+  let (canonical, explicitZero) ← if target.isConstOf ``Real then do
+      pure ((mkApp (← getConstInfo ``canonicalScalarZeroMembership).value! value).headBeta,
+        (← getConstInfo ``canonicalScalarZero).value!)
+    else do
+      let .forallE _ index range _ := target
+        | return .error (← rowError body "expected a real scalar or finite-vector zero singleton" label?)
+      let range ← whnf range
+      unless !range.hasLooseBVars && range.isConstOf ``Real do
+        return .error (← rowError body "expected a real scalar or finite-vector zero singleton" label?)
+      let index ← whnf index
+      unless index.isAppOfArity ``Fin 1 do
+        return .error (← rowError body "expected a finite-vector zero singleton" label?)
+      let dimension := index.getAppArgs[0]!
+      if ← Affine.depends point dimension then
+        return .error (← rowError body "cone dimension depends on the decision point" label?)
+      pure ((mkAppN (← getConstInfo ``canonicalVectorZeroMembership).value!
+        #[dimension, value]).headBeta,
+        (mkApp (← getConstInfo ``canonicalVectorZero).value! dimension).headBeta)
+  let canonicalArgs := canonical.getAppArgs
+  unless ← isDefEq args[2]! canonicalArgs[2]! do
+    return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
+  let singleton ← Affine.reduceStructure args[3]!
+  let canonicalSingleton := canonicalArgs[3]!
+  let canonicalSingletonArgs := canonicalSingleton.getAppArgs
+  let zero ← if singleton.isAppOfArity ``Singleton.singleton 4 then do
+      let singletonArgs := singleton.getAppArgs
+      unless ← isDefEq singletonArgs[2]! canonicalSingletonArgs[2]! do
+        return .error (← rowError body "unsupported singleton instance" label?)
+      pure singletonArgs[3]!
+    else if singleton.isAppOfArity ``Set.singleton 2 then
+      pure singleton.getAppArgs[1]!
+    else
+      return .error (← rowError body "expected the canonical singleton zero set" label?)
+  let zero ← Affine.reduceStructure zero
+  let canonicalZero := canonicalSingletonArgs[3]!
+  let zeroArgs := zero.getAppArgs
+  let validZero ← if zero.isAppOfArity ``OfNat.ofNat 3 then
+      pure ((← isDefEq zeroArgs[1]! canonicalZero.getAppArgs[1]!) &&
+        (← isDefEq zeroArgs[2]! canonicalZero.getAppArgs[2]!))
+    else if zero.isAppOfArity ``Zero.zero 2 then
+      isDefEq zeroArgs[1]! explicitZero.getAppArgs[1]!
+    else pure false
+  unless validZero && (← isDefEq zero canonicalZero) do
+    return .error (← rowError body "expected the canonical zero singleton" label?)
+  unless ← isDefEq body canonical do
+    return .error (← rowError body "membership does not match the canonical zero singleton" label?)
+  return .ok value
+
+private def normalizeZeroMembershipRow (predicate domain point body : Expr)
+    (provider : Affine.EvidenceProvider) (label? : Option Name) :
+    MetaM (Except Affine.AffineError RowResult) := do
+  let data ← singletonZeroData point body label?
+  if let .error error := data then return .error error
+  let .ok value := data | throwError "internal error: missing checked singleton membership"
+  let source ← mkLambdaFVars #[point] value
+  let affine ← Affine.reifyAffine source provider
+  if let .error error := affine then
+    return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
+  let .ok affine := affine | throwError "internal error: missing singleton coordinates"
+  let (constraint, pointwiseIff) ← Space.withCanonicalSpaces domain (← inferType value) do
+    let constraint ← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.eqZero #[affine.map])
+    let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeZeroMembership
+      #[affine.map, source, affine.pointwiseEquality])
+    if constraint.hasMVar || pointwiseIff.hasMVar then
+      throwError "row construction left unresolved metavariables"
+    let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
+    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+    checkWithKernel constraint
+    checkWithKernel pointwiseIff
+    unless ← isDefEq (← inferType pointwiseIff) expected do
+      throwError "row equivalence did not match the input predicate"
+    return (constraint, pointwiseIff)
+  return .ok { constraint, pointwiseIff }
 
 private def normalizeMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
@@ -277,6 +395,8 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
     -- wrappers, including the product patterns used by the surface DSL.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOfArity ``Membership.mem 5 then
+        if (← whnfUntil body.getAppArgs[1]! ``Set).isSome then
+          return ← normalizeZeroMembershipRow predicate domain point body provider label?
         return ← normalizeMembershipRow predicate domain point body provider label?
       if body.isForall then
         return ← normalizeExponentialFamilyRow predicate domain point body provider label?
@@ -356,9 +476,10 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
   withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate provider label?
 
-/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, native
-second-order or exponential cone membership, or one finite quantified family
-of exponential memberships. Every cone coordinate must be affine.
+/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, a canonical
+zero singleton, native nonnegative, zero, second-order, or exponential cone
+membership, or one finite quantified family of exponential memberships.
+Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
 def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})

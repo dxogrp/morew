@@ -15,6 +15,7 @@ import MorewTest.Atom.Recognition
 import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
 import MorewTest.Conic
+import MorewTest.Conic.AffineMembership
 import MorewTest.Conic.Automatic
 import MorewTest.Conic.EuclideanAffine
 import MorewTest.Conic.Exponential
@@ -23,6 +24,7 @@ import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
+import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Rewrite
@@ -59,6 +61,10 @@ import MorewTest.Reformulation.AffineHelperSource
 import MorewTest.Reformulation.AffineHelpers
 import MorewTest.Reformulation.CanonicalCheckpoint
 import MorewTest.Reformulation.Composition
+import MorewTest.Reformulation.ConeMembership
+import MorewTest.Reformulation.ConeMembership.Defined
+import MorewTest.Reformulation.ConeMembershipAliases
+import MorewTest.Reformulation.ConeMembershipReplay
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
