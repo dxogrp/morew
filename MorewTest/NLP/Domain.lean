@@ -55,6 +55,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     #[fun x : ℝ => Real.log x, fun _x : ℝ => Real.log 0])))
   assertDomain (← `(fun c : ℝ => fun hc : 0 < c =>
     ((fun _x : ℝ => True), #[fun x : ℝ => Real.log c + x]))) 2
+  assertDomain (← `(fun c : ℝ => fun _hc : 0 < Real.exp c =>
+    ((fun x : ℝ => Real.exp c ≤ x), #[fun x : ℝ => Real.log x, fun x : ℝ => x⁻¹]))) 2
   assertDomain (← `(((fun _x : ℝ => True),
     #[fun _x : ℝ => Real.log 1 + Real.sqrt 1 + (2 : ℝ)⁻¹])))
   assertDomain (← `(((fun _x : ℝ => True),

@@ -215,6 +215,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ((lowerBoundLogProblem lower).feasible, #[(lowerBoundLogProblem lower).objective]))) 2
       fun feasible sources => do
     discard <| isolatedSuccess feasible sources
+  withInput (← `(fun c : ℝ => fun _hc : 0 < Real.exp c =>
+    ((lowerBoundLogProblem (Real.exp c)).feasible,
+      #[(lowerBoundLogProblem (Real.exp c)).objective]))) 2 fun feasible sources => do
+    discard <| isolatedSuccess feasible sources
   withInput (← `((groupedLogProblem.feasible,
     #[groupedLogProblem.objective, fun x : ℝ => Real.sqrt (4 - x)]))) 0
       fun feasible sources => do
@@ -225,6 +229,23 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   withInput (← `((wrappedLogProblem.feasible, #[wrappedLogProblem.objective]))) 0
       fun feasible sources => do
     discard <| isolatedFailure feasible sources .unsupportedRow
+
+-- An approved strict margin can simplify to True and still be needed for an
+-- ordered-ring deduction. Retaining it must not expose unsupplied row proofs.
+open Lean.Elab Lean.Elab.Tactic in
+example (x c : ℝ) (h : 0 < Real.exp c) (hx : Real.exp c ≤ x) : 0 < x := by
+  run_tac
+    let point := mkFVar (← getFVarId (mkIdent `x))
+    let margin := mkFVar (← getFVarId (mkIdent `h))
+    let row := mkFVar (← getFVarId (mkIdent `hx))
+    let goal ← getMainGoal
+    let target ← goal.getType
+    if (← Domain.Evidence.prove? point target #[margin]).isSome then
+      throwError "domain proof search used an unsupplied decision-dependent row"
+    let some proof ← Domain.Evidence.prove? point target #[margin, row]
+      | throwError "domain proof search discarded an approved strict margin"
+    checkWithKernel proof
+    goal.assign proof
 
 /-! Unused ambient analytic instances do not enter the returned domain proofs. -/
 

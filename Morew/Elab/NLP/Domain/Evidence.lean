@@ -267,8 +267,10 @@ private def proveCore (point target : Expr) (facts : Array Expr) : MetaM Expr :=
     withFacts canonicalInstances #[] fun _ => do
       Space.withCanonicalSpaces #[← inferType point] do
         let simple ← simpContext
-        let approved ← approved.mapM (simplifiedFact simple)
-        withFacts approved.toList #[] fun facts => search target facts
+        let simplified ← approved.mapM (simplifiedFact simple)
+        -- A known positivity fact may simplify to True but still supply the
+        -- strict margin needed to combine another row with arithmetic.
+        withFacts (approved ++ simplified).toList #[] fun facts => search target facts
 
 /-- Try bounded, kernel-checked domain evidence from approved source-row and child facts.
 
