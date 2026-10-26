@@ -3,16 +3,20 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Runner
+import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Rewrite.Decomposition
+import Morew.Transform
 
 /-!
 # Exact replacement of ordered constraint rows
 
-Internal proof assembly for targeted rewrites. Conjunction proofs preserve the
+Shared proof assembly for targeted conic and NLP rewrites. This layer applies
+checked replacement rows to a typed problem; command-level naming and
+presentation updates belong to `Morew.Reformulation.Replace`. Conjunction proofs preserve the
 boundaries of unselected rows, even when a row itself contains a conjunction.
 -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Reformulation.Replace
 
 open Lean Lean.Meta
 open Morew.Elab.Reformulation
@@ -31,24 +35,9 @@ private theorem unitTargetIff {X : Type u} (source : X → Prop)
     exact (h x).mpr ⟨(), hx⟩
 
 private def conjunction (propositions : Array Expr) : Expr :=
-  if propositions.isEmpty then mkConst ``True
-  else propositions.pop.toList.foldr (mkApp2 (mkConst ``And)) propositions.back!
+  Rewrite.Decomposition.conjunction propositions.toList
 
-private def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
-  if proofs.isEmpty then return mkConst ``True.intro
-  let mut result := proofs.back!
-  for proof in proofs.pop.toList.reverse do
-    result ← mkAppM ``And.intro #[proof, result]
-  return result
-
-private def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
-  if count == 0 then return #[]
-  let mut result := #[]
-  let mut rest := proof
-  for _ in [:count - 1] do
-    result := result.push (← mkAppM ``And.left #[rest])
-    rest ← mkAppM ``And.right #[rest]
-  return result.push rest
+open Morew.Elab.Rewrite.Decomposition (conjunctionProof conjunctionParts)
 
 private def proveIff (lhs rhs : Expr)
     (forward backward : Expr → MetaM Expr) : MetaM Expr := do
@@ -219,4 +208,4 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   checkWithKernel equivalence
   return { targetProblem, equivalence }
 
-end Morew.Elab.Conic
+end Morew.Elab.Reformulation.Replace

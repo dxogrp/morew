@@ -20,6 +20,7 @@ with only `Finite ι` can install `letI := Fintype.ofFinite ι` when using the d
 namespace Morew.Elab.Conic
 
 open Lean Lean.Meta
+open Morew.Elab.Rewrite
 open Reformulation
 
 private theorem problemEq {X : Type u} {V : Type v} (p q : Morew.Problem X V)
@@ -98,7 +99,7 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
 private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     MetaM RowResult := do
   for expression in #[row.constraint, row.pointwiseIff] do
-    if ← Plan.unresolved expression then
+    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
       throwError "cached row contains unresolved metavariables"
   let row := { row with
     constraint := ← instantiateMVars row.constraint
@@ -124,7 +125,7 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
     MetaM (Except Affine.AffineError Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
-    if ← Plan.unresolved expression then
+    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
       return .error {
         expression
         reason := ← addMessageContext "conic form: unresolved metavariables in typed presentation"

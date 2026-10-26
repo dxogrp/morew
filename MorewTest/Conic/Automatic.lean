@@ -23,7 +23,7 @@ open Morew.Elab.Conic MorewTest.Affine
 private def checkPrepared (source : Expr) (result : Plan.Prepared) : MetaM Nat := do
   let (predicates, rows) ← match result with
     | .inl exact => do
-      discard <| Plan.checkLift source exact.lift
+      discard <| Morew.Elab.Rewrite.Plan.checkLift source exact.lift
       checkWithKernel exact.targetIff
       pure (exact.rowPredicates, exact.certifiedRows)
     | .inr contextual => do

@@ -71,13 +71,13 @@ reformulation noIdentity : smoothSource := by
 def ambiguousSource :=
   problem (x : ℝ) minimize x subject to bound : max (0 : ℝ) 1 ≤ min 2 3
 
-/-- error: constraint `bound`: ambiguous exact NLP rules: Morew.Exact.maxEpigraph, Morew.Exact.minHypograph -/
+/-- error: constraint `bound`: ambiguous exact NLP rules: Morew.Rewrite.maxEpigraph, Morew.Rewrite.minHypograph -/
 #guard_msgs (substring := true) in
 reformulation ambiguous : ambiguousSource := by
   nlp at bound
 
 reformulation selected : ambiguousSource := by
-  nlp at bound using Exact.maxEpigraph
+  nlp at bound using Rewrite.maxEpigraph
 
 example : GlobalEquivalence ambiguousSource selected := selected.equivalence
 

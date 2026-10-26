@@ -4,10 +4,10 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Automatic
-import Morew.Elab.Conic.Decomposition
+import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Reformulation.Replace
 
 /-!
 # Whole-problem exact conic planning
@@ -20,7 +20,9 @@ exactly so their affine siblings can supply retained domain evidence.
 namespace Morew.Elab.Conic.Terminal
 
 open Lean Lean.Meta
+open Morew.Elab.Rewrite
 open Morew.Elab.Reformulation
+open Morew.Elab.Reformulation.Replace
 
 /-- A complete checked terminal transformation, before visible-name allocation. -/
 structure Result where
@@ -104,7 +106,8 @@ private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowR
 entry provenance independently of the temporary presentation names. -/
 private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     (certificates : Array (Option (Array RowResult)))
-    (nextDomain : Expr) (auxiliary? : Option Expr) (rewrite : RewriteResult) : MetaM Work := do
+    (nextDomain : Expr) (auxiliary? : Option Expr)
+    (rewrite : Replace.RewriteResult) : MetaM Work := do
   unless certificates.size == rows.size do
     throwError "terminal replacement certificates do not match the generated rows"
   let origin := work.rowOrigins[index]!
@@ -294,7 +297,7 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
     try
       for expression in #[presentation.domainType, presentation.valueType,
           presentation.objective] ++ presentation.constraints.map (·.predicate) do
-        if ← Plan.unresolved expression then
+        if ← Morew.Elab.Rewrite.Plan.unresolved expression then
           throwError "terminal conic planning requires fully elaborated expressions"
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do

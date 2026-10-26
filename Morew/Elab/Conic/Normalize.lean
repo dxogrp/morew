@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Decomposition
+import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Affine.State
 import Morew.Elab.Conic.Space
 
@@ -18,6 +18,7 @@ a caller supplies the already checked affine maps and transports their evidence.
 namespace Morew.Elab.Conic
 
 open Lean Lean.Meta
+open Morew.Elab.Rewrite
 
 /-- A proposition and a checked equivalence from its original spelling. -/
 structure BodyNormalization where

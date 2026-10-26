@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Polyhedral
+import Morew.Rewrite.Polyhedral
 import Morew.Elab.Atom
 import Morew.Elab.Conic.Plan
 
@@ -18,6 +18,7 @@ namespace Morew.Elab.Conic.Polyhedral
 
 open Lean Lean.Meta
 open Plan
+open Morew.Elab.Rewrite.Plan
 
 /-- A checked exact replacement, before presentation names are allocated. -/
 abbrev Result := Plan.Result
@@ -31,14 +32,21 @@ inductive Rule where
 def rules : Array Rule :=
   #[.absolute, .positivePart, .maximum, .minimum, .supremum, .infimum, .norm]
 
-private def isRealVector (type : Expr) : MetaM Bool := do
+private def realVectorDimension? (type : Expr) : MetaM (Option Expr) := do
   let type ← whnf type
-  let .forallE _ index body _ := type | return false
-  if body.hasLooseBVars then return false
-  return (← whnf index).isAppOfArity ``Fin 1 && (← whnf body).isConstOf ``Real
+  let .forallE _ index body _ := type | return none
+  if body.hasLooseBVars then return none
+  let index ← whnf index
+  unless index.isAppOfArity ``Fin 1 && (← whnf body).isConstOf ``Real do return none
+  return some index.getAppArgs[0]!
+
+private def representationProof (rule input bound : Expr) (hypograph : Bool := false) :
+    MetaM Expr :=
+  mkAppM (if hypograph then ``Morew.HypographRepresentation.source_iff_exists
+    else ``Morew.EpigraphRepresentation.source_iff_exists) #[rule, input, bound]
 
 private def theoremSides (proof : Expr) : MetaM (Expr × Expr) := do
-  let type ← inferType proof
+  let type ← whnf (← inferType proof)
   unless type.isAppOfArity ``Iff 2 do throwError "internal error: expected an exact iff theorem"
   return (type.getAppArgs[0]!, type.getAppArgs[1]!)
 
@@ -62,11 +70,12 @@ private def finiteExtremumProof (point operation bound : Expr) (minimum : Bool) 
   unless args.size == 6 do throwError "unsupported finite extremum {operation}"
   if ← Affine.depends point args[3]! then
     throwError "the finite extremum's index set depends on a decision variable"
-  let theoremName := if minimum then ``Morew.Conic.Polyhedral.le_inf'_iff
-    else ``Morew.Conic.Polyhedral.sup'_le_iff
-  let proof ← mkAppM theoremName #[args[3]!, args[4]!, args[5]!, bound]
+  let ruleName := if minimum then ``Morew.Rewrite.finsetInfHypograph
+    else ``Morew.Rewrite.finsetSupEpigraph
+  let rule ← mkAppM ruleName #[args[3]!, args[4]!]
+  let proof ← representationProof rule args[5]! bound minimum
   let (lhs, _) ← theoremSides proof
-  let expected := lhs.getAppArgs[if minimum then 3 else 2]!
+  let expected ← Affine.reduceStructure lhs.getAppArgs[if minimum then 3 else 2]!
   sameOperationPrefix operation expected 3
   return proof
 
@@ -75,32 +84,34 @@ private def normProof (operation bound : Expr) : MetaM Expr := do
   unless operation.isAppOfArity ``Norm.norm 3 do
     throwError "unsupported norm bound {operation}"
   let vector := args[2]!
-  let proof ← if ← isRealVector (← inferType vector) then
-      mkAppM ``Morew.Conic.Polyhedral.norm_le_iff #[vector, bound]
+  let proof ← if let some n ← realVectorDimension? (← inferType vector) then
+      representationProof (← mkAppOptM ``Morew.Rewrite.normInfEpigraph #[some n])
+        vector bound
     else do
       let vector ← Affine.reduceStructure vector
       unless vector.isAppOfArity ``WithLp.toLp 3 do
         throwError "expected the native norm of Fin n → ℝ or WithLp.toLp 1/∞ of such a vector"
       let lpArgs := vector.getAppArgs
-      unless ← isRealVector (← inferType lpArgs[2]!) do
+      let some n ← realVectorDimension? (← inferType lpArgs[2]!) |
         throwError "expected a Fin n → ℝ vector inside WithLp.toLp"
       let saved ← saveState
-      let topProof ← mkAppM ``Morew.Conic.Polyhedral.norm_toLp_top_le_iff
-        #[lpArgs[2]!, bound]
+      let topProof ← representationProof
+        (← mkAppOptM ``Morew.Rewrite.normInfToLpEpigraph #[some n]) lpArgs[2]! bound
       let (topSource, _) ← theoremSides topProof
-      let expectedTop := topSource.getAppArgs[2]!
+      let expectedTop ← Affine.reduceStructure topSource.getAppArgs[2]!
       if ← isDefEq vector expectedTop.getAppArgs[2]! then
         pure topProof
       else
         saved.restore
-        let oneProof ← mkAppM ``Morew.Conic.Polyhedral.norm_toLp_one_le_iff
-          #[lpArgs[2]!, bound]
+        let oneProof ← representationProof
+          (← mkAppOptM ``Morew.Rewrite.norm1Epigraph #[some n]) lpArgs[2]! bound
         let (oneSource, _) ← theoremSides oneProof
-        unless ← isDefEq vector oneSource.getAppArgs[2]!.getAppArgs[2]! do
+        let expectedOne ← Affine.reduceStructure oneSource.getAppArgs[2]!
+        unless ← isDefEq vector expectedOne.getAppArgs[2]! do
           throwError "unsupported norm exponent; expected 1 or ∞"
         pure oneProof
   let (source, _) ← theoremSides proof
-  sameOperationPrefix operation source.getAppArgs[2]! 1
+  sameOperationPrefix operation (← Affine.reduceStructure source.getAppArgs[2]!) 1
   return proof
 
 private def automaticProof (point body : Expr) (selected? : Option Rule := none) :
@@ -122,19 +133,19 @@ private def automaticProof (point body : Expr) (selected? : Option Rule := none)
     match operation.kind with
     | .abs =>
         if accepts .absolute then
-          return ← mkAppM ``Morew.Conic.Polyhedral.abs_le_iff #[operands[0]!, right]
+          return ← representationProof (mkConst ``Morew.Rewrite.absEpigraph) operands[0]! right
     | .pos =>
         if accepts .positivePart then
-          return ← mkAppM ``Morew.Conic.Polyhedral.posPart_le_iff #[operands[0]!, right]
+          return ← representationProof (mkConst ``Morew.Rewrite.posEpigraph) operands[0]! right
     | .maximum =>
         if accepts .maximum then
-          return ← mkAppM ``Morew.Conic.Polyhedral.max_le_iff
-            #[operands[0]!, operands[1]!, right]
+          let input ← mkAppM ``Prod.mk #[operands[0]!, operands[1]!]
+          return ← representationProof (mkConst ``Morew.Rewrite.maxEpigraph) input right
     | _ => pure ()
   if let some operation ← Atom.recognizeAtom? right then
     if operation.kind == .minimum && accepts .minimum then
-      return ← mkAppM ``Morew.Conic.Polyhedral.le_min_iff
-        #[operation.operands[0]!, operation.operands[1]!, left]
+      let input ← mkAppM ``Prod.mk #[operation.operands[0]!, operation.operands[1]!]
+      return ← representationProof (mkConst ``Morew.Rewrite.minHypograph) input left true
   if left.isAppOfArity ``Finset.sup' 6 && accepts .supremum then
     return ← finiteExtremumProof point left right false
   if right.isAppOfArity ``Finset.inf' 6 && accepts .infimum then
@@ -153,10 +164,11 @@ private def automaticLift (selected? : Option Rule) (source domain : Expr) : Met
     let pointwise ← mkLambdaFVars #[point] proof
     let lift ← if target.isAppOfArity ``Exists 2 then do
         let args := target.getAppArgs
-        if ← Affine.depends point args[0]! then
+        let auxiliary ← whnf args[0]!
+        if ← Affine.depends point auxiliary then
           throwError "the auxiliary type depends on a decision variable"
         let target ← mkLambdaFVars #[point] args[1]!
-        mkAppM ``Morew.ExactConstraintLift.mk #[args[0]!, target, pointwise]
+        mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, target, pointwise]
       else do
         let target ← mkLambdaFVars #[point] target
         mkAppM ``Morew.ExactConstraintLift.ofIff #[target, pointwise]

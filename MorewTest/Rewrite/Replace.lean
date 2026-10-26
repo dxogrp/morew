@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Reformulation.Replace
 import Mathlib.Data.Real.Basic
 
 /-!
@@ -13,7 +13,7 @@ These tests check the target problem and the full equivalence type, including
 the order instance for maximization, without relying on surface planning.
 -/
 
-namespace MorewTest.Conic.Rewrite
+namespace MorewTest.Rewrite.Replace
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Term
 open Morew Morew.Elab.Reformulation
@@ -82,7 +82,7 @@ private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
   let lift ← checkedTerm liftSyntax
   let rows ← newRows.mapM checkedTerm
   let targetIff ← checkedTerm targetIffSyntax
-  let result ← Morew.Elab.Conic.rewriteConstraint presentation index lift auxiliary?
+  let result ← Morew.Elab.Reformulation.Replace.rewriteConstraint presentation index lift auxiliary?
     nextDomain rows targetIff
   let expected ← checkedTerm expectedSyntax
   unless ← isDefEq result.targetProblem expected do
@@ -148,6 +148,45 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (← `(fun _ : ℝ × ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun p : ℝ × ℝ => p.1) (fun _ => True)))
 
+run_cmd Lean.Elab.Command.liftTermElabM do
+  -- A contextual replacement uses exactly the retained rows, including their
+  -- nested conjunction and literal True entry. The selected row supplies no evidence.
+  let domain := Lean.mkConst ``Real
+  let objective ← checkedTerm (← `(fun x : ℝ => x))
+  let predicates ← #[← `(fun x : ℝ => 0 ≤ x ∧ x ≤ 3),
+    ← `(fun x : ℝ => x ≤ 5), ← `(fun _ : ℝ => True)].mapM checkedTerm
+  let presentation : PresentationState := {
+    sense := .minimize
+    domainType := domain
+    valueType := domain
+    binders := #[{ name := `x, type := domain }]
+    objective
+    constraints := predicates.mapIdx fun i predicate => {
+      name := Name.mkSimple s!"row_{i}", predicate }
+  }
+  let certificate ← checkedTerm (← `(fun (x : ℝ) (h : (0 ≤ x ∧ x ≤ 3) ∧ True) =>
+    (show x ≤ 5 ↔ True from ⟨fun _ => trivial, fun _ => h.1.2.trans (by norm_num)⟩)))
+  let result ← Morew.Elab.Reformulation.Replace.rewriteConstraintContextual
+    presentation 1 #[] certificate
+  let expected ← checkedTerm (← `(Problem.mk (fun x : ℝ => x)
+    (fun x => (0 ≤ x ∧ x ≤ 3) ∧ True)))
+  unless ← isDefEq result.targetProblem expected do
+    throwError "contextual replacement changed retained row boundaries"
+  let expectedType ← mkAppM ``GlobalEquivalence
+    #[← presentation.canonicalProblem, expected]
+  unless ← isDefEq (← inferType result.equivalence) expectedType do
+    throwError "contextual replacement has the wrong equivalence endpoints"
+  checkWithKernel result.equivalence
+  let invalid ← checkedTerm (← `(fun (x : ℝ) (h : x ≤ 5) =>
+    (show x ≤ 5 ↔ True from ⟨fun _ => trivial, fun _ => h⟩)))
+  let rejected ← try
+    discard <| Morew.Elab.Reformulation.Replace.rewriteConstraintContextual
+      presentation 1 #[] invalid
+    pure false
+  catch _ => pure true
+  unless rejected do
+    throwError "contextual replacement accepted evidence from the selected row"
+
 end
 
-end MorewTest.Conic.Rewrite
+end MorewTest.Rewrite.Replace

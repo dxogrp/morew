@@ -29,7 +29,7 @@ def nonlinear :=
       budget : |x| + y ^ 2 ≤ 10
 
 reformulation smoothConstraints : nonlinear := by
-  nlp at error using Exact.absEpigraph
+  nlp at error using Rewrite.absEpigraph
   epigraph a at (|x|) in budget as magnitude
   nlp at magnitude
 

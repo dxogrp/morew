@@ -27,7 +27,6 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
-import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
@@ -62,7 +61,6 @@ import MorewTest.NLP.DomainLemmas
 import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
-import MorewTest.NLP.Exact
 import MorewTest.NLP.Rewrite
 import MorewTest.NLP.Rows
 import MorewTest.NLP.Smooth
@@ -108,6 +106,7 @@ import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
+import MorewTest.Reformulation.Replace
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
@@ -120,6 +119,9 @@ import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
 import MorewTest.Reformulation.TerminalConicSection
+import MorewTest.Rewrite
+import MorewTest.Rewrite.Plan
+import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
 import MorewTest.Surface.AppliedSources

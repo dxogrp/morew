@@ -14,6 +14,8 @@ the exact proposed feasibility, including row insertion and auxiliary projection
 The tests distinguish candidate matching from complete domain certification.
 -/
 
+assert_not_exists Morew.Elab.Conic.Plan.Result Morew.Elab.Conic.RowResult
+
 namespace MorewTest.NLP.Rewrite
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
@@ -25,7 +27,7 @@ private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop
 
 private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex : Nat)
     (result : Rewrite.Result) : MetaM Unit := do
-  discard <| Morew.Elab.Conic.Plan.checkLift source result.lift
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   unless result.rowPredicates.size == result.certified.rowCertificates.size do
     throwError "generated row certificates are incomplete"
   for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
@@ -38,7 +40,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
     let generated := result.rowPredicates.map (mkApp · point)
     let bodies := retained.extract 0 insertionIndex ++ generated ++
       retained.extract insertionIndex retained.size
-    let feasible := Morew.Elab.Conic.Decomposition.conjunction bodies.toList
+    let feasible := Morew.Elab.Rewrite.Decomposition.conjunction bodies.toList
     let member ← mkAppM ``Membership.mem #[result.certified.domain, point]
     mkForallFVars #[point] (← mkArrow feasible member)
   unless ← isDefEq (← inferType result.certified.feasibleMemDomain) expectedInclusion do
@@ -108,13 +110,13 @@ run_cmd liftTermElabM do
   -- A failed abs candidate must not make the successful min plan ambiguous.
   expect (← `(input (fun p : ℝ × ℝ => |(2 : ℝ)| ≤ min p.1 p.2) #[])) 2
   rejected (← `(input (fun _ : ℝ => max (0 : ℝ) 1 ≤ min 2 3) #[]))
-    "ambiguous exact NLP rules: Morew.Exact.maxEpigraph, Morew.Exact.minHypograph"
+    "ambiguous exact NLP rules: Morew.Rewrite.maxEpigraph, Morew.Rewrite.minHypograph"
   rejected (← `(input (fun _ : ℝ =>
     ‖WithLp.toLp ∞ (fun _ : Fin 2 => (0 : ℝ))‖ ≤ min 2 3) #[]))
-    "Morew.Exact.minHypograph, Morew.Exact.normInfToLpEpigraph"
+    "Morew.Rewrite.minHypograph, Morew.Rewrite.normInfToLpEpigraph"
   rejected (← `(fun v : EuclideanSpace ℝ (Fin 2) =>
     input (fun _ : ℝ => ‖v‖ ≤ min 2 3) #[]))
-    "Morew.Exact.minHypograph, Morew.Exact.euclideanNormEpigraph" 1
+    "Morew.Rewrite.minHypograph, Morew.Rewrite.euclideanNormEpigraph" 1
 
 -- Domains use exact proposed rows, without validating unrelated retained rows.
 private def unrelated (x : ℝ) : Prop := x < 50
@@ -191,19 +193,19 @@ def booleanAuxiliary : Morew.ExactConstraintLift (fun _ : ℝ => True) where
 run_cmd liftTermElabM do
   expectUsing (← `(input (fun p : ℝ × ℝ => p.2 = |p.1|) #[])) (← `(absoluteGraph)) 2
   expectUsing (← `(input (fun p : ℝ × ℝ => |p.1| = p.2) #[])) (← `(absoluteGraph)) 2
-  expectUsing (← `(input (fun x : ℝ => |x ^ 2| ≤ 3) #[])) (← `(Morew.Exact.absEpigraph)) 2
+  expectUsing (← `(input (fun x : ℝ => |x ^ 2| ≤ 3) #[])) (← `(Morew.Rewrite.absEpigraph)) 2
   expectUsing (← `(input (fun p : ℝ × ℝ => 0 ≤ min p.1 p.2) #[]))
-    (← `(Morew.Exact.minHypograph)) 2
+    (← `(Morew.Rewrite.minHypograph)) 2
   expectUsing (← `(input (fun _ : ℝ => max (0 : ℝ) 1 ≤ min 2 3) #[]))
-    (← `(Morew.Exact.maxEpigraph)) 2
+    (← `(Morew.Rewrite.maxEpigraph)) 2
   expectUsing (← `(input (fun _ : ℝ => max (0 : ℝ) 1 ≤ min 2 3) #[]))
-    (← `(Morew.Exact.minHypograph)) 2
+    (← `(Morew.Rewrite.minHypograph)) 2
   expectUsing (← `(input (fun _ : ℝ =>
     ‖WithLp.toLp ∞ (fun _ : Fin 2 => (0 : ℝ))‖ ≤ min 2 3) #[]))
-    (← `(Morew.Exact.normInfToLpEpigraph (n := 2))) 3
+    (← `(Morew.Rewrite.normInfToLpEpigraph (n := 2))) 3
   expectUsing (← `(fun v : EuclideanSpace ℝ (Fin 2) =>
     input (fun _ : ℝ => ‖v‖ ≤ min 2 3) #[]))
-    (← `(Morew.Exact.euclideanNormEpigraph (n := 2))) 2 false 1
+    (← `(Morew.Rewrite.euclideanNormEpigraph (n := 2))) 2 false 1
   expectUsing (← `(input (fun _ : ℝ => True) #[])) (← `(emptyLift)) 0
   expectUsing (← `(input (fun x : ℝ => x ^ 2 ≤ 3) #[])) (← `(identityLift)) 1
 

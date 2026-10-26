@@ -74,9 +74,9 @@ private def checkReplacement (source : Expr) (retained : Array Expr)
   | .ok (.inl result) =>
     if contextual then throwError "a retained-margin rewrite escaped its context"
     if result.auxiliary?.isSome then throwError "an unconditional rewrite added an auxiliary"
-    let domain ← Morew.Elab.Conic.Plan.predicateDomain source
+    let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
     unless ← isDefEq result.nextDomain domain do throwError "exact rewrite changed the domain"
-    discard <| Morew.Elab.Conic.Plan.checkLift source result.lift
+    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
     checkWithKernel result.targetIff
   | .ok (.inr result) =>
     unless contextual do throwError "an unconditional rewrite retained unused domain evidence"

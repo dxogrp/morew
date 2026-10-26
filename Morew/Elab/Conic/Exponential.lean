@@ -49,9 +49,9 @@ private def operationCandidate (expression : Expr) : MetaM Bool := do
 def isCandidate (predicate : Expr) : MetaM Bool := do
   let saved ← saveState
   try
-    if ← Plan.unresolved predicate then return false
+    if ← Morew.Elab.Rewrite.Plan.unresolved predicate then return false
     withNewMCtxDepth do
-      let domain ← Plan.predicateDomain predicate
+      let domain ← Morew.Elab.Rewrite.Plan.predicateDomain predicate
       withLocalDeclD `point domain fun point => do
         let body ← Affine.reduceStructure (mkApp predicate point)
         if body.isAppOfArity ``LE.le 4 || body.isAppOfArity ``GE.ge 4 ||
@@ -83,21 +83,21 @@ private theorem dimensionPositiveOfNe (n : Nat) (h : n ≠ 0) : 0 < n :=
   Nat.pos_of_ne_zero h
 
 private def nonemptyEvidence (point dimension : Expr) : MetaM Expr := do
-  if (← Affine.depends point dimension) || (← Plan.unresolved dimension) then
+  if (← Affine.depends point dimension) || (← Morew.Elab.Rewrite.Plan.unresolved dimension) then
     throwError "log-sum-exp rewrite was not certified: dimension must be decision-independent"
   let n : Q(Nat) := dimension
   let goal : Q(Prop) := q(0 < $n)
   let nonzero : Q(Prop) := q($n ≠ 0)
   for declaration in ← getLCtx do
     let evidence := declaration.toExpr
-    if (← Affine.depends point evidence) || (← Plan.unresolved evidence) then continue
+    if (← Affine.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
     if ← isDefEq declaration.type goal then return evidence
     if ← isDefEq declaration.type nonzero then
       return ← mkAppM ``dimensionPositiveOfNe #[dimension, evidence]
   let saved ← saveState
   try
     let proof ← mkAppOptM ``dimensionPositive #[some dimension, none]
-    if ← Plan.unresolved proof then throwError "unresolved finite nonemptiness"
+    if ← Morew.Elab.Rewrite.Plan.unresolved proof then throwError "unresolved finite nonemptiness"
     unless ← isDefEq (← inferType proof) goal do
       throwError "finite nonemptiness did not establish the required dimension bound"
     checkWithKernel proof
@@ -250,17 +250,17 @@ private def planCoreDirect (source : Expr) (retained : Array Expr)
     MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     try
-      if ← Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
-      let domain ← Plan.predicateDomain source
+      if ← Morew.Elab.Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
+      let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
       for row in retained do
-        if ← Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
-        unless ← isDefEq (← Plan.predicateDomain row) domain do
+        if ← Morew.Elab.Rewrite.Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
+        unless ← isDefEq (← Morew.Elab.Rewrite.Plan.predicateDomain row) domain do
           throwError "retained constraint has a different decision domain"
       let mut instances ← Affine.sourceFiniteInstances source
       for row in retained do instances := instances ++ (← Affine.sourceFiniteInstances row)
-      let result ← Plan.withScopedFiniteInstances Plan.Prepared.replaceFVars instances.toList do
+      let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances Plan.Prepared.replaceFVars instances.toList do
         withLocalDeclD `point domain fun point =>
-          Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
+          Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
             withLocalDeclD `retained (conjunction (retained.map (mkApp · point))) fun evidence => do
               let proof ← automaticProof point (mkApp source point)
                 (retained.map (mkApp · point)) evidence preferLog selected?
@@ -276,12 +276,12 @@ private def planCoreDirect (source : Expr) (retained : Array Expr)
                 let target ← mkLambdaFVars #[point] args[1]!
                 let pointwise ← mkLambdaFVars #[point] proof
                 let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[args[0]!, target, pointwise]
-                let lift ← Plan.checkLift source lift
+                let lift ← Morew.Elab.Rewrite.Plan.checkLift source lift
                 return .inl (← withRowDiagnostics source (Plan.finish source domain lift provider))
               let rowPredicates := #[← instantiateMVars (← mkLambdaFVars #[point] target)]
               let certifiedRows ← withRowDiagnostics source (Plan.certifyRows rowPredicates provider)
               let conditionalIff ← instantiateMVars (← mkLambdaFVars #[point, evidence] proof)
-              if ← Plan.unresolved conditionalIff then
+              if ← Morew.Elab.Rewrite.Plan.unresolved conditionalIff then
                 throwError "exponential certificate contains unresolved metavariables"
               checkWithKernel conditionalIff
               Plan.prepareContextual source retained { domain, rowPredicates, certifiedRows, conditionalIff }

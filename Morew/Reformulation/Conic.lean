@@ -4,9 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Automatic
-import Morew.Elab.Conic.Rewrite
-import Morew.Reformulation.Presentation
-import Lean.Meta.Closure
+import Morew.Reformulation.Replace
 
 /-!
 # Targeted exact conic rewriting
@@ -73,29 +71,9 @@ private def Prepared.certificate : Prepared → Expr
   | .inl exact => exact.lift
   | .inr contextual => contextual.conditionalIff
 
-private def generatedStem (selector : TSyntax `ident) : CommandElabM String := do
-  let .str _ stem := selector.getId.eraseMacroScopes
-    | throwErrorAt selector "cannot derive a generated-name family from constraint `{selector.getId}`"
-  if stem.isEmpty then
-    throwErrorAt selector "cannot derive a generated-name family from an empty constraint label"
-  return stem
-
--- A row predicate occurs repeatedly in the explicit types and arguments of
--- the conjunction proofs. Keep those predicates, then their containing lift
--- and problems, shared in the stored certificate instead of duplicating large
--- vector predicates at every use.
-/-- Share repeated rows and problems in a stored conic certificate. -/
-partial def shareConicCertificate (certificate : Expr)
-    (candidates : List (Name × Expr)) : MetaM Expr := do
-  match candidates with
-  | [] => pure certificate
-  | (name, value) :: remaining =>
-    withLetDecl name (← inferType value) value fun binding => do
-      let replace := fun expression : Expr => expression.replace fun subexpression =>
-        if subexpression == value then some binding else none
-      let body ← shareConicCertificate (replace certificate)
-        (remaining.map fun (name, value) => (name, replace value))
-      mkLetFVars #[binding] body
+private def conicStyle : Replace.Style := {
+  family := "conic", diagnostic := "conic", certificateKind := `_conicCertificate
+}
 
 private def materializeConic (state : ReformState) (index : Nat)
     (prepared : Prepared) (preparedVars : Array Expr)
@@ -110,92 +88,25 @@ private def materializeConic (state : ReformState) (index : Nat)
       Morew.Elab.Conic.Plan.Prepared.replaceFVars prepared preparedVars sectionFVars
     let replacement ← match prepared with
       | .inl result => do
-        Morew.Elab.Conic.rewriteConstraint typed.presentation index
+        Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
           result.lift result.auxiliary? result.nextDomain result.rowPredicates result.targetIff
       | .inr contextual => do
-        Morew.Elab.Conic.rewriteConstraintContextual typed.presentation index
+        Morew.Elab.Reformulation.Replace.rewriteConstraintContextual typed.presentation index
           contextual.rowPredicates contextual.conditionalIff
-    let exact ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[typed.normalization.equivalence, replacement.equivalence]
-    let primitive ← state.runner.liftEquivalence exact
-    let primitive ← instantiateMVars primitive
-    let predicates := typed.presentation.constraints.map (·.predicate) ++
-      prepared.rowPredicates
-    let candidates := predicates.toList.zipIdx.map fun (predicate, index) =>
-      (Name.mkSimple s!"conic_row_{index}", predicate)
-    let primitive ← shareConicCertificate primitive (candidates ++ [
-      (`conic_certificate, prepared.certificate),
-      (`conic_source, typed.canonical),
-      (`conic_target, replacement.targetProblem)])
-    checkWithKernel primitive
-    -- Store the checked proof data once before the syntax round trip. Later
-    -- steps and the final declaration then refer to this constant instead of
-    -- re-elaborating its conjunction proofs. The closure retains section
-    -- parameters; the enclosing command transaction rolls it back on failure.
-    let primitiveName ← mkAuxDeclName (kind := `_conicCertificate)
-    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
-      (compile := false)
-    modifyEnv (addNoncomputable · primitiveName)
-    let mut binders := state.view.binders
-    if let some auxiliary := prepared.auxiliary? then
-      let some name := allocation.findName? 0
-        | throwError "internal error: missing conic auxiliary allocation"
-      let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
-      binders := binders.push {
-        name
-        typeSyntax := ← presentationTypeSyntax auxiliary
-      }
-    let mut rows := #[]
-    for i in [:prepared.rowPredicates.size] do
-      let some name := allocation.findName? (i + 1)
-        | throwError "internal error: missing conic row allocation"
-      rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-    let originalTypes := typed.presentation.binders.map fun binder => binder.type
-    let binderTypes := match prepared.auxiliary? with
-      | none => originalTypes
-      | some auxiliary => originalTypes.push auxiliary
-    let declarations := binders.mapIdx fun i binder => (binder.name, binderTypes[i]!)
-    let renderedRows ← withLocalDeclsDND declarations fun decisions => do
-      let point ← packPoint decisions
-      let names := decisions.mapIdx fun i decision => (decision.fvarId!, binders[i]!.name)
-      let context ← Simp.mkContext
-        (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
-      rows.mapIdxM fun i row => do
-        -- Generated rows may retain packed-point projections under sum or
-        -- quantified lambdas. Normalize their scaffolding here; a later
-        -- presentation refresh must preserve the untouched user bodies.
-        let (body, _) ← dsimp (mkApp prepared.rowPredicates[i]! point) context
-        pure { row with proposition := ← delabPresentationTerm body names }
-    let view := {
-      state.view with
-      binders
-      constraints := state.view.constraints.extract 0 index ++ renderedRows ++
-        state.view.constraints.extract (index + 1) state.view.constraints.size
-    }
-    let targetProblem ← simpOnly replacement.targetProblem
-    let semantic ← exactExpressionSyntax targetProblem
-    let primitiveCertificate ← exactExpressionSyntax primitive
-    return {
-      view
-      semantic
-      semanticDomainType := ← exactExpressionSyntax prepared.nextDomain
-      primitiveCertificate
-      simplifyExpLogTerms := state.simplifyExpLogTerms
-      hasSubstitution := state.hasSubstitution
-      removedConstraintNames := {}
-      normalizationLemmas := state.normalizationLemmas
-      checkpoint? := some { semantic, view }
-      constraintSplices := #[{ index, count := rows.size }]
-    }
+    Replace.finish conicStyle state typed index {
+      auxiliary? := prepared.auxiliary?
+      nextDomain := prepared.nextDomain
+      rowPredicates := prepared.rowPredicates
+      certificate := prepared.certificate
+      replacement
+    } allocation
 
 /-- Select and certify a whole-constraint rewrite, deferring named
 materialization until the runner has allocated its generated family. -/
 def prepareConic (state : ReformState) (step : Syntax)
     (selector : TSyntax `ident) (rule? : Option (TSyntax `term)) :
     CommandElabM SurfaceStepDraft := withRef step do
-  let some index := state.view.constraints.findIdx? fun constraint =>
-      sameUserName constraint.name selector.getId
-    | throwErrorAt selector "unknown or stale constraint label `{selector.getId.eraseMacroScopes}`"
+  let index ← Replace.findConstraint state selector
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
     let rule? ← rule?.mapM fun ruleSyntax => do
@@ -225,24 +136,9 @@ def prepareConic (state : ReformState) (step : Syntax)
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"
     | .ok result => pure (result, sectionFVars)
-  let stem ← generatedStem selector
-  let mut nameRequests := #[]
-  if prepared.auxiliary?.isSome then
-    nameRequests := nameRequests.push {
-      id := 0
-      kind := .generatedBinderFamily
-      requested := Name.mkSimple (stem ++ "_aux")
-      ref := selector.raw
-    }
-  for i in [:prepared.rowPredicates.size] do
-    nameRequests := nameRequests.push {
-      id := i + 1
-      kind := .generatedRowFamily
-      requested := Name.mkSimple s!"{stem}_conic_{i + 1}"
-      ref := selector.raw
-    }
   return {
-    nameRequests
+    nameRequests := ← Replace.nameRequests conicStyle selector
+      prepared.auxiliary?.isSome prepared.rowPredicates.size
     materialize := materializeConic state index prepared preparedVars
   }
 

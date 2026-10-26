@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Presentation
+import Morew.Reformulation.Replace
+import Morew.Elab.Rewrite.Plan
 import Morew.Reformulation.Syntax
 import Morew.Transform.Context
 import Morew.Elab.ObjectiveContext
@@ -149,8 +150,8 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
       | `(boundOccurrence| ($term:term)) =>
           elabPresentationTerm term (binders ++ definitions)
       | _ => throwUnsupportedSyntax
-    if (← Morew.Elab.Conic.Plan.unresolved body) ||
-        (← Morew.Elab.Conic.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
+    if (← Morew.Elab.Rewrite.Plan.unresolved body) ||
+        (← Morew.Elab.Rewrite.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
       throwErrorAt selector "occurrence selection contains unresolved metavariables"
     if (← isType needle) || (← isProof needle) then
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"
@@ -386,10 +387,7 @@ def prepareOccurrenceBound (state : ReformState) (step : Syntax)
     (constraint? explicitLabel? : Option (TSyntax `ident))
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection) :
     CommandElabM SurfaceStepDraft := do
-  let row? ← constraint?.mapM fun label => do
-    let some index := state.view.constraints.findIdx? (sameUserName ·.name label.getId)
-      | throwErrorAt label "unknown or stale constraint label `{label.getId.eraseMacroScopes}`"
-    pure index
+  let row? ← constraint?.mapM (Replace.findConstraint state)
   if row?.isNone then
     let expected := if direction == .upper then .minimize else .maximize
     unless state.view.sense == expected do
