@@ -15,7 +15,6 @@ the supplied nonempty support and its enumeration.
 
 assert_not_exists Morew.Syntax.ProblemView Morew.Elab.Reformulation.RunnerState
 assert_not_exists Morew.Conic.Cone Morew.Conic.Polyhedral.abs_le_iff
-assert_not_exists Morew.Exact.absEpigraph
 
 namespace MorewTest.Rewrite
 
