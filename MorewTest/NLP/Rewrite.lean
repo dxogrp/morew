@@ -210,6 +210,70 @@ run_cmd liftTermElabM do
 private def hiddenAbs (x : ℝ) : ℝ := |x|
 private def hiddenSquare (x : ℝ) : ℝ := x * x
 
+-- Named model builders are helpers too. Selecting their fields must not expose
+-- a decision-dependent predicate, nonsmooth atom, or native norm conversion.
+private noncomputable def boundModel (c : ℝ) : Morew.Problem ℝ ℝ where
+  objective x := |c * x|
+  feasible x := |c * x| ≤ 3
+
+private noncomputable abbrev boundModelAbbrev (c : ℝ) : Morew.Problem ℝ ℝ :=
+  ⟨fun x => |c * x|, fun x => |c * x| ≤ 3⟩
+
+private noncomputable def normModel (c : ℝ) :
+    Morew.Problem ℝ (EuclideanSpace ℝ (Fin 1)) where
+  objective x := WithLp.toLp 2 (fun _ => c * x)
+  feasible _ := True
+
+private noncomputable def smoothModel (c : ℝ) : Morew.Problem ℝ ℝ where
+  objective x := c * x
+  feasible x := c * x ≤ 3
+
+private def modelTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 3) :=
+  .ofIff (fun x => (smoothModel x).feasible x) (fun _ => Iff.rfl)
+
+private def independentModelTargetLift :
+    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x => (smoothModel 2).feasible x) (fun _ => Iff.rfl)
+
+private def literalModelTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 3) :=
+  .ofIff (fun x =>
+    (Morew.Problem.mk (fun y : ℝ => y) (fun y => x * y ≤ 3)).feasible x)
+    (fun _ => Iff.rfl)
+
+run_cmd liftTermElabM do
+  rejected (← `(input (fun x : ℝ => (boundModel x).feasible x) #[]))
+    "no supported exact NLP rule"
+  rejected (← `(input (fun x : ℝ => (boundModelAbbrev x).feasible x) #[]))
+    "no supported exact NLP rule"
+  rejected (← `(input (fun x : ℝ => let p := boundModel x; p.feasible x) #[]))
+    "no supported exact NLP rule"
+  rejected (← `(input (fun x : ℝ => (boundModel x).objective x ≤ 3) #[]))
+    "no supported exact NLP rule"
+  rejected (← `(input (fun x : ℝ => ‖(normModel x).objective x‖ ≤ 3) #[]))
+    "generated row"
+  -- Independent named containers and literal decision-dependent containers
+  -- retain the structural reductions used by imported/applied models.
+  expect (← `(fun c : ℝ => input (fun x : ℝ => (boundModel c).feasible x) #[])) 2 false 1
+  expect (← `(fun c : ℝ => input (fun x : ℝ => (boundModel c).objective x ≤ 3) #[]))
+    2 false 1
+  expect (← `(fun c : ℝ => input (fun x : ℝ => ‖(normModel c).objective x‖ ≤ 3) #[]))
+    2 false 1
+  expect (← `(input (fun x : ℝ =>
+    (Morew.Problem.mk (fun y : ℝ => y) (fun y => |x * y| ≤ 3)).feasible x) #[])) 2
+  expect (← `(input (fun x : ℝ =>
+    let p : Morew.Problem ℝ ℝ := ⟨fun y => y, fun y => |x * y| ≤ 3⟩
+    p.feasible x) #[])) 2
+  expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
+    (← `(independentModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => x * x ≤ 3) #[]))
+    (← `(literalModelTargetLift)) 1
+  let source ← Domain.elaborate (← `(fun x : ℝ => x * x ≤ 3))
+  let rule ← Domain.elaborate (← `(modelTargetLift))
+  let .error error ← Rewrite.plan source #[] (some rule)
+    | throwError "a decision-dependent named model target was unfolded"
+  unless (← error.reason.toString).contains "generated row" do
+    throwError "named model target did not fail at the target grammar boundary"
+
 run_cmd liftTermElabM do
   rejected (← `(input (fun x : ℝ => x ^ 2 ≤ 3) #[])) "no supported exact NLP rule"
   rejected (← `(input (fun x : ℝ => 0 ≤ |x|) #[])) "no supported exact NLP rule"

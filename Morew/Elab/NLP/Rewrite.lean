@@ -55,9 +55,16 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private abbrev conjunction := Conic.Decomposition.conjunction
 
+-- Model fields are structural only when their named container is independent
+-- of the decision point. Keep the same helper boundary as smooth certification.
+private def structural (point expression : Expr) (preserveLets : Bool := false) :
+    MetaM Expr :=
+  Affine.reduceStructure expression (preserveLets := preserveLets)
+    (opaqueProblemDependencies? := some point)
+
 -- Expose representation fields, not arbitrary target predicate definitions.
-private partial def exposeTarget (body : Expr) : MetaM Expr := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+private partial def exposeTarget (point body : Expr) : MetaM Expr := do
+  let body ← structural point body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
     | some ``Morew.ExactConstraintLift.target => some 3
@@ -72,7 +79,7 @@ private partial def exposeTarget (body : Expr) : MetaM Expr := do
       -- would also unfold a named predicate stored in its target field.
       let record ← whnf args[prefixSize - 1]!
       if let some field ← projectCore? record 1 then
-        return ← exposeTarget (mkAppN field (args.extract prefixSize args.size))
+        return ← exposeTarget point (mkAppN field (args.extract prefixSize args.size))
   return body
 
 -- Referenced local values and types can hide placeholders from `Expr.hasSorry`.
@@ -105,7 +112,7 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     let original := if noAuxiliary then point else .proj ``Prod 0 point
     let auxiliary := if noAuxiliary then mkConst ``Unit.unit else .proj ``Prod 1 point
     let target := mkApp2 targetFunction original auxiliary
-    let (bodies, proof) ← Conic.Decomposition.split target exposeTarget
+    let (bodies, proof) ← Conic.Decomposition.split target (exposeTarget point)
     let rows ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let targetIff ← mkLambdaFVars #[point] proof
     let expected ← mkForallFVars #[point]
@@ -174,7 +181,7 @@ private def proofSides (proof : Expr) : MetaM (Expr × Expr) := do
   unless type.isAppOfArity ``Iff 2 do throwError "internal error: expected exact iff evidence"
   return (type.getAppArgs[0]!, type.getAppArgs[1]!)
 
-private def normProof? (selected : Rule) (operation bound : Expr) :
+private def normProof? (selected : Rule) (point operation bound : Expr) :
     MetaM (Option (Name × Expr)) := do
   unless operation.isAppOfArity ``Norm.norm 3 do return none
   let vector := operation.getAppArgs[2]!
@@ -184,7 +191,7 @@ private def normProof? (selected : Rule) (operation bound : Expr) :
       pure <| some (``Morew.Exact.normInfEpigraph, ← representationProof
         (← mkAppOptM ``Morew.Exact.normInfEpigraph #[some n]) vector bound)
     else do
-      let reduced ← Affine.reduceStructure vector
+      let reduced ← structural point vector
       if reduced.isAppOfArity ``WithLp.toLp 3 then
         let raw := reduced.getAppArgs[2]!
         let some n ← realVectorDimension? (← inferType raw) | return none
@@ -193,8 +200,8 @@ private def normProof? (selected : Rule) (operation bound : Expr) :
           else ``Morew.Exact.norm2Epigraph
         let proof ← representationProof (← mkAppOptM name #[some n]) raw bound
         let (source, _) ← proofSides proof
-        let source ← Affine.reduceStructure source
-        let expected ← Affine.reduceStructure source.getAppArgs[2]!
+        let source ← structural point source
+        let expected ← structural point source.getAppArgs[2]!
         unless ← isDefEq vector expected.getAppArgs[2]! do return none
         pure (some (name, proof))
       else if let some n ← Affine.Space.euclideanDimension? vectorType then
@@ -204,21 +211,21 @@ private def normProof? (selected : Rule) (operation bound : Expr) :
       else pure none
   let some (name, proof) := proof? | return none
   let (source, _) ← proofSides proof
-  let source ← Affine.reduceStructure source
-  sameOperationPrefix operation (← Affine.reduceStructure source.getAppArgs[2]!) 1
+  let source ← structural point source
+  sameOperationPrefix operation (← structural point source.getAppArgs[2]!) 1
   return some (name, proof)
 
 private def nativeProof? (selected : Rule) (point body : Expr) :
     MetaM (Option (Name × Expr)) := do
-  let body ← Affine.reduceStructure body
+  let body ← structural point body
   let greaterEqual := body.isAppOfArity ``GE.ge 4
   unless greaterEqual || body.isAppOfArity ``LE.le 4 do return none
   let args := body.getAppArgs
   unless ← isDefEq args[0]! (mkConst ``Real) do return none
   unless ← isDefEq args[1]! (mkConst ``Real.instLE) do
     throwError "unsupported order instance in the selected predicate"
-  let left ← Affine.reduceStructure args[if greaterEqual then 3 else 2]!
-  let right ← Affine.reduceStructure args[if greaterEqual then 2 else 3]!
+  let left ← structural point args[if greaterEqual then 3 else 2]!
+  let right ← structural point args[if greaterEqual then 2 else 3]!
   if let some operation ← Atom.recognizeAtom? left then
     let operands := operation.operands
     if (selected == .absolute && operation.kind == .abs) ||
@@ -242,18 +249,18 @@ private def nativeProof? (selected : Rule) (point body : Expr) :
     let rule ← mkAppM selected.name #[args[3]!, args[4]!]
     let proof ← representationProof rule args[5]! (if minimum then left else right) minimum
     let (source, _) ← proofSides proof
-    let source ← Affine.reduceStructure source
+    let source ← structural point source
     sameOperationPrefix operation
-      (← Affine.reduceStructure source.getAppArgs[if minimum then 3 else 2]!) 3
+      (← structural point source.getAppArgs[if minimum then 3 else 2]!) 3
     return some (selected.name, proof)
   if selected == .normOne || selected == .normInfinity || selected == .normTwo then
-    return ← normProof? selected left right
+    return ← normProof? selected point left right
   return none
 
 private def automaticLift? (selected : Rule) (source domain : Expr) :
     MetaM (Option (Name × Expr)) :=
   withLocalDeclD `point domain fun point => do
-    let body ← Affine.reduceStructure (mkApp source point)
+    let body ← structural point (mkApp source point)
     let some (name, proof) ← nativeProof? selected point body | return none
     let (provedSource, target) ← proofSides proof
     unless ← isDefEq provedSource body do
