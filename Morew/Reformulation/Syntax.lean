@@ -58,6 +58,9 @@ syntax (name := nlpAtStep)
 /-- Certify the complete problem and finish the reformulation script. -/
 syntax (name := conicStep) "conic" : reformulationStep
 
+/-- Certify every objective and residual as a smooth NLP and finish the script. -/
+syntax (name := nlpStep) "nlp" : reformulationStep
+
 /-- Declare a transformed problem together with its global-equivalence
 certificate. -/
 syntax (name := reformulationCmd)

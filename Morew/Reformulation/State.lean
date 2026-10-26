@@ -74,17 +74,40 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
+/-- The two supported terminal representation artifacts. -/
+inductive TerminalKind where
+  | conic
+  | nlp
+  deriving BEq
+
+/-- User-facing name of a terminal representation. -/
+def TerminalKind.description : TerminalKind → String
+  | .conic => "conic"
+  | .nlp => "smooth NLP"
+
+/-- Suffix of the concrete terminal form declaration. -/
+def TerminalKind.formSuffix : TerminalKind → Name
+  | .conic => `conicForm
+  | .nlp => `nlpForm
+
+/-- Suffix of the terminal representability theorem. -/
+def TerminalKind.propertySuffix : TerminalKind → Name
+  | .conic => `isConic
+  | .nlp => `isSmoothNLP
+
 /-- Checked structural evidence retained until the final target is declared.
 Its free variables belong to the containing state's section-variable context. -/
-structure CheckedTerminalConicArtifact where
+structure CheckedTerminalArtifact where
+  /-- The representation certified by the terminal step. -/
+  kind : TerminalKind
   /-- A kernel-checked form of the final canonical problem. -/
   form : Expr
   /-- Source location of terminal validation. -/
   ref : Syntax
 
 /-- Move retained terminal evidence into a later elaboration context. -/
-def CheckedTerminalConicArtifact.replaceFVars (artifact : CheckedTerminalConicArtifact)
-    (oldVars newVars : Array Expr) : CheckedTerminalConicArtifact :=
+def CheckedTerminalArtifact.replaceFVars (artifact : CheckedTerminalArtifact)
+    (oldVars newVars : Array Expr) : CheckedTerminalArtifact :=
   { artifact with form := artifact.form.replaceFVars oldVars newVars }
 
 /-- Checked runner state together with syntax retained for declaration emission. -/
@@ -127,8 +150,8 @@ structure ReformState where
   removedConstraintNames : NameSet := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
-  /-- Structural evidence produced by terminal conic validation. -/
-  terminalConic? : Option CheckedTerminalConicArtifact := none
+  /-- Structural evidence produced by terminal validation. -/
+  terminalArtifact? : Option CheckedTerminalArtifact := none
 
 /-- A handler describes one uncommitted primitive step.  Certificate
 composition and state mutation are deliberately centralized in
@@ -156,7 +179,7 @@ structure SurfaceStepResult where
   /-- Ordered replacements indexed by entries at step entry. -/
   constraintSplices : Array ConstraintSplice := #[]
   /-- Form syntax to validate against the proposed canonical target. -/
-  terminalForm? : Option (TSyntax `term) := none
+  terminalForm? : Option (TerminalKind × TSyntax `term) := none
   /-- Whether additional steps may follow this result. -/
   status : Morew.Elab.Reformulation.StepStatus := .continue
   /-- Additional declarations requested by the step. -/
@@ -179,6 +202,6 @@ structure SurfaceMaterialization where
   /-- Section variables used while validating the typed result. -/
   sectionFVars : Array Expr
   /-- Validated terminal evidence in the same section-variable context. -/
-  terminalConic? : Option CheckedTerminalConicArtifact := none
+  terminalArtifact? : Option CheckedTerminalArtifact := none
 
 end Morew.Reformulation.Internal

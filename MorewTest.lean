@@ -122,6 +122,10 @@ import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
 import MorewTest.Reformulation.TerminalConicSection
+import MorewTest.Reformulation.TerminalNLP
+import MorewTest.Reformulation.TerminalNLPFailures
+import MorewTest.Reformulation.TerminalNLPFamilies
+import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
 import MorewTest.Rewrite.Replace

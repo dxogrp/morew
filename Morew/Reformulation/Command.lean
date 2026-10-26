@@ -8,6 +8,7 @@ import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import Morew.Reformulation.TerminalConic
+import Morew.Reformulation.TerminalNLP
 import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
 import Morew.Reformulation.Syntax
@@ -18,9 +19,10 @@ import Lean.Elab.MutualDef
 
 This module implements the small, proof-producing transformation language used
 by Morew's first release.  A reformulation command declares both the transformed
-problem and a `GlobalEquivalence` certificate. Terminal conic validation also
-retains a structural form and a proof of conic representability. Targeted
-`nlp at label` steps certify only their replacement rows and remain nonterminal.
+problem and a `GlobalEquivalence` certificate. Terminal `conic` and `nlp`
+validation also retain a concrete structural form and a representability proof.
+Targeted `nlp at label` steps certify only their replacement rows and remain
+nonterminal.
 -/
 
 namespace Morew
@@ -232,7 +234,7 @@ private theorem problemEquality {X : Type u} {V : Type v} (p q : Morew.Problem X
         (funext fun x => propext (feasible x))
 
 private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
-    (appliedTarget : TSyntax `term) (artifact : CheckedTerminalConicArtifact) :
+    (appliedTarget : TSyntax `term) (artifact : CheckedTerminalArtifact) :
     CommandElabM Unit := do
   let scope ← getScope
   withExporting (isExporting := scope.isPublic) do
@@ -247,10 +249,10 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       let form ← if ← isDefEq (← inferType artifact.form) formType then
           pure artifact.form
         else do
-          -- Retained dependent definitions can agree with the canonical conic
+          -- Retained dependent definitions can agree with the canonical
           -- target by proved normalization rather than definitional equality.
           let some targetBody ← unfoldDefinition? target
-            | throwErrorAt artifact.ref "cannot inspect the emitted conic target"
+            | throwErrorAt artifact.ref "cannot inspect the emitted {artifact.kind.description} target"
           let normalization ← checkedPointwiseNormalization state.sourceName
             represented targetBody state.normalizationLemmas
           let equality ← mkAppM ``problemEquality #[represented, target,
@@ -258,12 +260,15 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
           let represents ← mkAppM ``Eq.trans
             #[← mkProjection artifact.form `represents, equality]
           let data ← mkProjection artifact.form `data
-          pure <| mkAppN (mkConst ``Morew.Conic.Form.mk formType.getAppFn.constLevels!)
+          let constructor := match artifact.kind with
+            | .conic => ``Morew.Conic.Form.mk
+            | .nlp => ``Morew.NLP.Form.mk
+          pure <| mkAppN (mkConst constructor formType.getAppFn.constLevels!)
             (formType.getAppArgs ++ #[data, represents])
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
-      let formIdent := rootIdentFrom artifact.ref (targetName ++ `conicForm)
-      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ `isConic)
+      let formIdent := rootIdentFrom artifact.ref (targetName ++ artifact.kind.formSuffix)
+      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ artifact.kind.propertySuffix)
       let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope
         formType form
       -- Elaborate both artifacts in the same section context. Lean does not
@@ -272,8 +277,11 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       -- The form already carries its canonical instances. Source-local finite
       -- evidence need not be available to typeclass search at emission time.
       let namedFormType ← whnf (← inferType namedForm)
+      let propertyName := match artifact.kind with
+        | .conic => ``Morew.Conic.Form.isConic
+        | .nlp => ``Morew.NLP.Form.isSmoothNLP
       let property := mkAppN
-        (mkConst ``Morew.Conic.Form.isConic namedFormType.getAppFn.constLevels!)
+        (mkConst propertyName namedFormType.getAppFn.constLevels!)
         (namedFormType.getAppArgs ++ #[namedForm])
       let propertyType ← inferType property
       let propertyDefinition ← `(Parser.Command.theorem|
@@ -407,6 +415,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareNLP state step selector rule
       | `(reformulationStep| conic) =>
           prepareTerminalConic state step
+      | `(reformulationStep| nlp) =>
+          prepareTerminalNLP state step
       | _ => throwUnsupportedSyntax
     let (result, materialization) ← runTypedStepPlan state draft
     state ← commitSurfaceStep state result materialization
@@ -423,10 +433,10 @@ private def elabReformulationCore : CommandElab := fun stx => do
     }
   for companion in state.typed.companions do
     outputRequests := outputRequests.push companion.nameRequest
-  if let some artifact := state.terminalConic? then
+  if let some artifact := state.terminalArtifact? then
     outputRequests := outputRequests ++ #[
-      { name := targetDeclName ++ `conicForm, ref := artifact.ref },
-      { name := targetDeclName ++ `isConic, ref := artifact.ref }]
+      { name := targetDeclName ++ artifact.kind.formSuffix, ref := artifact.ref },
+      { name := targetDeclName ++ artifact.kind.propertySuffix, ref := artifact.ref }]
   match Morew.Elab.Reformulation.preflightDeclarationNames
       (← getEnv) outputRequests with
   | .ok _ => pure ()
@@ -497,7 +507,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       emitAlias appliedCertificate
       pure <| if (← get).messages.hasErrors then none else some target
 
-    let appliedTarget? ← if state.hasSubstitution || state.terminalConic?.isSome ||
+    let appliedTarget? ← if state.hasSubstitution || state.terminalArtifact?.isSome ||
         state.instantiatedSource then do
         elabCanonicalDeclarations
       else
@@ -517,7 +527,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       for companion in state.typed.companions do
         unless (← get).messages.hasErrors do
           emitCompanionDeclaration companion state.sectionFVars
-      if let some artifact := state.terminalConic? then
+      if let some artifact := state.terminalArtifact? then
         unless (← get).messages.hasErrors do
           emitTerminalArtifacts targetDeclName state appliedTarget artifact
       unless (← get).messages.hasErrors do

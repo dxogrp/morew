@@ -60,6 +60,7 @@ import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
 import Morew.Reformulation.Syntax
 import Morew.Reformulation.TerminalConic
+import Morew.Reformulation.TerminalNLP
 import Morew.Rewrite
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean
