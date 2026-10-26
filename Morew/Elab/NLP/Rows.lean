@@ -30,6 +30,8 @@ structure Result where
   feasibleMemDomain : Expr
   /-- `Morew.NLP.Rows.Certified domain rows[i]`, in presentation order. -/
   rowCertificates : Array Expr
+  /-- Computational scalar rows, with checked equivalence to each predicate. -/
+  rowBlocks : Array Expr
 
 /-- Rebase every expression before the reformulation runner materializes a step. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
@@ -37,7 +39,70 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
   domainIsOpen := result.domainIsOpen.replaceFVars oldVars newVars
   feasibleMemDomain := result.feasibleMemDomain.replaceFVars oldVars newVars
   rowCertificates := result.rowCertificates.map (·.replaceFVars oldVars newVars)
+  rowBlocks := result.rowBlocks.map (·.replaceFVars oldVars newVars)
 }
+
+/-- Retain one already certified predicate without changing its common domain. -/
+def Result.select (result : Result) (index : Nat) : Result :=
+  { result with rowCertificates := #[result.rowCertificates[index]!]
+                rowBlocks := #[result.rowBlocks[index]!] }
+
+private theorem transportInclusion {X Y : Type*} {p : X → Prop}
+    (q : Y → Prop) (map : Y → X) {s : Set X}
+    (included : ∀ x, p x → x ∈ s)
+    (backward : ∀ y, q y → p (map y)) : ∀ y, q y → y ∈ map ⁻¹' s :=
+  fun y hy => included (map y) (backward y hy)
+
+private theorem smoothProjection {X Y : Type*}
+    [NormedAddCommGroup X] [NormedSpace ℝ X]
+    [NormedAddCommGroup Y] [NormedSpace ℝ Y] :
+    ContDiff ℝ 2 (Prod.fst : X × Y → X) := contDiff_fst
+
+private theorem openProjection {X Y : Type*}
+    [NormedAddCommGroup X] [NormedAddCommGroup Y]
+    (s : Set X) (opened : IsOpen s) : IsOpen ((Prod.fst : X × Y → X) ⁻¹' s) :=
+  opened.preimage continuous_fst
+
+/-- Preserve checked residuals when a later exact step strengthens feasibility or
+adds an auxiliary product component. `backward` must recover the old feasibility;
+the existing smoothness and finite-index evidence are never rediscovered. -/
+def Result.transport (result : Result) (newFeasible backward : Expr)
+    (auxiliary? : Option Expr := none) : MetaM Result := do
+  let .forallE _ nextDomain _ _ ← whnf (← inferType newFeasible)
+    | throwError "expected the replacement feasibility predicate"
+  let .forallE _ oldDomain _ _ ← whnf (← inferType result.domain)
+    | throwError "expected a cached evaluation domain"
+  let map ← withLocalDeclD `point nextDomain fun point => do
+    let value ← if auxiliary?.isSome then mkAppM ``Prod.fst #[point] else pure point
+    mkLambdaFVars #[point] value
+  let included ← mkAppM ``transportInclusion
+    #[newFeasible, map, result.feasibleMemDomain, backward]
+  if let some auxiliary := auxiliary? then
+    let expected ← mkAppM ``Prod #[oldDomain, auxiliary]
+    unless ← isDefEq nextDomain expected do
+      throwError "cached NLP rows require the existing auxiliary product layout"
+    let domain ← mkAppM ``Set.preimage #[map, result.domain]
+    let isOpen ← Space.withCanonicalSpaces #[oldDomain, auxiliary, nextDomain] <|
+      mkAppOptM ``openProjection #[some oldDomain, some auxiliary, none, none,
+        some result.domain, some result.domainIsOpen]
+    let smooth ← Space.withCanonicalSpaces #[oldDomain, auxiliary, nextDomain] <|
+      mkAppOptM ``smoothProjection #[some oldDomain, some auxiliary, none, none, none, none]
+    let certificates ← result.rowCertificates.mapM fun proof =>
+      Space.withCanonicalSpaces #[oldDomain, auxiliary, nextDomain] <|
+        mkAppM ``Morew.NLP.Rows.Certified.pullback #[proof, map, smooth]
+    let blocks ← result.rowBlocks.mapM fun block =>
+      Space.withCanonicalSpaces #[oldDomain, auxiliary, nextDomain] <|
+        mkAppM ``Morew.NLP.Rows.Block.pullback #[block, map, smooth]
+    let result : Result := ⟨domain, isOpen, included, certificates, blocks⟩
+    for proof in certificates ++ blocks ++ #[domain, isOpen, included] do
+      unless ← Domain.Evidence.complete proof do throwError "incomplete transported NLP rows"
+      checkWithKernel proof
+    return result
+  else
+    unless ← isDefEq nextDomain oldDomain do
+      throwError "cached NLP rows changed their decision space without an auxiliary"
+    checkWithKernel included
+    return { result with feasibleMemDomain := included }
 
 private inductive Relation where
   | le | ge | eq
@@ -203,7 +268,8 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
     return result
   return #[]
 
-private def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obligation => do
+/-- Project only checked closed comparisons at compatible finite indices. -/
+def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obligation => do
   let (indices, support) ← indexContext point obligation
   let mut result ← projectedFacts point feasibleProof indices support 32
   for proof in support do
@@ -218,6 +284,7 @@ private structure RowCertificate where
   isOpen : Expr
   included : Expr
   proof : Expr
+  block : Expr
 
 private structure Context where
   feasible : Expr
@@ -242,10 +309,12 @@ private def reject (expression : Expr) (reason : MessageData)
 private def analytic (action : MetaM Expr) : RowsM Expr := do
   Space.withCanonicalSpaces #[(← read).decision] action
 
-private def restrict (certificate : RowCertificate) (subset : Expr) : RowsM Expr :=
-  analytic <| mkAppM ``Morew.NLP.Rows.Certified.mono #[certificate.proof, subset]
+private def restrict (certificate : RowCertificate) (subset : Expr) : RowsM (Expr × Expr) := do
+  return (← analytic <| mkAppM ``Morew.NLP.Rows.Certified.mono #[certificate.proof, subset],
+    ← analytic <| mkAppM ``Morew.NLP.Rows.Block.mono #[certificate.block, subset])
 
-private def intersect (left right : RowCertificate) : RowsM (RowCertificate × Expr × Expr) := do
+private def intersect (left right : RowCertificate) :
+    RowsM (RowCertificate × (Expr × Expr) × (Expr × Expr)) := do
   let domain ← mkAppM ``Morew.NLP.Domain.inter #[left.domain, right.domain]
   let leftSubset ← mkAppM ``Morew.NLP.Domain.inter_left #[left.domain, right.domain]
   let rightSubset ← mkAppM ``Morew.NLP.Domain.inter_right #[left.domain, right.domain]
@@ -253,7 +322,7 @@ private def intersect (left right : RowCertificate) : RowsM (RowCertificate × E
     #[left.domain, right.domain, left.isOpen, right.isOpen]
   let included ← mkAppM ``Morew.NLP.Domain.inter_includes
     #[(← read).feasible, left.domain, right.domain, left.included, right.included]
-  return (⟨domain, isOpen, included, left.proof⟩,
+  return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
 -- Keep independent proof lets in a projected predicate available while checking
@@ -279,19 +348,22 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
         isOpen := ← result.isOpen.replaceFVarsM #[binding] #[value]
         included := ← result.included.replaceFVarsM #[binding] #[value]
         proof := ← result.proof.replaceFVarsM #[binding] #[value]
+        block := ← result.block.replaceFVarsM #[binding] #[value]
       }
   let body ← structural point body
   if body.isConstOf ``True then
     let base := (← read).unrestricted
     let proof ← analytic <| mkAppOptM ``Morew.NLP.Rows.Certified.truth
       #[some (← read).decision, none, none, some base.domain]
-    return ⟨base.domain, base.domainIsOpen, base.feasibleMemDomain, proof⟩
+    let block ← analytic <| mkAppM ``Morew.NLP.Rows.Block.truth #[base.domain]
+    return ⟨base.domain, base.domainIsOpen, base.feasibleMemDomain, proof, block⟩
   if body.isAppOfArity ``And 2 then
     let left ← certifyBody point body.getAppArgs[0]!
     let right ← certifyBody point body.getAppArgs[1]!
     let (info, left, right) ← intersect left right
-    let proof ← analytic <| mkAppM ``Morew.NLP.Rows.Certified.and #[left, right]
-    return { info with proof }
+    let proof ← analytic <| mkAppM ``Morew.NLP.Rows.Certified.and #[left.1, right.1]
+    let block ← analytic <| mkAppM ``Morew.NLP.Rows.Block.and #[left.2, right.2]
+    return { info with proof, block }
   if let some (relation, type, lhs, rhs) := relation? body then
     unless ← canonicalRelation body relation type lhs rhs do
       reject body "expected a canonical real or finite-vector order instance"
@@ -311,7 +383,13 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
       let left ← mkLambdaFVars #[point] lhs
       let right ← mkLambdaFVars #[point] rhs
       let proof ← analytic <| mkAppM constructor #[left, right, result.smooth[0]!]
-      return ⟨result.domain, result.domainIsOpen, result.feasibleMemDomain, proof⟩
+      let constructor := match relation with
+        | .le => ``Morew.NLP.Rows.Block.le
+        | .ge => ``Morew.NLP.Rows.Block.ge
+        | .eq => ``Morew.NLP.Rows.Block.eq
+      let block ← analytic <| mkAppM constructor
+        #[result.domain, left, right, result.smooth[0]!]
+      return ⟨result.domain, result.domainIsOpen, result.feasibleMemDomain, proof, block⟩
     if let some size ← vectorSize? type then
       if ← Affine.depends point size then reject body "the vector dimension depends on a decision"
       let equivalent ← mkAppM (vectorRule relation) #[lhs, rhs]
@@ -322,7 +400,9 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
       let equivalent ← mkLambdaFVars #[point] equivalent
       let proof ← analytic <| mkAppM ``Morew.NLP.Rows.Certified.of_iff
         #[p, q, equivalent, result.proof]
-      return { result with proof }
+      let block ← analytic <| mkAppM ``Morew.NLP.Rows.Block.ofIff
+        #[p, q, equivalent, result.block]
+      return { result with proof, block }
     reject body "expected closed scalar or Fin n vector comparisons"
   if let .forallE name index rest info := body then
     let indexShape ← whnf index
@@ -338,8 +418,9 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
           ← mkLambdaFVars #[i] child.isOpen,
           ← mkLambdaFVars #[i] child.included,
           ← mkLambdaFVars #[i] child.proof,
+          ← mkLambdaFVars #[i] child.block,
           ← mkLambdaFVars #[i] predicate) : RowsM _).run context).run
-    let .ok (sets, opens, includes, proofs, predicates) := outcome | do
+    let .ok (sets, opens, includes, proofs, blocks, predicates) := outcome | do
       let .error error := outcome | unreachable!
       throwThe Domain.DomainError error
     let domain ← mkAppM ``Morew.NLP.Domain.family #[sets]
@@ -352,7 +433,13 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
         mkAppM ``Morew.NLP.Rows.Certified.mono #[mkApp proofs i, subset]
       mkLambdaFVars #[i] proof
     let proof ← analytic <| mkAppM ``Morew.NLP.Rows.Certified.family #[predicates, proofs]
-    return ⟨domain, isOpen, included, proof⟩
+    let blocks ← withLocalDecl name info index fun i => do
+      let subset ← mkAppM ``Morew.NLP.Domain.family_subset #[sets, i]
+      let block ← Space.withCanonicalSpaces #[context.decision] <|
+        mkAppM ``Morew.NLP.Rows.Block.mono #[mkApp blocks i, subset]
+      mkLambdaFVars #[i] block
+    let block ← analytic <| mkAppM ``Morew.NLP.Rows.Block.family #[predicates, blocks]
+    return ⟨domain, isOpen, included, proof, block⟩
   reject body "expected True, conjunctions, closed real comparisons, or finite families"
 
 private def certifyCore (feasible : Expr) (rows : Array Expr) :
@@ -363,7 +450,7 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
     return .error error
   let .forallE _ decision _ _ ← whnf (← inferType feasible)
     | throwError "expected a feasibility predicate"
-  let mut result : Result := ⟨base.domain, base.domainIsOpen, base.feasibleMemDomain, #[]⟩
+  let mut result : Result := ⟨base.domain, base.domainIsOpen, base.feasibleMemDomain, #[], #[]⟩
   for index in [:rows.size] do
     let row := rows[index]!
     unless ← Domain.Evidence.complete row do
@@ -387,6 +474,11 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
         mkAppM ``Morew.NLP.Rows.Certified.mono #[proof, left]
     let proof ← Space.withCanonicalSpaces #[decision] <|
       mkAppM ``Morew.NLP.Rows.Certified.mono #[child.proof, right]
+    let blocks ← result.rowBlocks.mapM fun block =>
+      Space.withCanonicalSpaces #[decision] <|
+        mkAppM ``Morew.NLP.Rows.Block.mono #[block, left]
+    let block ← Space.withCanonicalSpaces #[decision] <|
+      mkAppM ``Morew.NLP.Rows.Block.mono #[child.block, right]
     result := {
       domain
       domainIsOpen := ← Space.withCanonicalSpaces #[decision] <|
@@ -395,6 +487,7 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
       feasibleMemDomain := ← mkAppM ``Morew.NLP.Domain.inter_includes
         #[feasible, result.domain, child.domain, result.feasibleMemDomain, child.included]
       rowCertificates := proofs.push proof
+      rowBlocks := blocks.push block
     }
   let expectedOpen ← Space.withCanonicalSpaces #[decision] <|
     mkAppM ``IsOpen #[result.domain]
@@ -411,8 +504,15 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
     unless ← isDefEq (← inferType result.rowCertificates[i]!) expected do
       throwError "generated-row certificate changed row {i} or its common domain"
     let proof ← mkAppOptM ``id #[some expected, some result.rowCertificates[i]!]
-    result := { result with rowCertificates := result.rowCertificates.set! i proof }
-  for proof in result.rowCertificates ++ #[result.domainIsOpen, result.feasibleMemDomain] do
+    let expectedBlock ← Space.withCanonicalSpaces #[decision] <|
+      mkAppM ``Morew.NLP.Rows.Block #[result.domain, rows[i]!]
+    unless ← isDefEq (← inferType result.rowBlocks[i]!) expectedBlock do
+      throwError "generated-row block changed row {i} or its common domain"
+    let block ← mkAppOptM ``id #[some expectedBlock, some result.rowBlocks[i]!]
+    result := { result with rowCertificates := result.rowCertificates.set! i proof
+                            rowBlocks := result.rowBlocks.set! i block }
+  for proof in result.rowCertificates ++ result.rowBlocks ++
+      #[result.domainIsOpen, result.feasibleMemDomain] do
     unless ← Domain.Evidence.complete proof do throwError "incomplete generated-row certificate"
     checkWithKernel proof
   return .ok result

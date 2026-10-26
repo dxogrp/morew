@@ -61,6 +61,7 @@ import MorewTest.NLP.DomainLemmas
 import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
+import MorewTest.NLP.Form
 import MorewTest.NLP.Rewrite
 import MorewTest.NLP.RowData
 import MorewTest.NLP.Rows
