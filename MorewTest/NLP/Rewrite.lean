@@ -14,6 +14,8 @@ the exact proposed feasibility, including row insertion and auxiliary projection
 The tests distinguish candidate matching from complete domain certification.
 -/
 
+assert_not_exists Morew.Elab.Conic.Plan.Result Morew.Elab.Conic.RowResult
+
 namespace MorewTest.NLP.Rewrite
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
@@ -25,7 +27,7 @@ private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop
 
 private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex : Nat)
     (result : Rewrite.Result) : MetaM Unit := do
-  discard <| Morew.Elab.Conic.Plan.checkLift source result.lift
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   unless result.rowPredicates.size == result.certified.rowCertificates.size do
     throwError "generated row certificates are incomplete"
   for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
@@ -38,7 +40,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
     let generated := result.rowPredicates.map (mkApp · point)
     let bodies := retained.extract 0 insertionIndex ++ generated ++
       retained.extract insertionIndex retained.size
-    let feasible := Morew.Elab.Conic.Decomposition.conjunction bodies.toList
+    let feasible := Morew.Elab.Rewrite.Decomposition.conjunction bodies.toList
     let member ← mkAppM ``Membership.mem #[result.certified.domain, point]
     mkForallFVars #[point] (← mkArrow feasible member)
   unless ← isDefEq (← inferType result.certified.feasibleMemDomain) expectedInclusion do

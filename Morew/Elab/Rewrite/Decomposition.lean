@@ -13,7 +13,7 @@ the local evidence needed by each resulting predicate. Atomic predicates are
 left intact for the caller's recognizer.
 -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Rewrite
 
 open Lean Lean.Meta
 
@@ -24,6 +24,26 @@ def conjunction : List Expr → Expr
   | [] => mkConst ``True
   | [p] => p
   | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
+
+/-- Assemble proofs in the ordered conjunction convention. Empty collections
+produce `True`; a single entry retains its own conjunction boundaries. -/
+def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
+  if proofs.isEmpty then return mkConst ``True.intro
+  let mut result := proofs.back!
+  for proof in proofs.pop.toList.reverse do
+    result ← mkAppM ``And.intro #[proof, result]
+  return result
+
+/-- Project exactly the requested ordered entries, retaining any conjunction
+inside an entry. The count comes from the checked presentation or decomposition. -/
+def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
+  if count == 0 then return #[]
+  let mut result := #[]
+  let mut rest := proof
+  for _ in [:count - 1] do
+    result := result.push (← mkAppM ``And.left #[rest])
+    rest ← mkAppM ``And.right #[rest]
+  return result.push rest
 
 private theorem emptyLeft (p : Prop) : True ∧ p ↔ p :=
   ⟨fun h => h.2, fun h => ⟨True.intro, h⟩⟩
@@ -94,4 +114,4 @@ def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
     checkWithKernel proof
     return (predicates, proof)
 
-end Morew.Elab.Conic
+end Morew.Elab.Rewrite

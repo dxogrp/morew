@@ -54,7 +54,7 @@ private def materializeNLP (state : ReformState) (index : Nat)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
-    let replacement ← Morew.Elab.Conic.rewriteConstraint typed.presentation index
+    let replacement ← Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
       prepared.lift prepared.auxiliary? prepared.nextDomain prepared.rowPredicates prepared.targetIff
     -- The analytic evidence must cover this precise ordered replacement, not
     -- a stronger predicate or merely the selected row's original domain.
@@ -155,7 +155,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
     for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
       for inst in ← Morew.Elab.Affine.sourceFiniteInstances source do
         unless instances.contains inst do instances := instances.push inst
-    let result ← Morew.Elab.Conic.Plan.withScopedFiniteInstances
+    let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
       (fun result oldVars newVars => result.map
         (fun (value : NLPPrepared) => value.replaceFVars oldVars newVars)) instances.toList do
       Morew.Elab.NLP.Rewrite.plan predicate (retained.map (·.predicate)) rule? index

@@ -48,7 +48,7 @@ private def rowCone (constraint : Expr) : MetaM Expr := do
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) (auxiliary : Bool := false) : MetaM Unit := do
   unless ← Exponential.isCandidate source do throwError "exponential candidate was not recognized"
-  let domain ← Plan.predicateDomain source
+  let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
   match ← Exponential.plan source retained with
   | .error error => throwError "expected an exponential plan: {error.reason}"
   | .ok (.inl result) =>
@@ -56,7 +56,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
       unless result.auxiliary?.isSome == auxiliary do throwError "unexpected auxiliary decision space"
       let expectedRows := if auxiliary then 2 else 1
       unless result.rowPredicates.size == expectedRows do throwError "unexpected generated row count"
-      discard <| Plan.checkLift source result.lift
+      discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
       checkWithKernel result.targetIff
       if result.lift.hasMVar || result.targetIff.hasMVar || result.lift.hasSorry then
         throwError "incomplete exact exponential lift"
@@ -297,7 +297,7 @@ run_cmd liftTermElabM do
   let .inl result ← Plan.prepareContextual source #[] {
       domain, rowPredicates := #[], certifiedRows := #[], conditionalIff := proof }
     | throwError "an unconditional empty replacement remained contextual"
-  discard <| Plan.checkLift source result.lift
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   checkWithKernel result.targetIff
   unless result.rowPredicates.isEmpty && result.auxiliary?.isNone do
     throwError "empty replacement gained rows or an auxiliary"
@@ -310,7 +310,7 @@ run_cmd liftTermElabM do
       domain, rowPredicates := rows, certifiedRows := ← Plan.certifyRows rows,
       conditionalIff := proof }
     | throwError "an unconditional multi-row replacement remained contextual"
-  discard <| Plan.checkLift source result.lift
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   checkWithKernel result.targetIff
   checkRows domain result.rowPredicates result.certifiedRows
   unless result.rowPredicates.size == 2 && result.auxiliary?.isNone do

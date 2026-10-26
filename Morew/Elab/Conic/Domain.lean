@@ -18,15 +18,7 @@ namespace Morew.Elab.Conic.Domain
 
 open Lean Lean.Meta Qq
 
-/-- Project the ordered entries of the canonical retained conjunction. -/
-def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
-  if count == 0 then return #[]
-  let mut parts := #[]
-  let mut rest := proof
-  for _ in [:count - 1] do
-    parts := parts.push (← mkAppM ``And.left #[rest])
-    rest ← mkAppM ``And.right #[rest]
-  return parts.push rest
+open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
 private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
   le_of_lt h
@@ -34,13 +26,13 @@ private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ valu
 /-- Prove the sign of an independent real constant from an independent local
 hypothesis or bounded numeral/rational evaluation, using canonical real order. -/
 def constantSign? (point value : Expr) (strict : Bool) : MetaM (Option Expr) := do
-  if (← Affine.depends point value) || (← Plan.unresolved value) then return none
+  if (← Affine.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
   let value : Q(ℝ) := value
   let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
       if !(← Affine.depends point declaration.toExpr) &&
-          !(← Plan.unresolved declaration.toExpr) then
+          !(← Morew.Elab.Rewrite.Plan.unresolved declaration.toExpr) then
         if ← isDefEq declaration.type obligation then
           checkWithKernel declaration.toExpr
           return some declaration.toExpr

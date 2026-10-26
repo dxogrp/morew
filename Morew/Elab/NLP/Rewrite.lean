@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Rewrite
 import Morew.Elab.Atom
-import Morew.Elab.Conic.Plan
+import Morew.Elab.Rewrite.Plan
 import Morew.Elab.NLP.Rows
 
 /-!
@@ -29,31 +29,16 @@ open Lean Lean.Meta
 abbrev Error := Affine.AffineError
 
 /-- A checked exact replacement before presentation names are allocated. -/
-structure Result where
-  /-- An unconditional exact lift of the complete selected predicate. -/
-  lift : Expr
-  /-- The auxiliary space, with `Unit` erased. -/
-  auxiliary? : Option Expr
-  /-- The original decision space, optionally paired with auxiliary values. -/
-  nextDomain : Expr
-  /-- Generated predicates in their deterministic presentation order. -/
-  rowPredicates : Array Expr
-  /-- The lift target is equivalent to the generated conjunction. -/
-  targetIff : Expr
+structure Result extends Morew.Elab.Rewrite.Plan.Result where
   /-- Common-domain and smoothness evidence for precisely the generated rows. -/
   certified : Rows.Result
 
 /-- Substitute scoped source evidence through every part of a completed plan. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
-  let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
-  { lift := replace result.lift
-    auxiliary? := result.auxiliary?.map replace
-    nextDomain := replace result.nextDomain
-    rowPredicates := result.rowPredicates.map replace
-    targetIff := replace result.targetIff
+  { toResult := result.toResult.replaceFVars oldVars newVars
     certified := result.certified.replaceFVars oldVars newVars }
 
-private abbrev conjunction := Conic.Decomposition.conjunction
+private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 
 -- Model fields are structural only when their named container is independent
 -- of the decision point. Keep the same helper boundary as smooth certification.
@@ -119,7 +104,7 @@ private partial def incomplete (expression : Expr) (seen : FVarIdSet := {}) :
 private def finish (source domain lift : Expr) (retained : Array Expr)
     (insertionIndex : Nat) : MetaM Result := do
   -- Exactness is checked before any generated constraint can supply evidence.
-  let lift ← Conic.Plan.checkLift source lift
+  let lift ← Morew.Elab.Rewrite.Plan.checkLift source lift
   if ← incomplete lift then throwError "the exact certificate contains unresolved placeholders"
   let auxiliary ← whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
@@ -131,23 +116,21 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     let original := if noAuxiliary then point else .proj ``Prod 0 point
     let auxiliary := if noAuxiliary then mkConst ``Unit.unit else .proj ``Prod 1 point
     let target := mkApp2 targetFunction original auxiliary
-    let (bodies, proof) ← Conic.Decomposition.split target (exposeTarget point)
+    let (bodies, proof) ← Morew.Elab.Rewrite.Decomposition.split target (exposeTarget point)
     let rows ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let targetIff ← mkLambdaFVars #[point] proof
-    let expected ← mkForallFVars #[point]
-      (mkApp2 (mkConst ``Iff) target (conjunction bodies))
-    unless ← isDefEq (← inferType targetIff) expected do
-      throwError "internal error: target decomposition changed the exact lift"
-    checkWithKernel targetIff
     let retainedBodies := retained.map (mkApp · original)
     let allBodies := retainedBodies.extract 0 insertionIndex ++ bodies.toArray ++
       retainedBodies.extract insertionIndex retainedBodies.size
     let feasible ← mkLambdaFVars #[point] (conjunction allBodies.toList)
     return (rows, targetIff, feasible)
+  let prepared : Morew.Elab.Rewrite.Plan.Result := {
+    lift, auxiliary?, nextDomain, rowPredicates, targetIff }
+  prepared.checkTargetIff "internal error: target decomposition changed the exact lift"
   let certified ← match ← Rows.certifyRows feasible rowPredicates with
     | .ok certified => pure certified
     | .error error => throwError "generated row certification failed: {error.reason}"
-  return { lift, auxiliary?, nextDomain, rowPredicates, targetIff, certified }
+  return { toResult := prepared, certified }
 
 private inductive Rule where
   | absolute | positivePart | maximum | minimum | supremum | infimum
@@ -325,12 +308,12 @@ private def adaptProductRepresentation (source domain rule : Expr)
       throwError "cannot infer the exact representation's input and bound maps; supply an explicitly instantiated ExactConstraintLift"
     let input ← mkLambdaFVars #[point] input
     let output ← mkLambdaFVars #[point] output
-    Conic.Plan.checkLift source (← mkAppM adapter #[rule, input, output])
+    Morew.Elab.Rewrite.Plan.checkLift source (← mkAppM adapter #[rule, input, output])
 
 private def customLift (source domain rule : Expr) : MetaM Expr := do
   let saved ← saveState
   try
-    return ← Conic.Plan.customLift source domain rule
+    return ← Morew.Elab.Rewrite.Plan.customLift source domain rule
   catch original =>
     saved.restore
     let type ← whnf (← inferType rule)
@@ -368,7 +351,7 @@ private def planCore (source : Expr) (retained : Array Expr)
     for expression in #[source] ++ retained ++ rule?.toArray do
       if ← incomplete expression then
         throwError "unresolved metavariables or placeholders in the exact replacement input"
-    let domain ← Conic.Plan.predicateDomain source
+    let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
     discard <| Space.withCanonicalSpaces #[domain] (pure (mkConst ``True.intro))
     for row in retained do
       unless ← isDefEq (← inferType row) (← mkArrow domain (mkSort .zero)) do
@@ -408,12 +391,12 @@ def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
       for expression in #[source] ++ retained ++ rule?.toArray do
         for inst in ← Affine.sourceFiniteInstances expression do
           unless instances.contains inst do instances := instances.push inst
-      Conic.Plan.withScopedFiniteInstances
+      Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
         instances.toList do
-          let domain ← Conic.Plan.predicateDomain source
+          let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
           withLocalDeclD `point domain fun point =>
-            Conic.Plan.withScopedEvidence
+            Morew.Elab.Rewrite.Plan.withScopedEvidence
               (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
               point (mkApp source point) (planCore source retained rule? insertionIndex)
     catch exception => return .error (← failure source exception)

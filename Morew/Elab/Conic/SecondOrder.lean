@@ -43,9 +43,9 @@ the complete relation, polarity, carrier, and operation instances. -/
 def isCandidate (predicate : Expr) : MetaM Bool := do
   let saved ← saveState
   try
-    if ← Plan.unresolved predicate then return false
+    if ← Morew.Elab.Rewrite.Plan.unresolved predicate then return false
     withNewMCtxDepth do
-      let domain ← Plan.predicateDomain predicate
+      let domain ← Morew.Elab.Rewrite.Plan.predicateDomain predicate
       withLocalDeclD `point domain fun point => do
         let body ← Affine.reduceStructure (mkApp predicate point)
         if body.isAppOfArity ``LE.le 4 || body.isAppOfArity ``GE.ge 4 ||
@@ -169,15 +169,15 @@ private def planDirect (source : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
-      if ← Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
+      if ← Morew.Elab.Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
       for row in retained do
-        if ← Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
-      let domain ← Plan.predicateDomain source
+        if ← Morew.Elab.Rewrite.Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
+      let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
       let mut instances ← Affine.sourceFiniteInstances source
       for row in retained do instances := instances ++ (← Affine.sourceFiniteInstances row)
-      let result ← Plan.withScopedFiniteInstances Plan.ContextualResult.replaceFVars instances.toList do
+      let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances Plan.ContextualResult.replaceFVars instances.toList do
         withLocalDeclD `point domain fun point =>
-          Plan.withScopedEvidence Plan.ContextualResult.replaceFVars point (mkApp source point) do
+          Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.ContextualResult.replaceFVars point (mkApp source point) do
             let bodies := retained.map (mkApp · point)
             let (row, conditionalIff) ← withLocalDeclD `retained (conjunction bodies) fun evidence => do
               let proof ← automaticProof point (mkApp source point) bodies evidence
@@ -188,7 +188,7 @@ private def planDirect (source : Expr) (retained : Array Expr := #[])
             let rowPredicates := #[← instantiateMVars row]
             let certifiedRows ← Plan.certifyRows rowPredicates provider
             let conditionalIff ← instantiateMVars conditionalIff
-            if ← Plan.unresolved conditionalIff then
+            if ← Morew.Elab.Rewrite.Plan.unresolved conditionalIff then
               throwError "second-order certificate contains unresolved metavariables"
             checkWithKernel conditionalIff
             return { domain, rowPredicates, certifiedRows, conditionalIff }

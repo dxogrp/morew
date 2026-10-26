@@ -15,14 +15,12 @@ import Morew.Elab.Affine.State
 import Morew.Elab.Atom
 import Morew.Elab.Conic
 import Morew.Elab.Conic.Automatic
-import Morew.Elab.Conic.Decomposition
 import Morew.Elab.Conic.Domain
 import Morew.Elab.Conic.Exponential
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Polyhedral
-import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
@@ -36,7 +34,10 @@ import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.Runner
+import Morew.Elab.Rewrite.Decomposition
+import Morew.Elab.Rewrite.Plan
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP

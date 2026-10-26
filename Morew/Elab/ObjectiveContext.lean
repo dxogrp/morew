@@ -124,12 +124,12 @@ private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :=
   return some (args[if ge then 3 else 2]!, args[if ge then 2 else 3]!)
 
 private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
-  if (← Affine.depends point value) || (← Conic.Plan.unresolved value) then return none
+  if (← Affine.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
   let value : Q(ℝ) := value
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
       if !(← Affine.depends point declaration.toExpr) &&
-          !(← Conic.Plan.unresolved declaration.toExpr) then
+          !(← Morew.Elab.Rewrite.Plan.unresolved declaration.toExpr) then
         if ← isDefEq declaration.type q($value ≤ 0) then
           checkWithKernel declaration.toExpr
           return some declaration.toExpr
@@ -217,7 +217,7 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
     MetaM (Except MessageData Expr) :=
   Affine.withIsolatedMVars do
     for input in inputs do
-      if ← Conic.Plan.unresolved input then
+      if ← Morew.Elab.Rewrite.Plan.unresolved input then
         return .error m!"cannot certify an unresolved bound context"
     let result ← try action.run catch exception => pure (.error exception.toMessageData)
     match result with

@@ -27,7 +27,6 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
-import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
@@ -120,6 +119,8 @@ import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
 import MorewTest.Reformulation.TerminalConicSection
 import MorewTest.Rewrite
+import MorewTest.Rewrite.Plan
+import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
 import MorewTest.Surface.AppliedSources

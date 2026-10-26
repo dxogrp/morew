@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Presentation
+import Morew.Elab.Rewrite.Plan
 import Morew.Reformulation.Syntax
 import Morew.Transform.Context
 import Morew.Elab.ObjectiveContext
@@ -149,8 +150,8 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
       | `(boundOccurrence| ($term:term)) =>
           elabPresentationTerm term (binders ++ definitions)
       | _ => throwUnsupportedSyntax
-    if (← Morew.Elab.Conic.Plan.unresolved body) ||
-        (← Morew.Elab.Conic.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
+    if (← Morew.Elab.Rewrite.Plan.unresolved body) ||
+        (← Morew.Elab.Rewrite.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
       throwErrorAt selector "occurrence selection contains unresolved metavariables"
     if (← isType needle) || (← isProof needle) then
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"

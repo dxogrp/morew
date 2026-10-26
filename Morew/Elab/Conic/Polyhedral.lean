@@ -18,6 +18,7 @@ namespace Morew.Elab.Conic.Polyhedral
 
 open Lean Lean.Meta
 open Plan
+open Morew.Elab.Rewrite.Plan
 
 /-- A checked exact replacement, before presentation names are allocated. -/
 abbrev Result := Plan.Result

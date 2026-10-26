@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Automatic
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Reformulation.Replace
 import Morew.Reformulation.Presentation
 import Lean.Meta.Closure
 
@@ -110,10 +110,10 @@ private def materializeConic (state : ReformState) (index : Nat)
       Morew.Elab.Conic.Plan.Prepared.replaceFVars prepared preparedVars sectionFVars
     let replacement ← match prepared with
       | .inl result => do
-        Morew.Elab.Conic.rewriteConstraint typed.presentation index
+        Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
           result.lift result.auxiliary? result.nextDomain result.rowPredicates result.targetIff
       | .inr contextual => do
-        Morew.Elab.Conic.rewriteConstraintContextual typed.presentation index
+        Morew.Elab.Reformulation.Replace.rewriteConstraintContextual typed.presentation index
           contextual.rowPredicates contextual.conditionalIff
     let exact ← mkAppM ``Morew.GlobalEquivalence.trans
       #[typed.normalization.equivalence, replacement.equivalence]

@@ -154,7 +154,7 @@ namespace TypedPlans
 open Lean Lean.Meta
 
 private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
-  discard <| Morew.Elab.Conic.Plan.checkLift source result.lift
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   for proof in #[result.lift, result.targetIff] do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
     checkWithKernel proof
