@@ -61,6 +61,7 @@ import MorewTest.NLP.DomainFailures
 import MorewTest.NLP.DomainLemmas
 import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
+import MorewTest.NLP.Exact
 import MorewTest.NLP.Smooth
 import MorewTest.NLP.SmoothFailures
 import MorewTest.NLP.SmoothLemmas

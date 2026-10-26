@@ -35,6 +35,7 @@ import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Runner
+import Morew.Exact
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP
