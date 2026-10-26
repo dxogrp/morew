@@ -9,8 +9,7 @@ import Morew.Reformulation.Command
 # Exact smooth replacements of nonsmooth constraints
 
 `nlp at label` replaces a direct nonsmooth bound by exactly equivalent smooth
-constraints. `using` selects an explicit exact representation. Neither command
-asserts convexity or validates the complete problem as an NLP.
+constraints. `using` selects an explicit exact representation.
 
 For a nested term, first expose it with an occurrence epigraph or hypograph
 step. Generated constraint labels replace the selected label in place. Finite
