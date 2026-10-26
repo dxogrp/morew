@@ -123,6 +123,7 @@ import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
 import MorewTest.Reformulation.TerminalConicSection
 import MorewTest.Reformulation.TerminalNLP
+import MorewTest.Reformulation.TerminalNLPEvidence
 import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection

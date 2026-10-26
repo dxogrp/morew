@@ -101,6 +101,19 @@ private partial def incomplete (expression : Expr) (seen : FVarIdSet := {}) :
           if ← incomplete value seen then return true
   return false
 
+-- Native rules expose a bound's operands and can thereby discard unused source
+-- evidence. Keep independent proof lets in each emitted predicate as well as in
+-- its current certificate, so later reformulations can certify it again.
+private partial def retainSourceEvidence (point source body : Expr) : MetaM Expr := do
+  let source ← structural point source (preserveLets := true)
+  if let .letE name type value rest nondep := source then
+    if !(← isProp type) then
+      return ← retainSourceEvidence point (rest.instantiate1 value) body
+    withLetDecl name type value (nondep := nondep) fun binding => do
+      let body ← retainSourceEvidence point (rest.instantiate1 binding) body
+      mkLetFVars #[binding] body (usedLetOnly := false) (generalizeNondepLet := false)
+  else return body
+
 private def finish (source domain lift : Expr) (retained : Array Expr)
     (insertionIndex : Nat) : MetaM Result := do
   -- Exactness is checked before any generated constraint can supply evidence.
@@ -117,6 +130,7 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     let auxiliary := if noAuxiliary then mkConst ``Unit.unit else .proj ``Prod 1 point
     let target := mkApp2 targetFunction original auxiliary
     let (bodies, proof) ← Morew.Elab.Rewrite.Decomposition.split target (exposeTarget point)
+    let bodies ← bodies.mapM (retainSourceEvidence point (mkApp source original))
     let rows ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let targetIff ← mkLambdaFVars #[point] proof
     let retainedBodies := retained.map (mkApp · original)
