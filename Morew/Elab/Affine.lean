@@ -142,7 +142,11 @@ partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
     else pure expression
   | .proj name index value =>
     let value ← reduceStructure value preserveLets opaqueProblemDependencies?
-    if value.isAppOf ``Prod.mk then
+    if let .letE binding type value body nondep := value then
+      -- Move only the projection through a preserved let. Recognition can then
+      -- inspect its evidence in the original scope before reducing the body.
+      pure (.letE binding type value (.proj name index body) nondep)
+    else if value.isAppOf ``Prod.mk then
       reduceStructure value.getAppArgs[index + 2]! preserveLets opaqueProblemDependencies?
     else pure (.proj name index value)
   | .app .. =>

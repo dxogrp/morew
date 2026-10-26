@@ -100,6 +100,59 @@ reformulation groupedAgain : (groupedTarget c) := by
   nlp
 example : NLP.Form (groupedAgain c) := groupedAgain.nlpForm c
 
+-- Structural projections retain the same proof scope as a head let, through
+-- direct lowering, selected lowering, and replay of their generated predicates.
+def projected :=
+  problem (x : ℝ)
+    minimize x ^ 2
+    subject to
+      bound : ((let _h : 0 < coefficient c := coefficient_pos c
+                ((|Real.log (coefficient c) * x| ≤ 3, True), True)).1).1
+
+reformulation projectedTarget : (projected c) := by
+  nlp
+example : (projectedTarget.nlpForm c).data.rowCount = 2 := rfl
+example : GlobalEquivalence (projected c) (projectedTarget c) := projectedTarget.equivalence c
+
+reformulation projectedSelected : (projected c) := by
+  nlp at bound
+reformulation projectedSelectedAgain : (projectedSelected c) := by
+  nlp
+example : NLP.Form (projectedSelectedAgain c) := projectedSelectedAgain.nlpForm c
+
+-- Projected groups must expose their conjunction before deciding which leaves
+-- need lowering; the later norm auxiliary also transports the accepted evidence.
+def projectedGroup :=
+  problem (x : ℝ) (v : Fin 1 → ℝ) (t : ℝ)
+    minimize x ^ 2
+    subject to
+      bounds : (let _h : 0 < coefficient c := coefficient_pos c
+                (|Real.log (coefficient c) * x| ≤ t ∧ ‖WithLp.toLp 1 v‖ ≤ t, True)).1
+
+reformulation projectedGroupTarget : (projectedGroup c) := by
+  nlp
+example : (projectedGroupTarget.nlpForm c).data.rowCount = 5 := rfl
+example : GlobalEquivalence (projectedGroup c) (projectedGroupTarget c) :=
+  projectedGroupTarget.equivalence c
+reformulation projectedGroupAgain : (projectedGroupTarget c) := by
+  nlp
+example : NLP.Form (projectedGroupAgain c) := projectedGroupAgain.nlpForm c
+
+-- Explicit exact records may also place their target's evidence beneath a
+-- projection; both the selected result and a later terminal command retain it.
+def projectedGraph : GraphRepresentation (weighted c) where
+  Auxiliary := Unit
+  target x y _ :=
+    (let _h : 0 < coefficient c := coefficient_pos c
+     (y = Real.log (coefficient c) * x, True)).1
+  source_iff_exists x y := by simp [weighted]
+
+reformulation projectedGraphTarget : (source c) := by
+  nlp at graph using projectedGraph c
+reformulation projectedGraphAgain : (projectedGraphTarget c) := by
+  nlp
+example : NLP.Form (projectedGraphAgain c) := projectedGraphAgain.nlpForm c
+
 private theorem decisionEvidence (_x : ℝ) : 0 < coefficient c := coefficient_pos c
 
 -- An independent proposition is insufficient when its proof depends on a decision.
@@ -113,6 +166,18 @@ def dependentEvidence :=
 /-- error: constraint `bound` is not certified as a smooth NLP by the available rules: -/
 #guard_msgs (substring := true) in
 reformulation dependentEvidenceTarget : (dependentEvidence c) := by
+  nlp
+
+def projectedDependentEvidence :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      bound : (let _h : 0 < coefficient c := decisionEvidence c x
+               (|Real.log (coefficient c) * x| ≤ 1, True)).1
+
+/-- error: constraint `bound` is not certified as a smooth NLP by the available rules: -/
+#guard_msgs (substring := true) in
+reformulation projectedDependentEvidenceTarget : (projectedDependentEvidence c) := by
   nlp
 end Scalar
 
