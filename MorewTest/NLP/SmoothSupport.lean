@@ -36,7 +36,8 @@ def checkCertificate (source proof : Expr) : MetaM Unit := do
   unless proofType.isAppOfArity ``ContDiffOn 11 do
     throwError "smoothness certification proved a different predicate: {proofType}"
   let args := proofType.getAppArgs
-  unless args[0]!.isConstOf ``Real && args[5]!.isConstOf ``Real do
+  unless (← isDefEq args[0]! (mkConst ``Real)) &&
+      (← isDefEq args[5]! (mkConst ``Real)) do
     throwError "smoothness certificate changed the scalar field or result space"
   let two ← mkNumeral (← inferType args[8]!) 2
   let univ ← mkAppOptM ``Set.univ #[some args[2]!]

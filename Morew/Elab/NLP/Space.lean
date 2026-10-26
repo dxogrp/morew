@@ -4,12 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Mathlib.Analysis.Normed.Module.FiniteDimension
+import Morew.Elab.Affine.Space
 import Lean.Meta.Basic
 
 /-!
 # Canonical analytic structures for smoothness certification
 
-The supported real, product, and finite-function spaces use their standard
+The supported real, Euclidean, product, and finite-function spaces use their standard
 normed structures. These structures and their finite-dimensionality evidence
 are assembled together, independently of unrelated ambient instances.
 -/
@@ -33,6 +34,10 @@ namespace Structure
 
 /-- Standard real structures, fixed in this declaration's context. -/
 noncomputable abbrev real : Structure ℝ :=
+  ⟨inferInstance, inferInstance, inferInstance⟩
+
+/-- Standard finite Euclidean structures, fixed independently of ambient instances. -/
+noncomputable abbrev euclidean (n : Nat) : Structure (EuclideanSpace ℝ (Fin n)) :=
   ⟨inferInstance, inferInstance, inferInstance⟩
 
 /-- Standard product structures assembled from the supplied component structures. -/
@@ -79,6 +84,10 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
+  else if let some n ← Affine.Space.euclideanDimension? shape then
+    let coordinates ← buildSpace (← mkArrow (← mkAppM ``Fin #[n]) (mkConst ``Real))
+    let data ← mkAppM ``Structure.euclidean #[n]
+    finishSpace type data coordinates.instances
   else if shape.isAppOfArity ``Prod 2 then
     let left ← buildSpace shape.getAppArgs[0]!
     let right ← buildSpace shape.getAppArgs[1]!
@@ -102,7 +111,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
       let fintype ← mkAppOptM ``id #[some fintypeType, some fintype]
       finishSpace type data (target.instances.push fintype)
   else
-    throwError "unsupported smooth decision or value space {type}; expected ℝ, a product, or a Fin n function space"
+    throwError "unsupported smooth decision or value space {type}; expected ℝ, a finite Euclidean space, a product, or a Fin n function space"
 
 private def installInstances (remaining : List Expr) (action : MetaM Expr) : MetaM Expr := do
   match remaining with

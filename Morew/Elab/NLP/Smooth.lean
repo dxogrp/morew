@@ -18,7 +18,9 @@ on `Set.univ` for a native fragment, including nonconvex products and polynomial
 It does not change model expressions or install a modeling command. Failure means
 that the fragment did not certify the function, not that the function is not smooth.
 
-Real scalars, products, and finite real vectors are supported decision spaces.
+Real scalars, finite Euclidean spaces, products, and finite real vectors are
+supported decision spaces. Native Euclidean coordinates and `WithLp.toLp 2`
+construction use the canonical continuous linear equivalence.
 Constants, projections, arithmetic, natural powers, finite sums, and the native
 exponential, trigonometric, and hyperbolic functions compose structurally. Local
 lets and beta applications reduce only for proof construction; named helpers do
@@ -127,19 +129,28 @@ private def reject (expression : Expr) (kind : SmoothFailureKind)
       m!"cannot certify smoothness of {(← read).source}: at {expression}: {reason}"
   }
 
-private partial def supportedSpace (type : Expr) : MetaM Bool := do
+private partial def supportedSpaceShape (euclidean : Bool) (type : Expr) : MetaM Bool := do
   let type ← whnf type
   if type.isConstOf ``Real then return true
+  if euclidean then
+    if (← Affine.Space.euclideanDimension? type).isSome then return true
   if type.isAppOfArity ``Prod 2 then
-    return (← supportedSpace type.getAppArgs[0]!) &&
-      (← supportedSpace type.getAppArgs[1]!)
+    return (← supportedSpaceShape euclidean type.getAppArgs[0]!) &&
+      (← supportedSpaceShape euclidean type.getAppArgs[1]!)
   if let .forallE name index body info := type then
     unless (← whnf index).isAppOfArity ``Fin 1 do return false
     return ← withLocalDecl name info index fun i => do
       let body ← Core.betaReduce (← whnf (body.instantiate1 i))
       if body.containsFVar i.fvarId! then return false
-      supportedSpace body
+      supportedSpaceShape euclidean body
   return false
+
+private def supportedSpace (type : Expr) : MetaM Bool :=
+  supportedSpaceShape true type
+
+-- Extending analytic spaces must not expose formerly opaque helper arguments.
+private def helperArgumentSpace (type : Expr) : MetaM Bool :=
+  supportedSpaceShape false type
 
 private def functionOf (point body : Expr) : MetaM Expr :=
   mkLambdaFVars #[point] body
@@ -378,6 +389,12 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     let info ← univInfo point
     return { info with
       smooth := ← construct point expression ``Morew.NLP.Smooth.id #[info.domain] }
+  if let .proj ``WithLp 0 value := expression then
+    if (← Affine.Space.euclideanDimension? (← inferType value)).isSome then
+      let child ← certifyBody point value
+      return { child with
+        smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
+          #[← functionOf point value, child.smooth] (intermediateSpaces := #[← inferType value]) }
   if let .proj ``Prod index value := expression then
     -- A fixed scalar/vector component need not give the whole parameter an
     -- analytic structure. Unsupported value spaces remain opaque, after the
@@ -416,6 +433,20 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let head := expression.getAppFn
   let args := expression.getAppArgs
   let name := head.constName?
+  if name == some ``WithLp.toLp && args.size == 3 then
+    if (← Affine.Space.euclideanDimension? type).isSome then
+      let child ← certifyBody point args[2]!
+      return { child with
+        smooth := ← construct point expression ``Morew.NLP.Smooth.toEuclidean
+          #[← functionOf point args[2]!, child.smooth]
+          (intermediateSpaces := #[← inferType args[2]!]) }
+  if name == some ``WithLp.ofLp && args.size == 3 then
+    if (← Affine.Space.euclideanDimension? (← inferType args[2]!)).isSome then
+      let child ← certifyBody point args[2]!
+      return { child with
+        smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
+          #[← functionOf point args[2]!, child.smooth]
+          (intermediateSpaces := #[← inferType args[2]!]) }
   if name == some ``Function.comp && args.size == 6 then
     return ← certifyBody point (mkApp args[3]! (mkApp args[4]! args[5]!))
   if (name == some ``HAdd.hAdd || name == some ``HSub.hSub ||
@@ -578,7 +609,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let mut children : Array Certificate := #[]
   for argument in args do
     if (independent || (← Affine.depends point argument)) &&
-        (← supportedSpace (← inferType argument)) then
+        (← helperArgumentSpace (← inferType argument)) then
       let child ← withReader (fun ctx => { ctx with
         prior := ctx.prior ++ children.map (·.included) }) <| certifyBody point argument
       children := children.push child
