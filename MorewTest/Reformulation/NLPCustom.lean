@@ -210,5 +210,30 @@ example (x y : ℝ) : (target c).feasible (x, y) ↔
 
 end TargetProofLet
 
+namespace StructuralModelArgument
+
+def model (c : ℝ) : Problem ℝ ℝ where
+  objective x := x
+  feasible x := c * x ≤ 3
+
+def lift : ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x =>
+    (model (let _h : True := True.intro
+      ((fun _ : ℝ => 2) ∘ fun y => y * y) x)).feasible x)
+    (fun _ => Iff.rfl)
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+    subject to bound : 2 * x ≤ 3
+
+reformulation target : source := by
+  nlp at bound using lift
+
+example : GlobalEquivalence source target := target.equivalence
+example (x : ℝ) : target.feasible x ↔ 2 * x ≤ 3 := Iff.rfl
+
+end StructuralModelArgument
+
 end
 end MorewTest.Reformulation.NLPCustom

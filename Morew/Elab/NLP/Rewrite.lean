@@ -64,10 +64,14 @@ private def structural (point expression : Expr) (preserveLets : Bool := false) 
   let step (value : Expr) : MetaM TransformStep := do
     let reduced ← Affine.reduceStructure value (preserveLets := preserveLets)
       (opaqueProblemDependencies? := some point)
+    let reduced := if reduced.isAppOf ``Function.comp && reduced.getAppNumArgs ≥ 6 then
+        let args := reduced.getAppArgs
+        mkAppN (mkApp args[3]! (mkApp args[4]! args[5]!)) (args.extract 6 args.size)
+      else reduced
     if let .letE _ type binding body _ := reduced then
       if preserveLets && !(← Affine.depends point type) &&
           !(← Affine.depends point binding) then
-        return .done reduced
+        return .continue reduced
       return .visit (body.instantiate1 binding)
     if reduced != value then return .visit reduced
     if !(← Affine.depends point value) then return .done value
