@@ -114,6 +114,7 @@ private structure Context where
   feasible : Expr
   inferDomains : Bool := false
   prior : Array Expr := #[]
+  facts? : Option Domain.Evidence.FactsProvider := none
 
 private abbrev CertifyM := ReaderT Context (ExceptT SmoothError MetaM)
 
@@ -340,7 +341,9 @@ private def restrictDomain (point expression value : Expr) (positive : Bool)
   let required : Expr := if positive then q(0 < $value) else q($value ≠ 0)
   let feasible := (← read).feasible
   let inclusion ← withLocalDeclD `feasiblePoint (mkApp feasible point) fun hp => do
-    let mut facts ← Domain.Evidence.rowFacts point hp
+    let mut facts ← match (← read).facts? with
+      | none => Domain.Evidence.rowFacts point hp
+      | some provider => provider point hp required
     facts := facts.push (mkApp2 info.included point hp)
     for prior in (← read).prior do
       facts := facts.push (mkApp2 prior point hp)
@@ -703,11 +706,12 @@ def certifyGlobal (source : Expr) : MetaM (Except SmoothError Expr) :=
 /-- Internal shared traversal in domain-inference mode. The caller validates the
 feasibility grammar and checks that its decision space agrees with the source.
 Previously proved inclusion certificates may supply earlier domain facts. -/
-def certifyOnFeasible (feasible source : Expr) (prior : Array Expr := #[]) :
+def certifyOnFeasible (feasible source : Expr) (prior : Array Expr := #[])
+    (facts? : Option Domain.Evidence.FactsProvider := none) :
     MetaM (Except SmoothError Certificate) :=
   Affine.withIsolatedMVars do
     try
-      (certifyCore source { source, feasible, inferDomains := true, prior }).run
+      (certifyCore source { source, feasible, inferDomains := true, prior, facts? }).run
     catch exception =>
       return .error {
         source, expression := source, type := ← inferType source

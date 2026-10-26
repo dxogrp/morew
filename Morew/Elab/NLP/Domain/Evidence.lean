@@ -46,9 +46,14 @@ private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM
           if ← hasPlaceholders value then return true
   return false
 
-private def complete (expression : Expr) : MetaM Bool := do
+/-- Check all referenced expression data for unresolved terms and placeholders. -/
+def complete (expression : Expr) : MetaM Bool := do
   return !(← Affine.hasUnresolved expression) &&
     !(← (hasPlaceholders expression).run' {})
+
+/-- Internal source of checked facts projected from the supplied feasibility proof.
+The obligation allows finite families to be specialized only at relevant indices. -/
+abbrev FactsProvider := (point feasibleProof obligation : Expr) → MetaM (Array Expr)
 
 private def admissionFailure (index : Nat) (expression : Expr) (reason : MessageData) :
     MetaM AdmissionError := do
