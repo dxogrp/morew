@@ -185,7 +185,7 @@ private def materializeTerminalConic (state : ReformState)
       checkpoint? := some { semantic, view }
       constraintSplices := prepared.replacedIndices.map fun index =>
         { index, count := (prepared.rowOrigins.filter (· == index)).size }
-      terminalForm? := some (← exactExpressionSyntax form)
+      terminalForm? := some (.conic, ← exactExpressionSyntax form)
       status := .terminal
     }
 

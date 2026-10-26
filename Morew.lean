@@ -26,10 +26,12 @@ import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
+import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.NLP.Rows
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
+import Morew.Elab.NLP.Terminal
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
@@ -58,6 +60,7 @@ import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
 import Morew.Reformulation.Syntax
 import Morew.Reformulation.TerminalConic
+import Morew.Reformulation.TerminalNLP
 import Morew.Rewrite
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean

@@ -178,28 +178,81 @@ def problemTypeSyntax (optimizationProblem : TSyntax `term) :
     synthesizeSyntheticMVarsNoPostponing
     problemTypeSyntaxFromExpression (← instantiateMVars expression)
 
-/-- Simplify an expression using only the supplied declarations and reductions. -/
+-- Disable automatic zeta reduction while explicitly reducing data lets. Proof
+-- lets stay in their original scope so later analytic checks can use their
+-- evidence without treating a decision- or index-dependent fact as global.
+private def proofPreservingSimpMethods : Simp.Methods :=
+  let defaults := Simp.mkDefaultMethodsCore #[]
+  { defaults with
+    pre := fun expression => do
+      if let .letE name type value body nondep := expression then
+        unless ← isProp type do
+          return .visit { expr := body.instantiate1 value }
+        -- The default have-telescope traversal also absorbs following data
+        -- lets, bypassing this pre-method and retaining their projections.
+        -- Visit the body explicitly while keeping the original proof scope.
+        return ← withLetDecl name type value (nondep := nondep) fun binding => do
+          let result ← Simp.simp (body.instantiate1 binding)
+          let expr ← mkLetFVars #[binding] result.expr
+            (usedLetOnly := false) (generalizeNondepLet := false)
+          let proof? ← result.proof?.mapM fun proof =>
+            mkLetFVars #[binding] proof
+              (usedLetOnly := false) (generalizeNondepLet := false)
+          return .done { result with expr, proof? }
+      defaults.pre expression
+    dpre := fun expression => do
+      if let .letE name type value body nondep := expression then
+        unless ← isProp type do
+          return .visit (body.instantiate1 value)
+        return ← withLetDecl name type value (nondep := nondep) fun binding => do
+          let body ← Simp.dsimp (body.instantiate1 binding)
+          return .done (← mkLetFVars #[binding] body
+            (usedLetOnly := false) (generalizeNondepLet := false))
+      defaults.dpre expression }
+
+/-- Simplify an expression using only the supplied declarations and reductions.
+Canonical predicates can retain scoped proof lets for later certification. -/
 def simpOnly (expression : Expr) (lemmas : Array Name := #[])
-    (unfold : Array Name := #[]) : MetaM Expr := do
+    (unfold : Array Name := #[]) (preserveProofLets : Bool := false) : MetaM Expr := do
   let mut theorems : SimpTheorems := {}
   for declaration in lemmas do
     theorems ← theorems.addConst declaration
   for declaration in unfold do
     theorems ← theorems.addDeclToUnfold declaration
   let context ← Simp.mkContext
+    (config := if preserveProofLets then { zeta := false, zetaUnused := false } else {})
     (simpTheorems := #[theorems])
     (congrTheorems := ← getSimpCongrTheorems)
-  let (result, _) ← simp expression context
+  let (result, _) ← if preserveProofLets then
+      Simp.main expression context (methods := proofPreservingSimpMethods)
+    else simp expression context
   instantiateMVars result.expr
 
-private partial def splitConstraintBody (body : Expr) : Nat → MetaM (Array Expr)
-  | 0 => do
+/-- Reduce generated scaffolding while retaining local proof evidence. -/
+def dsimpPreservingProofLets (expression : Expr) : MetaM Expr := do
+  let context ← Simp.mkContext
+    (config := { zeta := false, zetaUnused := false })
+    (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
+  let (expression, _) ← Simp.dsimpMain expression context
+    (methods := proofPreservingSimpMethods)
+  instantiateMVars expression
+
+private partial def splitConstraintBody (body : Expr) (count : Nat) : MetaM (Array Expr) := do
+  if let .letE name type value rest nondep := body.consumeMData then
+    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+      let rows ← splitConstraintBody (rest.instantiate1 binding) count
+      rows.mapM fun row => mkLetFVars #[binding] row
+        (usedLetOnly := false) (generalizeNondepLet := false)
+  match count with
+  | 0 =>
       unless ← isDefEq body (mkConst ``True) do
         throwError "problem presentation metadata does not match the source feasibility predicate"
       pure #[]
   | 1 => pure #[body]
-  | count + 2 => do
-      let body ← whnf body
+  | count + 2 =>
+      let body ← withConfig (fun config => { config with zeta := false, zetaUnused := false }) <|
+        whnf body
+      if body.isLet then return ← splitConstraintBody body (count + 2)
       let arguments := body.getAppArgs
       unless body.getAppFn.isConstOf ``And && arguments.size == 2 do
         throwError "problem presentation metadata does not match the source constraint structure"
@@ -218,6 +271,7 @@ private def sourceProblemParts (sourceName : Name) (source : Expr)
   let feasible ← mkAppM ``Morew.Problem.feasible #[source]
   let constraints ← withLocalDeclD `point domain fun point => do
     let body ← simpOnly (mkApp feasible point) (unfold := #[sourceName])
+      (preserveProofLets := true)
     let bodies ← splitConstraintBody body constraintCount
     bodies.mapM fun body => mkLambdaFVars #[point] body
   pure (domain, objective, constraints)
@@ -280,12 +334,13 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
       let protectedSemantic ← protectCheckpoint semanticExpression source protectedSource
       let transformed ← simpOnly protectedSemantic (unfold :=
         #[``Morew.Problem.pullback, ``Morew.Problem.epigraph,
-          ``Morew.Problem.hypograph])
+          ``Morew.Problem.hypograph]) (preserveProofLets := true)
 
       -- A same-domain rewrite can leave the protected objective as a bare
       -- function. Normalize that function before restoring it, as well as
       -- normalizing its applications below.
       let exactObjective ← simpOnly objective (unfold := #[sourceName])
+        (preserveProofLets := true)
       let exactParts := #[exactObjective] ++ constraints
       let protectAction : StateT (Array (MVarId × Expr)) TermElabM Expr :=
         Meta.transform transformed (post := fun expression => do
@@ -299,7 +354,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
             let exact := mkAppN exactParts[partIndex]! arguments
             let exact ← simpOnly exact
               (if simplifyExpLogTerms then #[``Real.log_exp, ``Real.exp_pos] else #[])
-              (unfold := #[sourceName])
+              (unfold := #[sourceName]) (preserveProofLets := true)
             let removedSourceConstraint := partIndex > 0 &&
               removedConstraintNames.contains
                 sourceView.constraints[partIndex - 1]!.name.eraseMacroScopes
@@ -318,7 +373,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
               pure (.done placeholder))
       let (transformedProtected, assignments) ← protectAction.run #[]
       let normalized ← simpOnly transformedProtected
-        #[``true_and, ``and_true, ``and_assoc]
+        #[``true_and, ``and_true, ``and_assoc] (preserveProofLets := true)
       let closed ← mkLambdaFVars protectedParts normalized
       let result := mkAppN closed exactParts
       for (placeholder, exact) in assignments do
@@ -488,6 +543,14 @@ the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
     (binders : Array (FVarId × Name)) (replay : Bool := true)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
+  -- Proofs retained only as analytic evidence need not clutter the display.
+  -- Exact replay keeps them, and used proof bindings are never rewritten here.
+  let expression ← if replay then pure expression else
+    Meta.transform expression (pre := fun expression => do
+      if let .letE _ type value body _ := expression then
+        if !body.hasLooseBVar 0 && (← isProp type) then
+          return .visit (body.instantiate1 value)
+      return .continue)
   -- Reserve the displayed names before choosing names for inner binders.
   -- Generated decisions carry hygiene scopes, which must not make an inner
   -- lambda appear free to reuse the same visible spelling.
@@ -695,8 +758,10 @@ def problemViewFromExpression (target : Expr)
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
     let render definitions objectiveBody feasibleBody binderNames := do
-      let objectiveBody ← if recoverDefinitions then pure objectiveBody else simpOnly objectiveBody
-      let feasibleBody ← if recoverDefinitions then pure feasibleBody else simpOnly feasibleBody
+      let objectiveBody ← if recoverDefinitions then pure objectiveBody else
+        simpOnly objectiveBody (preserveProofLets := true)
+      let feasibleBody ← if recoverDefinitions then pure feasibleBody else
+        simpOnly feasibleBody (preserveProofLets := true)
       let constraints ← splitConstraintBody feasibleBody template.constraints.size
       let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
         (!forRegistration) parameterInstances
@@ -732,7 +797,7 @@ def typedPresentationFromExpression (target : Expr)
   let objective ← mkAppM ``Morew.Problem.objective #[target]
   let feasible ← mkAppM ``Morew.Problem.feasible #[target]
   let constraintPredicates ← withLocalDeclD `point domain fun point => do
-    let feasibleBody ← simpOnly (mkApp feasible point)
+    let feasibleBody ← simpOnly (mkApp feasible point) (preserveProofLets := true)
     let bodies ← splitConstraintBody feasibleBody template.constraints.size
     bodies.mapM fun body => mkLambdaFVars #[point] body
   pure {

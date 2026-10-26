@@ -133,11 +133,9 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
   let renderedRows ← withLocalDeclsDND declarations fun decisions => do
     let point ← packPoint decisions
     let names := decisions.mapIdx fun i decision => (decision.fvarId!, binders[i]!.name)
-    let context ← Simp.mkContext
-      (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
     rows.mapIdxM fun i row => do
       -- Only generated scaffolding is reduced; untouched row syntax stays in the view.
-      let (body, _) ← dsimp (mkApp data.rowPredicates[i]! point) context
+      let body ← dsimpPreservingProofLets (mkApp data.rowPredicates[i]! point)
       pure { row with proposition := ← delabPresentationTerm body names }
   let view := {
     state.view with
@@ -145,7 +143,8 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
     constraints := state.view.constraints.extract 0 index ++ renderedRows ++
       state.view.constraints.extract (index + 1) state.view.constraints.size
   }
-  let semantic ← exactExpressionSyntax (← simpOnly replacement.targetProblem)
+  let semantic ← exactExpressionSyntax (← simpOnly replacement.targetProblem
+    (preserveProofLets := true))
   return {
     view
     semantic

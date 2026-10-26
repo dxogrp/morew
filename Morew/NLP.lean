@@ -44,6 +44,8 @@ Native global smoothness certification is available through the separate
 `Morew.Elab.NLP.Smooth` import. The separate `Morew.Elab.NLP.Domain` import
 infers domains and proves inclusion from existing feasibility. The separate
 `Morew.Reformulation` import provides targeted `nlp at label` exact smooth
-rewrites; these do not construct a whole-model NLP form. Terminal `nlp`
-validation remains a later extension.
+rewrites and terminal `nlp` validation. The terminal step certifies the whole
+problem, retaining its displayed comparisons while storing scalar residuals
+and closed bounds in a concrete `NLP.Form`. It emits `target.nlpForm` and
+`target.isSmoothNLP` alongside the ordinary target and its equivalence proof.
 -/

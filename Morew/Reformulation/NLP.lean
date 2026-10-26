@@ -29,7 +29,8 @@ The shared allocator freshens collisions without changing untouched labels.
 Domain evidence comes from checked closed comparisons in the proposed target,
 including generated guards, after exactness has been proved independently.
 Unsupported retained rows and the objective remain untouched. This step is
-nonterminal and emits no whole-model `NLP.Form`; bare `nlp` is a separate feature.
+nonterminal and emits no whole-model `NLP.Form`. Bare `nlp` performs terminal
+whole-model validation and emits a concrete form and representability proof.
 -/
 
 namespace Morew.Reformulation.Internal

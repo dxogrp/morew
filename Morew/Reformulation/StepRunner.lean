@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Presentation
 import Morew.Conic.Basic
+import Morew.NLP.Basic
 
 /-!
 # Surface step validation and commitment
@@ -22,7 +23,7 @@ private abbrev SurfaceMaterializerM :=
 private def validateTypedPrimitive (state : ReformState)
     (result : SurfaceStepResult) :
     CommandElabM (Morew.Elab.Reformulation.StepResult × Array Expr ×
-      Option CheckedTerminalConicArtifact) :=
+      Option CheckedTerminalArtifact) :=
   runTermElabM fun sectionFVars => do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let next ← elabTerm result.semantic none
@@ -96,19 +97,22 @@ private def validateTypedPrimitive (state : ReformState)
     let expectedCanonical ← updatedPresentation.canonicalProblem
     unless ← isDefEq normalization.canonical expectedCanonical do
       throwError "checked normalization does not target the presentation delta"
-    let terminalConic? ← result.terminalForm?.mapM fun (formSyntax : TSyntax `term) => do
+    let terminalArtifact? ← result.terminalForm?.mapM fun (kind, formSyntax) => do
       unless result.status == .terminal do
-        throwErrorAt formSyntax "a conic form requires a terminal result"
+        throwErrorAt formSyntax "a {kind.description} form requires a terminal result"
       let form ← elabTerm formSyntax none
       synthesizeSyntheticMVarsNoPostponing
       let form ← instantiateMVars form
       if form.hasMVar then
-        throwErrorAt formSyntax "terminal conic form contains unresolved metavariables"
+        throwErrorAt formSyntax "terminal {kind.description} form contains unresolved metavariables"
       let type ← whnf (← inferType form)
-      unless type.isAppOfArity ``Morew.Conic.Form 5 do
-        throwErrorAt formSyntax "terminal evidence is not a Conic.Form"
+      let (formName, formLabel) := match kind with
+        | .conic => (``Morew.Conic.Form, "Conic.Form")
+        | .nlp => (``Morew.NLP.Form, "NLP.Form")
+      unless type.isAppOfArity formName 5 do
+        throwErrorAt formSyntax "terminal evidence is not a {formLabel}"
       unless ← isDefEq type.getAppArgs.back! expectedCanonical do
-        throwErrorAt formSyntax "terminal conic form does not represent the final canonical problem"
+        throwErrorAt formSyntax "terminal {kind.description} form does not represent the final canonical problem"
       -- Use the form's stored instances even when finiteness was available
       -- only inside a source constraint during planning.
       let data ← mkProjection form `data
@@ -117,22 +121,22 @@ private def validateTypedPrimitive (state : ReformState)
         | .minimize => mkConst ``Morew.ObjectiveSense.minimize
         | .maximize => mkConst ``Morew.ObjectiveSense.maximize
       unless ← isDefEq sense expectedSense do
-        throwErrorAt formSyntax "terminal conic form has the wrong objective sense"
+        throwErrorAt formSyntax "terminal {kind.description} form has the wrong objective sense"
       -- Section-instance types can contain metavariables assigned while
       -- elaborating the target. The kernel needs their instantiated context.
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
-      pure { form, ref := formSyntax.raw : CheckedTerminalConicArtifact }
-    pure (typedResult, sectionFVars, terminalConic?)
+      pure { kind, form, ref := formSyntax.raw : CheckedTerminalArtifact }
+    pure (typedResult, sectionFVars, terminalArtifact?)
 
 private def typedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     Morew.Elab.Reformulation.StepPlan SurfaceMaterializerM := {
   nameRequests := draft.nameRequests
   materialize := fun allocation _ => do
     let surface ← draft.materialize allocation
-    let (result, sectionFVars, terminalConic?) ←
+    let (result, sectionFVars, terminalArtifact?) ←
       validateTypedPrimitive state surface
-    pure (result, some { surface, sectionFVars, terminalConic? })
+    pure (result, some { surface, sectionFVars, terminalArtifact? })
 }
 
 private def reportNamePreflightError {α}
@@ -210,7 +214,7 @@ def commitSurfaceStep (state : ReformState)
     hasSubstitution := surface.hasSubstitution
     removedConstraintNames := surface.removedConstraintNames
     normalizationLemmas := surface.normalizationLemmas
-    terminalConic? := materialization.terminalConic?.map
+    terminalArtifact? := materialization.terminalArtifact?.map
       (·.replaceFVars materialization.sectionFVars sectionFVars)
   }
 
