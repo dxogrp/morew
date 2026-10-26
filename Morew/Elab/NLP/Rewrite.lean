@@ -57,10 +57,22 @@ private abbrev conjunction := Conic.Decomposition.conjunction
 
 -- Model fields are structural only when their named container is independent
 -- of the decision point. Keep the same helper boundary as smooth certification.
+-- Normalize nested structural forms before deciding that independence; retained
+-- lets are opened by target decomposition so their evidence stays scoped.
 private def structural (point expression : Expr) (preserveLets : Bool := false) :
-    MetaM Expr :=
-  Affine.reduceStructure expression (preserveLets := preserveLets)
-    (opaqueProblemDependencies? := some point)
+    MetaM Expr := do
+  let step (value : Expr) : MetaM TransformStep := do
+    let reduced ← Affine.reduceStructure value (preserveLets := preserveLets)
+      (opaqueProblemDependencies? := some point)
+    if let .letE _ type binding body _ := reduced then
+      if preserveLets && !(← Affine.depends point type) &&
+          !(← Affine.depends point binding) then
+        return .done reduced
+      return .visit (body.instantiate1 binding)
+    if reduced != value then return .visit reduced
+    if !(← Affine.depends point value) then return .done value
+    return .continue
+  Meta.transform expression (pre := step) (post := step)
 
 -- Expose representation fields, not arbitrary target predicate definitions.
 private partial def exposeTarget (point body : Expr) : MetaM Expr := do

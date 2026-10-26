@@ -235,6 +235,34 @@ private def independentModelTargetLift :
     Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel 2).feasible x) (fun _ => Iff.rfl)
 
+private def betaIndependentModelTargetLift :
+    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x => (smoothModel ((fun _ : ℝ => 2) x)).feasible x)
+    (fun _ => Iff.rfl)
+
+private def projectionIndependentModelTargetLift :
+    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x => (smoothModel ((2 : ℝ), x).1).feasible x)
+    (fun _ => Iff.rfl)
+
+private def letIndependentModelTargetLift :
+    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x => (smoothModel (let _y := x; 2)).feasible x)
+    (fun _ => Iff.rfl)
+
+private def positiveCoefficient (c : ℝ) : ℝ := c ^ 2 + 1
+
+private theorem positiveCoefficient_pos (c : ℝ) : 0 < positiveCoefficient c := by
+  unfold positiveCoefficient
+  positivity
+
+private def proofLetModelTargetLift (c : ℝ) :
+    Morew.ExactConstraintLift (fun x : ℝ => Real.log (positiveCoefficient c) * x ≤ 3) :=
+  .ofIff (fun x =>
+    let _h : 0 < positiveCoefficient c := positiveCoefficient_pos c
+    (smoothModel ((fun _ : ℝ => Real.log (positiveCoefficient c)) x)).feasible x)
+    (fun _ => Iff.rfl)
+
 private def literalModelTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 3) :=
   .ofIff (fun x =>
     (Morew.Problem.mk (fun y : ℝ => y) (fun y => x * y ≤ 3)).feasible x)
@@ -254,6 +282,10 @@ run_cmd liftTermElabM do
   -- Independent named containers and literal decision-dependent containers
   -- retain the structural reductions used by imported/applied models.
   expect (← `(fun c : ℝ => input (fun x : ℝ => (boundModel c).feasible x) #[])) 2 false 1
+  expect (← `(input (fun x : ℝ =>
+    (boundModel ((fun _ : ℝ => 2) x)).feasible x) #[])) 2
+  expect (← `(input (fun x : ℝ => (boundModel ((2 : ℝ), x).1).feasible x) #[])) 2
+  expect (← `(input (fun x : ℝ => (boundModel (let _y := x; 2)).feasible x) #[])) 2
   expect (← `(fun c : ℝ => input (fun x : ℝ => (boundModel c).objective x ≤ 3) #[]))
     2 false 1
   expect (← `(fun c : ℝ => input (fun x : ℝ => ‖(normModel c).objective x‖ ≤ 3) #[]))
@@ -265,6 +297,14 @@ run_cmd liftTermElabM do
     p.feasible x) #[])) 2
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
     (← `(independentModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
+    (← `(betaIndependentModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
+    (← `(projectionIndependentModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
+    (← `(letIndependentModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => Real.log (positiveCoefficient 1) * x ≤ 3) #[]))
+    (← `(proofLetModelTargetLift 1)) 1
   expectUsing (← `(input (fun x : ℝ => x * x ≤ 3) #[]))
     (← `(literalModelTargetLift)) 1
   let source ← Domain.elaborate (← `(fun x : ℝ => x * x ≤ 3))
