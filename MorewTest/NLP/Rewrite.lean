@@ -256,6 +256,14 @@ private def nestedLetModelTargetLift :
     (smoothModel (let _h : True := True.intro; (fun _ : ℝ => 2) x)).feasible x)
     (fun _ => Iff.rfl)
 
+private def chainedLetModelTargetLift :
+    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+  .ofIff (fun x =>
+    (smoothModel (let _h : True := True.intro
+      let _unused := x
+      (fun _ : ℝ => 2) x)).feasible x)
+    (fun _ => Iff.rfl)
+
 private def compositionModelTargetLift :
     Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel (((fun _ : ℝ => 2) ∘ fun y => y * y) x)).feasible x)
@@ -333,6 +341,8 @@ run_cmd liftTermElabM do
     (← `(letIndependentModelTargetLift)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
     (← `(nestedLetModelTargetLift)) 1
+  expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
+    (← `(chainedLetModelTargetLift)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
     (← `(compositionModelTargetLift)) 1
   expectUsing (← `(input (fun x : ℝ => Real.log (positiveCoefficient 1) * x ≤ 3) #[]))

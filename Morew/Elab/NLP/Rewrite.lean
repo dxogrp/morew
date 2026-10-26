@@ -59,7 +59,7 @@ private abbrev conjunction := Conic.Decomposition.conjunction
 -- of the decision point. Keep the same helper boundary as smooth certification.
 -- Normalize nested structural forms before deciding that independence; retained
 -- lets are opened by target decomposition so their evidence stays scoped.
-private def structural (point expression : Expr) (preserveLets : Bool := false) :
+private partial def structural (point expression : Expr) (preserveLets : Bool := false) :
     MetaM Expr := do
   let step (value : Expr) : MetaM TransformStep := do
     let reduced ← Affine.reduceStructure value (preserveLets := preserveLets)
@@ -68,10 +68,13 @@ private def structural (point expression : Expr) (preserveLets : Bool := false) 
         let args := reduced.getAppArgs
         mkAppN (mkApp args[3]! (mkApp args[4]! args[5]!)) (args.extract 6 args.size)
       else reduced
-    if let .letE _ type binding body _ := reduced then
+    if let .letE name type binding body nondep := reduced then
       if preserveLets && !(← Affine.depends point type) &&
           !(← Affine.depends point binding) then
-        return .continue reduced
+        return ← withLetDecl name type binding (nondep := nondep) fun bindingVar => do
+          let body ← structural point (body.instantiate1 bindingVar) preserveLets
+          return .done (← mkLetFVars #[bindingVar] body
+            (usedLetOnly := false) (generalizeNondepLet := false))
       return .visit (body.instantiate1 binding)
     if reduced != value then return .visit reduced
     if !(← Affine.depends point value) then return .done value
