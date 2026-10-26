@@ -31,6 +31,7 @@ import Morew.Elab.NLP.Rewrite
 import Morew.Elab.NLP.Rows
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
+import Morew.Elab.NLP.Terminal
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names

@@ -70,6 +70,7 @@ import MorewTest.NLP.SmoothFailures
 import MorewTest.NLP.SmoothLemmas
 import MorewTest.NLP.SmoothState
 import MorewTest.NLP.SmoothSupport
+import MorewTest.NLP.Terminal
 import MorewTest.ObjectiveContext
 import MorewTest.ObjectiveContextAutomation
 import MorewTest.Reformulation.AffineHelperSource
