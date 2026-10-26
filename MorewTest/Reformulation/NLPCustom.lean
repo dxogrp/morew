@@ -176,5 +176,39 @@ example : GlobalEquivalence (supportedSource s hs a) (supportedTarget s a) :=
 
 end ParameterEvidence
 
+namespace TargetProofLet
+
+def coefficient (c : ℝ) : ℝ := c ^ 2 + 1
+
+theorem coefficient_pos (c : ℝ) : 0 < coefficient c := by
+  unfold coefficient
+  positivity
+
+def weighted (c x : ℝ) : ℝ := Real.log (coefficient c) * x
+
+def weightedGraph (c : ℝ) : GraphRepresentation (weighted c) where
+  Auxiliary := Unit
+  target x y _ :=
+    let _h : 0 < coefficient c := coefficient_pos c
+    y = Real.log (coefficient c) * x
+  source_iff_exists x y := by simp [weighted]
+
+def source (c : ℝ) :=
+  problem (x y : ℝ)
+    minimize x
+    subject to graph : y = weighted c x
+
+variable (c : ℝ)
+
+reformulation target : (source c) := by
+  nlp at graph using weightedGraph c
+
+example : GlobalEquivalence (source c) (target c) := target.equivalence c
+
+example (x y : ℝ) : (target c).feasible (x, y) ↔
+    y = Real.log (coefficient c) * x := Iff.rfl
+
+end TargetProofLet
+
 end
 end MorewTest.Reformulation.NLPCustom

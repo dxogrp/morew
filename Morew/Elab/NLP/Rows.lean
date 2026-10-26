@@ -256,7 +256,30 @@ private def intersect (left right : RowCertificate) : RowsM (RowCertificate × E
   return (⟨domain, isOpen, included, left.proof⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
+-- Keep independent proof lets in a projected predicate available while checking
+-- its residuals, including when the binding is scoped to a finite-family index.
+private def hoistProjectionLets : Expr → Expr
+  | .proj name index value =>
+    match hoistProjectionLets value with
+    | .letE binding type value body nondep =>
+      .letE binding type value (.proj name index body) nondep
+    | value => .proj name index value
+  | expression => expression
+
 private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
+  let body := hoistProjectionLets (← Affine.reduceStructure body (preserveLets := true)
+    (opaqueProblemDependencies? := some point))
+  if let .letE name type value rest nondep := body then
+    if (← Affine.depends point type) || (← Affine.depends point value) then
+      return ← certifyBody point (rest.instantiate1 value)
+    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+      let result ← certifyBody point (rest.instantiate1 binding)
+      return {
+        domain := ← result.domain.replaceFVarsM #[binding] #[value]
+        isOpen := ← result.isOpen.replaceFVarsM #[binding] #[value]
+        included := ← result.included.replaceFVarsM #[binding] #[value]
+        proof := ← result.proof.replaceFVarsM #[binding] #[value]
+      }
   let body ← structural point body
   if body.isConstOf ``True then
     let base := (← read).unrestricted

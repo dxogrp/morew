@@ -125,6 +125,51 @@ run_elab assertRows (← `(fun (s : Finset ℕ) (a : ℕ → ℝ)
   ((fun _ : ℝ => True),
     #[fun x : ℝ => ∀ j : Fin s.card, Real.log (a (s.equivFin.symm j)) + x ≤ 0]))) 3
 
+-- Checked independent proof lets belong to the row's local scope. They may
+-- depend on its finite index, but must not escape as free variables in evidence.
+def coefficient (c : ℝ) : ℝ := c ^ 2 + 1
+
+theorem coefficient_pos (c : ℝ) : 0 < coefficient c := by
+  unfold coefficient
+  positivity
+
+run_elab assertRows (← `(fun c : ℝ =>
+  ((fun _ : ℝ => True),
+    #[fun x : ℝ =>
+      let _h : 0 < coefficient c := coefficient_pos c
+      Real.log (coefficient c) * x ≤ 0]))) 1
+
+run_elab assertRows (← `(fun (n : ℕ) (a : Fin n → ℝ) =>
+  ((fun _ : ℝ => True),
+    #[fun x : ℝ => ∀ i : Fin n,
+      let _h : 0 < coefficient (a i) := coefficient_pos (a i)
+      Real.log (coefficient (a i)) * x ≤ 0]))) 2
+
+run_elab assertRows (← `(fun c : ℝ =>
+  ((fun _ : ℝ => True),
+    #[fun x : ℝ =>
+      (let _h : 0 < coefficient c := coefficient_pos c
+       (Real.log (coefficient c) * x ≤ 0, True)).1]))) 1
+
+-- A decision-dependent binding stays inside the residual traversal.
+run_elab assertRows (← `(((fun _ : ℝ => True),
+  #[fun x : ℝ =>
+    let _h : 0 < Real.exp x := Real.exp_pos x
+    Real.log (Real.exp x) ≤ 0])))
+
+run_elab assertRows (← `(fun c : ℝ =>
+  ((fun _ : ℝ => True),
+    #[fun x : ℝ =>
+      let _h : 0 < coefficient c := (fun _ : ℝ => coefficient_pos c) x
+      Real.log (coefficient c) * x ≤ 0]))) 1 (some .feasibleInclusion)
+
+run_elab assertRows (← `(fun c : ℝ =>
+  ((fun _ : ℝ => True),
+    #[fun _ : ℝ =>
+        let _h : 0 < coefficient c := coefficient_pos c
+        True,
+      fun x : ℝ => Real.log (coefficient c) * x ≤ 0]))) 1 (some .feasibleInclusion)
+
 -- An unselected predicate and every original residual remain outside the target
 -- grammar; an empty supplied row list still checks the decision space.
 run_elab assertRows (← `(((fun x : ℝ => x < 0 ∨ 1 < x), (#[] : Array (ℝ → Prop)))))
