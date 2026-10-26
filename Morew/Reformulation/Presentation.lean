@@ -185,14 +185,29 @@ private def proofPreservingSimpMethods : Simp.Methods :=
   let defaults := Simp.mkDefaultMethodsCore #[]
   { defaults with
     pre := fun expression => do
-      if let .letE _ type value body _ := expression then
+      if let .letE name type value body nondep := expression then
         unless ← isProp type do
           return .visit { expr := body.instantiate1 value }
+        -- The default have-telescope traversal also absorbs following data
+        -- lets, bypassing this pre-method and retaining their projections.
+        -- Visit the body explicitly while keeping the original proof scope.
+        return ← withLetDecl name type value (nondep := nondep) fun binding => do
+          let result ← Simp.simp (body.instantiate1 binding)
+          let expr ← mkLetFVars #[binding] result.expr
+            (usedLetOnly := false) (generalizeNondepLet := false)
+          let proof? ← result.proof?.mapM fun proof =>
+            mkLetFVars #[binding] proof
+              (usedLetOnly := false) (generalizeNondepLet := false)
+          return .done { result with expr, proof? }
       defaults.pre expression
     dpre := fun expression => do
-      if let .letE _ type value body _ := expression then
+      if let .letE name type value body nondep := expression then
         unless ← isProp type do
           return .visit (body.instantiate1 value)
+        return ← withLetDecl name type value (nondep := nondep) fun binding => do
+          let body ← Simp.dsimp (body.instantiate1 binding)
+          return .done (← mkLetFVars #[binding] body
+            (usedLetOnly := false) (generalizeNondepLet := false))
       defaults.dpre expression }
 
 /-- Simplify an expression using only the supplied declarations and reductions.

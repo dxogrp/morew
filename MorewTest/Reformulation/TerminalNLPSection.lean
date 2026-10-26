@@ -147,5 +147,46 @@ end
 
 end IndexAliases
 
+namespace ProofBeforeData
+
+-- Retaining a proof let must not stop structural reduction of later data lets.
+-- In particular, the subtype constructor's projection is its real-valued field.
+def source :=
+  problem (x t : ℝ)
+    let loss := x ^ 2
+    let identity : loss = x * x := by ring
+    let bounded : { y : ℝ // y = loss } := ⟨x * x, by ring⟩
+    minimize loss + bounded.val
+    subject to bound : |bounded.val| ≤ t
+
+reformulation targeted : source := by
+  nlp at bound
+
+reformulation targetedTerminal : targeted := by
+  nlp
+example : NLP.Form targetedTerminal := targetedTerminal.nlpForm
+example : GlobalEquivalence targeted targetedTerminal := targetedTerminal.equivalence
+
+reformulation terminal : source := by
+  nlp
+example : NLP.Form terminal := terminal.nlpForm
+example : terminal.nlpForm.data.rowCount = 2 := rfl
+example : terminal.nlpForm.data.toProblem = terminal := terminal.nlpForm.represents
+
+reformulation continued : terminal := by
+  epigraph value
+  nlp
+example : NLP.Form continued := continued.nlpForm
+example : GlobalEquivalence terminal continued := continued.equivalence
+
+run_cmd do
+  for name in #[``targeted, ``terminal, ``continued] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) name
+      | Lean.throwError "missing proof/data-let presentation"
+    unless view.definitions.map (·.name.eraseMacroScopes) == #[`loss, `identity, `bounded] do
+      Lean.throwError "normalization changed model-local definition identities"
+
+end ProofBeforeData
+
 end
 end MorewTest.Reformulation.TerminalNLPSection
