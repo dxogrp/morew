@@ -26,8 +26,8 @@ namespace Morew.Elab.NLP
 open Lean Lean.Meta Qq
 open Reformulation
 
--- Stored forms expose only structural aliases in their type, so ordinary field
--- notation can synthesize the same canonical structures for a Matrix alias.
+-- Stored forms expose structural types, so ordinary field notation can synthesize
+-- the same canonical structures for Matrix and finite-index aliases.
 private partial def structuralDomain (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then return shape
@@ -38,6 +38,7 @@ private partial def structuralDomain (type : Expr) : MetaM Expr := do
     return ← mkAppM ``Prod #[← structuralDomain shape.getAppArgs[0]!,
       ← structuralDomain shape.getAppArgs[1]!]
   if let .forallE _ index target _ := shape then
+    let index ← whnf index
     let target ← Core.betaReduce (← whnf target)
     if target.hasLooseBVars then throwError "NLP rows require a nondependent finite space"
     return ← mkArrow index (← structuralDomain target)
@@ -164,9 +165,11 @@ private def buildFormCore (presentation : PresentationState)
       throwError "NLP form contains unresolved expressions or placeholders"
     checkWithKernel form
     return form
-  let formType ← inferType form
   let decision ← structuralDomain presentation.domainType
-  let publicType := mkAppN formType.getAppFn (formType.getAppArgs.set! 0 decision)
+  -- Nested aliases also occur inside the chosen instance expressions. Rebuild
+  -- those expressions over the exposed shape so ordinary projections match them.
+  let publicType ← Space.withCanonicalSpaces #[decision] <|
+    mkAppOptM ``Morew.NLP.Form #[some decision, none, none, none, some canonical]
   let form ← mkAppOptM ``id #[some publicType, some form]
   checkWithKernel form
   return .ok form

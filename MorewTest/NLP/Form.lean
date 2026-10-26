@@ -134,6 +134,39 @@ def matrixForm := nlp_form_for%
     ⟨fun x => x 0 1, fun x => x 0 1 ≤ 1⟩)
 example : matrixForm.data.rowCount = 1 := rfl
 
+-- Public form fields work without registering instances for finite-index aliases.
+def Index (n : Nat) := Fin n
+def NestedIndex (n : Nat) := Index n
+
+def indexAliasForm (n : Nat) := nlp_form_for%
+  (show Problem (Index n → ℝ) ℝ from
+    ⟨fun _ => 0, fun x => ∀ i : Index n, x i ≤ 1⟩)
+
+def nativeIndexForm (n : Nat) := nlp_form_for%
+  (show Problem (Fin n → ℝ) ℝ from
+    ⟨fun _ => 0, fun x => ∀ i : Fin n, x i ≤ 1⟩)
+
+example (n : Nat) : (indexAliasForm n).data.rowCount = n := by
+  change (∑ _ : Fin n, (1 : ℕ)) = n
+  simp
+example (n : Nat) : (indexAliasForm n).data.rowCount =
+    (nativeIndexForm n).data.rowCount := rfl
+example (x : Index 2 → ℝ) :
+    ((indexAliasForm 2).data.rows (1 : Fin 2)).residual x = x (1 : Fin 2) - 1 := rfl
+
+def nestedIndexAliasForm (n m : Nat) := nlp_form_for%
+  (show Problem (Index n → NestedIndex m → ℝ) ℝ from
+    ⟨fun _ => 0, fun x => ∀ i : Index n, ∀ j : NestedIndex m, x i j ≥ 1⟩)
+
+example (n m : Nat) : (nestedIndexAliasForm n m).data.rowCount = n * m := by
+  change (∑ _ : Fin n, ∑ _ : Fin m, (1 : ℕ)) = n * m
+  simp
+example (x : Index 2 → NestedIndex 2 → ℝ) :
+    ((nestedIndexAliasForm 2 2).data.rows (3 : Fin 4)).residual x =
+      x (1 : Fin 2) (1 : Fin 2) - 1 := rfl
+example : ((nestedIndexAliasForm 2 2).data.rows (3 : Fin 4)).bounds =
+    NLP.Bounds.lowerBound 0 := rfl
+
 def emptyForm := nlp_form_for%
   (show Problem ℝ ℝ from ⟨fun x => x ^ 2, fun _ => True ∧ True⟩)
 example : emptyForm.data.rowCount = 0 := rfl

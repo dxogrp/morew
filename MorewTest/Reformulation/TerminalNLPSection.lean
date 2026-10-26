@@ -111,5 +111,41 @@ reformulation zeroTarget : (vectorTarget 0) := by
 example : zeroTarget.nlpForm.data.rowCount = 0 := rfl
 end
 
+namespace IndexAliases
+
+def Index (n : Nat) := Fin n
+def NestedIndex (n : Nat) := Index n
+
+section
+variable (n m : Nat)
+
+def source :=
+  problem (x : Index n → NestedIndex m → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      upper : ∀ i : Index n, ∀ j : NestedIndex m, x i j ≤ 1
+
+reformulation target : (source n m) := by
+  nlp
+example : (target.nlpForm n m).data.rowCount = n * m := by
+  change (∑ _ : Fin n, ∑ _ : Fin m, (1 : ℕ)) + 0 = n * m
+  simp
+example : (target.nlpForm n m).data.toProblem = target n m :=
+  (target.nlpForm n m).represents
+example : GlobalEquivalence (source n m) (target n m) := target.equivalence n m
+example : (target.nlpForm 0 m).data.rowCount = 0 := rfl
+
+/--
+info: problem (x : Index n → NestedIndex m → ℝ)
+  minimize 0
+  subject to
+    upper : ∀ (i : Index n) (j : NestedIndex m), x i j ≤ 1
+-/
+#guard_msgs in
+#printp target
+end
+
+end IndexAliases
+
 end
 end MorewTest.Reformulation.TerminalNLPSection
