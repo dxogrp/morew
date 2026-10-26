@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Mathlib.Analysis.Calculus.ContDiff.Operations
+import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 
@@ -79,6 +80,18 @@ theorem fst (f : X → Y × Z) (hf : ContDiffOn ℝ 2 f domain) :
 theorem snd (f : X → Y × Z) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => (f x).2) domain :=
   hf.snd
+
+/-- Equip a smooth real coordinate vector with the Euclidean norm. -/
+theorem toEuclidean {n : Nat} (f : X → Fin n → ℝ)
+    (hf : ContDiffOn ℝ 2 f domain) :
+    ContDiffOn ℝ 2 (fun x => WithLp.toLp 2 (f x)) domain :=
+  (EuclideanSpace.equiv (Fin n) ℝ).symm.contDiff.comp_contDiffOn hf
+
+/-- Extract the coordinates of a smooth Euclidean vector. -/
+theorem ofEuclidean {n : Nat} (f : X → EuclideanSpace ℝ (Fin n))
+    (hf : ContDiffOn ℝ 2 f domain) :
+    ContDiffOn ℝ 2 (fun x => WithLp.ofLp (f x)) domain :=
+  (EuclideanSpace.equiv (Fin n) ℝ).contDiff.comp_contDiffOn hf
 
 /-- Evaluate a smooth finite vector at a fixed index. -/
 theorem apply {ι : Type z} [Fintype ι] (f : X → ι → Y) (index : ι)

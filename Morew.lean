@@ -28,6 +28,8 @@ import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
+import Morew.Elab.NLP.Rewrite
+import Morew.Elab.NLP.Rows
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
 import Morew.Elab.ObjectiveContext
@@ -35,15 +37,18 @@ import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Runner
+import Morew.Exact
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP
 import Morew.NLP.Basic
 import Morew.NLP.Domain
+import Morew.NLP.Rows
 import Morew.NLP.Smooth
 import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Presentation

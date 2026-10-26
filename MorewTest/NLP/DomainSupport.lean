@@ -54,7 +54,8 @@ def checkResult (feasible : Expr) (sources : Array Expr) (result : DomainResult)
     unless proofType.isAppOfArity ``ContDiffOn 11 do
       throwError "domain certificate proved a different predicate: {proofType}"
     let args := proofType.getAppArgs
-    unless args[0]!.isConstOf ``Real && args[5]!.isConstOf ``Real do
+    unless (← isDefEq args[0]! (mkConst ``Real)) &&
+        (← isDefEq args[5]! (mkConst ``Real)) do
       throwError "domain certificate changed the scalar field or result space"
     let two ← mkNumeral (← inferType args[8]!) 2
     let expected := mkAppN proofType.getAppFn

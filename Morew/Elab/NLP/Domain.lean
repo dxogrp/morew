@@ -79,13 +79,21 @@ private def convertError (index : Nat) (error : Smooth.SmoothError) : DomainErro
   obligation? := error.obligation?, reason := error.reason
 }
 
-private def certifyCore (feasible : Expr) (sources : Array Expr) :
+private def certifyCore (feasible : Expr) (sources : Array Expr)
+    (facts? : Option Evidence.FactsProvider := none) :
     MetaM (Except DomainError DomainResult) := do
-  if let .error error ← Evidence.admit feasible then
+  if facts?.isNone then
+    if let .error error ← Evidence.admit feasible then
+      return .error {
+        source := feasible, rowIndex? := some error.rowIndex
+        expression := error.expression, type := error.type
+        kind := .unsupportedRow, reason := error.reason
+      }
+  else if !(← Evidence.complete feasible) then
     return .error {
-      source := feasible, rowIndex? := some error.rowIndex
-      expression := error.expression, type := error.type
-      kind := .unsupportedRow, reason := error.reason
+      source := feasible, expression := feasible, type := ← inferType feasible
+      kind := .unresolved
+      reason := ← addMessageContext m!"feasibility contains unresolved expressions or placeholders"
     }
   let .forallE _ decision _ _ ← whnf (← inferType feasible)
     | throwError "expected a feasibility predicate"
@@ -120,7 +128,7 @@ private def certifyCore (feasible : Expr) (sources : Array Expr) :
         kind := .unsupportedSpace
         reason := ← addMessageContext m!"source {index} must have type {decision} → ℝ"
       }
-    let outcome ← Smooth.certifyOnFeasible feasible source #[result.feasibleMemDomain]
+    let outcome ← Smooth.certifyOnFeasible feasible source #[result.feasibleMemDomain] facts?
     if let .error error := outcome then return .error (convertError index error)
     let .ok child := outcome | unreachable!
     if result.smooth.isEmpty then
@@ -181,6 +189,21 @@ def certify (feasible : Expr) (sources : Array Expr) :
   Affine.withIsolatedMVars do
     try
       certifyCore feasible sources
+    catch exception =>
+      return .error {
+        source := feasible, expression := feasible, type := ← inferType feasible
+        kind := .invalidInstance
+        reason := ← addMessageContext exception.toMessageData
+      }
+
+/-- Internal certification using checked projections of a separately admitted row
+grammar. The provider receives the actual feasibility proof; all returned analytic
+and inclusion certificates are checked against that unchanged predicate. -/
+def certifyWithEvidence (feasible : Expr) (sources : Array Expr)
+    (facts : Evidence.FactsProvider) : MetaM (Except DomainError DomainResult) :=
+  Affine.withIsolatedMVars do
+    try
+      certifyCore feasible sources (some facts)
     catch exception =>
       return .error {
         source := feasible, expression := feasible, type := ← inferType feasible

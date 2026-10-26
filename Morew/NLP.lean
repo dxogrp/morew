@@ -42,6 +42,8 @@ For maximization, keep the problem explicitly typed as
 unchanged, and representation equality alone does not determine its sense.
 Native global smoothness certification is available through the separate
 `Morew.Elab.NLP.Smooth` import. The separate `Morew.Elab.NLP.Domain` import
-infers domains and proves inclusion from existing feasibility. The `nlp` command
-remains a later extension to this semantic API.
+infers domains and proves inclusion from existing feasibility. The separate
+`Morew.Reformulation` import provides targeted `nlp at label` exact smooth
+rewrites; these do not construct a whole-model NLP form. Terminal `nlp`
+validation remains a later extension.
 -/

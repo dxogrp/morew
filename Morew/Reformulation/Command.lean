@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 import Morew.Reformulation.TerminalConic
 import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
@@ -18,7 +19,8 @@ import Lean.Elab.MutualDef
 This module implements the small, proof-producing transformation language used
 by Morew's first release.  A reformulation command declares both the transformed
 problem and a `GlobalEquivalence` certificate. Terminal conic validation also
-retains a structural form and a proof of conic representability.
+retains a structural form and a proof of conic representability. Targeted
+`nlp at label` steps certify only their replacement rows and remain nonterminal.
 -/
 
 namespace Morew
@@ -401,6 +403,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareOccurrenceBound state step binder selector constraint label provided .lower
       | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
           prepareConic state step selector rule
+      | `(reformulationStep| nlp at $selector:ident $[using $rule:term]?) =>
+          prepareNLP state step selector rule
       | `(reformulationStep| conic) =>
           prepareTerminalConic state step
       | _ => throwUnsupportedSyntax

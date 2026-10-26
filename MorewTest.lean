@@ -61,6 +61,10 @@ import MorewTest.NLP.DomainFailures
 import MorewTest.NLP.DomainLemmas
 import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
+import MorewTest.NLP.Euclidean
+import MorewTest.NLP.Exact
+import MorewTest.NLP.Rewrite
+import MorewTest.NLP.Rows
 import MorewTest.NLP.Smooth
 import MorewTest.NLP.SmoothFailures
 import MorewTest.NLP.SmoothLemmas
@@ -84,6 +88,11 @@ import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
+import MorewTest.Reformulation.NLP
+import MorewTest.Reformulation.NLPCustom
+import MorewTest.Reformulation.NLPFailures
+import MorewTest.Reformulation.NLPImported
+import MorewTest.Reformulation.NLPImportedSource
 import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
