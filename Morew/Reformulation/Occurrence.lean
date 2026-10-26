@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Presentation
+import Morew.Reformulation.Replace
 import Morew.Elab.Rewrite.Plan
 import Morew.Reformulation.Syntax
 import Morew.Transform.Context
@@ -387,10 +387,7 @@ def prepareOccurrenceBound (state : ReformState) (step : Syntax)
     (constraint? explicitLabel? : Option (TSyntax `ident))
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection) :
     CommandElabM SurfaceStepDraft := do
-  let row? ← constraint?.mapM fun label => do
-    let some index := state.view.constraints.findIdx? (sameUserName ·.name label.getId)
-      | throwErrorAt label "unknown or stale constraint label `{label.getId.eraseMacroScopes}`"
-    pure index
+  let row? ← constraint?.mapM (Replace.findConstraint state)
   if row?.isNone then
     let expected := if direction == .upper then .minimize else .maximize
     unless state.view.sense == expected do

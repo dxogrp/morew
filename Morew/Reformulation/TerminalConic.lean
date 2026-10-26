@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Terminal
-import Morew.Reformulation.Conic
+import Morew.Reformulation.Replace
 
 /-!
 # Terminal cone-membership conversion
@@ -141,13 +141,8 @@ private def materializeTerminalConic (state : ReformState)
     let primitive ← state.runner.liftEquivalence exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
-    let primitive ← shareConicCertificate (← instantiateMVars primitive)
+    let primitive ← Replace.storeCertificate `_terminalConicCertificate primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
-    checkWithKernel primitive
-    let primitiveName ← mkAuxDeclName (kind := `_terminalConicCertificate)
-    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
-      (compile := false)
-    modifyEnv (addNoncomputable · primitiveName)
     let mut binders := state.view.binders
     for i in [:prepared.auxiliaries.size] do
       let some name := allocation.findName? i

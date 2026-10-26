@@ -52,6 +52,7 @@ import Morew.Reformulation.NLP
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Presentation
+import Morew.Reformulation.Replace
 import Morew.Reformulation.State
 import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
