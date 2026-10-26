@@ -285,20 +285,32 @@ available. Unapproved decision-dependent hypotheses are never searched. The
 restores state. No unresolved metavariables or placeholders can escape.
 -/
 def prove? (point target : Expr) (facts : Array Expr := #[]) : MetaM (Option Expr) := do
-  let result : Except Unit Expr ← Affine.withIsolatedMVars do
-    try
-      let context ← readThe Core.Context
-      let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
-      let limit := if context.maxHeartbeats == 0 then localLimit
-        else min context.maxHeartbeats localLimit
-      return ← withTheReader Core.Context
-          (fun context => { context with maxHeartbeats := limit }) do
-        let proof ← instantiateMVars (← proveCore point target facts)
-        unless (← complete proof) && (← isDefEq (← inferType proof) target) do
-          return .error ()
-        checkWithKernel proof
-        return .ok proof
-    catch _ => return .error ()
+  let saved ← saveState
+  let result : Except Unit Expr ← tryCatchRuntimeEx
+    (Affine.withIsolatedMVars do
+      try
+        let context ← readThe Core.Context
+        let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
+        let limit := if context.maxHeartbeats == 0 then localLimit
+          else min context.maxHeartbeats localLimit
+        return ← withTheReader Core.Context
+            (fun context => { context with maxHeartbeats := limit }) do
+          let proof ← instantiateMVars (← proveCore point target facts)
+          unless (← complete proof) && (← isDefEq (← inferType proof) target) do
+            return .error ()
+          checkWithKernel proof
+          return .ok proof
+      catch _ => return .error ())
+    fun exception => do
+      -- Ordinary catches propagate runtime limits, including through state
+      -- isolation. Restore before treating our local search cap as unavailable
+      -- evidence; caller exhaustion and recursion limits must still escape.
+      saved.restore
+      setEnv saved.core.env
+      if exception.isMaxHeartbeat then
+        Core.checkMaxHeartbeats "NLP domain evidence"
+        return .error ()
+      throw exception
   return result.toOption
 
 end Morew.Elab.NLP.Domain.Evidence

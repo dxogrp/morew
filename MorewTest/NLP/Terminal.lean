@@ -94,6 +94,59 @@ run_cmd liftTermElabM do
     throwError "deferred smooth group was split unnecessarily"
   count result 4
 
+-- An unproductive domain search can reach its local cap before a later exact
+-- rule exposes the margin. It must fail cleanly so terminal planning can retry.
+set_option maxHeartbeats 0 in
+run_cmd liftTermElabM do
+  let source ← presentation
+    (← `(fun p : (ℝ × ℝ) × (Fin 1 → ℝ) => Real.log p.1.1)) #[
+      (`first, ← `(fun p : (ℝ × ℝ) × (Fin 1 → ℝ) => |Real.log p.1.1| ≤ p.1.2)),
+      (`margin, ← `(fun p : (ℝ × ℝ) × (Fin 1 → ℝ) => 1 ≤ min p.1.1 2)),
+      (`norm1, ← `(fun p : (ℝ × ℝ) × (Fin 1 → ℝ) => ‖WithLp.toLp 1 p.2‖ ≤ p.1.2)),
+      (`norm2, ← `(fun p : (ℝ × ℝ) × (Fin 1 → ℝ) =>
+        ‖WithLp.toLp 1 (fun i => 2 * p.2 i)‖ ≤ p.1.2))]
+  let feasible ← mkAppM ``Morew.Problem.feasible #[← source.canonicalProblem]
+  let environment ← getEnv
+  let context ← getMCtx
+  let .error _ ← Rows.certifyRows feasible #[source.constraints[0]!.predicate]
+    | throwError "unexpected evidence before lowering the margin"
+  unless context.mvarCounter == (← getMCtx).mvarCounter &&
+      context.lmvarCounter == (← getMCtx).lmvarCounter do
+    throwError "exhausted domain search leaked metavariables"
+  for (name, _) in (← getEnv).constants.toList do
+    unless environment.contains name do throwError "exhausted domain search leaked {name}"
+  let result ← checked source
+  unless result.rowOrigins == #[0, 0, 1, 1, 2, 2, 2, 3, 3, 3] &&
+      result.auxiliaries.map (·.1) == #[2, 3] do
+    throwError "retry after exhausted domain search changed row or auxiliary origins"
+  count result 10
+
+-- The private evidence cap is recoverable, but a tighter caller budget and
+-- recursion limits still terminate the attempt without leaking scratch state.
+run_cmd liftTermElabM do
+  withLocalDeclD `point (mkConst ``Real) fun point => do
+    let required ← mkAppM ``LT.lt #[← Domain.elaborate (← `((0 : ℝ))), point]
+    for recursion in [false, true] do
+      let context ← getMCtx
+      let environment ← getEnv
+      let initial ← IO.getNumHeartbeats
+      let propagated ← tryCatchRuntimeEx
+        (withTheReader Core.Context (fun context =>
+          if recursion then { context with maxRecDepth := 1 }
+          else { context with initHeartbeats := initial, maxHeartbeats := 1 }) do
+          discard <| Domain.Evidence.prove? point required
+          pure false)
+        fun exception =>
+          if (if recursion then exception.isMaxRecDepth else exception.isMaxHeartbeat) then
+            pure true
+          else throw exception
+      unless propagated do throwError "domain evidence swallowed a caller resource limit"
+      unless context.mvarCounter == (← getMCtx).mvarCounter &&
+          context.lmvarCounter == (← getMCtx).lmvarCounter do
+        throwError "caller resource exhaustion leaked metavariables"
+      for (name, _) in (← getEnv).constants.toList do
+        unless environment.contains name do throwError "caller resource exhaustion leaked {name}"
+
 -- A constant nonsmooth head is a smooth constant. Its two syntactically
 -- applicable rewrite rules must not force an unnecessary ambiguity failure.
 run_cmd liftTermElabM do
