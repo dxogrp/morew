@@ -28,6 +28,7 @@ import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
+import Morew.Elab.NLP.Rewrite
 import Morew.Elab.NLP.Rows
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space

@@ -63,6 +63,7 @@ import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
 import MorewTest.NLP.Exact
+import MorewTest.NLP.Rewrite
 import MorewTest.NLP.Rows
 import MorewTest.NLP.Smooth
 import MorewTest.NLP.SmoothFailures
