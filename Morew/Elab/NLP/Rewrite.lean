@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Exact
+import Morew.Rewrite
 import Morew.Elab.Atom
 import Morew.Elab.Conic.Plan
 import Morew.Elab.NLP.Rows
@@ -155,15 +155,15 @@ private inductive Rule where
   deriving BEq
 
 private def Rule.name : Rule → Name
-  | .absolute => ``Morew.Exact.absEpigraph
-  | .positivePart => ``Morew.Exact.posEpigraph
-  | .maximum => ``Morew.Exact.maxEpigraph
-  | .minimum => ``Morew.Exact.minHypograph
-  | .supremum => ``Morew.Exact.finsetSupEpigraph
-  | .infimum => ``Morew.Exact.finsetInfHypograph
-  | .normOne => ``Morew.Exact.norm1Epigraph
-  | .normInfinity => ``Morew.Exact.normInfEpigraph
-  | .normTwo => ``Morew.Exact.norm2Epigraph
+  | .absolute => ``Morew.Rewrite.absEpigraph
+  | .positivePart => ``Morew.Rewrite.posEpigraph
+  | .maximum => ``Morew.Rewrite.maxEpigraph
+  | .minimum => ``Morew.Rewrite.minHypograph
+  | .supremum => ``Morew.Rewrite.finsetSupEpigraph
+  | .infimum => ``Morew.Rewrite.finsetInfHypograph
+  | .normOne => ``Morew.Rewrite.norm1Epigraph
+  | .normInfinity => ``Morew.Rewrite.normInfEpigraph
+  | .normTwo => ``Morew.Rewrite.norm2Epigraph
 
 private def rules : Array Rule := #[.absolute, .positivePart, .maximum, .minimum,
   .supremum, .infimum, .normOne, .normInfinity, .normTwo]
@@ -207,16 +207,16 @@ private def normProof? (selected : Rule) (point operation bound : Expr) :
   let vectorType ← inferType vector
   let proof? ← if let some n ← realVectorDimension? vectorType then do
       if selected != .normInfinity then return none
-      pure <| some (``Morew.Exact.normInfEpigraph, ← representationProof
-        (← mkAppOptM ``Morew.Exact.normInfEpigraph #[some n]) vector bound)
+      pure <| some (``Morew.Rewrite.normInfEpigraph, ← representationProof
+        (← mkAppOptM ``Morew.Rewrite.normInfEpigraph #[some n]) vector bound)
     else do
       let reduced ← structural point vector
       if reduced.isAppOfArity ``WithLp.toLp 3 then
         let raw := reduced.getAppArgs[2]!
         let some n ← realVectorDimension? (← inferType raw) | return none
-        let name := if selected == .normOne then ``Morew.Exact.norm1Epigraph
-          else if selected == .normInfinity then ``Morew.Exact.normInfToLpEpigraph
-          else ``Morew.Exact.norm2Epigraph
+        let name := if selected == .normOne then ``Morew.Rewrite.norm1Epigraph
+          else if selected == .normInfinity then ``Morew.Rewrite.normInfToLpEpigraph
+          else ``Morew.Rewrite.norm2Epigraph
         let proof ← representationProof (← mkAppOptM name #[some n]) raw bound
         let (source, _) ← proofSides proof
         let source ← structural point source
@@ -225,8 +225,8 @@ private def normProof? (selected : Rule) (point operation bound : Expr) :
         pure (some (name, proof))
       else if let some n ← Affine.Space.euclideanDimension? vectorType then
         if selected != .normTwo then return none
-        pure <| some (``Morew.Exact.euclideanNormEpigraph, ← representationProof
-          (← mkAppOptM ``Morew.Exact.euclideanNormEpigraph #[some n]) vector bound)
+        pure <| some (``Morew.Rewrite.euclideanNormEpigraph, ← representationProof
+          (← mkAppOptM ``Morew.Rewrite.euclideanNormEpigraph #[some n]) vector bound)
       else pure none
   let some (name, proof) := proof? | return none
   let (source, _) ← proofSides proof

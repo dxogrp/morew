@@ -62,7 +62,6 @@ import MorewTest.NLP.DomainLemmas
 import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
-import MorewTest.NLP.Exact
 import MorewTest.NLP.Rewrite
 import MorewTest.NLP.Rows
 import MorewTest.NLP.Smooth
@@ -120,6 +119,7 @@ import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
 import MorewTest.Reformulation.TerminalConicSection
+import MorewTest.Rewrite
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
 import MorewTest.Surface.AppliedSources

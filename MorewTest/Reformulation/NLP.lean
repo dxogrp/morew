@@ -81,7 +81,7 @@ reformulation defaultObjective : absoluteObjective := by
 
 reformulation namedObjective : absoluteObjective := by
   epigraph t as objective_bound
-  nlp at objective_bound using Exact.absEpigraph
+  nlp at objective_bound using Rewrite.absEpigraph
 
 example : GlobalEquivalence absoluteObjective defaultObjective := defaultObjective.equivalence
 example : GlobalEquivalence absoluteObjective namedObjective := namedObjective.equivalence

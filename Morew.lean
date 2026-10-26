@@ -37,7 +37,6 @@ import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Runner
-import Morew.Exact
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP
@@ -57,6 +56,11 @@ import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution
 import Morew.Reformulation.Syntax
 import Morew.Reformulation.TerminalConic
+import Morew.Rewrite
+import Morew.Rewrite.Basic
+import Morew.Rewrite.Euclidean
+import Morew.Rewrite.Polyhedral
+import Morew.Rewrite.Polyhedral.Lemmas
 import Morew.Syntax
 import Morew.Syntax.Elab
 import Morew.Syntax.Grammar
