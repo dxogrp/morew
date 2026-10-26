@@ -48,6 +48,7 @@ import Morew.NLP.Smooth
 import Morew.Reformulation
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Presentation

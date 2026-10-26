@@ -88,6 +88,11 @@ import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
+import MorewTest.Reformulation.NLP
+import MorewTest.Reformulation.NLPCustom
+import MorewTest.Reformulation.NLPFailures
+import MorewTest.Reformulation.NLPImported
+import MorewTest.Reformulation.NLPImportedSource
 import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds

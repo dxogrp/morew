@@ -50,6 +50,11 @@ optionally using an explicitly supplied representation certificate. -/
 syntax (name := conicAtStep)
   "conic " "at " ident (" using " term)? : reformulationStep
 
+/-- Replace one current constraint by an exact smooth representation,
+optionally using an explicitly supplied representation certificate. -/
+syntax (name := nlpAtStep)
+  "nlp " "at " ident (" using " term)? : reformulationStep
+
 /-- Certify the complete problem and finish the reformulation script. -/
 syntax (name := conicStep) "conic" : reformulationStep
 
