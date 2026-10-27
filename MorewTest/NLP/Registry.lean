@@ -41,11 +41,13 @@ private def check (term : TSyntax `term) (rows : Nat)
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "registered NLP planning leaked scratch metavariables"
 
-private def exactRows (term : TSyntax `term) (parameters : Nat := 0) : TermElabM Unit :=
+private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
+    (rule? : Option Expr := none) (declaration? : Option Name := none) : TermElabM Unit :=
   Domain.withInput term parameters fun source expected => do
     let before ← getMCtx
     let environment ← getEnv
-    let result ← match ← Morew.Elab.NLP.Rewrite.plan source #[] with
+    let result ← match ← Morew.Elab.NLP.Rewrite.plan source #[]
+        (rule? := rule?) (declaration? := declaration?) with
       | .ok result => pure result
       | .error error => throwError "registered NLP rows failed: {error.reason}"
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
@@ -66,12 +68,13 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0) : TermElabM
       checkWithKernel proof
 
 private def reject (term : TSyntax `term) (message : String)
-    (declaration? : Option Name := none) (parameters : Nat := 0) : TermElabM Unit :=
+    (declaration? : Option Name := none) (parameters : Nat := 0)
+    (rule? : Option Expr := none) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
     let before ← getMCtx
     let environment ← getEnv
     let .error error ← Morew.Elab.NLP.Rewrite.plan source retained
-        (declaration? := declaration?)
+        (declaration? := declaration?) (rule? := rule?)
       | throwError "invalid registered NLP plan was accepted"
     unless (← error.reason.toString).contains message do
       throwError "wrong registered NLP diagnostic: {error.reason}"
@@ -212,6 +215,20 @@ run_cmd liftTermElabM do
     #[(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
       (fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)]))
 
+-- Concrete exact lifts certify their entire source; named declarations infer
+-- an input map, but concrete records retain the original full-source check.
+run_cmd liftTermElabM do
+  let concreteRule ← Domain.elaborate (← `(boundedRule))
+  exactRows (← `(input (fun x : ℝ => bounded x)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)])) (rule? := some concreteRule)
+  exactRows (← `(input (fun x : ℝ => bounded (x + 1))
+    #[(fun x : ℝ => x + 1 ≤ 3), (fun x : ℝ => -(x + 1) ≤ 3)]))
+    (declaration? := some ``boundedRule)
+  reject (← `(input (fun x : ℝ => bounded (x + 1)) #[]))
+    "entire selected predicate" (rule? := some concreteRule)
+  reject (← `(input (fun p : ℝ × ℝ => bounded (p.1 + 1)) #[]))
+    "entire selected predicate" (rule? := some concreteRule)
+
 noncomputable def userBound (c x : ℝ) : Prop := |x| ≤ c
 
 @[morew_nlp] noncomputable def completePredicateRule (c : ℝ) :
@@ -232,6 +249,32 @@ noncomputable def userSquare (x : ℝ) : ℝ := x * x
 run_cmd liftTermElabM do
   check (← `(input (fun p : ℝ × ℝ => p.2 = userSquare p.1) #[])) 1
   check (← `(input (fun p : ℝ × ℝ => userSquare p.1 = p.2) #[])) 1
+
+-- A graph orientation is usable only after its generated rows are certified.
+-- The first source below initially matches the constant input, leaving the
+-- unsupported decision-dependent helper `shift x` in the target. Retrying with
+-- the other orientation must discard that attempt's metavariables and declarations.
+noncomputable def shift (x : ℝ) : ℝ := x + 1
+
+@[morew_nlp] noncomputable def shiftGraph : GraphRepresentation shift where
+  Auxiliary := Unit
+  target x y _ := y = x + 1
+  source_iff_exists x y := by simp only [shift, exists_const]
+
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun x : ℝ => shift x = shift 3)
+    #[(fun x : ℝ => shift 3 = x + 1)]))
+  exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
+    #[(fun x : ℝ => shift 3 = x + 1)]))
+  exactRows (← `(input (fun x : ℝ => shift x = shift 3)
+    #[(fun x : ℝ => shift 3 = x + 1)])) (declaration? := some ``shiftGraph)
+  exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
+    #[(fun x : ℝ => shift 3 = x + 1)])) (declaration? := some ``shiftGraph)
+  let concreteRule ← Domain.elaborate (← `(shiftGraph))
+  exactRows (← `(input (fun x : ℝ => shift x = shift 3)
+    #[(fun x : ℝ => shift 3 = x + 1)])) (rule? := some concreteRule)
+  exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
+    #[(fun x : ℝ => shift 3 = x + 1)])) (rule? := some concreteRule)
 
 -- One general Euclidean registration handles both carrier spellings. Adding the
 -- specialized record is a real second success, not an implicit priority choice.

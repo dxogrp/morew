@@ -227,4 +227,23 @@ run_cmd liftTermElabM do
   check (← `(fun p : ℝ × ℝ => p.2 ≤ positiveShift 2 p.1)) 2 #[]
     (some ``positiveShiftAuxiliary)
 
+-- Graph certification preserves both equation orientations, including cases
+-- where either side can match the registered function head.
+noncomputable def graphShift (x : ℝ) : ℝ := x + 1
+
+@[morew_conic]
+noncomputable def graphShiftRule : GraphRepresentation graphShift where
+  Auxiliary := Unit
+  target x y _ := y = x + 1
+  source_iff_exists _ _ := by simp only [graphShift, exists_const]
+
+run_cmd liftTermElabM do
+  let ordinaryRows := #[← `(fun p : ℝ × ℝ => p.2 = p.1 + 1)]
+  check (← `(fun p : ℝ × ℝ => p.2 = graphShift p.1)) 1 (expected := ordinaryRows)
+  check (← `(fun p : ℝ × ℝ => graphShift p.1 = p.2)) 1 (expected := ordinaryRows)
+  check (← `(fun x : ℝ => graphShift x = graphShift 3)) 1
+    (expected := #[← `(fun x : ℝ => graphShift x = 3 + 1)])
+  check (← `(fun x : ℝ => graphShift 3 = graphShift x)) 1
+    (expected := #[← `(fun x : ℝ => graphShift 3 = x + 1)])
+
 end MorewTest.Conic.Registry

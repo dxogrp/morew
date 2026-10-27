@@ -173,16 +173,26 @@ def expose (expression : Expr) : MetaM Expr := do
     if reduced != value then return .visit reduced
     return .continue)
 
+private inductive ExactInput where
+  | infer | whole | concrete
+  deriving BEq
+
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
-    (reverseGraph : Bool) (wholeInput : Bool := false) : MetaM Result := do
+    (reverseGraph : Bool) (exactInput : ExactInput) : MetaM Result := do
   let (parameters, _, type) ← forallMetaTelescopeReducing (← inferType originalRule)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
-  let (input, proofArguments) ← if wholeInput then do
+  let (input, proofArguments) ← if exactInput == .whole then do
       unless family == .exact && (← isDefEq inputType (← inferType point)) do
         throwError "the exact representation input is not the decision space"
       pure (point, #[])
+    else if family == .exact && exactInput == .concrete then do
+      -- A concrete exact lift already describes its decision space. Retain
+      -- the existing adapter semantics rather than silently precomposing it.
+      let saved ← saveState
+      if ← isDefEq inputType (← inferType point) then pure (point, #[])
+      else saved.restore; inputValue inputType
     else inputValue inputType
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
@@ -234,37 +244,47 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let target ← expose existsType.getAppArgs[1]!
   return { auxiliary, target, sourceIff := proof, usedEvidence }
 
-private def checked (point sourceBody : Expr) (prepare : MetaM Expr)
-    (prove? : Prove) : MetaM Result := do
-  let result : Except Exception Result ← Affine.withIsolatedMVars do
-    let tryAttempt := fun reverse whole => Affine.withIsolatedMVars do
-      try return .ok (← attempt point sourceBody (← prepare) prove? reverse whole)
-      catch exception => return .error exception
-    match ← tryAttempt false false with
+private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
+    (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
+  let result : Except (Bool × Exception) α ← Affine.withIsolatedMVars do
+    let tryAttempt := fun reverse inputMode => Affine.withIsolatedMVars do
+      let matched ← try attempt point sourceBody (← prepare) prove? reverse inputMode
+        catch exception => return .error (false, exception)
+      try return .ok (← accept matched)
+      catch exception => return .error (true, exception)
+    match ← tryAttempt false exactInput with
     | .ok value => return .ok value
     | .error original =>
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
       let (family, _, _) ← Registry.representation type
-      if family == .graph then return ← tryAttempt true false
-      if family == .exact then
-        -- An unused input (or product coordinate) cannot always be inferred.
-        -- Preserve the whole-predicate adapter as an isolated fallback.
-        if let .ok value ← tryAttempt false true then return .ok value
+      if family == .graph || (family == .exact && exactInput == .infer) then
+        -- Retry the whole checked attempt: a matched graph orientation may
+        -- still fail the consumer's target certification. Exact records also
+        -- retain the whole-input fallback for unused inputs or coordinates.
+        match ← tryAttempt (family == .graph)
+            (if family == .exact then .whole else exactInput) with
+        | .ok value => return .ok value
+        | .error failure =>
+          -- Prefer an actual target-certification failure to a mismatch.
+          if !original.1 && failure.1 then return .error failure
       return .error original
   match result with
   | .ok value => pure value
-  | .error error => throw error
+  | .error (_, error) => throw error
 
-/-- Match an arbitrary supported record expression, including unapplied
-parameterized declarations. Failure restores metavariables and declarations. -/
-def rule (point sourceBody expression : Expr)
-    (prove? : Prove := fun _ => pure none) : MetaM Result :=
-  checked point sourceBody (pure expression) prove?
+/-- Match and certify exactly the supplied record. Each alternative includes
+`accept` in its isolated attempt, preserving only a successful result's proof
+dependencies. Concrete exact lifts retain their whole-decision interpretation
+when input types coincide. Graph orientations count as one candidate. -/
+def rule {α : Type} (point sourceBody expression : Expr)
+    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
+  checked point sourceBody (pure expression) accept prove? .concrete
 
-/-- Instantiate a declaration with its actual universe and term parameters. -/
-def declaration (point sourceBody : Expr) (name : Name)
-    (prove? : Prove := fun _ => pure none) : MetaM Result := do
-  checked point sourceBody (mkConstWithFreshMVarLevels name) prove?
+/-- Instantiate and certify a declaration, retrying graph orientation when its
+first matched target cannot be certified. Fresh universes belong to each attempt. -/
+def declaration {α : Type} (point sourceBody : Expr) (name : Name)
+    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
+  checked point sourceBody (mkConstWithFreshMVarLevels name) accept prove? .infer
 
 end Morew.Elab.Rewrite.Match

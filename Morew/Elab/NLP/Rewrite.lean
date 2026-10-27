@@ -134,18 +134,22 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     | .error error => throwError "generated row certification failed: {error.reason}"
   return { toResult := prepared, certified }
 
-private def declarationLift (selected : Name) (source domain : Expr) : MetaM Expr :=
+private def matchAndFinish (source domain : Expr)
+    (matchRule : Expr → Expr →
+      (Morew.Elab.Rewrite.Match.Result → MetaM Result) → MetaM Result)
+    (finishLift : Expr → MetaM Result) : MetaM Result :=
   withLocalDeclD `point domain fun point => do
     let body ← structural point (mkApp source point)
-    let matched ← Morew.Elab.Rewrite.Match.declaration point body selected
-    if matched.usedEvidence then
-      throwError "exact NLP replacement must hold without retained-constraint assumptions"
-    if ← Affine.depends point matched.auxiliary then
-      throwError "the auxiliary space depends on a decision variable"
-    let target ← mkLambdaFVars #[point] matched.target
-    let pointwise ← mkLambdaFVars #[point] matched.sourceIff
-    return ← instantiateMVars (← mkAppM ``Morew.ExactConstraintLift.mk
-      #[matched.auxiliary, target, pointwise])
+    -- No retained-evidence callback is supplied to either matcher. Exactness
+    -- remains unconditional; only the finished rows use feasibility evidence.
+    matchRule point body fun matched => do
+      if ← Affine.depends point matched.auxiliary then
+        throwError "the auxiliary space depends on a decision variable"
+      let target ← mkLambdaFVars #[point] matched.target
+      let pointwise ← mkLambdaFVars #[point] matched.sourceIff
+      let lift ← instantiateMVars (← mkAppM ``Morew.ExactConstraintLift.mk
+        #[matched.auxiliary, target, pointwise])
+      finishLift lift
 
 private def registeredCandidates (source domain : Expr) : MetaM (Array Name) :=
   withLocalDeclD `point domain fun point => do
@@ -238,19 +242,36 @@ private def planCore (source : Expr) (retained : Array Expr)
       unless ← isDefEq (← inferType row) (← mkArrow domain (mkSort .zero)) do
         throwError "a retained row has a different decision space"
     let finishLift := fun lift => finish source domain lift retained insertionIndex
+    let finishDeclaration := fun name accept => matchAndFinish source domain
+      (fun point body => Morew.Elab.Rewrite.Match.declaration point body name) accept
     if let some name := declaration? then
-      return .ok (← finishLift (← declarationLift name source domain))
+      return .ok (← finishDeclaration name finishLift)
     if let some rule := rule? then
-      return .ok (← finishLift (← customLift source domain rule))
+      let direct : Except Exception Result ← Affine.withIsolatedMVars do
+        try return .ok (← finishLift (← customLift source domain rule))
+        catch exception => return .error exception
+      match direct with
+      | .ok result => return .ok result
+      | .error original =>
+        -- Keep the existing concrete-record adapters, including exact lifts'
+        -- full-source check. Only graph orientation needs a certified retry.
+        unless (← whnf (← inferType rule)).isAppOfArity ``Morew.GraphRepresentation 3 do
+          throw original
+        try
+          return .ok (← matchAndFinish source domain
+            (fun point body => Morew.Elab.Rewrite.Match.rule point body rule) finishLift)
+        catch _ => throw original
     let mut successes : Array (Name × Result) := #[]
     let mut firstMatchError? := none
     let mut firstError? := none
     for selected in ← registeredCandidates source domain do
+      let reachedTarget ← IO.mkRef false
       let attempt : Except (Bool × Error) Result ← Affine.withIsolatedMVars do
-        let lift ← try declarationLift selected source domain
-          catch exception => return .error (false, ← failure source exception)
-        try return .ok (← finishLift lift)
-        catch exception => return .error (true, ← failure source exception)
+        try
+          return .ok (← finishDeclaration selected fun lift => do
+            reachedTarget.set true
+            finishLift lift)
+        catch exception => return .error (← reachedTarget.get, ← failure source exception)
       match attempt with
       | .ok result => successes := successes.push (selected, result)
       | .error (true, error) => if firstError?.isNone then firstError? := some error

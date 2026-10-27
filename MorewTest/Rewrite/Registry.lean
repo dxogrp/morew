@@ -68,7 +68,7 @@ private def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := d
   let source ← elaborate source
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
-    let result ← try Match.declaration point (mkApp source point) name
+    let result ← try Match.declaration point (mkApp source point) name pure
       catch error => throwError "matching {name} on {source}: {error.toMessageData}"
     checkWithKernel result.sourceIff
     let expected ← mkAppM ``Exists #[result.target]
@@ -198,13 +198,13 @@ run_elab do
     withLocalDeclD `retained condition fun retained => do
       let before ← getMCtx
       let rejected ← try
-          discard <| Match.declaration point (mkApp source point) ``subtypeAbs
+          discard <| Match.declaration point (mkApp source point) ``subtypeAbs pure
           pure false
         catch _ => pure true
       unless rejected do throwError "matching consumed unapproved retained evidence"
       unless before.mvarCounter == (← getMCtx).mvarCounter do
         throwError "failed matching leaked metavariables"
-      let matched ← Match.declaration point (mkApp source point) ``subtypeAbs fun wanted => do
+      let matched ← Match.declaration point (mkApp source point) ``subtypeAbs pure fun wanted => do
         if ← isDefEq wanted condition then pure (some retained) else pure none
       unless matched.usedEvidence do throwError "domain evidence was not recorded"
       unless !(matched.target.containsFVar retained.fvarId!) do
@@ -242,6 +242,63 @@ attribute [local morew_nlp] genericGraph
 run_elab do
   matched (← `(fun p : (ULift.{1} ℝ) × ULift.{1} ℝ => p.2 = generic p.1)) ``genericGraph
 end
+
+-- Graph orientation retries include the consumer's certification work. Failed
+-- proof dependencies are discarded before retry, while accepted ones survive.
+private def graphRetry (source expected : TSyntax `term) (name : Name) : TermElabM Unit := do
+  let source ← elaborate source
+  let expected ← elaborate expected
+  let domain ← Plan.predicateDomain source
+  let attempts ← IO.mkRef 0
+  let discarded ← IO.mkRef (none : Option Name)
+  let accepted ← IO.mkRef (none : Option Name)
+  let before ← getMCtx
+  withLocalDeclD `point domain fun point => do
+    let result : Match.Result ← Match.declaration point (mkApp source point) name fun result => do
+      let attempt ← attempts.get
+      attempts.modify (· + 1)
+      if attempt == 0 then
+        let scratch ← mkFreshExprMVar (mkConst ``Nat)
+        scratch.mvarId!.assign (mkNatLit 1)
+        let proof ← mkEqRefl (mkNatLit 0)
+        let name ← mkAuxLemma [] (← inferType proof) proof
+          (kind? := some `discardedGraphOrientation) (cache := false)
+        discarded.set (some name)
+        throwError "reject the first graph orientation after allocating proof state"
+      let some discardedName ← discarded.get
+        | throwError "graph regression did not exercise the rejected orientation"
+      if (← getEnv).contains discardedName then
+        throwError "graph retry retained a discarded auxiliary declaration"
+      let proof ← mkLambdaFVars #[point] result.sourceIff
+      let name ← mkAuxLemma [] (← inferType proof) proof
+        (kind? := some `acceptedGraphOrientation) (cache := false)
+      accepted.set (some name)
+      return { result with sourceIff := mkApp (mkConst name) point }
+    unless before.mvarCounter == (← getMCtx).mvarCounter &&
+        before.lmvarCounter == (← getMCtx).lmvarCounter do
+      throwError "graph retry leaked scratch metavariables"
+    unless ← isDefEq result.target (mkApp expected point) do
+      throwError "graph retry did not use the accepted reverse orientation"
+    let existsTarget ← mkAppM ``Exists #[result.target]
+    unless ← isDefEq (← inferType result.sourceIff)
+        (mkApp2 (mkConst ``Iff) (mkApp source point) existsTarget) do
+      throwError "graph retry changed the selected source predicate"
+    checkWithKernel result.sourceIff
+  unless (← attempts.get) == 2 do
+    throwError "graph regression did not check both orientations exactly once"
+  let some discardedName ← discarded.get | throwError "missing rejected graph attempt"
+  let some acceptedName ← accepted.get | throwError "missing accepted graph attempt"
+  if (← getEnv).contains discardedName then
+    throwError "graph retry leaked the rejected proof dependency"
+  unless (← getEnv).contains acceptedName do
+    throwError "graph retry dropped the accepted proof dependency"
+
+run_elab do
+  graphRetry (← `(fun x : ℝ => shifted 3 x = shifted 3 2))
+    (← `(fun x : ℝ => fun _ : Unit => shifted 3 2 = x + 3)) ``shiftedGraph
+  graphRetry (← `(fun x : ULift.{1} ℝ => generic x = generic (ULift.up (2 : ℝ))))
+    (← `(fun x : ULift.{1} ℝ => fun _ : Unit => generic (ULift.up (2 : ℝ)) = x))
+    ``genericGraph
 
 run_elab do
   let .ok attributeImpl := Lean.getAttributeImpl (← getEnv) `morew_nlp

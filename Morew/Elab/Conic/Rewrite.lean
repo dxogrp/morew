@@ -133,7 +133,8 @@ private def materialize (source domain point evidence : Expr) (retained : Array 
   Plan.prepareContextual source retained { domain, rowPredicates, certifiedRows, conditionalIff }
 
 private def attempt (source : Expr) (retained : Array Expr)
-    (matchRule : Expr → Expr → (Expr → MetaM (Option Expr)) → MetaM Match.Result)
+    (matchRule : Expr → Expr → (Expr → MetaM (Option Expr)) →
+      (Match.Result → MetaM Plan.Prepared) → MetaM Plan.Prepared)
     (provider : Affine.EvidenceProvider) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     try
@@ -151,8 +152,8 @@ private def attempt (source : Expr) (retained : Array Expr)
             let bodies := retained.map (mkApp · point)
             withLocalDeclD `retained (Decomposition.conjunction bodies.toList) fun evidence => do
               let body ← matchingBody (mkApp source point)
-              let matched ← matchRule point body (proveObligation point bodies evidence)
-              materialize source domain point evidence retained matched provider
+              matchRule point body (proveObligation point bodies evidence) fun matched =>
+                materialize source domain point evidence retained matched provider
       return .ok result
     catch error =>
       return .error { expression := source, reason := ← addMessageContext error.toMessageData }
@@ -163,7 +164,8 @@ def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
-      attempt source retained (fun point body prove => Match.declaration point body name prove) provider
+      attempt source retained
+        (fun point body prove accept => Match.declaration point body name accept prove) provider
 
 /-- Preserve the checked whole-predicate adapter for concrete certificate
 expressions. If that adapter cannot prepare the record, typed matching may
@@ -175,7 +177,8 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
       let direct ← Plan.plan source rule provider
       if let .ok result := direct then return .ok (.inl result)
-      attempt source retained (fun point body prove => Match.rule point body rule prove) provider
+      attempt source retained
+        (fun point body prove accept => Match.rule point body rule accept prove) provider
 
 /-- Certify all registered candidates and require a unique success. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
