@@ -146,14 +146,12 @@ def presentationTypeSyntax (type : Expr) (replay : Bool := true)
     pure <| freezePresentationReferences infos #[]
       sectionReferences parameterInstances stx.raw
 
-/-- Stable type syntax for the semantic and displayed problem types. -/
+/-- Stable syntax for the semantic decision and objective-value types. -/
 structure ProblemTypeSyntax where
   /-- Stable semantic decision-domain type. -/
   domain : TSyntax `term
   /-- Stable semantic objective-value type. -/
   value : TSyntax `term
-  /-- Objective-value type syntax for the displayed presentation. -/
-  presentationValue : Lean.Syntax
 
 /-- Recover stable type syntax directly from an already checked problem. -/
 def problemTypeSyntaxFromExpression (expression : Expr) :
@@ -167,16 +165,7 @@ def problemTypeSyntaxFromExpression (expression : Expr) :
   pure {
     domain := ← exactExpressionSyntax domain
     value := ← exactExpressionSyntax value
-    presentationValue := ← presentationTypeSyntax (← whnf value)
   }
-
-/-- Recover stable domain and objective-value type syntax from a problem. -/
-def problemTypeSyntax (optimizationProblem : TSyntax `term) :
-    CommandElabM ProblemTypeSyntax :=
-  runTermElabM fun _ => withRef optimizationProblem do
-    let expression ← elabTerm optimizationProblem none
-    synthesizeSyntheticMVarsNoPostponing
-    problemTypeSyntaxFromExpression (← instantiateMVars expression)
 
 -- Disable automatic zeta reduction while explicitly reducing data lets. Proof
 -- lets stay in their original scope so later analytic checks can use their

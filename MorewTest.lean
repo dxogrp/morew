@@ -16,7 +16,6 @@ import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
 import MorewTest.Conic
 import MorewTest.Conic.AffineMembership
-import MorewTest.Conic.Automatic
 import MorewTest.Conic.EuclideanAffine
 import MorewTest.Conic.Exponential
 import MorewTest.Conic.ExponentialCone
@@ -27,11 +26,14 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
+import MorewTest.Conic.Registry
+import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
 import MorewTest.Conic.Terminal
 import MorewTest.Core
+import MorewTest.Diagnostics
 import MorewTest.ExactConstraintLift
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
@@ -62,6 +64,7 @@ import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
 import MorewTest.NLP.Form
+import MorewTest.NLP.Registry
 import MorewTest.NLP.Rewrite
 import MorewTest.NLP.RowData
 import MorewTest.NLP.Rows
@@ -110,6 +113,8 @@ import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
+import MorewTest.Reformulation.Registry
+import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Replace
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
@@ -130,6 +135,12 @@ import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
+import MorewTest.Rewrite.Registry
+import MorewTest.Rewrite.Registry.First
+import MorewTest.Rewrite.Registry.OrderAB
+import MorewTest.Rewrite.Registry.OrderBA
+import MorewTest.Rewrite.Registry.Second
+import MorewTest.Rewrite.Registry.Source
 import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions

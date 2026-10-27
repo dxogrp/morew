@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Automatic
+import Morew.Elab.Conic.Rewrite
 import Morew.Reformulation.Replace
 
 /-!
@@ -11,6 +11,14 @@ import Morew.Reformulation.Replace
 
 The surface handler selects one current presentation label, preflights the
 generated name family, and materializes a checked in-place replacement.
+
+Automatic selection uses `@[morew_conic]` declarations, including the shipped
+rules. It requires one fully certified result; multiple successful declarations
+are reported by fully qualified name. Registration and import order do not
+choose a winner. `using ruleName` selects that declaration alone and infers its
+parameters from the row, whether or not it is registered. Applied certificate
+terms retain ordinary Lean elaboration, and explicit failures never fall back
+to another rule.
 
 `conic at label` recognizes whole upper bounds on absolute value, positive part,
 maximum, finite `Finset.sup'`, and native one/infinity norms, and whole lower
@@ -109,29 +117,23 @@ def prepareConic (state : ReformState) (step : Syntax)
   let index ← Replace.findConstraint state selector
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
-    let rule? ← rule?.mapM fun ruleSyntax => do
-      try
-        let rule ← elabTerm ruleSyntax none
-        synthesizeSyntheticMVarsNoPostponing
-        let rule ← instantiateMVars rule
-        if rule.hasMVar then throwError "exact rule contains unresolved metavariables"
-        return rule
-      catch
-        | .error _ message =>
-          throwErrorAt ruleSyntax
-            "constraint `{selector.getId.eraseMacroScopes}`: failed to elaborate exact rule: {message}"
-        | exception => throw exception
+    let (rule?, declaration?) ← Replace.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
     let result : Except Morew.Elab.Affine.AffineError Prepared ←
       Morew.Elab.Conic.Plan.withPresentationFiniteInstances
         Morew.Elab.Conic.Plan.Prepared.replaceFVars presentation do
-        if rule?.isSome then do
-          let result ← Morew.Elab.Conic.Polyhedral.plan predicate rule?
-          pure (result.map Sum.inl)
+        if let some name := declaration? then do
+          let retained := presentation.constraints.extract 0 index ++
+            presentation.constraints.extract (index + 1) presentation.constraints.size
+          Morew.Elab.Conic.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
+        else if let some rule := rule? then do
+          let retained := presentation.constraints.extract 0 index ++
+            presentation.constraints.extract (index + 1) presentation.constraints.size
+          Morew.Elab.Conic.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
         else do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Automatic.planFirst predicate (retained.map (·.predicate))
+          Morew.Elab.Conic.Rewrite.planUnique predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

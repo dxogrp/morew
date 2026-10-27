@@ -5,8 +5,10 @@ import Morew.Conic.Cone
 import Morew.Conic.Exponential
 import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
+import Morew.Conic.Exponential.Representations
 import Morew.Conic.Polyhedral
 import Morew.Conic.SecondOrder
+import Morew.Conic.SecondOrder.Representations
 import Morew.Core
 import Morew.Elab.Affine
 import Morew.Elab.Affine.Expansion
@@ -14,14 +16,12 @@ import Morew.Elab.Affine.Space
 import Morew.Elab.Affine.State
 import Morew.Elab.Atom
 import Morew.Elab.Conic
-import Morew.Elab.Conic.Automatic
 import Morew.Elab.Conic.Domain
-import Morew.Elab.Conic.Exponential
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
-import Morew.Elab.Conic.Polyhedral
-import Morew.Elab.Conic.SecondOrder
+import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.NLP.Domain
@@ -29,6 +29,7 @@ import Morew.Elab.NLP.Domain.Evidence
 import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.NLP.Rows
+import Morew.Elab.NLP.Rules
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
 import Morew.Elab.NLP.Terminal
@@ -39,7 +40,9 @@ import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.Runner
 import Morew.Elab.Rewrite.Decomposition
+import Morew.Elab.Rewrite.Match
 import Morew.Elab.Rewrite.Plan
+import Morew.Elab.Rewrite.Registry
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP

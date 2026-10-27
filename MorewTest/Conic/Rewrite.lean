@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Automatic
+import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 import Lean.Meta.Tactic.AuxLemma
 
@@ -12,10 +12,10 @@ import Lean.Meta.Tactic.AuxLemma
 
 Direct selection deliberately tests affine constant overlaps before the
 terminal caller's affine-first shortcut. Other cases distinguish failed
-candidate heads from certified rules and retain the targeted dispatch policy.
+candidate heads from fully certified registered rules.
 -/
 
-namespace MorewTest.Conic.Automatic
+namespace MorewTest.Conic.Rewrite
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.Conic MorewTest.Affine
@@ -41,7 +41,7 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
     (retained : Array Expr := #[]) : TermElabM Unit := do
   let source ← elaborate stx
   let before ← getMCtx
-  let result ← Automatic.planUnique source retained
+  let result ← Morew.Elab.Conic.Rewrite.planUnique source retained
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "automatic selection leaked scratch metavariables"
@@ -60,7 +60,7 @@ private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
   let .ok _ ← normalizeRow source | throwError "ambiguity fixture is not already affine"
   let before ← getMCtx
   let environment ← getEnv
-  let .error error ← Automatic.planUnique source
+  let .error error ← Morew.Elab.Conic.Rewrite.planUnique source
     | throwError "multiple exact rules were accepted as a unique match"
   let message ← error.reason.toString
   unless message.contains "ambiguous exact conic rules" do
@@ -72,24 +72,18 @@ private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
   for (name, _) in (← getEnv).constants.toList do
     unless environment.contains name do
       throwError "ambiguous selection leaked auxiliary declaration {name}"
-  let .ok result ← Automatic.planFirst source
-    | throwError "targeted first-success policy rejected a certified overlap"
-  discard <| checkPrepared source result
 
 run_cmd liftTermElabM do
   expectAmbiguous (← `(fun _ : ℝ => Real.exp 0 ≤ Real.log 2))
-    #["exponential upper bound", "logarithmic lower bound"]
+    #["Morew.Conic.Exponential.expEpigraph", "Morew.Conic.Exponential.logHypograph"]
   expectAmbiguous (← `(fun _ : ℝ => max (0 : ℝ) 1 ≤ min 2 3))
-    #["maximum upper bound", "minimum lower bound"]
+    #["Morew.Rewrite.maxEpigraph", "Morew.Rewrite.minHypograph"]
   expectUnique (← `(fun p : ℝ × ℝ => |(2 : ℝ)| ≤ min p.1 p.2)) 2
-  let fallback ← elaborate (← `(fun p : ℝ × ℝ => |(2 : ℝ)| ≤ min p.1 p.2))
-  let .error _ ← Automatic.planFirst fallback
-    | throwError "targeted polyhedral branch selection changed"
   expectUnique (← `(fun x : ℝ => x ^ 2 ≤ Real.log 2)) 1
   expectUnique (← `(fun x : ℝ => |x| ≤ Real.exp 2)) 2
   expectUnique (← `(fun x : ℝ => Real.exp x ≤ 3)) 1
-  -- The default exponential attempt can itself fall back to le_log. It must
-  -- not count as an additional rule alongside the explicit logarithm attempt.
+  -- A logarithmic lower bound has one registered candidate; native and named
+  -- composite registrations must not add unrelated certified alternatives.
   expectUnique (← `(fun t : ℝ => t ≤ Real.log 2)) 1
   let margin ← elaborate (← `(fun x : ℝ => 1 ≤ x))
   expectUnique (← `(fun x : ℝ => Real.exp 0 ≤ Real.log x)) 1 #[margin]
@@ -105,21 +99,21 @@ run_cmd liftTermElabM do
       ← `(fun x : ℝ => Real.cosh x ≤ 1),
       ← `(fun x : ℝ => Real.tanh x ≤ 1)] do
     let source ← elaborate term
-    if ← Exponential.isCandidate source then
+    if !(← Morew.Elab.Rewrite.Registry.candidates .conic source).isEmpty then
       throwError "a smooth-only atom became an exponential cone candidate"
-    let .error _ ← Automatic.planUnique source
+    let .error _ ← Morew.Elab.Conic.Rewrite.planUnique source
       | throwError "a smooth-only atom acquired an automatic conic rule"
 
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1))
-  let .error error ← Automatic.planUnique source
+  let .error error ← Morew.Elab.Conic.Rewrite.planUnique source
     | throwError "logarithm without a retained margin was accepted"
   unless (← error.reason.toString).contains "positive constant margin" do
     throwError "automatic selection lost its domain diagnostic: {error.reason}"
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => Real.exp x ≤ c))
   let hole ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  let .error _ ← Automatic.planUnique (mkApp builder hole)
+  let .error _ ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder hole)
     | throwError "automatic selection accepted unresolved input"
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "failed selection leaked scratch metavariables"
@@ -140,7 +134,7 @@ private def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
         generated.modify (·.push name)
         return some (mkAppN (mkConst name) parameters)
     }
-    let result ← Automatic.planUnique source #[] provider
+    let result ← Morew.Elab.Conic.Rewrite.planUnique source #[] provider
     match result with
     | .ok result =>
       unless success do throwError "nonlinear replacement was accepted"
@@ -159,4 +153,4 @@ run_cmd liftTermElabM do
   checkEvidenceLifetime (← `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>
     fun x : ℝ => max (x / c) (x * x) ≤ 1)) false
 
-end MorewTest.Conic.Automatic
+end MorewTest.Conic.Rewrite

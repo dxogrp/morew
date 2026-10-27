@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew
+import MorewTest.Diagnostics
 
 /-!
 # Targeted polyhedral diagnostics and rollback
@@ -50,7 +51,7 @@ def reverseSource :=
     subject to
       reversed : 1 ≤ |x|
 
-/-- error: constraint `reversed`: no supported exact polyhedral rule -/
+/-- error: constraint `reversed`: no supported registered conic rule matches the entire selected predicate and bound polarity -/
 #guard_msgs (substring := true) in
 reformulation reverse : reverseSource certificate reverseAlias := by
   conic at reversed
@@ -61,12 +62,12 @@ def nonlinearSource :=
     subject to
       nonlinear : |x ^ 2| ≤ 3
 
-/-- error: constraint `nonlinear`: generated row -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `nonlinear`: no registered exact conic rule was fully certified:",
+  "Morew.Rewrite.absEpigraph: generated row"] in
 reformulation nonlinear : nonlinearSource certificate nonlinearAlias := by
   conic at nonlinear
 
-/-- error: constraint `bound`: expected an ExactConstraintLift -/
+/-- error: constraint `bound`: expected ExactConstraintLift -/
 #guard_msgs (substring := true) in
 reformulation wrongRecord : source certificate wrongRecordAlias := by
   conic at bound using (0 : ℝ)
@@ -98,8 +99,7 @@ reformulation unresolvedAfterSuccess : twoBounds certificate unresolvedAfterSucc
 def wrongLift : ExactConstraintLift (fun x : ℝ => x ≤ 3) :=
   ExactConstraintLift.ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
 
-/-- error: constraint `bound`: the supplied exact certificate does not describe the entire selected predicate -/
-#guard_msgs in
+#guard_error_fragments ["constraint `bound`: representation operation", "does not match"] in
 reformulation wrongPredicate : source certificate wrongPredicateAlias := by
   conic at bound using wrongLift
 

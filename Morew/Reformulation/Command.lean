@@ -382,7 +382,6 @@ private def elabReformulationCore : CommandElab := fun stx => do
     semantic := sourceTerm
     semanticDomainType := problemTypes.domain
     semanticValueType := problemTypes.value
-    presentationValueType := problemTypes.presentationValue
     certificateSyntax := initialCertificateSyntax
     source := sourceTerm
     sourceName

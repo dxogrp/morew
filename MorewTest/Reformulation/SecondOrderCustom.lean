@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew
+import MorewTest.Diagnostics
 
 /-!
 # Custom exact certificates with second-order targets
@@ -159,8 +160,7 @@ elab "assert_atomic_reformulation% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-/-- error: constraint `after`: the supplied exact certificate does not describe the entire selected predicate -/
-#guard_msgs in
+#guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
 assert_atomic_reformulation%
 reformulation wrongSource : source certificate wrongSourceAlias := by
   conic at auxiliary using auxiliaryRule

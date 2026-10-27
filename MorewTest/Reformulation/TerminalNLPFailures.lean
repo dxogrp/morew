@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import MorewTest.Diagnostics
 
 /-!
 # Terminal smooth-NLP rejection and complete rollback
@@ -36,8 +37,8 @@ def smoothSource := problem (x : ℝ) minimize x ^ 2 subject to bound : 0 ≤ x
 
 namespace FormCollision
 def target.nlpForm : Nat := 17
-/-- error: `MorewTest.Reformulation.TerminalNLPFailures.FormCollision.target.nlpForm` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalNLPFailures.FormCollision.target.nlpForm` has already been declared"] in
 assert_nlp_terminal_atomic%
 reformulation target : smoothSource certificate aliasProof := by
   nlp
@@ -46,22 +47,20 @@ end FormCollision
 
 namespace PropertyCollision
 def target.isSmoothNLP : Nat := 19
-/-- error: `MorewTest.Reformulation.TerminalNLPFailures.PropertyCollision.target.isSmoothNLP` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalNLPFailures.PropertyCollision.target.isSmoothNLP` has already been declared"] in
 assert_nlp_terminal_atomic%
 reformulation target : smoothSource certificate aliasProof := by
   nlp
 example : target.isSmoothNLP = 19 := rfl
 end PropertyCollision
 
-/-- error: duplicate generated declaration name -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["duplicate generated declaration name"] in
 assert_nlp_terminal_atomic%
 reformulation aliasIsForm : smoothSource certificate aliasIsForm.nlpForm := by
   nlp
 
-/-- error: duplicate generated declaration name -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["duplicate generated declaration name"] in
 assert_nlp_terminal_atomic%
 reformulation aliasIsProperty : smoothSource certificate aliasIsProperty.isSmoothNLP := by
   nlp
@@ -89,8 +88,7 @@ reformulation nlpAfterConic : smoothSource := by
   nlp
 
 def nonsmoothObjective := problem (x : ℝ) minimize |x|
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noImplicitObjectiveLift : nonsmoothObjective := by
   nlp
@@ -99,51 +97,44 @@ def zeroBoundary :=
   problem (x : ℝ)
     minimize Real.sqrt x
     subject to lower : 0 ≤ x
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noBoundaryDomain : zeroBoundary := by
   nlp
 
 def strictRows := problem (x : ℝ) minimize x subject to strict : 0 < x
-/-- error: constraint `strict` is not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `strict` is not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noStrictRows : strictRows := by
   nlp
 
 def nonsmoothEquality := problem (x : ℝ) minimize x subject to equality : |x| = 1
-/-- error: constraint `equality` is not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `equality` is not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noAutomaticGraph : nonsmoothEquality := by
   nlp
 
 def nestedNonsmooth := problem (x : ℝ) minimize x subject to nested : |x| + x ≤ 1
-/-- error: constraint `nested` is not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `nested` is not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noNestedAutomaticLift : nestedNonsmooth := by
   nlp
 
 def badConstant := problem (x : ℝ) minimize x + Real.log (-1)
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noInvalidConstantDomain : badConstant := by
   nlp
 
 def unsupportedSpace := problem (_choice : Bool) minimize (0 : ℝ)
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noBooleanSpace : unsupportedSpace := by
   nlp
 
 opaque alteredLE : LE ℝ := ⟨fun _ _ => True⟩
 def alteredOrder := problem (x : ℝ) minimize x subject to fake : @LE.le ℝ alteredLE x 1
-/-- error: constraint `fake` is not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `fake` is not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation noAlteredOrder : alteredOrder := by
   nlp
@@ -155,15 +146,13 @@ def lateObjectiveFailure :=
     minimize Real.log x
     subject to magnitude : |x| ≤ t
 
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation rollbackAfterTargeted : lateObjectiveFailure := by
   nlp at magnitude
   nlp
 
-/-- error: not certified as a smooth NLP by the available rules: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in
 assert_nlp_terminal_atomic%
 reformulation rollbackInsideTerminal : lateObjectiveFailure := by
   nlp
@@ -176,8 +165,7 @@ private def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
     Lean.throwError "injected terminal NLP property emission failure"
   Lean.Elab.throwUnsupportedSyntax
 
-/-- error: injected terminal NLP property emission failure -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["injected terminal NLP property emission failure"] in
 assert_nlp_terminal_atomic%
 reformulation lateFailure : smoothSource certificate lateFailureAlias := by
   nlp

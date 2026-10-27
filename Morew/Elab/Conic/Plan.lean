@@ -9,8 +9,8 @@ import Morew.Elab.Rewrite.Plan
 /-!
 # Shared exact conic replacement planning
 
-Inspect custom representations, split ordered target rows, and certify each row.
-Operation recognizers and the surface runner share this implementation.
+Adapt explicit representations, split ordered target rows, and certify each row.
+Registered-rule selection and explicit certificates share these finishing checks.
 -/
 
 namespace Morew.Elab.Conic.Plan
@@ -124,7 +124,8 @@ private abbrev conjunction := Decomposition.conjunction
 -- Adapters can leave another representation's target projection at the head.
 -- Expose only these record fields, stopping before arbitrary predicate helpers
 -- or arithmetic operands are unfolded.
-private partial def exposeTarget (body : Expr) : MetaM Expr := do
+/-- Reduce checked representation target fields without unfolding predicate helpers. -/
+partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Affine.reduceStructure body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
@@ -142,7 +143,8 @@ private partial def exposeTarget (body : Expr) : MetaM Expr := do
         return ← exposeTarget (mkAppN reduced (args.extract prefixSize args.size))
   return body
 
-private def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
+/-- Expose representation fields and split a checked replacement target. -/
+def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
   Decomposition.split body fun body => do
     let body ← exposeTarget body
     -- Keep exact-lift diagnostics stable while sharing conjunction proof assembly.
@@ -222,11 +224,9 @@ def prepareContextual (source : Expr) (retained : Array Expr)
     | some exact => .inl exact
     | none => .inr result
 
-/-- Plan one entire selected predicate. A supplied record bypasses automatic
-operation matching, but every resulting row still undergoes affine checking.
+/-- Adapt an explicit record for the entire selected predicate and certify its rows.
 Caller metavariables and the environment are restored on failure. -/
-private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
-    (sourcePredicate : Expr) (rule? : Option Expr := none)
+private def planDirect (sourcePredicate rule : Expr)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     try
@@ -236,9 +236,7 @@ private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
       let result ← withFiniteInstances (← Affine.sourceFiniteInstances source).toList do
         withLocalDeclD `point domain fun point =>
           withPredicateEvidence point (mkApp source point) do
-            let lift ← match rule? with
-              | none => automaticLift source domain
-              | some rule => customLift source domain (← instantiateMVars rule)
+            let lift ← customLift source domain rule
             finish source domain lift provider
       return .ok result
     catch error =>
@@ -247,13 +245,12 @@ private def planDirect (automaticLift : Expr → Expr → MetaM Expr)
         reason := ← addMessageContext error.toMessageData
       }
 
-/-- Certify a selected predicate, exposing finite evidence from helpers only if
-the direct attempt fails. Matching always uses the original predicate. -/
-def plan (automaticLift : Expr → Expr → MetaM Expr) (sourcePredicate : Expr)
-    (rule? : Option Expr := none) (provider : Affine.EvidenceProvider := {}) :
+/-- Certify an explicit record, exposing finite evidence from helpers only if
+the direct attempt fails. Adaptation always uses the original predicate. -/
+def plan (sourcePredicate rule : Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Affine.AffineError Result) :=
   Affine.withIsolatedMVars do
     withHelperFiniteInstances Result.replaceFVars #[sourcePredicate]
-      (planDirect automaticLift sourcePredicate rule? provider)
+      (planDirect sourcePredicate rule provider)
 
 end Morew.Elab.Conic.Plan

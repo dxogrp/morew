@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.SecondOrder
+import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 import Mathlib.Analysis.SpecialFunctions.Exp
 
@@ -19,7 +19,7 @@ namespace MorewTest.Conic.SecondOrderElab
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
-open Morew.Elab.Conic.SecondOrder
+open Morew.Elab.Conic
 open scoped ENNReal
 
 private noncomputable abbrev nativeLE : LE ℝ := inferInstance
@@ -28,65 +28,58 @@ private def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
 
-private def checkPlan (source : Expr) (retained : Array Expr := #[]) : MetaM Unit := do
-  let result ← match ← plan source retained with
-    | .ok result => pure result
+private def checkPlan (source : Expr) (retained : Array Expr := #[])
+    (contextual : Bool := false) : MetaM Unit := do
+  let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
+  let (predicates, certificates, proofs) ← match ← Rewrite.planUnique source retained with
     | .error error => throwError "expected a second-order plan for {source}: {error.reason}"
-  unless result.rowPredicates.size == 1 && result.certifiedRows.size == 1 do
+    | .ok (.inl result) =>
+      if contextual then throwError "a retained-margin rewrite escaped its context"
+      if result.auxiliary?.isSome then throwError "an unconditional rewrite added an auxiliary"
+      unless ← isDefEq result.nextDomain domain do throwError "exact rewrite changed the domain"
+      discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+      result.toResult.checkTargetIff
+      pure (result.rowPredicates, result.certifiedRows, #[result.lift, result.targetIff])
+    | .ok (.inr result) =>
+      unless contextual do throwError "an unconditional rewrite retained unused domain evidence"
+      unless ← isDefEq result.domain domain do
+        throwError "second-order planning changed the decision domain"
+      let expected ← withLocalDeclD `point domain fun point => do
+        let remainder := conjunction (retained.map (mkApp · point))
+        let target := conjunction (result.rowPredicates.map (mkApp · point))
+        let equivalence ← mkAppM ``Iff #[mkApp source point, target]
+        mkForallFVars #[point] (← mkArrow remainder equivalence)
+      unless ← isDefEq (← inferType result.conditionalIff) expected do
+        throwError "conditional certificate does not retain the exact source and remainder"
+      pure (result.rowPredicates, result.certifiedRows, #[result.conditionalIff])
+  unless predicates.size == 1 && certificates.size == 1 do
     throwError "second-order planning must produce exactly one cone row"
-  let .forallE _ domain _ _ ← whnf (← inferType source)
-    | throwError "source is not a predicate"
-  unless ← isDefEq result.domain domain do
-    throwError "second-order planning changed the decision domain"
-  let expected ← withLocalDeclD `point domain fun point => do
-    let remainder := conjunction (retained.map (mkApp · point))
-    let target := mkApp result.rowPredicates[0]! point
-    let equivalence ← mkAppM ``Iff #[mkApp source point, target]
-    mkForallFVars #[point] (← mkArrow remainder equivalence)
-  unless ← isDefEq (← inferType result.conditionalIff) expected do
-    throwError "conditional certificate does not retain the exact source and remainder"
-  let some row := result.certifiedRows[0]? | throwError "missing certified row"
+  let some row := certificates[0]? | throwError "missing certified row"
   let constraintType ← whnf (← inferType row.constraint)
   let rowExpected ← withLocalDeclD `point domain fun point => do
     let holds := mkAppN
       (mkConst ``Morew.Conic.Constraint.Holds constraintType.getAppFn.constLevels!)
       (constraintType.getAppArgs ++ #[row.constraint, point])
-    mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp result.rowPredicates[0]! point])
+    mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicates[0]! point])
   unless ← isDefEq (← inferType row.pointwiseIff) rowExpected do
     throwError "the certified row does not match the generated membership"
-  for expression in #[result.conditionalIff, row.constraint, row.pointwiseIff] do
+  for expression in proofs ++ #[row.constraint, row.pointwiseIff] do
     if expression.hasMVar || expression.hasSorry then
       throwError "second-order planning returned an incomplete certificate"
     checkWithKernel expression
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
-  let .error error ← plan source retained
+  let .error error ← Rewrite.planUnique source retained
     | throwError "unsupported second-order predicate was accepted: {source}"
   let message ← error.reason.toString
   unless message.contains fragment do
     throwError "expected diagnostic containing {fragment}, got {message}"
 
-private def checkReplacement (source : Expr) (retained : Array Expr)
-    (contextual : Bool) : MetaM Unit := do
-  match ← planReplacement source retained with
-  | .error error => throwError "expected a second-order replacement: {error.reason}"
-  | .ok (.inl result) =>
-    if contextual then throwError "a retained-margin rewrite escaped its context"
-    if result.auxiliary?.isSome then throwError "an unconditional rewrite added an auxiliary"
-    let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-    unless ← isDefEq result.nextDomain domain do throwError "exact rewrite changed the domain"
-    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    checkWithKernel result.targetIff
-  | .ok (.inr result) =>
-    unless contextual do throwError "an unconditional rewrite retained unused domain evidence"
-    checkWithKernel result.conditionalIff
-
 private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => do
     checkPlan source
-    checkReplacement source #[] false
 
 private def expectRejected (stx : TSyntax `term) (fragment : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
@@ -104,8 +97,7 @@ private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
       | throwError "expected a literal array of retained predicates"
     match failure? with
     | none =>
-      checkPlan source retained
-      checkReplacement source retained true
+      checkPlan source retained (contextual := true)
     | some fragment => rejectPlan source retained fragment
 
 /-! Both native vector interfaces, every built-in quadratic shape, and symbolic
@@ -201,15 +193,15 @@ run_cmd liftTermElabM do
 independently of coincidence on particular values. -/
 
 run_cmd liftTermElabM do
-  expectRejected (← `(fun x : ℝ => x^2 = 3)) "upper bound"
-  expectRejected (← `(fun x : ℝ => 3 ≤ x^2)) "upper-bound polarity"
-  expectRejected (← `(fun x : ℝ => x^3 ≤ 3)) "exponent 2"
+  expectRejected (← `(fun x : ℝ => x^2 = 3)) "bound polarity"
+  expectRejected (← `(fun x : ℝ => 3 ≤ x^2)) "bound polarity"
+  expectRejected (← `(fun x : ℝ => x^3 ≤ 3)) "does not match 3"
   expectRejected (← `(fun x : ℝ => (x^2)^2 ≤ 3)) "affine"
   expectRejected (← `(fun x : ℝ => x^2 ≤ x*x)) "affine"
-  expectRejected (← `(fun x : Fin 2 → ℝ => ‖x‖^2 ≤ 3)) "Euclidean norm"
+  expectRejected (← `(fun x : Fin 2 → ℝ => ‖x‖^2 ≤ 3)) "Fin 2 → ℝ"
   expectRejected (← `(fun x : EuclideanSpace ℝ Bool => ‖x‖ ≤ 3)) "EuclideanSpace"
   expectRejected (← `(fun x : Fin 2 → ℝ => (∑ i ∈ ({0} : Finset (Fin 2)), (x i)^2) ≤ 3))
-    "complete selected bound"
+    "Finset.univ does not match {0}"
   expectRejected (← `(fun x : ℝ =>
     @HPow.hPow ℝ ℕ ℝ ⟨fun a _ => a*a⟩ x 2 ≤ 3)) "instance"
   expectRejected (← `(fun x : EuclideanSpace ℝ (Fin 2) =>
@@ -230,8 +222,6 @@ run_cmd liftTermElabM do
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => x^2 ≤ c))
   let missing ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  if ← isCandidate (mkApp builder missing) then
-    throwError "candidate matching accepted an unresolved predicate"
   rejectPlan (mkApp builder missing) #[] "unresolved"
   if ← missing.mvarId!.isAssigned then throwError "planner assigned an unresolved bound"
   unless before.mvarCounter == (← getMCtx).mvarCounter do
@@ -248,13 +238,34 @@ run_cmd liftTermElabM do
     throwError "successful planning leaked scratch metavariables"
   if ← missing.mvarId!.isAssigned then throwError "planner assigned an unrelated hole"
 
-/-! Ordinary function-space norms continue through the L∞ planner; only their
-explicit L2 wrapper selects second-order planning. -/
+/-! The registered norm rules preserve the carrier distinction: ordinary
+function-space norms produce nonnegative rows, while Euclidean norms produce SOC. -/
 
 run_cmd liftTermElabM do
   let ordinary ← elaborate (← `(fun x : Fin 2 → ℝ => ‖x‖ ≤ 3))
   let euclidean ← elaborate (← `(fun x : EuclideanSpace ℝ (Fin 2) => ‖x‖ ≤ 3))
-  if ← isCandidate ordinary then throwError "ordinary L∞ norm was routed to the SOC planner"
-  unless ← isCandidate euclidean do throwError "native Euclidean norm was not selected"
+  let .ok (.inl ordinaryResult) ← Rewrite.planUnique ordinary
+    | throwError "ordinary L∞ norm did not produce an unconditional replacement"
+  let .ok (.inl euclideanResult) ← Rewrite.planUnique euclidean
+    | throwError "Euclidean norm did not produce an unconditional replacement"
+  let scalar := Lean.mkConst ``Morew.Conic.Cone.nonnegativeScalar
+  let vector ← mkAppM ``Morew.Conic.Cone.nonnegative #[mkNatLit 2]
+  let soc ← mkAppM ``Morew.Conic.Cone.secondOrder #[mkNatLit 2]
+  for (source, result, cones) in
+      #[(ordinary, ordinaryResult, #[scalar, vector, vector]),
+        (euclidean, euclideanResult, #[soc])] do
+    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+    result.toResult.checkTargetIff
+    if result.auxiliary?.isSome then throwError "norm replacement introduced an auxiliary"
+    unless result.rowPredicates.size == cones.size && result.certifiedRows.size == cones.size do
+      throwError "norm replacement has the wrong row count"
+    for row in result.certifiedRows, expectedCone in cones do
+      let type ← whnf (← inferType row.constraint)
+      let cone := mkAppN (mkConst ``Morew.Conic.Constraint.cone type.getAppFn.constLevels!)
+        (type.getAppArgs ++ #[row.constraint])
+      unless ← isDefEq cone expectedCone do
+        throwError "norm replacement produced the wrong cone"
+      checkWithKernel row.constraint
+      checkWithKernel row.pointwiseIff
 
 end MorewTest.Conic.SecondOrderElab

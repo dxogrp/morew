@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Polyhedral
+import Morew.Elab.Conic.Rewrite
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
@@ -33,9 +33,12 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => do
     let rule? ← rule?.mapM elaborate
-    let outcome ← Morew.Elab.Conic.Polyhedral.plan source rule?
+    let outcome ← match rule? with
+      | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule
+      | none => Morew.Elab.Conic.Rewrite.planUnique source
     let result ← match outcome with
-      | .ok result => pure result
+      | .ok (.inl result) => pure result
+      | .ok (.inr _) => throwError "an unconditional replacement acquired retained assumptions"
       | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
     unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
       throwError "expected {rows} rows, got {result.rowPredicates.size}"
@@ -51,7 +54,10 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
     (rule? : Option (TSyntax `term) := none) : TermElabM Unit := do
   let source ← elaborate stx
   let rule? ← rule?.mapM elaborate
-  let .error error ← Morew.Elab.Conic.Polyhedral.plan source rule?
+  let outcome ← match rule? with
+    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule
+    | none => Morew.Elab.Conic.Rewrite.planUnique source
+  let .error error := outcome
     | throwError "unsupported polyhedral predicate was accepted"
   let message ← error.reason.toString
   unless message.contains fragment do
@@ -59,8 +65,9 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
 
 elab "polyhedral_lift% " source:term : term => do
   let source ← elaborate source
-  match ← Morew.Elab.Conic.Polyhedral.plan source with
-  | .ok result => pure result.lift
+  match ← Morew.Elab.Conic.Rewrite.planUnique source with
+  | .ok (.inl result) => pure result.lift
+  | .ok (.inr _) => throwError "an unconditional replacement acquired retained assumptions"
   | .error error => throwError "{error.reason}"
 
 def symbolicNorm (n : ℕ) : ExactConstraintLift (fun v : Fin n → ℝ => ‖v‖ ≤ 2) :=
@@ -173,25 +180,29 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (some (← `(nonlinearExact)))
   expectRejected (← `(fun x : ℝ => 0 ≤ x)) "unsupported exact-lift decision space"
     (some (← `(boolAuxiliary)))
-  expectRejected (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) "entire selected"
+  expectRejected (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) "does not match"
     (some (← `(absEpigraph)))
   expectRejected (← `(fun x : ℝ => opaqueAbs x ≤ 1)) "no supported"
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "unsupported norm exponent"
+  -- The unified planner accepts the L2 bound through its SOC rule. Explicitly
+  -- selecting the L1 rule must still reject the incompatible norm carrier.
+  expectPlan (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) 1 false
+  expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "instance"
+    (some (← `(Morew.Rewrite.norm1Epigraph (n := 2))))
   expectRejected (← `(fun x : ℝ => @LE.le ℝ ⟨fun a b => a + 1 ≤ b⟩ |x| 1)) "order instance"
   expectRejected (← `(fun v : Fin 2 → ℝ =>
-    @Norm.norm (Fin 2 → ℝ) ⟨fun _ => 0⟩ v ≤ 1)) "unsupported instance"
+    @Norm.norm (Fin 2 → ℝ) ⟨fun _ => 0⟩ v ≤ 1)) "instance"
   -- Coincident operands still require the native maximum instance.
   expectRejected (← `(fun x : ℝ =>
-    @Max.max ℝ ⟨fun a _ => a⟩ x x ≤ 1)) "no supported"
+    @Max.max ℝ ⟨fun a _ => a⟩ x x ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     @Finset.sup' ℝ ℕ (inferInstance : SemilatticeSup (OrderDual ℝ))
-      {0} (by simp) (fun _ => x) ≤ 1)) "unsupported instance"
+      {0} (by simp) (fun _ => x) ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     (if x ≤ 0 then ({0} : Finset ℕ) else {1}).sup'
-      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "depends on a decision"
+      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "decision variable"
   expectRejected (← `(fun x : ℝ => 0 ≤ x ∨ x ≤ 0)) "unsupported exact target"
     (some (← `(disjunctiveTarget)))
   expectRejected (← `(predicateHelper)) "unsupported exact target"
@@ -203,7 +214,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
   let missing ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  let .error error ← Morew.Elab.Conic.Polyhedral.plan (mkApp builder missing)
+  let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder missing)
     | throwError "an unresolved bound was accepted"
   unless (← error.reason.toString).contains "unresolved metavariables" do
     throwError "wrong unresolved-bound diagnostic: {error.reason}"
@@ -211,13 +222,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "failed planning leaked scratch metavariables"
   withLetDecl `hiddenBound (mkConst ``Real) missing fun hidden => do
-    let .error error ← Morew.Elab.Conic.Polyhedral.plan (mkApp builder hidden)
+    let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder hidden)
       | throwError "an unresolved bound hidden in a let was accepted"
     unless (← error.reason.toString).contains "unresolved metavariables" do
       throwError "wrong hidden-bound diagnostic: {error.reason}"
   let coefficientBuilder ← elaborate (← `(fun (a x : ℝ) => |a * x| ≤ 1))
   withLetDecl `coefficient (mkConst ``Real) missing fun coefficient => do
-    let .error error ← Morew.Elab.Conic.Polyhedral.plan (mkApp coefficientBuilder coefficient)
+    let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp coefficientBuilder coefficient)
       | throwError "planner specialized an unresolved coefficient hidden in a local declaration"
     unless (← error.reason.toString).contains "unresolved" do
       throwError "missing unresolved-coefficient diagnostic"
@@ -225,7 +236,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "failed planning assigned a caller metavariable"
   let source ← elaborate (← `(fun x : ℝ => |x| ≤ 2))
   let before ← getMCtx
-  let .ok _ ← Morew.Elab.Conic.Polyhedral.plan source
+  let .ok _ ← Morew.Elab.Conic.Rewrite.planUnique source
     | throwError "the state-isolation success case failed"
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
