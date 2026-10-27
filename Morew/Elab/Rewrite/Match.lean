@@ -78,6 +78,16 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
         throwError "unsupported order instance in {actual}"
       throwError "unsupported type or instance in {actual}"
     return
+  -- Reconstructed inputs may be matched against an intact pair or subtype.
+  -- Project only their fields; the surrounding mathematical head stays opaque.
+  if expected.isAppOfArity ``Prod.mk 4 || expected.isAppOfArity ``Subtype.mk 4 then
+    unless ← isDefEq type (← inferType actual) do
+      throwError "representation input types differ at {actual}"
+    let structureName := if expected.isAppOfArity ``Prod.mk 4 then ``Prod else ``Subtype
+    let fields := expected.getAppArgs
+    matchValue fields[2]! (.proj structureName 0 actual)
+    matchValue fields[3]! (.proj structureName 1 actual)
+    return
   match expected, actual with
   | .lam _ type body _, .lam _ otherType otherBody _ =>
     unless ← isDefEq type otherType do throwError "representation input types differ"
@@ -164,15 +174,15 @@ def expose (expression : Expr) : MetaM Expr := do
     return .continue)
 
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
-    (reverseGraph : Bool) : MetaM Result := do
+    (reverseGraph : Bool) (wholeInput : Bool := false) : MetaM Result := do
   let (parameters, _, type) ← forallMetaTelescopeReducing (← inferType originalRule)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
-  let (input, proofArguments) ← if family == .exact then do
-      let state ← saveState
-      if ← isDefEq inputType (← inferType point) then pure (point, #[])
-      else state.restore; inputValue inputType
+  let (input, proofArguments) ← if wholeInput then do
+      unless family == .exact && (← isDefEq inputType (← inferType point)) do
+        throwError "the exact representation input is not the decision space"
+      pure (point, #[])
     else inputValue inputType
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
@@ -227,17 +237,21 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
 private def checked (point sourceBody : Expr) (prepare : MetaM Expr)
     (prove? : Prove) : MetaM Result := do
   let result : Except Exception Result ← Affine.withIsolatedMVars do
-    let expression ← prepare
-    let state ← saveState
-    try return .ok (← attempt point sourceBody expression prove? false)
-    catch original =>
-      state.restore
-      try
-        let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
-        let (family, _, _) ← Registry.representation type
-        unless family == .graph do return .error original
-        return .ok (← attempt point sourceBody expression prove? true)
+    let tryAttempt := fun reverse whole => Affine.withIsolatedMVars do
+      try return .ok (← attempt point sourceBody (← prepare) prove? reverse whole)
       catch exception => return .error exception
+    match ← tryAttempt false false with
+    | .ok value => return .ok value
+    | .error original =>
+      let expression ← prepare
+      let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
+      let (family, _, _) ← Registry.representation type
+      if family == .graph then return ← tryAttempt true false
+      if family == .exact then
+        -- An unused input (or product coordinate) cannot always be inferred.
+        -- Preserve the whole-predicate adapter as an isolated fallback.
+        if let .ok value ← tryAttempt false true then return .ok value
+      return .error original
   match result with
   | .ok value => pure value
   | .error error => throw error

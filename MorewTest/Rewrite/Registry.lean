@@ -76,6 +76,59 @@ private def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := d
         (mkApp2 (mkConst ``Iff) (mkApp source point) expected) do
       throwError "matched certificate changed the selected predicate"
 
+-- Product inputs: reconstructing operands must also accept intact products,
+-- including nested values and projections from a larger decision domain.
+private noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
+
+private noncomputable def pairAbsRule : Morew.EpigraphRepresentation pairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [pairAbs, exists_const] using
+      Morew.Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+
+private noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ :=
+  |p.1.1 - p.1.2 + p.2|
+
+private noncomputable def nestedPairAbsRule :
+    Morew.EpigraphRepresentation nestedPairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [nestedPairAbs, exists_const] using
+      Morew.Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+
+run_elab do
+  matched (← `(fun p : ℝ × ℝ => pairAbs p ≤ 3)) ``pairAbsRule
+  matched (← `(fun p : ℝ × ℝ => pairAbs (p.1, p.2) ≤ 3)) ``pairAbsRule
+  matched (← `(fun p : (ℝ × ℝ) × ℝ => pairAbs p.1 ≤ p.2)) ``pairAbsRule
+  matched (← `(fun p : (ℝ × ℝ) × ℝ => nestedPairAbs p ≤ 3)) ``nestedPairAbsRule
+
+private def nonnegativeValue (x : {x : ℝ // 0 ≤ x}) : ℝ := x.val
+
+private def nonnegativeValueRule : Morew.EpigraphRepresentation nonnegativeValue where
+  Auxiliary := Unit
+  target x t _ := x.val ≤ t
+  source_iff_exists _ _ := by simp only [nonnegativeValue, exists_const]
+
+-- An intact subtype supplies its own property proof; no external evidence
+-- callback is needed when reconstructing the representation input.
+run_elab do
+  matched (← `(fun x : {x : ℝ // 0 ≤ x} => nonnegativeValue x ≤ 3))
+    ``nonnegativeValueRule
+
+-- Exact inputs: infer the operand even when its type is the decision type.
+private noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
+
+private noncomputable def boundedRule : Morew.ExactConstraintLift bounded :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
+    (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
+
+run_elab do
+  matched (← `(fun x : ℝ => bounded x)) ``boundedRule
+  matched (← `(fun x : ℝ => bounded (x + 1))) ``boundedRule
+  matched (← `(fun p : ℝ × ℝ => bounded (p.1 + 1))) ``boundedRule
+
 run_elab do
   matched (← `(fun p : ℝ × ℝ => p.2 = shifted 3 p.1)) ``shiftedGraph
   matched (← `(fun p : ℝ × ℝ => shifted 3 p.1 = p.2)) ``shiftedGraph

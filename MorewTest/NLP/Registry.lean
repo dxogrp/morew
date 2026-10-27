@@ -43,14 +43,27 @@ private def check (term : TSyntax `term) (rows : Nat)
 
 private def exactRows (term : TSyntax `term) (parameters : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source expected => do
+    let before ← getMCtx
+    let environment ← getEnv
     let result ← match ← Morew.Elab.NLP.Rewrite.plan source #[] with
       | .ok result => pure result
       | .error error => throwError "registered NLP rows failed: {error.reason}"
+    unless before.mvarCounter == (← getMCtx).mvarCounter &&
+        before.lmvarCounter == (← getMCtx).lmvarCounter do
+      throwError "registered NLP planning leaked scratch metavariables"
+    for (name, _) in (← getEnv).constants.toList do
+      unless environment.contains name do
+        throwError "registered NLP planning leaked declaration {name}"
     unless result.rowPredicates.size == expected.size do
       throwError "registered NLP row count changed"
     for actual in result.rowPredicates, expected in expected do
       unless ← isDefEq actual expected do
         throwError "registered NLP row changed its expression or position: {actual}"
+    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+    for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
+        result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
+      if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
+      checkWithKernel proof
 
 private def reject (term : TSyntax `term) (message : String)
     (declaration? : Option Name := none) (parameters : Nat := 0) : TermElabM Unit :=
@@ -146,6 +159,58 @@ attribute [morew_nlp] shiftedRule
 run_cmd liftTermElabM do
   check (← `(fun c : ℝ => input (fun x : ℝ => shiftedAbs c (x * x) ≤ 3) #[]))
     2 none 1
+
+-- Product inputs must match intact values, their eta expansions, and nested
+-- projections without changing the selected predicate checked by the lift.
+noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
+
+@[morew_nlp] noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [pairAbs, exists_const] using Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun p : ℝ × ℝ => pairAbs p ≤ 3)
+    #[(fun p : ℝ × ℝ => p.1 - p.2 ≤ 3),
+      (fun p : ℝ × ℝ => -(p.1 - p.2) ≤ 3)]))
+  exactRows (← `(input (fun p : ℝ × ℝ => pairAbs (p.1, p.2) ≤ 3)
+    #[(fun p : ℝ × ℝ => p.1 - p.2 ≤ 3),
+      (fun p : ℝ × ℝ => -(p.1 - p.2) ≤ 3)]))
+  exactRows (← `(input (fun p : (ℝ × ℝ) × ℝ => pairAbs p.1 ≤ p.2)
+    #[(fun p : (ℝ × ℝ) × ℝ => p.1.1 - p.1.2 ≤ p.2),
+      (fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2) ≤ p.2)]))
+
+noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.2 + p.2|
+
+@[morew_nlp] noncomputable def nestedPairAbsRule : EpigraphRepresentation nestedPairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [nestedPairAbs, exists_const] using
+      Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun p : (ℝ × ℝ) × ℝ => nestedPairAbs p ≤ 3)
+    #[(fun p : (ℝ × ℝ) × ℝ => p.1.1 - p.1.2 + p.2 ≤ 3),
+      (fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2 + p.2) ≤ 3)]))
+
+-- Exact predicates infer their input map even when the rule's input type and
+-- the current decision space coincide.
+noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
+
+@[morew_nlp] noncomputable def boundedRule : ExactConstraintLift bounded :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
+    (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun x : ℝ => bounded x)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
+  exactRows (← `(input (fun x : ℝ => bounded (x + 1))
+    #[(fun x : ℝ => x + 1 ≤ 3), (fun x : ℝ => -(x + 1) ≤ 3)]))
+  exactRows (← `(input (fun p : ℝ × ℝ => bounded (p.1 + 1))
+    #[(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
+      (fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)]))
 
 noncomputable def userBound (c x : ℝ) : Prop := |x| ≤ c
 

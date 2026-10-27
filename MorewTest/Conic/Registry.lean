@@ -20,8 +20,10 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Elab.Conic MorewTest.Affine
 
 private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := #[])
-    (name? : Option Name := none) : TermElabM Unit := do
+    (name? : Option Name := none) (expected : Array (TSyntax `term) := #[]) :
+    TermElabM Unit := do
   let source ← elaborate term
+  let before ← getMCtx
   let result ← match name? with
     | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
     | none => Morew.Elab.Conic.Rewrite.planUnique source retained
@@ -29,11 +31,23 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     | match result with
       | .error error => throwError "registered conic rule failed: {error.reason}"
       | .ok _ => throwError "unreachable"
+  unless before.mvarCounter == (← getMCtx).mvarCounter &&
+      before.lmvarCounter == (← getMCtx).lmvarCounter do
+    throwError "registered conic planning leaked scratch metavariables"
+  if let .inl result := result then
+    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+    result.toResult.checkTargetIff
   let (predicates, certificates, proof) := match result with
     | .inl result => (result.rowPredicates, result.certifiedRows, result.lift)
     | .inr result => (result.rowPredicates, result.certifiedRows, result.conditionalIff)
   unless predicates.size == rows && certificates.size == rows do
     throwError "wrong number of certified registered rows"
+  unless expected.isEmpty do
+    unless predicates.size == expected.size do
+      throwError "wrong number of expected registered rows"
+    for actual in predicates, expected in expected do
+      unless ← isDefEq actual (← elaborate expected) do
+        throwError "registered conic row changed its expression or position: {actual}"
   checkWithKernel proof
   for row in certificates do
     checkWithKernel row.constraint
@@ -73,6 +87,56 @@ run_cmd liftTermElabM do
   check (← `(fun p : ℝ × ℝ => let (x, t) := p; Real.exp x ≤ t)) 1
   check (← `((Morew.Problem.mk (fun p : ℝ × ℝ => p.2)
     (fun p : ℝ × ℝ => Real.exp p.1 ≤ p.2)).feasible)) 1
+
+-- Product inputs: intact values, projections, and nested products match the
+-- same checked representation without requiring source-level eta expansion.
+noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
+
+@[morew_conic]
+noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [pairAbs, exists_const] using Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+
+noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.2 + p.2|
+
+@[morew_conic]
+noncomputable def nestedPairAbsRule : EpigraphRepresentation nestedPairAbs where
+  Auxiliary := Unit
+  target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
+  source_iff_exists p t := by
+    simpa only [nestedPairAbs, exists_const] using
+      Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+
+run_cmd liftTermElabM do
+  let pairRows := #[← `(fun p : ℝ × ℝ => p.1 - p.2 ≤ 3),
+    ← `(fun p : ℝ × ℝ => -(p.1 - p.2) ≤ 3)]
+  check (← `(fun p : ℝ × ℝ => pairAbs p ≤ 3)) 2 (expected := pairRows)
+  check (← `(fun p : ℝ × ℝ => pairAbs (p.1, p.2) ≤ 3)) 2 (expected := pairRows)
+  check (← `(fun p : (ℝ × ℝ) × ℝ => pairAbs p.1 ≤ p.2)) 2
+    (expected := #[← `(fun p : (ℝ × ℝ) × ℝ => p.1.1 - p.1.2 ≤ p.2),
+      ← `(fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2) ≤ p.2)])
+  check (← `(fun p : (ℝ × ℝ) × ℝ => nestedPairAbs p ≤ 3)) 2
+    (expected := #[← `(fun p : (ℝ × ℝ) × ℝ => p.1.1 - p.1.2 + p.2 ≤ 3),
+      ← `(fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2 + p.2) ≤ 3)])
+
+-- Exact inputs: composition does not depend on whether the operand and the
+-- decision variable have the same type.
+noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
+
+@[morew_conic]
+noncomputable def boundedRule : ExactConstraintLift bounded :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+
+run_cmd liftTermElabM do
+  check (← `(fun x : ℝ => bounded x)) 2
+    (expected := #[← `(fun x : ℝ => x ≤ 3), ← `(fun x : ℝ => -x ≤ 3)])
+  check (← `(fun x : ℝ => bounded (x + 1))) 2
+    (expected := #[← `(fun x : ℝ => x + 1 ≤ 3), ← `(fun x : ℝ => -(x + 1) ≤ 3)])
+  check (← `(fun p : ℝ × ℝ => bounded (p.1 + 1))) 2
+    (expected := #[← `(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
+      ← `(fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)])
 
 noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x
 
