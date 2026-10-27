@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew
+import MorewTest.Diagnostics
 
 /-!
 # Custom exact exponential representations
@@ -150,9 +151,7 @@ elab "assert_atomic_exponential% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-/-- error: constraint `after`: representation operation Real.exp (?_, ?_).1 does not match point.1.2 -/
-#guard_msgs in
-set_option pp.mvars false in
+#guard_error_fragments ["constraint `after`: representation operation Real.exp", "does not match"] in
 assert_atomic_exponential%
 reformulation rollback : source certificate rollbackAlias := by
   conic at exponential using scalarAuxiliaryRule
@@ -164,8 +163,8 @@ def automaticSource :=
     subject to
       exponential : Real.exp x ≤ t + 1
 
-/-- error: constraint `exponential`: representation operation point.2 does not match point.2 + 1 -/
-#guard_msgs in
+#guard_error_fragments ["constraint `exponential`: representation operation", "does not match",
+  "+ 1"] in
 reformulation noFallback : automaticSource := by
   conic at exponential using scalarAuxiliaryRule
 

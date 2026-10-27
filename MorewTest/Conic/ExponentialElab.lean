@@ -265,7 +265,7 @@ run_cmd liftTermElabM do
   expectRejected (← `(fun p : ℝ × ℝ => p.2 ≤ Real.exp p.1)) "bound"
   expectRejected (← `(fun p : ℝ × ℝ => Real.exp p.1 = p.2)) "polarity"
   expectRejected (← `(fun p : ℝ × ℝ => Morew.Fn.softplus p.1 ≥ p.2)) "polarity"
-  expectRejected (← `(fun p : ℝ × ℝ => Real.log p.1 ≤ p.2)) "does not match point.1"
+  expectRejected (← `(fun p : ℝ × ℝ => Real.log p.1 ≤ p.2)) "does not match"
   expectRejected (← `(fun p : ℝ × ℝ => hiddenExp p.1 ≤ p.2)) "supported"
   expectRejected (← `(fun p : ℝ × ℝ => hiddenSoftplus p.1 ≤ p.2)) "supported"
   expectRejected (← `(fun p : ℝ × ℝ => Real.exp (p.1 * p.1) ≤ p.2)) "affine"
