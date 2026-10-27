@@ -65,7 +65,7 @@ info: problem (x : Fin columns → ℝ) (t : ℝ)
   minimize t
   subject to
     nonnegative : x ∈ ℝ₊^columns
-    residual_conic_1 : (t, 1 / 2, fun i => ∑ x_1, design i x_1 * x x_1 - response i) ∈ RSOC rows
+    residual_conic_1 : (t, 1 / 2, fun i => ∑ j, design i j * x j - response i) ∈ RSOC rows
 -/
 #guard_msgs in
 #printp symbolic
@@ -85,7 +85,7 @@ info: problem (x : Fin 3 → ℝ) (t : ℝ)
   minimize t
   subject to
     nonnegative : x ∈ ℝ₊^3
-    residual_conic_1 : (t, 1 / 2, fun i => ∑ x_1, ![![1, 2, 3], ![4, 5, 6]] i x_1 * x x_1 - ![7, 8] i) ∈ RSOC 2
+    residual_conic_1 : (t, 1 / 2, fun i => ∑ j, ![![1, 2, 3], ![4, 5, 6]] i j * x j - ![7, 8] i) ∈ RSOC 2
 -/
 #guard_msgs in
 #printp concrete

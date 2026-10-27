@@ -758,10 +758,12 @@ def problemViewFromExpression (target : Expr)
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
     let render definitions objectiveBody feasibleBody binderNames := do
+      -- Definitional reduction preserves sum indices when removing scaffolding;
+      -- `simp` can replace them with binder names from congruence theorems.
       let objectiveBody ← if recoverDefinitions then pure objectiveBody else
-        simpOnly objectiveBody (preserveProofLets := true)
+        dsimpPreservingProofLets objectiveBody
       let feasibleBody ← if recoverDefinitions then pure feasibleBody else
-        simpOnly feasibleBody (preserveProofLets := true)
+        dsimpPreservingProofLets feasibleBody
       let constraints ← splitConstraintBody feasibleBody template.constraints.size
       let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
         (!forRegistration) parameterInstances

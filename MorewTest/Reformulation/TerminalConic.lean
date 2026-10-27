@@ -161,9 +161,9 @@ info: problem (x t loss_aux : ℝ) (loss_aux_1 loss_aux_2 : Fin 2 → ℝ)
   subject to
     loss_conic_1 : loss_aux ∈ ℝ₊
     loss_conic_1_1 : ∀ (i : Fin 2), (![0, x] i - t, 1, loss_aux_1 i) ∈ EXP
-    loss_conic_2 : 1 - ∑ x, loss_aux_1 x ∈ ℝ₊
+    loss_conic_2 : 1 - ∑ i, loss_aux_1 i ∈ ℝ₊
     loss_conic_3 : ∀ (i : Fin 2), (![0, -x] i - t, 1, loss_aux_2 i) ∈ EXP
-    loss_conic_4 : 1 - ∑ x, loss_aux_2 x ∈ ℝ₊
+    loss_conic_4 : 1 - ∑ i, loss_aux_2 i ∈ ℝ₊
     last : 10 - t ∈ ℝ₊
 -/
 #guard_msgs in
