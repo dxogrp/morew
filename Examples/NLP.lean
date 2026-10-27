@@ -29,18 +29,18 @@ def nonlinear :=
       error : |x ^ 2 - y| ≤ t
       budget : |x| + y ^ 2 ≤ 10
 
-reformulation nonlinearNLP : nonlinear := by
-  nlp at error using Rewrite.absEpigraph -- `using` is optional here
+reformulation smoothConstraints : nonlinear := by
+  nlp at error using Rewrite.absEpigraph -- explicit `using` clause is optional here
   -- Expose the nested absolute value as the direct bound named `magnitude`.
   epigraph a at (|x|) in budget as magnitude
   nlp at magnitude
   nlp
 
-#printp nonlinearNLP
-example : GlobalEquivalence nonlinear nonlinearNLP := nonlinearNLP.equivalence
-example : nonlinearNLP.nlpForm.data.toProblem = nonlinearNLP :=
-  nonlinearNLP.nlpForm.represents
-example : IsSmoothNLP nonlinearNLP := nonlinearNLP.isSmoothNLP
+#printp smoothConstraints
+example : GlobalEquivalence nonlinear smoothConstraints := smoothConstraints.equivalence
+example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
+  smoothConstraints.nlpForm.represents
+example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP
 
 def normBound (n : ℕ) :=
   problem (v : Fin n → ℝ) (t : ℝ)
@@ -52,15 +52,12 @@ variable (n : ℕ)
 
 -- Automatic rewriting yields `0 ≤ t` and `∑ i, v i ^ 2 ≤ t ^ 2`,
 -- preserving the symbolic dimension `n`.
-reformulation normNLP : (normBound n) := by
+reformulation squaredNorm : (normBound n) := by
   nlp
 
-#printp normNLP
-example : GlobalEquivalence (normBound n) (normNLP n) := normNLP.equivalence n
-example : NLP.Form (normNLP n) := normNLP.nlpForm n
-example : (normNLP.nlpForm n).data.toProblem = normNLP n :=
-  (normNLP.nlpForm n).represents
-example : IsSmoothNLP (normNLP n) := normNLP.isSmoothNLP n
+#printp squaredNorm
+example : GlobalEquivalence (normBound n) (squaredNorm n) := squaredNorm.equivalence n
+example : IsSmoothNLP (squaredNorm n) := squaredNorm.isSmoothNLP n
 
 end
 end Morew.Examples.NLP
