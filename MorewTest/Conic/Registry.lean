@@ -20,13 +20,16 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Elab.Conic MorewTest.Affine
 
 private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := #[])
-    (name? : Option Name := none) (expected : Array (TSyntax `term) := #[]) :
+    (name? : Option Name := none) (expected : Array (TSyntax `term) := #[])
+    (rule? : Option Expr := none) :
     TermElabM Unit := do
   let source ← elaborate term
   let before ← getMCtx
-  let result ← match name? with
-    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
-    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
+  let result ← match rule? with
+    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule retained
+    | none => match name? with
+      | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+      | none => Morew.Elab.Conic.Rewrite.planUnique source retained
   let .ok result := result
     | match result with
       | .error error => throwError "registered conic rule failed: {error.reason}"
@@ -54,17 +57,21 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     checkWithKernel row.pointwiseIff
 
 private def reject (term : TSyntax `term) (fragment : String)
-    (retained : Array Expr := #[]) (name? : Option Name := none) : TermElabM Unit := do
+    (retained : Array Expr := #[]) (name? : Option Name := none)
+    (rule? : Option Expr := none) : TermElabM Unit := do
   let source ← elaborate term
   let before ← getMCtx
   let environment ← getEnv
-  let result ← match name? with
-    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
-    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
+  let result ← match rule? with
+    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule retained
+    | none => match name? with
+      | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+      | none => Morew.Elab.Conic.Rewrite.planUnique source retained
   let .error error := result | throwError "unsupported registered conic rule was accepted"
   unless (← error.reason.toString).contains fragment do
     throwError "unexpected registered conic failure: {error.reason}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter do
+  unless before.mvarCounter == (← getMCtx).mvarCounter &&
+      before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "failed registration use leaked scratch metavariables"
   for (name, _) in (← getEnv).constants.toList do
     unless environment.contains name do throwError "failed registration use leaked {name}"
@@ -137,6 +144,20 @@ run_cmd liftTermElabM do
   check (← `(fun p : ℝ × ℝ => bounded (p.1 + 1))) 2
     (expected := #[← `(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
       ← `(fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)])
+
+-- Concrete exact lifts certify their entire source. A named declaration may
+-- infer an input map, while a concrete record keeps its original decision space.
+run_cmd liftTermElabM do
+  let concreteRule ← elaborate (← `(boundedRule))
+  check (← `(fun x : ℝ => bounded x)) 2
+    (expected := #[← `(fun x : ℝ => x ≤ 3), ← `(fun x : ℝ => -x ≤ 3)])
+    (rule? := some concreteRule)
+  check (← `(fun x : ℝ => bounded (x + 1))) 2 (name? := some ``boundedRule)
+    (expected := #[← `(fun x : ℝ => x + 1 ≤ 3), ← `(fun x : ℝ => -(x + 1) ≤ 3)])
+  reject (← `(fun x : ℝ => bounded (x + 1))) "does not match"
+    (rule? := some concreteRule)
+  reject (← `(fun p : ℝ × ℝ => bounded (p.1 + 1)))
+    "exact representation input is not the decision space" (rule? := some concreteRule)
 
 noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x
 

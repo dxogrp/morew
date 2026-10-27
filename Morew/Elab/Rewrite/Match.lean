@@ -174,7 +174,7 @@ def expose (expression : Expr) : MetaM Expr := do
     return .continue)
 
 private inductive ExactInput where
-  | infer | whole | concrete
+  | infer | whole
   deriving BEq
 
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
@@ -183,16 +183,10 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
-  let (input, proofArguments) ← if exactInput == .whole then do
-      unless family == .exact && (← isDefEq inputType (← inferType point)) do
+  let (input, proofArguments) ← if family == .exact && exactInput == .whole then do
+      unless ← isDefEq inputType (← inferType point) do
         throwError "the exact representation input is not the decision space"
       pure (point, #[])
-    else if family == .exact && exactInput == .concrete then do
-      -- A concrete exact lift already describes its decision space. Retain
-      -- the existing adapter semantics rather than silently precomposing it.
-      let saved ← saveState
-      if ← isDefEq inputType (← inferType point) then pure (point, #[])
-      else saved.restore; inputValue inputType
     else inputValue inputType
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
@@ -276,10 +270,10 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
 /-- Match and certify exactly the supplied record. Each alternative includes
 `accept` in its isolated attempt, preserving only a successful result's proof
 dependencies. Concrete exact lifts retain their whole-decision interpretation
-when input types coincide. Graph orientations count as one candidate. -/
+and require matching input types. Graph orientations count as one candidate. -/
 def rule {α : Type} (point sourceBody expression : Expr)
     (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
-  checked point sourceBody (pure expression) accept prove? .concrete
+  checked point sourceBody (pure expression) accept prove? .whole
 
 /-- Instantiate and certify a declaration, retrying graph orientation when its
 first matched target cannot be certified. Fresh universes belong to each attempt. -/
