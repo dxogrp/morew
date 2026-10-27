@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Automatic
+import Morew.Elab.Conic.Rewrite
 import Morew.Reformulation.Replace
 
 /-!
@@ -125,15 +125,15 @@ def prepareConic (state : ReformState) (step : Syntax)
         if let some name := declaration? then do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Automatic.planDeclaration predicate name (retained.map (·.predicate))
+          Morew.Elab.Conic.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
         else if let some rule := rule? then do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Automatic.planExplicit predicate rule (retained.map (·.predicate))
+          Morew.Elab.Conic.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
         else do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Automatic.planUnique predicate (retained.map (·.predicate))
+          Morew.Elab.Conic.Rewrite.planUnique predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

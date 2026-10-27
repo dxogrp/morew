@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Automatic
+import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
@@ -220,7 +220,7 @@ private partial def lower (original : PresentationState) (work : Work)
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       continue
     let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
-    match ← Automatic.planUnique predicate retained provider with
+    match ← Morew.Elab.Conic.Rewrite.planUnique predicate retained provider with
     | .ok prepared =>
       let next ← applyPrepared work index prepared
       -- Every successful automatic plan certifies its generated rows. Therefore

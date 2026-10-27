@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Automatic
+import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 
 /-!
@@ -23,8 +23,8 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     (name? : Option Name := none) : TermElabM Unit := do
   let source ← elaborate term
   let result ← match name? with
-    | some name => Automatic.planDeclaration source name retained
-    | none => Automatic.planUnique source retained
+    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
   let .ok result := result
     | match result with
       | .error error => throwError "registered conic rule failed: {error.reason}"
@@ -45,8 +45,8 @@ private def reject (term : TSyntax `term) (fragment : String)
   let before ← getMCtx
   let environment ← getEnv
   let result ← match name? with
-    | some name => Automatic.planDeclaration source name retained
-    | none => Automatic.planUnique source retained
+    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
   let .error error := result | throwError "unsupported registered conic rule was accepted"
   unless (← error.reason.toString).contains fragment do
     throwError "unexpected registered conic failure: {error.reason}"
@@ -123,7 +123,7 @@ noncomputable def quotientWithProofLet (c : ℝ) (h : c = 1) :
 run_cmd liftTermElabM do
   let term ← elaborate (← `(fun (c : ℝ) (_ : c = 1) => fun x : ℝ => x / c ≤ 1))
   lambdaBoundedTelescope term 2 fun _ source => do
-    match ← Automatic.planDeclaration source ``quotientWithProofLet with
+    match ← Morew.Elab.Conic.Rewrite.planDeclaration source ``quotientWithProofLet with
     | .error error => throwError "target-local nonzero evidence was lost: {error.reason}"
     | .ok (.inl result) =>
       checkWithKernel result.lift

@@ -16,7 +16,6 @@ import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
 import MorewTest.Conic
 import MorewTest.Conic.AffineMembership
-import MorewTest.Conic.Automatic
 import MorewTest.Conic.EuclideanAffine
 import MorewTest.Conic.Exponential
 import MorewTest.Conic.ExponentialCone
@@ -28,6 +27,7 @@ import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Registry
+import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows

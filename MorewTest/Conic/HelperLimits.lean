@@ -3,9 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Polyhedral
-import Morew.Elab.Conic.SecondOrder
-import Morew.Elab.Conic.Exponential
+import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support
 import Lean.Meta.Tactic.AuxLemma
@@ -34,17 +32,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (finiteDot e a x, (1 : ℝ), finiteDot e b x) ∈
         Morew.Conic.Cone.exponential.carrier)) 4
 
-private inductive Planner where
-  | polyhedral | secondOrder | exponential
-  deriving Repr
-
-private def plan (planner : Planner) (source : Expr) (provider : Affine.EvidenceProvider) :
-    MetaM (Except Affine.AffineError Unit) := do
-  match planner with
-  | .polyhedral => return (← Conic.Polyhedral.plan source none provider).map fun _ => ()
-  | .secondOrder => return (← Conic.SecondOrder.plan source #[] provider).map fun _ => ()
-  | .exponential => return (← Conic.Exponential.plan source #[] provider).map fun _ => ()
-
 private def elaborate (term : TSyntax `term) : TermElabM Expr := do
   let expression ← elabTerm term none
   synthesizeSyntheticMVarsNoPostponing
@@ -53,7 +40,7 @@ private def elaborate (term : TSyntax `term) : TermElabM Expr := do
     throwError "helper-budget regression did not fully elaborate its source"
   return expression
 
-private def checkFailure (planner : Planner) (term : TSyntax `term) : TermElabM Unit := do
+private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
@@ -71,38 +58,38 @@ private def checkFailure (planner : Planner) (term : TSyntax `term) : TermElabM 
       let before ← getMCtx
       -- An escaping exception fails the regression instead of being accepted
       -- as equivalent to the public API's explicit error result.
-      let .error error ← plan planner source provider
-        | throwError "{repr planner} exceeded the helper-depth limit"
+      let .error error ← Conic.Rewrite.planUnique source #[] provider
+        | throwError "conic rewriting exceeded the helper-depth limit"
       unless (← error.reason.toString).contains "maxExpansionDepth" do
-        throwError "{repr planner} lost the budget diagnostic: {error.reason}"
+        throwError "conic rewriting lost the budget diagnostic: {error.reason}"
       let after ← getMCtx
       unless before.mvarCounter == after.mvarCounter &&
           before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-        throwError "{repr planner} leaked speculative metavariables"
+        throwError "conic rewriting leaked speculative metavariables"
       if ← callerHole.mvarId!.isAssigned then
-        throwError "{repr planner} assigned a caller metavariable"
+        throwError "conic rewriting assigned a caller metavariable"
       for name in ← generated.get do
         if (← getEnv).contains name then
-          throwError "{repr planner} retained failed auxiliary evidence {name}"
+          throwError "conic rewriting retained failed auxiliary evidence {name}"
     if (← generated.get).isEmpty then
-      throwError "{repr planner} did not exercise evidence creation before failure"
+      throwError "conic rewriting did not exercise evidence creation before failure"
 
-private def checkSuccess (planner : Planner) (term : TSyntax `term) : TermElabM Unit := do
+private def checkSuccess (term : TSyntax `term) : TermElabM Unit := do
   let source ← elaborate term
-  match ← plan planner source {} with
+  match ← Conic.Rewrite.planUnique source with
   | .ok _ => pure ()
-  | .error error => throwError "{repr planner} failed after an independent limit failure: {error.reason}"
+  | .error error => throwError "conic rewriting failed after an independent limit failure: {error.reason}"
 
 set_option morew.affine.maxExpansionDepth 1 in
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkFailure .polyhedral (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
+  checkFailure (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
     fun x : ℝ => |x / c + nestedCost 2 1 x| ≤ 10))
-  checkSuccess .polyhedral (← `(fun x : ℝ => |cost 2 1 x| ≤ 10))
-  checkFailure .secondOrder (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
+  checkSuccess (← `(fun x : ℝ => |cost 2 1 x| ≤ 10))
+  checkFailure (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
     fun x : ℝ => (x / c + nestedCost 2 1 x) ^ 2 ≤ 10))
-  checkSuccess .secondOrder (← `(fun x : ℝ => (cost 2 1 x) ^ 2 ≤ 10))
-  checkFailure .exponential (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
+  checkSuccess (← `(fun x : ℝ => (cost 2 1 x) ^ 2 ≤ 10))
+  checkFailure (← `(fun c : ℝ => fun (_h : c ≠ 0 ∧ True) =>
     fun x : ℝ => Real.exp (x / c + nestedCost 2 1 x) ≤ 10))
-  checkSuccess .exponential (← `(fun x : ℝ => Real.exp (cost 2 1 x) ≤ 10))
+  checkSuccess (← `(fun x : ℝ => Real.exp (cost 2 1 x) ≤ 10))
 
 end MorewTest.Conic.HelperLimits

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Exponential
+import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 
 /-!
@@ -47,9 +47,8 @@ private def rowCone (constraint : Expr) : MetaM Expr := do
 
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) (auxiliary : Bool := false) : MetaM Unit := do
-  unless ← Exponential.isCandidate source do throwError "exponential candidate was not recognized"
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-  match ← Exponential.plan source retained with
+  match ← Rewrite.planUnique source retained with
   | .error error => throwError "expected an exponential plan: {error.reason}"
   | .ok (.inl result) =>
       if contextual then throwError "retained domain evidence escaped its contextual certificate"
@@ -99,7 +98,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
-  let .error error ← Exponential.plan source retained
+  let .error error ← Rewrite.planUnique source retained
     | throwError "unsupported exponential predicate was accepted: {source}; retained: {retained}"
   unless (← error.reason.toString).contains fragment do
     throwError "expected diagnostic containing {fragment}, got {error.reason}"
@@ -320,8 +319,6 @@ run_cmd liftTermElabM do
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => Real.exp x ≤ c))
   let missing ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  if ← Exponential.isCandidate (mkApp builder missing) then
-    throwError "candidate matching accepted an unresolved predicate"
   rejectPlan (mkApp builder missing) #[] "unresolved"
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "failed planning leaked scratch metavariables"

@@ -16,15 +16,12 @@ import Morew.Elab.Affine.Space
 import Morew.Elab.Affine.State
 import Morew.Elab.Atom
 import Morew.Elab.Conic
-import Morew.Elab.Conic.Automatic
 import Morew.Elab.Conic.Domain
-import Morew.Elab.Conic.Exponential
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
-import Morew.Elab.Conic.Polyhedral
+import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.Rules
-import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.NLP.Domain
