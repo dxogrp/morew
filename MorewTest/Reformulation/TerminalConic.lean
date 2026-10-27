@@ -106,7 +106,7 @@ info: problem (x y t : ℝ)
   subject to
     first : x - y ∈ ({0} : Set ℝ)
     bounds_conic_1 : t - x ∈ ℝ₊
-    bounds_conic_2 : t - -x ∈ ℝ₊
+    bounds_conic_2 : t + x ∈ ℝ₊
     bounds_conic_3 : 1 - y ∈ ℝ₊
     domainLog_conic_1 : x - 1 ∈ ℝ₊
     domainLog_conic_2 : (t, 1, x) ∈ EXP
@@ -303,11 +303,11 @@ example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     automaticTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     selectedTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
 
 end FiniteInstances
 

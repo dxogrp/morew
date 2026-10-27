@@ -40,7 +40,7 @@ example : minimumTarget.conicForm.data.sense = .minimize := rfl
 example : minimumTarget.conicForm.data.rowCount = 2 := rfl
 example (x : ℝ) : minimumTarget.objective x = cost 2 1 x + residual 3 2 x := rfl
 example (x : ℝ) : minimumTarget.feasible x ↔
-    10 - cost 2 1 x ∈ ℝ₊ ∧ residual 3 2 x - -5 ∈ ℝ₊ := Iff.rfl
+    10 - cost 2 1 x ∈ ℝ₊ ∧ residual 3 2 x + 5 ∈ ℝ₊ := Iff.rfl
 
 /--
 info: problem (x : ℝ)
@@ -49,7 +49,7 @@ info: problem (x : ℝ)
   minimize loss + penalty
   subject to
     cap : 10 - loss ∈ ℝ₊
-    lower : penalty - -5 ∈ ℝ₊
+    lower : penalty + 5 ∈ ℝ₊
 -/
 #guard_msgs in
 #printp minimumTarget
@@ -133,7 +133,7 @@ example : GlobalEquivalence nativeAtoms nativeAtomsTarget := nativeAtomsTarget.e
 example : IsConic nativeAtomsTarget := nativeAtomsTarget.isConic
 example : nativeAtomsTarget.conicForm.data.rowCount = 4 := rfl
 example (x t : ℝ) : nativeAtomsTarget.feasible (x, t) ↔
-    cost 1 0 t - residual 2 1 x ∈ ℝ₊ ∧ cost 1 0 t - -(residual 2 1 x) ∈ ℝ₊ ∧
+    cost 1 0 t - residual 2 1 x ∈ ℝ₊ ∧ cost 1 0 t + residual 2 1 x ∈ ℝ₊ ∧
       (cost 1 0 t, 1 / 2, ![cost 2 1 x]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
       (residual 2 1 x, 1, cost 1 0 t) ∈ EXP := Iff.rfl
 
@@ -142,7 +142,7 @@ info: problem (x t : ℝ)
   minimize cost 2 1 x
   subject to
     absolute_conic_1 : cost 1 0 t - Affine.HelperFixtures.residual 2 1 x ∈ ℝ₊
-    absolute_conic_2 : cost 1 0 t - -Affine.HelperFixtures.residual 2 1 x ∈ ℝ₊
+    absolute_conic_2 : cost 1 0 t + Affine.HelperFixtures.residual 2 1 x ∈ ℝ₊
     square_conic_1 : (cost 1 0 t, 1 / 2, ![cost 2 1 x]) ∈ RSOC 1
     exponential_conic_1 : (Affine.HelperFixtures.residual 2 1 x, 1, cost 1 0 t) ∈ EXP
 -/
@@ -323,7 +323,7 @@ example : anotherRowTarget.conicForm.data.toProblem = anotherRowTarget :=
   anotherRowTarget.conicForm.represents
 
 example (x : Parameter.Index → ℝ) (t : ℝ) : anotherRowTarget.feasible (x, t) ↔
-    t - x (Parameter.equivalence 0) ∈ ℝ₊ ∧ t - -(x (Parameter.equivalence 0)) ∈ ℝ₊ ∧
+    t - x (Parameter.equivalence 0) ∈ ℝ₊ ∧ t + x (Parameter.equivalence 0) ∈ ℝ₊ ∧
       10 - finiteDot Parameter.equivalence Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
 
 end HiddenFinite

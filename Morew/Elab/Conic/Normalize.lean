@@ -10,9 +10,10 @@ import Morew.Elab.Conic.Space
 /-!
 # Checked final cone-membership normalization
 
-Rewrite native affine comparisons to cone membership without inspecting or
-expanding their operands. This pass preserves conjunction trees and local lets;
-a caller supplies the already checked affine maps and transports their evidence.
+Rewrite native affine comparisons to cone membership, simplifying literal zero
+and explicit negation in the generated margins without expanding operands. This
+pass preserves conjunction trees and local lets; a caller supplies the already
+checked affine maps and transports their evidence.
 -/
 
 namespace Morew.Elab.Conic
@@ -58,9 +59,12 @@ private def zeroMembership {Y : Type} [NormedAddCommGroup Y] (value : Y) : Prop 
   value ∈ ({0} : Set Y)
 
 -- Fix primitive operations where these templates are declared, so unrelated
--- local `HSub`, `Neg`, or `Zero` instances cannot affect the generated margin.
+-- local `HSub`, `HAdd`, `Neg`, or `Zero` instances cannot affect the generated margin.
 private def nativeDifference {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) : Y :=
   lhs - rhs
+
+private def nativeAddition {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) : Y :=
+  lhs + rhs
 
 private def nativeZero {Y : Type} [NormedAddCommGroup Y] : Y := 0
 
@@ -71,6 +75,12 @@ private theorem nativeSubZero {Y : Type} [NormedAddCommGroup Y] (value : Y) :
 
 private theorem nativeZeroSub {Y : Type} [NormedAddCommGroup Y] (value : Y) :
     0 - value = -value := zero_sub value
+
+private theorem nativeSubNeg {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) :
+    lhs - -rhs = lhs + rhs := sub_neg_eq_add lhs rhs
+
+private theorem nativeZeroSubNeg {Y : Type} [NormedAddCommGroup Y] (value : Y) :
+    0 - -value = value := by rw [sub_neg_eq_add, zero_add]
 
 private def exposeTemplate (value : Expr) : MetaM Expr := do
   let some result ← unfoldDefinition? value
@@ -93,6 +103,17 @@ private def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
   let zero ← exposeTemplate (← mkAppOptM ``nativeZero #[some type, none])
   if ← literalZero rhs zero then
     return (lhs, ← mkAppM ``nativeSubZero #[lhs])
+  -- Only explicit native negation is eligible: do not unfold a named operand,
+  -- or accept a different Neg instance that happens to agree at this value.
+  let negated := rhs.consumeMData
+  if negated.isAppOfArity ``Neg.neg 3 then
+    let args := negated.getAppArgs
+    let native ← exposeTemplate (← mkAppM ``nativeNegation #[args[2]!])
+    if ← isDefEq args[1]! native.getAppArgs[1]! then
+      if ← literalZero lhs zero then
+        return (args[2]!, ← mkAppM ``nativeZeroSubNeg #[args[2]!])
+      return (← exposeTemplate (← mkAppM ``nativeAddition #[lhs, args[2]!]),
+        ← mkAppM ``nativeSubNeg #[lhs, args[2]!])
   if ← literalZero lhs zero then
     return (← exposeTemplate (← mkAppM ``nativeNegation #[rhs]),
       ← mkAppM ``nativeZeroSub #[rhs])
