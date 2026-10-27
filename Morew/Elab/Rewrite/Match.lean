@@ -93,6 +93,23 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
     unless ← isDefEq type otherType do throwError "representation input types differ"
     withLocalDeclD `index type fun index =>
       matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+  | .lam _ type body _, _ =>
+    withLocalDeclD `index type fun index =>
+      matchValue (body.instantiate1 index) (mkApp actual index)
+  | _, .lam _ type body _ =>
+    withLocalDeclD `index type fun index =>
+      matchValue (mkApp expected index) (body.instantiate1 index)
+  | .forallE _ type body _, .forallE _ otherType otherBody _ =>
+    unless ← isDefEq type otherType do throwError "representation input types differ"
+    withLocalDeclD `index type fun index =>
+      matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+  | .proj name index value, .proj otherName otherIndex otherValue =>
+    unless name == otherName && index == otherIndex do
+      throwError "representation expression {expected} does not match {actual}"
+    matchValue value otherValue
+  | .const name _, .const otherName _ =>
+    unless name == otherName && (← isDefEq expected actual) do
+      throwError "representation expression {expected} does not match {actual}"
   | _, _ =>
     if expected.isApp || actual.isApp then
       let expectedFn := expected.getAppFn
@@ -105,7 +122,7 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
       let first := expected.getAppArgs
       let second := actual.getAppArgs
       for index in [:first.size] do matchValue first[index]! second[index]!
-    else unless ← isDefEq expected actual do
+    else unless expected == actual do
       throwError "representation expression {expected} does not match {actual}"
 
 private def solveProof (point proof : Expr) (prove? : Prove) : MetaM Bool := do

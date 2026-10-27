@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
+import MorewTest.Rewrite.Registry.Source
 
 /-!
 # Registered conic records and retained-domain boundaries
@@ -158,6 +159,44 @@ run_cmd liftTermElabM do
     (rule? := some concreteRule)
   reject (← `(fun p : ℝ × ℝ => bounded (p.1 + 1)))
     "exact representation input is not the decision space" (rule? := some concreteRule)
+
+section QuantifiedHelperOpacity
+
+private noncomputable def hiddenAbs (x : ℝ) : ℝ := |x|
+
+private noncomputable def quantifiedAbsRule :
+    ExactConstraintLift (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
+    intro x
+    simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
+
+attribute [local morew_conic] quantifiedAbsRule
+
+-- Both sources have the same registered conjunction head. Matching beneath a
+-- quantifier must preserve helper opacity instead of unfolding by definitional equality.
+run_cmd liftTermElabM do
+  check (← `(fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True)) 2
+    (expected := #[← `(fun x : ℝ => x ≤ 3), ← `(fun x : ℝ => -x ≤ 3)])
+  reject (← `(fun x : ℝ => (∀ _ : Fin 1, hiddenAbs x ≤ 3) ∧ True)) "does not match"
+
+end QuantifiedHelperOpacity
+
+section StructuralHelperOpacity
+
+open MorewTest.Rewrite.Registry.Source.HelperOpacity
+
+attribute [local morew_conic] projectedAbsRule appliedAbsRule
+
+run_cmd liftTermElabM do
+  let expected := #[← `(fun x : ℝ => x ≤ 3), ← `(fun x : ℝ => -x ≤ 3)]
+  check (← `(fun x : ℝ => (projectedAbs x).1 ≤ 3)) 2 (expected := expected)
+  reject (← `(fun x : ℝ => (hiddenProjectedAbs x).1 ≤ 3)) "does not match"
+  check (← `(fun x : ℝ => applyFunction namedAbs x ≤ 3)) 2 (expected := expected)
+  check (← `(fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)) 2
+    (expected := expected)
+  reject (← `(fun x : ℝ => applyFunction aliasAbs x ≤ 3)) "does not match"
+
+end StructuralHelperOpacity
 
 noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x
 

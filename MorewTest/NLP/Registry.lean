@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
+import MorewTest.Rewrite.Registry.Source
 
 /-!
 # Registered NLP rules
@@ -228,6 +229,46 @@ run_cmd liftTermElabM do
     "entire selected predicate" (rule? := some concreteRule)
   reject (← `(input (fun p : ℝ × ℝ => bounded (p.1 + 1)) #[]))
     "entire selected predicate" (rule? := some concreteRule)
+
+section QuantifiedHelperOpacity
+
+private noncomputable def hiddenAbs (x : ℝ) : ℝ := |x|
+
+private noncomputable def quantifiedAbsRule :
+    ExactConstraintLift (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
+    intro x
+    simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
+
+attribute [local morew_nlp] quantifiedAbsRule
+
+-- Both sources have the same registered conjunction head. Matching beneath a
+-- quantifier must preserve helper opacity instead of unfolding by definitional equality.
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
+  reject (← `(input (fun x : ℝ => (∀ _ : Fin 1, hiddenAbs x ≤ 3) ∧ True) #[]))
+    "does not match"
+
+end QuantifiedHelperOpacity
+
+section StructuralHelperOpacity
+
+open MorewTest.Rewrite.Registry.Source.HelperOpacity
+
+attribute [local morew_nlp] projectedAbsRule appliedAbsRule
+
+run_cmd liftTermElabM do
+  exactRows (← `(input (fun x : ℝ => (projectedAbs x).1 ≤ 3)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
+  reject (← `(input (fun x : ℝ => (hiddenProjectedAbs x).1 ≤ 3) #[])) "does not match"
+  exactRows (← `(input (fun x : ℝ => applyFunction namedAbs x ≤ 3)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
+  exactRows (← `(input (fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)
+    #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
+  reject (← `(input (fun x : ℝ => applyFunction aliasAbs x ≤ 3) #[])) "does not match"
+
+end StructuralHelperOpacity
 
 noncomputable def userBound (c x : ℝ) : Prop := |x| ≤ c
 

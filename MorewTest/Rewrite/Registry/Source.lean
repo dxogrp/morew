@@ -28,4 +28,32 @@ attribute [scoped morew_nlp] shiftedEpigraph
 
 end Scoped
 
+namespace HelperOpacity
+
+noncomputable def projectedAbs (x : ℝ) : ℝ × ℝ := (|x|, 0)
+
+noncomputable def hiddenProjectedAbs (x : ℝ) : ℝ × ℝ := projectedAbs x
+
+noncomputable def projectedAbsRule :
+    Morew.ExactConstraintLift (fun x : ℝ => (projectedAbs x).1 ≤ 3) :=
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
+    intro x
+    simpa only [projectedAbs] using Morew.Rewrite.Polyhedral.abs_le_iff x 3)
+
+noncomputable def namedAbs (x : ℝ) : ℝ := |x|
+
+noncomputable def aliasAbs (x : ℝ) : ℝ := namedAbs x
+
+def applyFunction (f : ℝ → ℝ) (x : ℝ) : ℝ := f x
+
+noncomputable def appliedAbsRule :
+    Morew.EpigraphRepresentation (applyFunction namedAbs) where
+  Auxiliary := Unit
+  target x t _ := x ≤ t ∧ -x ≤ t
+  source_iff_exists x t := by
+    simpa only [applyFunction, namedAbs, exists_const] using
+      Morew.Rewrite.Polyhedral.abs_le_iff x t
+
+end HelperOpacity
+
 end MorewTest.Rewrite.Registry.Source

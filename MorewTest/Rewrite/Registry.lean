@@ -76,6 +76,42 @@ private def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := d
         (mkApp2 (mkConst ``Iff) (mkApp source point) expected) do
       throwError "matched certificate changed the selected predicate"
 
+section HelperOpacity
+
+open Source.HelperOpacity
+
+private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Unit := do
+  let source ← elaborate source
+  let domain ← Plan.predicateDomain source
+  withLocalDeclD `point domain fun point => do
+    let before ← getMCtx
+    let environment ← getEnv
+    let failure? : Option String ← try
+        discard <| Match.declaration point (mkApp source point) name pure
+        pure none
+      catch error => pure (some (← error.toMessageData.toString))
+    let some failure := failure?
+      | throwError "matching unfolded an unregistered helper in {source}"
+    unless failure.contains "does not match" do
+      throwError "unexpected helper-opacity diagnostic: {failure}"
+    unless before.mvarCounter == (← getMCtx).mvarCounter &&
+        before.lmvarCounter == (← getMCtx).lmvarCounter do
+      throwError "rejected helper matching leaked scratch metavariables"
+    for (name, _) in (← getEnv).constants.toList do
+      unless environment.contains name do
+        throwError "rejected helper matching leaked declaration {name}"
+
+-- Projection receivers and unapplied function arguments keep their named
+-- mathematical heads. Function eta expansion remains structural syntax.
+run_elab do
+  matched (← `(fun x : ℝ => (projectedAbs x).1 ≤ 3)) ``projectedAbsRule
+  rejectedMatch (← `(fun x : ℝ => (hiddenProjectedAbs x).1 ≤ 3)) ``projectedAbsRule
+  matched (← `(fun x : ℝ => applyFunction namedAbs x ≤ 3)) ``appliedAbsRule
+  matched (← `(fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)) ``appliedAbsRule
+  rejectedMatch (← `(fun x : ℝ => applyFunction aliasAbs x ≤ 3)) ``appliedAbsRule
+
+end HelperOpacity
+
 -- Product inputs: reconstructing operands must also accept intact products,
 -- including nested values and projections from a larger decision domain.
 private noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
