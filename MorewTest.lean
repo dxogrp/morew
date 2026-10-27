@@ -33,6 +33,7 @@ import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
 import MorewTest.Conic.Terminal
 import MorewTest.Core
+import MorewTest.Diagnostics
 import MorewTest.ExactConstraintLift
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
