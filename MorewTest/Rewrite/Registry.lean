@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Rewrite.RegistrySource
+import MorewTest.Rewrite.Registry.Source
 import Morew.Elab.Rewrite.Match
 import Mathlib.Tactic
 
@@ -19,7 +19,7 @@ namespace MorewTest.Rewrite.Registry
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Rewrite
-open MorewTest.Rewrite.RegistrySource
+open MorewTest.Rewrite.Registry.Source
 
 private def elaborate (term : TSyntax `term) : TermElabM Expr := do
   let value ← elabTerm term none
@@ -47,7 +47,7 @@ run_elab do
 end
 
 section
-open scoped MorewTest.Rewrite.RegistrySource.Scoped
+open scoped MorewTest.Rewrite.Registry.Source.Scoped
 run_elab do
   selected .nlp (← `(fun p : ℝ × ℝ => shifted 3 p.1 ≤ p.2))
     #[``Scoped.shiftedEpigraph]

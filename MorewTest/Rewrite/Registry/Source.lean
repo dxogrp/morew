@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Rewrite.Registry
 import Morew.Rewrite.Polyhedral
 
-namespace MorewTest.Rewrite.RegistrySource
+namespace MorewTest.Rewrite.Registry.Source
 
 /-- A custom head whose implementation is irrelevant to registry lookup. -/
 def shifted (c x : ℝ) : ℝ := x + c
@@ -28,4 +28,4 @@ attribute [scoped morew_nlp] shiftedEpigraph
 
 end Scoped
 
-end MorewTest.Rewrite.RegistrySource
+end MorewTest.Rewrite.Registry.Source

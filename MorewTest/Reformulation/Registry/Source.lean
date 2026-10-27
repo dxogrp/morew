@@ -7,7 +7,7 @@ import Morew.Reformulation
 
 /-! # Imported registered rules used by command integration tests -/
 
-namespace MorewTest.Reformulation.RegistrySource
+namespace MorewTest.Reformulation.Registry.Source
 
 open Morew
 
@@ -40,4 +40,4 @@ def maximizing (center : ℝ) :=
 
 end
 
-end MorewTest.Reformulation.RegistrySource
+end MorewTest.Reformulation.Registry.Source

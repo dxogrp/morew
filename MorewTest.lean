@@ -113,7 +113,7 @@ import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.Registry
-import MorewTest.Reformulation.RegistrySource
+import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Replace
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
@@ -135,11 +135,11 @@ import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
 import MorewTest.Rewrite.Registry
-import MorewTest.Rewrite.RegistryFirst
-import MorewTest.Rewrite.RegistryOrderAB
-import MorewTest.Rewrite.RegistryOrderBA
-import MorewTest.Rewrite.RegistrySecond
-import MorewTest.Rewrite.RegistrySource
+import MorewTest.Rewrite.Registry.First
+import MorewTest.Rewrite.Registry.OrderAB
+import MorewTest.Rewrite.Registry.OrderBA
+import MorewTest.Rewrite.Registry.Second
+import MorewTest.Rewrite.Registry.Source
 import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions

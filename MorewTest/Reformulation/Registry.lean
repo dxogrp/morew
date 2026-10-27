@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.RegistrySource
+import MorewTest.Reformulation.Registry.Source
 
 /-!
 # Registered rules through targeted and terminal commands
@@ -14,7 +14,7 @@ rule. Its registered exact representation supplies the complete replacement.
 
 namespace MorewTest.Reformulation.Registry
 
-open Morew MorewTest.Reformulation.RegistrySource
+open Morew MorewTest.Reformulation.Registry.Source
 
 noncomputable section
 
