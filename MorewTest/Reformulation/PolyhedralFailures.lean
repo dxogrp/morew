@@ -61,7 +61,10 @@ def nonlinearSource :=
     subject to
       nonlinear : |x ^ 2| ≤ 3
 
-/-- Morew.Rewrite.absEpigraph: generated row -/
+/--
+error: constraint `nonlinear`: no registered exact conic rule was fully certified:
+Morew.Rewrite.absEpigraph: generated row
+-/
 #guard_msgs (substring := true) in
 reformulation nonlinear : nonlinearSource certificate nonlinearAlias := by
   conic at nonlinear

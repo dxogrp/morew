@@ -25,8 +25,13 @@ def source :=
       square : x ^ 2 ≤ t
       ratio : x ^ 2 / y ≤ t
 
-/-- Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ does not match point.1.1
+Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation missing : source certificate missingAlias := by
   conic at square
   conic at ratio
@@ -45,8 +50,13 @@ def nonnegative :=
       margin : 0 ≤ y
       ratio : x ^ 2 / y ≤ t
 
-/-- Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ does not match point.1.1
+Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation zeroMargin : nonnegative := by
   conic at ratio
 
@@ -57,8 +67,13 @@ def strictlyPositive :=
       positive : 0 < y
       ratio : x ^ 2 / y ≤ t
 
-/-- Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ does not match point.1.1
+Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation noUniformMargin : strictlyPositive := by
   conic at ratio
 
@@ -70,8 +85,13 @@ def derived :=
       comparison : z ≤ y
       ratio : x ^ 2 / y ≤ t
 
-/-- Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ does not match point.1.1.1
+Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation noArithmeticSearch : derived := by
   conic at ratio
 
@@ -103,8 +123,13 @@ def nonlinear :=
     subject to
       bound : (Real.exp x) ^ 2 ≤ t
 
-/-- Morew.Conic.SecondOrder.squareEpigraph: generated row: constraint: cone coordinates -/
+/--
+error: constraint `bound`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareEpigraph: representation operation ‖?_‖ does not match Real.exp point.1
+Morew.Conic.SecondOrder.squareEpigraph: generated row: constraint: cone coordinates
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation nonlinearCoordinate : nonlinear := by
   conic at bound
 
@@ -115,8 +140,13 @@ def nonlinearDenominator :=
       margin : 1 ≤ y ^ 2
       ratio : x ^ 2 / y ^ 2 ≤ t
 
-/-- Morew.Conic.SecondOrder.squareDivEpigraph: generated row: constraint: cone coordinates -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ does not match point.1.1
+Morew.Conic.SecondOrder.squareDivEpigraph: generated row: constraint: cone coordinates
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation nonlinearRatio : nonlinearDenominator := by
   conic at ratio
 
@@ -126,8 +156,16 @@ def emptyRatio :=
     subject to
       ratio : (∑ i, x i ^ 2) / y ≤ t
 
-/-- Morew.Conic.SecondOrder.sumSquaresDivEpigraph: registered conic rewrite was not certified: missing positive constant margin -/
+/--
+error: constraint `ratio`: no registered exact conic rule was fully certified:
+Morew.Conic.SecondOrder.normSquareDivEpigraph: representation operation ‖(?_, ⟨?_, ?_⟩).1‖ ^
+  2 does not match ∑ i, point.1.1 i ^ 2
+Morew.Conic.SecondOrder.squareDivEpigraph: representation operation (?_, ⟨?_, ?_⟩).1 ^
+  2 does not match ∑ i, point.1.1 i ^ 2
+Morew.Conic.SecondOrder.sumSquaresDivEpigraph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
+set_option pp.mvars false in
 reformulation emptyStillRequiresMargin : emptyRatio := by
   conic at ratio
 
