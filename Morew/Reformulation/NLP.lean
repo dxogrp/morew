@@ -16,6 +16,13 @@ infimum have lower-bound rules. Operands and bounds may be nonlinear, provided
 all replacement residuals can be certified C² on an open domain containing the
 rewritten feasible set. This asserts no convexity.
 
+Automatic rewriting discovers `@[morew_nlp]` declarations and requires exactly
+one fully certified result. Shipped and user-defined rules use the same path;
+ambiguous successes are listed by fully qualified name. `using ruleName`
+selects only that declaration, inferring its parameters from the row. It need
+not be registered. Applied certificate expressions retain ordinary Lean
+elaboration, and an explicit failure never triggers automatic fallback.
+
 The command handles one outer operation. Use an occurrence epigraph or hypograph
 step first to expose a nested operation. `using rule` supplies an exact-lift,
 graph, epigraph, or hypograph representation of the entire selected predicate;
@@ -80,18 +87,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
   let index ← Replace.findConstraint state selector
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
-    let rule? ← rule?.mapM fun ruleSyntax => do
-      try
-        let rule ← elabTerm ruleSyntax none
-        synthesizeSyntheticMVarsNoPostponing
-        let rule ← instantiateMVars rule
-        if rule.hasMVar then throwError "exact rule contains unresolved metavariables"
-        return rule
-      catch
-        | .error _ message =>
-          throwErrorAt ruleSyntax
-            "constraint `{selector.getId.eraseMacroScopes}`: failed to elaborate exact rule: {message}"
-        | exception => throw exception
+    let (rule?, declaration?) ← Replace.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
     let retained := presentation.constraints.extract 0 index ++
       presentation.constraints.extract (index + 1) presentation.constraints.size
@@ -104,7 +100,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
     let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
       (fun result oldVars newVars => result.map
         (fun (value : NLPPrepared) => value.replaceFVars oldVars newVars)) instances.toList do
-      Morew.Elab.NLP.Rewrite.plan predicate (retained.map (·.predicate)) rule? index
+      Morew.Elab.NLP.Rewrite.plan predicate (retained.map (·.predicate)) rule? index declaration?
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

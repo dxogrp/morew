@@ -116,7 +116,7 @@ run_cmd liftTermElabM do
     "Morew.Rewrite.minHypograph, Morew.Rewrite.normInfToLpEpigraph"
   rejected (← `(fun v : EuclideanSpace ℝ (Fin 2) =>
     input (fun _ : ℝ => ‖v‖ ≤ min 2 3) #[]))
-    "Morew.Rewrite.minHypograph, Morew.Rewrite.euclideanNormEpigraph" 1
+    "Morew.Rewrite.euclideanNormEpigraph, Morew.Rewrite.minHypograph" 1
 
 -- Domains use exact proposed rows, without validating unrelated retained rows.
 private def unrelated (x : ℝ) : Prop := x < 50

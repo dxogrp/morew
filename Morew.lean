@@ -32,6 +32,7 @@ import Morew.Elab.NLP.Domain.Evidence
 import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.NLP.Rows
+import Morew.Elab.NLP.Rules
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
 import Morew.Elab.NLP.Terminal
