@@ -622,24 +622,9 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   reject expression .unknownHead "unsupported function, coercion, or operation"
 
 
--- A placeholder may be hidden in a local value or type even when the source
--- contains no sorryAx application directly. Inspect referenced locals only;
--- unrelated declarations do not affect certification.
-private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasSorry then return true
-  for id in (collectFVars {} expression).fvarIds do
-    unless (← get).contains id do
-      modify (·.insert id)
-      if let some declaration := (← getLCtx).find? id then
-        if ← hasPlaceholders declaration.type then return true
-        if let some value := declaration.value? (allowNondep := true) then
-          if ← hasPlaceholders value then return true
-  return false
-
 private def certifyCore (source : Expr) : CertifyM Certificate := do
   let source ← instantiateMVars source
-  if (← (hasPlaceholders source).run' {}) || (← Affine.hasUnresolved source) then
+  unless ← Domain.Evidence.complete source do
     reject source .unresolved "unresolved metavariables or placeholders are not supported"
   let type ← whnf (← inferType source)
   let .forallE _ decision result _ := type
@@ -658,7 +643,7 @@ private def certifyCore (source : Expr) : CertifyM Certificate := do
   }
   let proof := result.smooth
   let domain := result.domain
-  if (← (hasPlaceholders proof).run' {}) || (← Affine.hasUnresolved proof) then
+  unless ← Domain.Evidence.complete proof do
     reject source .unresolved "smoothness construction left unresolved metavariables or placeholders"
   let function ← certificateFunction proof
   unless ← isDefEq function source do
@@ -670,7 +655,7 @@ private def certifyCore (source : Expr) : CertifyM Certificate := do
     reject source .invalidInstance "certificate does not establish the exact C² target"
   checkWithKernel proof
   for evidence in #[result.isOpen, result.included] do
-    if (← (hasPlaceholders evidence).run' {}) || (← Affine.hasUnresolved evidence) then
+    unless ← Domain.Evidence.complete evidence do
       reject source .unresolved "domain construction left incomplete evidence"
     checkWithKernel evidence
   return { result with

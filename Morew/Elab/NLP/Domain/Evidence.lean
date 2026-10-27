@@ -46,7 +46,9 @@ private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM
           if ← hasPlaceholders value then return true
   return false
 
-/-- Check all referenced expression data for unresolved terms and placeholders. -/
+/-- Check for unresolved terms and placeholders, including those hidden in
+referenced local values and types. Unrelated local declarations do not affect
+completeness. Shared by smoothness, domain, and exact-replacement certification. -/
 def complete (expression : Expr) : MetaM Bool := do
   return !(← Affine.hasUnresolved expression) &&
     !(← (hasPlaceholders expression).run' {})

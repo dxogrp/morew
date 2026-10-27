@@ -88,21 +88,6 @@ private partial def exposeTarget (point body : Expr) : MetaM Expr := do
         return ← exposeTarget point (mkAppN field (args.extract prefixSize args.size))
   return body
 
--- Referenced local values and types can hide placeholders from `Expr.hasSorry`.
-private partial def incomplete (expression : Expr) (seen : FVarIdSet := {}) :
-    MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasMVar || expression.hasSorry then return true
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    unless seen.contains id do
-      seen := seen.insert id
-      if let some declaration := (← getLCtx).find? id then
-        if ← incomplete declaration.type seen then return true
-        if let some value := declaration.value? (allowNondep := true) then
-          if ← incomplete value seen then return true
-  return false
-
 -- Native rules expose a bound's operands and can thereby discard unused source
 -- evidence. Keep independent proof lets in each emitted predicate as well as in
 -- its current certificate, so later reformulations can certify it again.
@@ -120,7 +105,8 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     (insertionIndex : Nat) : MetaM Result := do
   -- Exactness is checked before any generated constraint can supply evidence.
   let lift ← Morew.Elab.Rewrite.Plan.checkLift source lift
-  if ← incomplete lift then throwError "the exact certificate contains unresolved placeholders"
+  unless ← Domain.Evidence.complete lift do
+    throwError "the exact certificate contains unresolved placeholders"
   let auxiliary ← whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
   let auxiliary? := if noAuxiliary then none else some auxiliary
@@ -198,7 +184,7 @@ private def adaptProductRepresentation (source domain rule : Expr)
       throwError "the supplied exact certificate does not describe the entire selected predicate"
     let input ← instantiateMVars input
     let output ← instantiateMVars output
-    if (← incomplete input) || (← incomplete output) then
+    unless (← Domain.Evidence.complete input) && (← Domain.Evidence.complete output) do
       throwError "cannot infer the exact representation's input and bound maps; supply an explicitly instantiated ExactConstraintLift"
     let input ← mkLambdaFVars #[point] input
     let output ← mkLambdaFVars #[point] output
@@ -244,7 +230,7 @@ private def planCore (source : Expr) (retained : Array Expr)
       throwError "constraint replacement insertion index is out of bounds"
     let source ← instantiateMVars source
     for expression in #[source] ++ retained ++ rule?.toArray do
-      if ← incomplete expression then
+      unless ← Domain.Evidence.complete expression do
         throwError "unresolved metavariables or placeholders in the exact replacement input"
     let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
     discard <| Space.withCanonicalSpaces #[domain] (pure (mkConst ``True.intro))
