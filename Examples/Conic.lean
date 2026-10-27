@@ -8,9 +8,13 @@ import Morew
 /-!
 # Certified complete conic reformulations
 
-Bare `conic` finishes a script, writes affine constraints as cone memberships,
-and stores the matching affine cone program data. Objective bounds and
-coordinate substitutions remain explicit steps chosen by the user.
+`conic at label` performs an exact rewrite of a selected constraint; optional
+`using` selects its rule.
+
+Bare `conic` finishes the script by rewriting supported constraints as cone
+memberships and certifying the complete problem as an affine cone program.
+It records a concrete conic form and certificates alongside the final problem.
+Objective bounds and coordinate substitutions remain explicit steps.
 -/
 
 namespace Examples.Conic
