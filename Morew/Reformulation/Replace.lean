@@ -37,6 +37,31 @@ def findConstraint (state : ReformState) (selector : TSyntax `ident) : CommandEl
     | throwErrorAt selector "unknown or stale constraint label `{selector.getId.eraseMacroScopes}`"
   return index
 
+/-- Resolve a parameterized declaration without prematurely inserting its parameters.
+
+The selected-rule matcher infers those parameters from the complete constraint.
+Closed declarations, local records, and general certificate expressions retain
+ordinary term elaboration and the existing checked representation adapters.
+Neither case searches the registry or falls back to another rule on failure. -/
+def elaborateRule (selector : TSyntax `ident) (rule? : Option (TSyntax `term)) :
+    TermElabM (Option Expr × Option Name) := do
+  let some ruleSyntax := rule? | return (none, none)
+  try
+    if ruleSyntax.raw.isIdent then
+      if let some expression@(.const name _) ← resolveId? ruleSyntax (withInfo := true) then
+        if (← whnf (← inferType expression)).isForall then
+          return (none, some name)
+    let rule ← elabTerm ruleSyntax none
+    synthesizeSyntheticMVarsNoPostponing
+    let rule ← instantiateMVars rule
+    if rule.hasMVar then throwError "exact rule contains unresolved metavariables"
+    return (some rule, none)
+  catch
+    | .error _ message =>
+      throwErrorAt ruleSyntax
+        "constraint `{selector.getId.eraseMacroScopes}`: failed to elaborate exact rule: {message}"
+    | exception => throw exception
+
 /-- Decode the final user-visible component used by generated name families. -/
 def generatedStem (selector : TSyntax `ident) : CommandElabM String := do
   let .str _ stem := selector.getId.eraseMacroScopes
