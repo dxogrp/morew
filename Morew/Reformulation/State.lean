@@ -124,8 +124,6 @@ structure ReformState where
   semanticDomainType : TSyntax `term
   /-- Stable syntax for the semantic objective-value type. -/
   semanticValueType : TSyntax `term
-  /-- Objective-value type syntax used in the displayed presentation. -/
-  presentationValueType : Lean.Syntax
   /-- Re-elaboratable mirror of the checked typed certificate, retained only
   for command emission so section variables keep their source binders. -/
   certificateSyntax : TSyntax `term
