@@ -173,9 +173,7 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
-      let direct ← Plan.plan
-        (fun original domain => Morew.Elab.Rewrite.Plan.customLift original domain rule)
-        source none provider
+      let direct ← Plan.plan source rule provider
       if let .ok result := direct then return .ok (.inl result)
       attempt source retained (fun point body prove => Match.rule point body rule prove) provider
 
