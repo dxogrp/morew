@@ -173,7 +173,10 @@ def onlyZeroMargin :=
       margin : 0 ≤ x
       logarithm : t ≤ Real.log x
 
-/-- error: terminal conic validation is uncertified: constraint `logarithm`: logarithm rewrite was not certified: missing positive constant margin -/
+/--
+error: terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:
+Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
 assert_terminal_atomic%
 reformulation noStrictMargin : onlyZeroMargin := by
@@ -187,7 +190,10 @@ def derivedMargin :=
       comparison : y ≤ x
       logarithm : t ≤ Real.log x
 
-/-- error: terminal conic validation is uncertified: constraint `logarithm`: logarithm rewrite was not certified: missing positive constant margin -/
+/--
+error: terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:
+Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin
+-/
 #guard_msgs (substring := true) in
 assert_terminal_atomic%
 reformulation noArithmeticDomainSearch : derivedMargin := by

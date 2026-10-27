@@ -201,15 +201,15 @@ run_cmd liftTermElabM do
 independently of coincidence on particular values. -/
 
 run_cmd liftTermElabM do
-  expectRejected (← `(fun x : ℝ => x^2 = 3)) "upper bound"
-  expectRejected (← `(fun x : ℝ => 3 ≤ x^2)) "upper-bound polarity"
-  expectRejected (← `(fun x : ℝ => x^3 ≤ 3)) "exponent 2"
+  expectRejected (← `(fun x : ℝ => x^2 = 3)) "bound polarity"
+  expectRejected (← `(fun x : ℝ => 3 ≤ x^2)) "bound polarity"
+  expectRejected (← `(fun x : ℝ => x^3 ≤ 3)) "does not match 3"
   expectRejected (← `(fun x : ℝ => (x^2)^2 ≤ 3)) "affine"
   expectRejected (← `(fun x : ℝ => x^2 ≤ x*x)) "affine"
-  expectRejected (← `(fun x : Fin 2 → ℝ => ‖x‖^2 ≤ 3)) "Euclidean norm"
+  expectRejected (← `(fun x : Fin 2 → ℝ => ‖x‖^2 ≤ 3)) "Fin 2 → ℝ"
   expectRejected (← `(fun x : EuclideanSpace ℝ Bool => ‖x‖ ≤ 3)) "EuclideanSpace"
   expectRejected (← `(fun x : Fin 2 → ℝ => (∑ i ∈ ({0} : Finset (Fin 2)), (x i)^2) ≤ 3))
-    "complete selected bound"
+    "Finset.univ does not match {0}"
   expectRejected (← `(fun x : ℝ =>
     @HPow.hPow ℝ ℕ ℝ ⟨fun a _ => a*a⟩ x 2 ≤ 3)) "instance"
   expectRejected (← `(fun x : EuclideanSpace ℝ (Fin 2) =>

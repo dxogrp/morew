@@ -4,6 +4,9 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import Morew.Elab.Conic.Polyhedral
+import Morew.Elab.Conic.SecondOrder
+import Morew.Elab.Conic.Exponential
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support
 import MorewTest.Reformulation.AffineHelperSource

@@ -3,102 +3,207 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Polyhedral
-import Morew.Elab.Conic.SecondOrder
-import Morew.Elab.Conic.Exponential
+import Morew.Elab.Conic.Rules
+import Morew.Elab.Conic.Domain
+import Morew.Elab.Rewrite.Match
 
 /-!
-# Automatic exact-rule selection
+# Registered exact conic selection
 
-Targeted rewriting retains its first-certified-success policy. Terminal lowering
-uses exhaustive certification after checking whether a row is already affine.
-Each speculative attempt isolates metavariables; the enclosing transaction also
-rolls back successful proof dependencies when selection is ambiguous.
+Every automatic candidate comes from `@[morew_conic]`, including built-ins.
+Both targeted and terminal callers require one fully certified replacement.
+Retained evidence can discharge domain obligations for same-domain replacements;
+conditional auxiliary lifts remain outside this API.
 -/
 
 namespace Morew.Elab.Conic.Automatic
 
-open Lean Lean.Meta
+open Lean Lean.Meta Qq
+open Morew.Elab.Rewrite
 
-/-- Identities of independent native rule attempts. Second-order operation heads
-and norm carriers select disjoint variants within their respective attempts. -/
-inductive RuleId where
-  | polyhedral (rule : Polyhedral.Rule)
-  | secondOrder
-  | exponential (rule : Exponential.Rule)
-  deriving BEq, Repr
+private theorem existsUnitIff (p : Unit → Prop) : (∃ u, p u) ↔ p () := by
+  constructor
+  · rintro ⟨⟨⟩, h⟩
+    exact h
+  · exact fun h => ⟨(), h⟩
 
-/-- Readable identities for diagnostics, independent of theorem pretty-printing. -/
-def RuleId.description : RuleId → String
-  | .polyhedral .absolute => "absolute-value upper bound"
-  | .polyhedral .positivePart => "positive-part upper bound"
-  | .polyhedral .maximum => "maximum upper bound"
-  | .polyhedral .minimum => "minimum lower bound"
-  | .polyhedral .supremum => "finite-supremum upper bound"
-  | .polyhedral .infimum => "finite-infimum lower bound"
-  | .polyhedral .norm => "polyhedral norm upper bound"
-  | .secondOrder => "second-order upper bound"
-  | .exponential .exponential => "exponential upper bound"
-  | .exponential .logarithm => "logarithmic lower bound"
-  | .exponential .logSumExp => "log-sum-exp upper bound"
-  | .exponential .softplus => "softplus upper bound"
-  | .exponential .relativeEntropy => "relative-entropy upper bound"
+private theorem dimensionPositive (n : Nat) [Nonempty (Fin n)] : 0 < n :=
+  Fin.pos_iff_nonempty.mpr inferInstance
 
-/-- Preserve targeted rewriting's family order and certified fallback behavior. -/
-def planFirst (predicate : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+private theorem dimensionPositiveOfNe (n : Nat) (h : n ≠ 0) : 0 < n :=
+  Nat.pos_of_ne_zero h
+
+private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := do
+  if (← Affine.depends point dimension) || (← Rewrite.Plan.unresolved dimension) then return none
+  let n : Q(Nat) := dimension
+  let goal : Q(Prop) := q(0 < $n)
+  let nonzero : Q(Prop) := q($n ≠ 0)
+  for declaration in ← getLCtx do
+    let evidence := declaration.toExpr
+    if (← Affine.depends point evidence) || (← Rewrite.Plan.unresolved evidence) then continue
+    if ← isDefEq declaration.type goal then return some evidence
+    if ← isDefEq declaration.type nonzero then
+      return some (← mkAppM ``dimensionPositiveOfNe #[dimension, evidence])
+  let saved ← saveState
+  try
+    let proof ← mkAppOptM ``dimensionPositive #[some dimension, none]
+    if ← Rewrite.Plan.unresolved proof then throwError "unresolved finite nonemptiness"
+    unless ← isDefEq (← inferType proof) goal do throwError "invalid dimension evidence"
+    checkWithKernel proof
+    return some proof
+  catch _ => saved.restore
+  if let some value ← getNatValue? (← Affine.reduceStructure dimension) then
+    if value > 0 && value ≤ 100000 then return some (← mkDecideProof goal)
+  return none
+
+/-- Evidence for registered records uses the established bounded conic policy.
+The selected row is never among the supplied retained predicates. -/
+private def proveObligation (point : Expr) (retained : Array Expr)
+    (evidence goal : Expr) : MetaM (Option Expr) := do
+  let goal ← instantiateMVars goal
+  if ← Rewrite.Plan.unresolved goal then return none
+  for declaration in ← getLCtx do
+    let proof := declaration.toExpr
+    if (← Affine.depends point proof) || (← Rewrite.Plan.unresolved proof) then continue
+    if ← isDefEq declaration.type goal then
+      checkWithKernel proof
+      return some proof
+  let reduced ← Affine.reduceStructure goal
+  if reduced.isAppOfArity ``LT.lt 4 || reduced.isAppOfArity ``LE.le 4 then
+    let args := reduced.getAppArgs
+    let strict := reduced.isAppOfArity ``LT.lt 4
+    if ← isDefEq args[0]! q(ℝ) then
+      let value : Q(ℝ) := args[3]!
+      let canonical : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
+      if ← isDefEq reduced canonical then
+        if let some proof ← Domain.signFromRetained? point value retained evidence strict then
+          return some proof
+        throwError "registered conic rewrite was not certified: missing {if strict then "positive" else "nonnegative"} constant margin; required an independent ε with {if strict then "0 < ε" else "0 ≤ ε"} and a retained constraint ε ≤ {value}"
+    if strict && (← isDefEq args[0]! q(Nat)) then
+      let n : Q(Nat) := args[3]!
+      if ← isDefEq reduced q(0 < $n) then
+        if let some proof ← nonemptyEvidence? point n then return some proof
+        throwError "registered conic rewrite was not certified: missing independent nonempty dimension evidence (0 < {n})"
+  return none
+
+-- Preserve the conic consumer's structural policy without teaching the neutral
+-- registry about model containers or compiler-generated product matchers.
+private def matchingBody (expression : Expr) : MetaM Expr := do
+  Meta.transform expression (pre := fun value => do
+    let reduced ← Affine.reduceStructure value (preserveLets := true)
+    if reduced != value then return .visit reduced
+    return .continue)
+
+private def materialize (source domain point evidence : Expr) (retained : Array Expr)
+    (matched : Match.Result) (provider : Affine.EvidenceProvider) : MetaM Plan.Prepared := do
+  let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
+  if ← Affine.depends point auxiliary then throwError "the auxiliary type depends on a decision variable"
+  let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary => do
+    let body ← Plan.exposeTarget (mkApp matched.target auxiliary)
+    let reduceProjection (value : Expr) : MetaM TransformStep := do
+      if value.isProj || value.isAppOf ``Subtype.val ||
+          value.isAppOf ``Prod.fst || value.isAppOf ``Prod.snd then
+        let reduced ← Registry.structural value
+        if reduced != value then return .visit reduced
+      return .continue
+    let body ← Meta.transform body (pre := reduceProjection) (post := reduceProjection)
+    mkLambdaFVars #[auxiliary] body
+  let proof ← instantiateMVars matched.sourceIff
+  if ← Affine.depends evidence target then
+    throwError "generated cone rows depend on retained feasibility evidence"
+  if !(← Affine.depends evidence proof) then
+    let target ← mkLambdaFVars #[point] target
+    let pointwise ← mkLambdaFVars #[point] proof
+    let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, target, pointwise]
+    let lift ← Rewrite.Plan.checkLift source lift
+    return .inl (← Plan.finish source domain lift provider)
+  unless ← isDefEq auxiliary (mkConst ``Unit) do
+    throwError "retained-context exact replacements with auxiliary variables are not supported"
+  let raw := mkApp target (mkConst ``Unit.unit)
+  let eliminated ← mkAppM ``Iff.trans #[proof, ← mkAppM ``existsUnitIff #[target]]
+  let (rows, decomposition) ← Plan.splitTarget raw
+  let rowPredicates ← rows.toArray.mapM fun row => mkLambdaFVars #[point] row
+  let conditionalIff ← mkLambdaFVars #[point, evidence]
+    (← mkAppM ``Iff.trans #[eliminated, decomposition])
+  if ← Rewrite.Plan.unresolved conditionalIff then
+    throwError "registered conic certificate contains unresolved metavariables"
+  checkWithKernel conditionalIff
+  let certifiedRows ← Plan.certifyRows rowPredicates provider
+  Plan.prepareContextual source retained { domain, rowPredicates, certifiedRows, conditionalIff }
+
+private def attempt (source : Expr) (retained : Array Expr)
+    (matchRule : Expr → Expr → (Expr → MetaM (Option Expr)) → MetaM Match.Result)
+    (provider : Affine.EvidenceProvider) : MetaM (Except Affine.AffineError Plan.Prepared) :=
   Affine.withIsolatedMVars do
-    let mut candidateError? := none
-    if ← Exponential.isCandidate predicate then
-      match ← Exponential.plan predicate retained provider with
-      | .ok result => return .ok result
-      | .error error => candidateError? := some error
-    if ← SecondOrder.isCandidate predicate then
-      match ← SecondOrder.planReplacement predicate retained provider with
-      | .ok result => return .ok result
-      | .error error =>
-        if candidateError?.isNone then candidateError? := some error
-    match ← Polyhedral.plan predicate none provider with
-    | .ok result => return .ok (.inl result)
-    | .error error => return .error (candidateError?.getD error)
-
-/-- Certify every applicable native exact rule and require a unique success.
-
-The terminal caller first normalizes already-affine rows. This function itself
-does not perform that shortcut: constant inequalities can therefore exhibit
-real rule ambiguity when this lower-level interface is called directly.
-Candidate heads and failed obligations never count as successful matches.
-No custom rules are searched, and no objective or nested expression is lifted. -/
-def planUnique (predicate : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  Affine.withIsolatedMVars do
-    let mut successes : Array (RuleId × Plan.Prepared) := #[]
-    if ← Exponential.isCandidate predicate then
-      for rule in Exponential.rules do
-        if let .ok result ← Exponential.planRule rule predicate retained provider then
-          successes := successes.push (.exponential rule, result)
-    if ← SecondOrder.isCandidate predicate then
-      if let .ok result ← SecondOrder.planReplacement predicate retained provider then
-        successes := successes.push (.secondOrder, result)
-    for rule in Polyhedral.rules do
-      if let .ok result ← Polyhedral.planRule rule predicate provider then
-        successes := successes.push (.polyhedral rule, .inl result)
-    if let [(_, result)] := successes.toList then
+    try
+      if ← Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
+      let domain ← Rewrite.Plan.predicateDomain source
+      for row in retained do
+        if ← Rewrite.Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
+        unless ← isDefEq (← Rewrite.Plan.predicateDomain row) domain do
+          throwError "retained constraint has a different decision domain"
+      let mut instances ← Affine.sourceFiniteInstances source
+      for row in retained do instances := instances ++ (← Affine.sourceFiniteInstances row)
+      let result ← Rewrite.Plan.withScopedFiniteInstances Plan.Prepared.replaceFVars instances.toList do
+        withLocalDeclD `point domain fun point =>
+          Rewrite.Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
+            let bodies := retained.map (mkApp · point)
+            withLocalDeclD `retained (Decomposition.conjunction bodies.toList) fun evidence => do
+              let body ← matchingBody (mkApp source point)
+              let matched ← matchRule point body (proveObligation point bodies evidence)
+              materialize source domain point evidence retained matched provider
       return .ok result
-    if successes.size > 1 then
-      let descriptions := successes.toList.map fun (rule, _) => rule.description
-      return .error {
-        expression := predicate
-        reason := ← addMessageContext
-          m!"ambiguous exact conic rules: {String.intercalate ", " descriptions}"
-      }
-    -- Reuse the established, source-specific diagnostic rather than reporting
-    -- a rejected attempt for an unrelated operation earlier in the rule table.
-    match ← planFirst predicate retained provider with
-    | .error error => return .error error
-    | .ok _ => return .error {
-        expression := predicate
-        reason := "internal error: exhaustive conic selection omitted a certified rule"
-      }
+    catch error =>
+      return .error { expression := source, reason := ← addMessageContext error.toMessageData }
+
+/-- Select an explicitly named declaration, registered or not. There is no
+fallback to any other rule when matching, exactness, or affine checking fails. -/
+def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+  Affine.withIsolatedMVars do
+    Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
+      attempt source retained (fun point body prove => Match.declaration point body name prove) provider
+
+/-- Preserve the checked whole-predicate adapter for concrete certificate
+expressions. If that adapter cannot prepare the record, typed matching may
+reconstruct subtype inputs using the existing retained-domain policy. Both
+attempts use exactly the supplied record; registered rules are never searched. -/
+def planExplicit (source rule : Expr) (retained : Array Expr := #[])
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+  Affine.withIsolatedMVars do
+    Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
+      let direct ← Plan.plan
+        (fun original domain => Rewrite.Plan.customLift original domain rule)
+        source none provider
+      if let .ok result := direct then return .ok (.inl result)
+      attempt source retained (fun point body prove => Match.rule point body rule prove) provider
+
+/-- Certify all registered candidates and require a unique success. -/
+def planUnique (predicate : Expr) (retained : Array Expr := #[])
+    (provider : Affine.EvidenceProvider := {}) (accept : Name → Bool := fun _ => true) : MetaM (Except Affine.AffineError Plan.Prepared) :=
+  Affine.withIsolatedMVars do
+    try
+      if ← Rewrite.Plan.unresolved predicate then
+        throwError "unresolved metavariables in selected predicate"
+      let domain ← Rewrite.Plan.predicateDomain predicate
+      let lookup ← withLocalDeclD `point domain fun point => do
+        mkLambdaFVars #[point] (← matchingBody (mkApp predicate point))
+      let candidates := (← Registry.candidates .conic lookup).filter accept
+      let mut successes : Array (Name × Plan.Prepared) := #[]
+      let mut failures : Array MessageData := #[]
+      for name in candidates do
+        match ← planDeclaration predicate name retained provider with
+        | .ok result => successes := successes.push (name, result)
+        | .error error => failures := failures.push m!"{name}: {error.reason}"
+      if let [(_, result)] := successes.toList then return .ok result
+      if successes.size > 1 then
+        let names := successes.toList.map fun (name, _) => name.toString
+        throwError "ambiguous exact conic rules: {String.intercalate ", " names}; select one with `using`"
+      if failures.isEmpty then
+        throwError "no supported registered conic rule matches the entire selected predicate and bound polarity"
+      throwError "no registered exact conic rule was fully certified:\n{MessageData.joinSep failures.toList "\n"}"
+    catch error => return .error {
+      expression := predicate
+      reason := ← addMessageContext error.toMessageData }
 
 end Morew.Elab.Conic.Automatic

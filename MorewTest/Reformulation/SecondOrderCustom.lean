@@ -159,8 +159,9 @@ elab "assert_atomic_reformulation% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-/-- error: constraint `after`: the supplied exact certificate does not describe the entire selected predicate -/
+/-- error: constraint `after`: representation operation userSquare (?_, ?_).1 does not match point.1.2 -/
 #guard_msgs in
+set_option pp.mvars false in
 assert_atomic_reformulation%
 reformulation wrongSource : source certificate wrongSourceAlias := by
   conic at auxiliary using auxiliaryRule

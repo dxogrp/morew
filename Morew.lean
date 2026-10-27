@@ -5,8 +5,10 @@ import Morew.Conic.Cone
 import Morew.Conic.Exponential
 import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
+import Morew.Conic.Exponential.Representations
 import Morew.Conic.Polyhedral
 import Morew.Conic.SecondOrder
+import Morew.Conic.SecondOrder.Representations
 import Morew.Core
 import Morew.Elab.Affine
 import Morew.Elab.Affine.Expansion
@@ -21,6 +23,7 @@ import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Polyhedral
+import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.SecondOrder
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal

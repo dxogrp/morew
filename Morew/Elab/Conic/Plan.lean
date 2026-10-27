@@ -124,7 +124,8 @@ private abbrev conjunction := Decomposition.conjunction
 -- Adapters can leave another representation's target projection at the head.
 -- Expose only these record fields, stopping before arbitrary predicate helpers
 -- or arithmetic operands are unfolded.
-private partial def exposeTarget (body : Expr) : MetaM Expr := do
+/-- Reduce checked representation target fields without unfolding predicate helpers. -/
+partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Affine.reduceStructure body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
@@ -142,7 +143,8 @@ private partial def exposeTarget (body : Expr) : MetaM Expr := do
         return ← exposeTarget (mkAppN reduced (args.extract prefixSize args.size))
   return body
 
-private def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
+/-- Expose representation fields and split a checked replacement target. -/
+def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
   Decomposition.split body fun body => do
     let body ← exposeTarget body
     -- Keep exact-lift diagnostics stable while sharing conjunction proof assembly.

@@ -173,25 +173,25 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (some (← `(nonlinearExact)))
   expectRejected (← `(fun x : ℝ => 0 ≤ x)) "unsupported exact-lift decision space"
     (some (← `(boolAuxiliary)))
-  expectRejected (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) "entire selected"
+  expectRejected (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) "does not match"
     (some (← `(absEpigraph)))
   expectRejected (← `(fun x : ℝ => opaqueAbs x ≤ 1)) "no supported"
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "unsupported norm exponent"
+  expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "WithLp 2"
   expectRejected (← `(fun x : ℝ => @LE.le ℝ ⟨fun a b => a + 1 ≤ b⟩ |x| 1)) "order instance"
   expectRejected (← `(fun v : Fin 2 → ℝ =>
-    @Norm.norm (Fin 2 → ℝ) ⟨fun _ => 0⟩ v ≤ 1)) "unsupported instance"
+    @Norm.norm (Fin 2 → ℝ) ⟨fun _ => 0⟩ v ≤ 1)) "instance"
   -- Coincident operands still require the native maximum instance.
   expectRejected (← `(fun x : ℝ =>
-    @Max.max ℝ ⟨fun a _ => a⟩ x x ≤ 1)) "no supported"
+    @Max.max ℝ ⟨fun a _ => a⟩ x x ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     @Finset.sup' ℝ ℕ (inferInstance : SemilatticeSup (OrderDual ℝ))
-      {0} (by simp) (fun _ => x) ≤ 1)) "unsupported instance"
+      {0} (by simp) (fun _ => x) ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     (if x ≤ 0 then ({0} : Finset ℕ) else {1}).sup'
-      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "depends on a decision"
+      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "decision variable"
   expectRejected (← `(fun x : ℝ => 0 ≤ x ∨ x ≤ 0)) "unsupported exact target"
     (some (← `(disjunctiveTarget)))
   expectRejected (← `(predicateHelper)) "unsupported exact target"

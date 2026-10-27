@@ -150,8 +150,9 @@ elab "assert_atomic_exponential% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-/-- error: constraint `after`: the supplied exact certificate does not describe the entire selected predicate -/
+/-- error: constraint `after`: representation operation Real.exp (?_, ?_).1 does not match point.1.2 -/
 #guard_msgs in
+set_option pp.mvars false in
 assert_atomic_exponential%
 reformulation rollback : source certificate rollbackAlias := by
   conic at exponential using scalarAuxiliaryRule
@@ -163,7 +164,7 @@ def automaticSource :=
     subject to
       exponential : Real.exp x ≤ t + 1
 
-/-- error: constraint `exponential`: the supplied exact certificate does not describe the entire selected predicate -/
+/-- error: constraint `exponential`: representation operation point.2 does not match point.2 + 1 -/
 #guard_msgs in
 reformulation noFallback : automaticSource := by
   conic at exponential using scalarAuxiliaryRule

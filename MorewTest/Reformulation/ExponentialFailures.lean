@@ -210,8 +210,8 @@ def fakeOrder :=
 reformulation incompatibleOrder : fakeOrder := by
   conic at bound
 
-/-- error: constraint `exponential`: expected an ExactConstraintLift -/
-#guard_msgs (substring := true) in
+/-- error: constraint `exponential`: expected ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation; reduced type is ℝ -/
+#guard_msgs in
 reformulation invalidExplicitRule : source := by
   conic at exponential using (0 : ℝ)
 

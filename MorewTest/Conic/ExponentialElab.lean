@@ -100,7 +100,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
   let .error error ← Exponential.plan source retained
-    | throwError "unsupported exponential predicate was accepted: {source}"
+    | throwError "unsupported exponential predicate was accepted: {source}; retained: {retained}"
   unless (← error.reason.toString).contains fragment do
     throwError "expected diagnostic containing {fragment}, got {error.reason}"
 
@@ -266,7 +266,7 @@ run_cmd liftTermElabM do
   expectRejected (← `(fun p : ℝ × ℝ => p.2 ≤ Real.exp p.1)) "bound"
   expectRejected (← `(fun p : ℝ × ℝ => Real.exp p.1 = p.2)) "polarity"
   expectRejected (← `(fun p : ℝ × ℝ => Morew.Fn.softplus p.1 ≥ p.2)) "polarity"
-  expectRejected (← `(fun p : ℝ × ℝ => Real.log p.1 ≤ p.2)) "polarity"
+  expectRejected (← `(fun p : ℝ × ℝ => Real.log p.1 ≤ p.2)) "does not match point.1"
   expectRejected (← `(fun p : ℝ × ℝ => hiddenExp p.1 ≤ p.2)) "supported"
   expectRejected (← `(fun p : ℝ × ℝ => hiddenSoftplus p.1 ≤ p.2)) "supported"
   expectRejected (← `(fun p : ℝ × ℝ => Real.exp (p.1 * p.1) ≤ p.2)) "affine"
@@ -274,7 +274,7 @@ run_cmd liftTermElabM do
   expectRejected (← `(fun p : (Fin 2 → ℝ) × ℝ =>
     Morew.Fn.logSumExp (fun i => (p.1 i)^2) ≤ p.2)) "affine"
   expectRejected (← `(fun p : (Fin 2 → ℝ) × ℝ =>
-    Real.log (∑ i ∈ ({0} : Finset (Fin 2)), Real.exp (p.1 i)) ≤ p.2)) "sum"
+    Real.log (∑ i ∈ ({0} : Finset (Fin 2)), Real.exp (p.1 i)) ≤ p.2)) "Finset.univ does not match {0}"
   expectRejected (← `(fun p : ℝ × ℝ =>
     @LE.le ℝ ⟨fun _ _ => True⟩ (Real.exp p.1) p.2)) "instance"
   expectRejected (← `(fun p : ℝ × ℝ =>
