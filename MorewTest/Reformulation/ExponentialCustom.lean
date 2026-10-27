@@ -151,7 +151,7 @@ elab "assert_atomic_exponential% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-#guard_error_fragments ["constraint `after`: representation operation Real.exp", "does not match"] in
+#guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
 assert_atomic_exponential%
 reformulation rollback : source certificate rollbackAlias := by
   conic at exponential using scalarAuxiliaryRule

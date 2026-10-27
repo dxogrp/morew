@@ -160,7 +160,7 @@ elab "assert_atomic_reformulation% " nested:command : command => do
     unless before.contains name do
       Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
 
-#guard_error_fragments ["constraint `after`: representation operation userSquare", "does not match"] in
+#guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
 assert_atomic_reformulation%
 reformulation wrongSource : source certificate wrongSourceAlias := by
   conic at auxiliary using auxiliaryRule
