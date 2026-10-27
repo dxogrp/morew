@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import MorewTest.Diagnostics
 import Morew.Conic.Exponential
 
 /-!
@@ -35,8 +36,7 @@ def source :=
       exponential : Real.exp x ≤ t
       logarithm : t ≤ Real.log y
 
-/-- error: constraint `logarithm`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `logarithm`:"] in
 assert_exp_atomic%
 reformulation missingDomain : source certificate missingDomainAlias := by
   conic at exponential
@@ -228,8 +228,7 @@ def uncertifiedTarget : ExactConstraintLift
 
 -- This certificate is mathematically valid, but its unlowered target is not
 -- affine. The explicit request must fail instead of running the automatic atom.
-/-- error: constraint `exponential`: generated row: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `exponential`: generated row:"] in
 assert_exp_atomic%
 reformulation explicitCannotFallback : scalarSource certificate explicitCannotFallbackAlias := by
   conic at exponential using uncertifiedTarget
@@ -241,8 +240,7 @@ def liftedSource :=
       softplus : Fn.softplus x ≤ t
       logarithm : t ≤ Real.log x
 
-/-- error: constraint `logarithm`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `logarithm`:"] in
 assert_exp_atomic%
 reformulation failureAfterAuxiliary : liftedSource certificate failureAfterAuxiliaryAlias := by
   conic at softplus

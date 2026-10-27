@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import MorewTest.Diagnostics
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support
@@ -361,8 +362,7 @@ def absoluteSource :=
     minimize cost 2 1 x
     subject to bound : wrappedAbs x ≤ t
 
-/-- error: constraint `bound`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `bound`:"] in
 assert_helper_atomic%
 reformulation noWrappedAbsolute : absoluteSource := by
   conic at bound
@@ -372,8 +372,7 @@ def squareSource :=
     minimize cost 2 1 x
     subject to bound : wrappedSquare x ≤ t
 
-/-- error: terminal conic validation is uncertified: constraint `bound`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `bound`:"] in
 assert_helper_atomic%
 reformulation noWrappedSquare : squareSource := by
   conic
@@ -385,8 +384,7 @@ def exponentialSource :=
       first : |cost 2 1 x| ≤ t
       bound : wrappedExp x ≤ t
 
-/-- error: constraint `bound`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `bound`:"] in
 assert_helper_atomic%
 reformulation noWrappedExponential : exponentialSource certificate noWrappedAlias := by
   conic at first
@@ -397,16 +395,14 @@ def predicateSource :=
     minimize cost 2 1 x
     subject to bound : wrappedPredicate x t
 
-/-- error: terminal conic validation is uncertified: constraint `bound`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `bound`:"] in
 assert_helper_atomic%
 reformulation noWrappedPredicate : predicateSource := by
   conic
 
 -- Option changes take effect at the model command and do not escape its scope.
 set_option morew.affine.maxExpansionSteps 0 in
-/-- error: terminal conic validation is uncertified: objective: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: objective:"] in
 assert_helper_atomic%
 reformulation helpersDisabled : minimum := by
   conic

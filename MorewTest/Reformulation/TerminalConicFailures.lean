@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import MorewTest.Diagnostics
 
 /-!
 # Terminal conic failure and declaration atomicity
@@ -41,8 +42,8 @@ def affineSource :=
 
 namespace TargetCollision
 def target : Nat := 11
-/-- error: `MorewTest.Reformulation.TerminalConicFailures.TargetCollision.target` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalConicFailures.TargetCollision.target` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
@@ -51,8 +52,8 @@ end TargetCollision
 
 namespace EquivalenceCollision
 def target.equivalence : Nat := 13
-/-- error: `MorewTest.Reformulation.TerminalConicFailures.EquivalenceCollision.target.equivalence` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalConicFailures.EquivalenceCollision.target.equivalence` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
@@ -61,8 +62,8 @@ end EquivalenceCollision
 
 namespace FormCollision
 def target.conicForm : Nat := 17
-/-- error: `MorewTest.Reformulation.TerminalConicFailures.FormCollision.target.conicForm` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalConicFailures.FormCollision.target.conicForm` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
@@ -71,8 +72,8 @@ end FormCollision
 
 namespace IsConicCollision
 def target.isConic : Nat := 19
-/-- error: `MorewTest.Reformulation.TerminalConicFailures.IsConicCollision.target.isConic` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalConicFailures.IsConicCollision.target.isConic` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
@@ -81,22 +82,20 @@ end IsConicCollision
 
 namespace AliasCollision
 def certificateAlias : Nat := 23
-/-- error: `MorewTest.Reformulation.TerminalConicFailures.AliasCollision.certificateAlias` has already been declared -/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "`MorewTest.Reformulation.TerminalConicFailures.AliasCollision.certificateAlias` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
 example : certificateAlias = 23 := rfl
 end AliasCollision
 
-/-- error: duplicate generated declaration name -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["duplicate generated declaration name"] in
 assert_terminal_atomic%
 reformulation aliasIsForm : affineSource certificate aliasIsForm.conicForm := by
   conic
 
-/-- error: duplicate generated declaration name -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["duplicate generated declaration name"] in
 assert_terminal_atomic%
 reformulation aliasIsConic : affineSource certificate aliasIsConic.isConic := by
   conic
@@ -136,8 +135,7 @@ reformulation targetedAfterTerminal : affineSource := by
 
 def nonlinearMinimum := problem (x : ℝ) minimize |x|
 
-/-- error: terminal conic validation is uncertified: objective: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: objective:"] in
 assert_terminal_atomic%
 reformulation noAutomaticEpigraph : nonlinearMinimum := by
   conic
@@ -148,8 +146,7 @@ def nonlinearMaximum :=
     subject to
       margin : 1 ≤ x
 
-/-- error: terminal conic validation is uncertified: objective: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: objective:"] in
 assert_terminal_atomic%
 reformulation noAutomaticHypograph : nonlinearMaximum := by
   conic
@@ -160,8 +157,7 @@ def missingMargin :=
     subject to
       logarithm : t ≤ Real.log x
 
-/-- error: terminal conic validation is uncertified: constraint `logarithm`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `logarithm`:"] in
 assert_terminal_atomic%
 reformulation noMargin : missingMargin := by
   conic
@@ -173,11 +169,9 @@ def onlyZeroMargin :=
       margin : 0 ≤ x
       logarithm : t ≤ Real.log x
 
-/--
-error: terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:
-Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin
--/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:",
+  "Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin"] in
 assert_terminal_atomic%
 reformulation noStrictMargin : onlyZeroMargin := by
   conic
@@ -190,11 +184,9 @@ def derivedMargin :=
       comparison : y ≤ x
       logarithm : t ≤ Real.log x
 
-/--
-error: terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:
-Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin
--/
-#guard_msgs (substring := true) in
+#guard_error_fragments [
+  "terminal conic validation is uncertified: constraint `logarithm`: no registered exact conic rule was fully certified:",
+  "Morew.Conic.Exponential.logHypograph: registered conic rewrite was not certified: missing positive constant margin"] in
 assert_terminal_atomic%
 reformulation noArithmeticDomainSearch : derivedMargin := by
   conic
@@ -205,8 +197,7 @@ def quadraticWithoutMargin :=
     subject to
       ratio : x ^ 2 / y ≤ t
 
-/-- error: terminal conic validation is uncertified: constraint `ratio`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `ratio`:"] in
 assert_terminal_atomic%
 reformulation noQuadraticDenominatorMargin : quadraticWithoutMargin := by
   conic
@@ -218,8 +209,7 @@ def entropyWithoutNumeratorMargin :=
       denominator : 1 ≤ b
       entropy : Fn.relativeEntropy a b ≤ t
 
-/-- error: terminal conic validation is uncertified: constraint `entropy`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `entropy`:"] in
 assert_terminal_atomic%
 reformulation noEntropyNumeratorMargin : entropyWithoutNumeratorMargin := by
   conic
@@ -230,8 +220,7 @@ def emptyLogSumExp :=
     subject to
       lse : Fn.logSumExp v ≤ t
 
-/-- error: terminal conic validation is uncertified: constraint `lse`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `lse`:"] in
 assert_terminal_atomic%
 reformulation noEmptyLogSumExp : emptyLogSumExp := by
   conic
@@ -242,8 +231,7 @@ def strictSource :=
     subject to
       strict : 0 < x
 
-/-- error: terminal conic validation is uncertified: constraint `strict`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `strict`:"] in
 assert_terminal_atomic%
 reformulation noStrictRow : strictSource := by
   conic
@@ -254,8 +242,7 @@ def nonlinearEquality :=
     subject to
       equality : x ^ 2 = 1
 
-/-- error: terminal conic validation is uncertified: constraint `equality`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `equality`:"] in
 assert_terminal_atomic%
 reformulation noNonlinearEquality : nonlinearEquality := by
   conic
@@ -267,8 +254,7 @@ def opaqueSource :=
     subject to
       hidden : hiddenAffine x ≤ 3
 
-/-- error: terminal conic validation is uncertified: constraint `hidden`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `hidden`:"] in
 assert_terminal_atomic%
 reformulation noHelperUnfolding : opaqueSource := by
   conic
@@ -279,16 +265,14 @@ def nonlinearCoordinates :=
     subject to
       nested : Fn.softplus (x ^ 2) ≤ t
 
-/-- error: terminal conic validation is uncertified: constraint `nested`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `nested`:"] in
 assert_terminal_atomic%
 reformulation noRecursiveAtomLifting : nonlinearCoordinates := by
   conic
 
 def unsupportedSpace := problem (_choice : Bool) minimize (0 : ℝ)
 
-/-- error: terminal conic validation is uncertified: objective: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: objective:"] in
 assert_terminal_atomic%
 reformulation noBooleanSpace : unsupportedSpace := by
   conic
@@ -301,8 +285,7 @@ def customOrder :=
     subject to
       fake : @LE.le ℝ incompatibleOrder x 1
 
-/-- error: terminal conic validation is uncertified: constraint `fake`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `fake`:"] in
 assert_terminal_atomic%
 reformulation noCustomOrder : customOrder := by
   conic
@@ -313,8 +296,7 @@ def groupedCustomOrder :=
     subject to
       fake : @LE.le ℝ incompatibleOrder x 1 ∧ x = 0
 
-/-- error: terminal conic validation is uncertified: constraint `fake`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `fake`:"] in
 assert_terminal_atomic%
 reformulation noGroupedCustomOrder : groupedCustomOrder := by
   conic
@@ -329,8 +311,7 @@ def customMembership :=
       fake : @Membership.mem (ℝ × ℝ × ℝ) (ConvexCone ℝ (ℝ × ℝ × ℝ))
         incompatibleMembership Conic.Cone.exponential.carrier (x, 1, x)
 
-/-- error: terminal conic validation is uncertified: constraint `fake`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `fake`:"] in
 assert_terminal_atomic%
 reformulation noCustomMembership : customMembership := by
   conic
@@ -431,16 +412,14 @@ def liftedThenFailure :=
       loss : Fn.softplus x ≤ t
       logarithm : t ≤ Real.log x
 
-/-- error: terminal conic validation is uncertified: constraint `logarithm`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `logarithm`:"] in
 assert_terminal_atomic%
 reformulation rollbackAfterTargetedSuccess : liftedThenFailure
     certificate rollbackAfterTargetedAlias := by
   conic at loss
   conic
 
-/-- error: terminal conic validation is uncertified: constraint `logarithm`: -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["terminal conic validation is uncertified: constraint `logarithm`:"] in
 assert_terminal_atomic%
 reformulation rollbackInsideTerminal : liftedThenFailure
     certificate rollbackInsideTerminalAlias := by
@@ -478,8 +457,7 @@ private def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
     Lean.throwError "injected terminal property emission failure"
   Lean.Elab.throwUnsupportedSyntax
 
-/-- error: injected terminal property emission failure -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["injected terminal property emission failure"] in
 assert_terminal_atomic%
 reformulation lateFailure : absoluteSource certificate lateFailureAlias := by
   conic
