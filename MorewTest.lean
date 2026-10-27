@@ -130,6 +130,11 @@ import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
+import MorewTest.Rewrite.RegistryFirst
+import MorewTest.Rewrite.RegistryOrderAB
+import MorewTest.Rewrite.RegistryOrderBA
+import MorewTest.Rewrite.RegistrySecond
+import MorewTest.Rewrite.RegistrySource
 import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
