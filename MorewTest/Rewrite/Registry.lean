@@ -101,6 +101,12 @@ private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Uni
       unless environment.contains name do
         throwError "rejected helper matching leaked declaration {name}"
 
+private noncomputable def proofDomainValue (x : ℝ) (_f : (|x| ≤ 3) → ℝ) : ℝ := x
+
+private noncomputable def proofDomainRule : Morew.ExactConstraintLift
+    (fun x : ℝ => proofDomainValue x (fun _ : |x| ≤ 3 => x) ≤ 3) :=
+  .ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
+
 -- Projection receivers and unapplied function arguments keep their named
 -- mathematical heads. Function eta expansion remains structural syntax.
 run_elab do
@@ -109,6 +115,17 @@ run_elab do
   matched (← `(fun x : ℝ => applyFunction namedAbs x ≤ 3)) ``appliedAbsRule
   matched (← `(fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)) ``appliedAbsRule
   rejectedMatch (← `(fun x : ℝ => applyFunction aliasAbs x ≤ 3)) ``appliedAbsRule
+
+-- Proposition-valued binder domains are matched structurally in both forall
+-- and lambda syntax; definitional equality must not unfold a hidden helper.
+run_elab do
+  matched (← `(fun x : ℝ => (|x| ≤ 3 → |x| ≤ 3) ∧ x ≤ 3)) ``implicationAbsRule
+  rejectedMatch (← `(fun x : ℝ => (namedAbs x ≤ 3 → |x| ≤ 3) ∧ x ≤ 3))
+    ``implicationAbsRule
+  matched (← `(fun x : ℝ => proofDomainValue x (fun _ : |x| ≤ 3 => x) ≤ 3))
+    ``proofDomainRule
+  rejectedMatch (← `(fun x : ℝ => proofDomainValue x (fun _ : namedAbs x ≤ 3 => x) ≤ 3))
+    ``proofDomainRule
 
 end HelperOpacity
 

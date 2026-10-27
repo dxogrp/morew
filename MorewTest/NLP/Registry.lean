@@ -256,7 +256,7 @@ section StructuralHelperOpacity
 
 open MorewTest.Rewrite.Registry.Source.HelperOpacity
 
-attribute [local morew_nlp] projectedAbsRule appliedAbsRule
+attribute [local morew_nlp] projectedAbsRule appliedAbsRule implicationAbsRule
 
 run_cmd liftTermElabM do
   exactRows (← `(input (fun x : ℝ => (projectedAbs x).1 ≤ 3)
@@ -267,6 +267,10 @@ run_cmd liftTermElabM do
   exactRows (← `(input (fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)
     #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)]))
   reject (← `(input (fun x : ℝ => applyFunction aliasAbs x ≤ 3) #[])) "does not match"
+  exactRows (← `(input (fun x : ℝ => (|x| ≤ 3 → |x| ≤ 3) ∧ x ≤ 3)
+    #[(fun x : ℝ => x ≤ 3)]))
+  reject (← `(input (fun x : ℝ => (namedAbs x ≤ 3 → |x| ≤ 3) ∧ x ≤ 3) #[]))
+    "does not match"
 
 end StructuralHelperOpacity
 

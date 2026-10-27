@@ -90,7 +90,7 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
     return
   match expected, actual with
   | .lam _ type body _, .lam _ otherType otherBody _ =>
-    unless ← isDefEq type otherType do throwError "representation input types differ"
+    matchValue type otherType
     withLocalDeclD `index type fun index =>
       matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
   | .lam _ type body _, _ =>
@@ -100,7 +100,10 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
     withLocalDeclD `index type fun index =>
       matchValue (mkApp expected index) (body.instantiate1 index)
   | .forallE _ type body _, .forallE _ otherType otherBody _ =>
-    unless ← isDefEq type otherType do throwError "representation input types differ"
+    -- Implication antecedents are proposition-valued binder domains; compare
+    -- their mathematical heads just like the body, while ordinary types retain
+    -- the type/instance comparison above.
+    matchValue type otherType
     withLocalDeclD `index type fun index =>
       matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
   | .proj name index value, .proj otherName otherIndex otherValue =>

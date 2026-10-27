@@ -44,6 +44,10 @@ noncomputable def namedAbs (x : ℝ) : ℝ := |x|
 
 noncomputable def aliasAbs (x : ℝ) : ℝ := namedAbs x
 
+noncomputable def implicationAbsRule :
+    Morew.ExactConstraintLift (fun x : ℝ => (|x| ≤ 3 → |x| ≤ 3) ∧ x ≤ 3) :=
+  .ofIff (fun x => x ≤ 3) (by intro x; simp)
+
 def applyFunction (f : ℝ → ℝ) (x : ℝ) : ℝ := f x
 
 noncomputable def appliedAbsRule :

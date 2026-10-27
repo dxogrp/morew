@@ -185,7 +185,7 @@ section StructuralHelperOpacity
 
 open MorewTest.Rewrite.Registry.Source.HelperOpacity
 
-attribute [local morew_conic] projectedAbsRule appliedAbsRule
+attribute [local morew_conic] projectedAbsRule appliedAbsRule implicationAbsRule
 
 run_cmd liftTermElabM do
   let expected := #[← `(fun x : ℝ => x ≤ 3), ← `(fun x : ℝ => -x ≤ 3)]
@@ -195,6 +195,9 @@ run_cmd liftTermElabM do
   check (← `(fun x : ℝ => applyFunction (fun y => namedAbs y) x ≤ 3)) 2
     (expected := expected)
   reject (← `(fun x : ℝ => applyFunction aliasAbs x ≤ 3)) "does not match"
+  check (← `(fun x : ℝ => (|x| ≤ 3 → |x| ≤ 3) ∧ x ≤ 3)) 1
+    (expected := #[← `(fun x : ℝ => x ≤ 3)])
+  reject (← `(fun x : ℝ => (namedAbs x ≤ 3 → |x| ≤ 3) ∧ x ≤ 3)) "does not match"
 
 end StructuralHelperOpacity
 
