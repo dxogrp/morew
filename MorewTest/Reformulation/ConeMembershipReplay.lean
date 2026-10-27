@@ -26,6 +26,7 @@ def source :=
       upper : x ≤ 0
       leftZero : 0 = y
       numeric : (2 : ℝ) = 3
+      negative : -x ≤ y
 
 reformulation target : source := by
   conic
@@ -58,7 +59,8 @@ section ChangedInstances
 -- These instances did not exist when either target was registered. Arbitrary
 -- replacements make each equality below check that replay uses the old checked
 -- instances, including operations retained inside local definitions.
-variable [changedSub : HSub ℝ ℝ ℝ] [changedNeg : Neg ℝ] [changedZero : Zero ℝ]
+variable [changedSub : HSub ℝ ℝ ℝ] [changedAdd : HAdd ℝ ℝ ℝ]
+  [changedNeg : Neg ℝ] [changedZero : Zero ℝ]
   [changedNumeral : ∀ n : Nat, OfNat ℝ n]
   [changedMembership : Membership ℝ (Set ℝ)] [changedSingleton : Singleton ℝ (Set ℝ)]
 
@@ -107,6 +109,7 @@ info: problem (x y : ℝ)
     upper : -x ∈ ℝ₊
     leftZero : -y ∈ ({0} : Set ℝ)
     numeric : 2 - 3 ∈ ({0} : Set ℝ)
+    negative : y + x ∈ ℝ₊
 -/
 #guard_msgs in
 #printp target

@@ -58,6 +58,78 @@ info: problem (x y : ℝ)
 #guard_msgs in
 #printp scalarTarget
 
+def negativeScalars :=
+  problem (x y : ℝ)
+    minimize x
+    subject to
+      lower : -x ≤ y
+      upper : x ≥ -y
+      equal : x = -y
+      constant : -2 ≤ x
+      zeroMargin : -x ≤ 0
+
+reformulation negativeScalarTarget : negativeScalars := by
+  conic
+
+example : GlobalEquivalence negativeScalars negativeScalarTarget :=
+  negativeScalarTarget.equivalence
+example : negativeScalarTarget.conicForm.data.toProblem = negativeScalarTarget :=
+  negativeScalarTarget.conicForm.represents
+example (x y : ℝ) : negativeScalarTarget.feasible (x, y) ↔
+    y + x ∈ ℝ₊ ∧ x + y ∈ ℝ₊ ∧ x + y ∈ ({0} : Set ℝ) ∧
+      x + 2 ∈ ℝ₊ ∧ x ∈ ℝ₊ := Iff.rfl
+
+/--
+info: problem (x y : ℝ)
+  minimize x
+  subject to
+    lower : y + x ∈ ℝ₊
+    upper : x + y ∈ ℝ₊
+    equal : x + y ∈ ({0} : Set ℝ)
+    constant : x + 2 ∈ ℝ₊
+    zeroMargin : x ∈ ℝ₊
+-/
+#guard_msgs in
+#printp negativeScalarTarget
+
+-- Retained negative aliases stay named even when their canonical predicates
+-- use addition or cancel a double negation at the zero margin.
+def negativeAlias :=
+  problem (x y : ℝ)
+    let first := -x
+    let second := -x
+    let origin := (0 : ℝ)
+    minimize y
+    subject to
+      lower : first ≤ y
+      other : second ≤ y
+      zeroMargin : first ≤ 0
+      zeroAliasMargin : -x ≤ origin
+      equal : y = second
+
+reformulation negativeAliasTarget : negativeAlias := by
+  conic
+
+example : GlobalEquivalence negativeAlias negativeAliasTarget := negativeAliasTarget.equivalence
+example : negativeAliasTarget.conicForm.data.toProblem = negativeAliasTarget :=
+  negativeAliasTarget.conicForm.represents
+
+/--
+info: problem (x y : ℝ)
+  let first := -x
+  let second := -x
+  let origin := 0
+  minimize y
+  subject to
+    lower : y - first ∈ ℝ₊
+    other : y - second ∈ ℝ₊
+    zeroMargin : -first ∈ ℝ₊
+    zeroAliasMargin : origin + x ∈ ℝ₊
+    equal : y - second ∈ ({0} : Set ℝ)
+-/
+#guard_msgs in
+#printp negativeAliasTarget
+
 def zeroAlias :=
   problem (x : ℝ)
     let z := (0 : ℝ)
@@ -222,7 +294,8 @@ run_cmd do
   unless view.constraints.map (·.name.eraseMacroScopes) == #[`grouped, `same, `objectiveBound] do
     Lean.throwError "final conversion split or renamed an affine group"
   for (source, copied) in #[(``continued, `replayed),
-      (``numericTarget, `replayedNumeric), (``emptyVectorAgain, `replayedEmptyVector)] do
+      (``numericTarget, `replayedNumeric), (``emptyVectorAgain, `replayedEmptyVector),
+      (``negativeScalarTarget, `replayedNegative), (``negativeAliasTarget, `replayedNegativeAlias)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) source
       | Lean.throwError "missing membership presentation for replay"
     let term ← Lean.Elab.liftMacroM view.toTermSyntax
@@ -233,6 +306,10 @@ example (x t : ℝ) : replayed.feasible (x, t) ↔ continued.feasible (x, t) := 
 example (x : ℝ) : replayedNumeric.feasible x ↔ numericTarget.feasible x := Iff.rfl
 example (v w : Fin 0 → ℝ) :
     replayedEmptyVector.feasible (v, w) ↔ emptyVectorAgain.feasible (v, w) := Iff.rfl
+example (x y : ℝ) : replayedNegative.feasible (x, y) ↔
+    negativeScalarTarget.feasible (x, y) := Iff.rfl
+example (x y : ℝ) : replayedNegativeAlias.feasible (x, y) ↔
+    negativeAliasTarget.feasible (x, y) := Iff.rfl
 
 -- Generated zero and subtraction use canonical instances even if an unrelated
 -- local definition retains a custom instance parameter. Stored presentation
@@ -300,6 +377,45 @@ example : GlobalEquivalence target continued := continued.equivalence
 
 end
 end AmbientSubtraction
+
+namespace AmbientAddition
+
+private abbrev canonicalAddition : HAdd ℝ ℝ ℝ := inferInstance
+
+section
+variable [customAdd : HAdd ℝ ℝ ℝ]
+
+def source :=
+  problem (x y : ℝ)
+    let unused := x + y
+    minimize x
+    subject to
+      lower : -x ≤ y
+
+reformulation target : source := by
+  conic
+
+-- The unused definition retains the custom addition parameter. Exact replay
+-- must keep the generated native addition independently of the readable display.
+run_cmd do
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
+    | Lean.throwError "missing membership presentation under a custom addition instance"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  let name := Lean.mkIdent `replayed
+  Lean.Elab.Command.elabCommand (← `(noncomputable def $name := $term))
+
+example (x y : ℝ) : target.feasible (x, y) ↔
+    @HAdd.hAdd ℝ ℝ ℝ canonicalAddition y x ∈ ℝ₊ := Iff.rfl
+example (x y : ℝ) : replayed.feasible (x, y) ↔ target.feasible (x, y) := Iff.rfl
+example : target.conicForm.data.toProblem = target := target.conicForm.represents
+
+reformulation continued : target := by
+  conic
+
+example : GlobalEquivalence target continued := continued.equivalence
+
+end
+end AmbientAddition
 
 end
 end MorewTest.Reformulation.ConeMembership
