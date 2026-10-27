@@ -112,6 +112,8 @@ import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.PresentationUpdates
+import MorewTest.Reformulation.Registry
+import MorewTest.Reformulation.RegistrySource
 import MorewTest.Reformulation.Replace
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
