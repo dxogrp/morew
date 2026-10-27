@@ -71,9 +71,36 @@ run_cmd liftTermElabM do
     (← `(fun x : ℝ × (Fin 2 → ℝ) => x ∈ (Morew.Conic.Cone.secondOrder 2).carrier))
     (← `(fun x : ℝ × (Fin 2 → ℝ) => x ∈ (Morew.Conic.Cone.secondOrder 2).carrier)) 0 false
 
+-- Only the generated subtraction is simplified; its operands keep their form.
+run_cmd liftTermElabM do
+  assertNormalization
+    (← `(fun p : ℝ × ℝ => -p.1 ≤ p.2))
+    (← `(fun p : ℝ × ℝ => p.2 + p.1 ∈ ℝ₊))
+  assertNormalization
+    (← `(fun p : ℝ × ℝ => p.1 ≥ -p.2))
+    (← `(fun p : ℝ × ℝ => p.1 + p.2 ∈ ℝ₊))
+  assertNormalization
+    (← `(fun p : ℝ × ℝ => p.1 = -p.2))
+    (← `(fun p : ℝ × ℝ => p.1 + p.2 ∈ ({0} : Set ℝ)))
+  assertNormalization
+    (← `(fun x : ℝ => (-2 : ℝ) ≤ x ∧ x = -3))
+    (← `(fun x : ℝ => x + 2 ∈ ℝ₊ ∧ x + 3 ∈ ({0} : Set ℝ)))
+  assertNormalization
+    (← `(fun x : ℝ => -x ≤ 0 ∧ 0 ≤ -x))
+    (← `(fun x : ℝ => x ∈ ℝ₊ ∧ -x ∈ ℝ₊))
+  assertNormalization
+    (← `(fun p : ℝ × ℝ => -(p.1 - -p.2) ≤ p.2))
+    (← `(fun p : ℝ × ℝ => p.2 + (p.1 - -p.2) ∈ ℝ₊))
+  assertNormalization
+    (← `(fun n : Nat => fun p : (Fin n → ℝ) × (Fin n → ℝ) =>
+      -p.1 ≤ p.2 ∧ p.1 = -p.2))
+    (← `(fun n : Nat => fun p : (Fin n → ℝ) × (Fin n → ℝ) =>
+      p.2 + p.1 ∈ ℝ₊^n ∧ p.1 + p.2 ∈ ({0} : Set (Fin n → ℝ)))) 1
+
 -- Source helpers are operands, and their implementations stay uninspected.
 private def helper (x : ℝ) : ℝ := 2 * x + 1
 private def zeroHelper (_ : ℝ) : ℝ := 0
+private def negHelper (x : ℝ) : ℝ := -x
 
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun x : ℝ => zeroHelper x ≤ helper x))
@@ -84,6 +111,17 @@ run_cmd liftTermElabM do
     throwError "normalization simplified a helper whose value happens to be zero"
   unless result.predicate.find? (·.isConstOf ``HSub.hSub) |>.isSome do
     throwError "normalization dropped a named zero operand"
+
+run_cmd liftTermElabM do
+  let source ← elaborate (← `(fun p : ℝ × ℝ => negHelper p.1 ≤ p.2))
+  let result ← normalizePredicate source
+  unless result.predicate.find? (·.isConstOf ``negHelper) |>.isSome do
+    throwError "normalization unfolded a helper containing negation"
+  unless result.predicate.find? (·.isConstOf ``HSub.hSub) |>.isSome do
+    throwError "normalization canceled a hidden negation"
+  assertNormalization
+    (← `(fun p : ℝ × ℝ => -helper p.1 ≤ p.2))
+    (← `(fun p : ℝ × ℝ => p.2 + helper p.1 ∈ ℝ₊))
 
 -- In a surface model, local definitions are free let variables until the row
 -- is rendered. Equal definition bodies must not merge their binding identities.
@@ -99,6 +137,16 @@ run_cmd liftTermElabM do
             result.body.containsFVar second.fvarId! do
           throwError "normalization erased or conflated local definitions"
         checkWithKernel result.iff
+
+run_cmd liftTermElabM do
+  withLocalDeclD `x (mkConst ``Real) fun x => do
+    let negative ← mkAppM ``Neg.neg #[x]
+    withLetDecl `hidden (mkConst ``Real) negative fun hidden => do
+      let result ← normalizeBody (← mkAppM ``LE.le #[hidden, x])
+      unless result.body.containsFVar hidden.fvarId! &&
+          (result.body.find? (·.isConstOf ``HSub.hSub)).isSome do
+        throwError "normalization unfolded a local definition containing negation"
+      checkWithKernel result.iff
 
 -- Unused lets and named aliases survive predicate normalization itself.
 run_cmd liftTermElabM do
@@ -126,6 +174,19 @@ run_cmd liftTermElabM do
   catch _ => pure false
   if accepted then throwError "normalization accepted a nonstandard order instance"
 
+-- A nonnative negation remains an operand, even if its value happens to match
+-- native negation at this particular argument.
+run_cmd liftTermElabM do
+  for sourceSyntax in #[
+      (← `(letI : Neg ℝ := ⟨fun x => x⟩
+        fun p : ℝ × ℝ => -p.1 ≤ p.2)),
+      (← `(letI : Neg ℝ := ⟨fun _ => -(0 : ℝ)⟩
+        fun x : ℝ => -(0 : ℝ) ≤ x))] do
+    let result ← normalizePredicate (← elaborate sourceSyntax)
+    unless result.predicate.find? (·.isConstOf ``HSub.hSub) |>.isSome do
+      throwError "normalization canceled a nonnative negation"
+    checkWithKernel result.pointwiseIff
+
 -- The generated difference uses native operations despite unrelated local
 -- arithmetic instances; none of those instance arguments may escape into it.
 run_cmd liftTermElabM do
@@ -136,6 +197,18 @@ run_cmd liftTermElabM do
     for parameter in parameters do
       if result.predicate.containsFVar parameter.fvarId! then
         throwError "generated membership captured an unrelated operation instance"
+
+run_cmd liftTermElabM do
+  let source ← elaborate (← `(fun [HAdd ℝ ℝ ℝ] =>
+    fun p : ℝ × ℝ => -p.1 ≤ p.2))
+  let expected ← elaborate (← `(fun p : ℝ × ℝ => p.2 + p.1 ∈ ℝ₊))
+  lambdaBoundedTelescope source 1 fun parameters predicate => do
+    let result ← normalizePredicate predicate
+    if result.predicate.containsFVar parameters[0]!.fvarId! then
+      throwError "generated addition captured an unrelated operation instance"
+    unless ← isDefEq result.predicate expected do
+      throwError "generated addition did not use native arithmetic"
+    checkWithKernel result.pointwiseIff
 
 -- Failed normalization cannot complete an unresolved operand, including one
 -- hidden behind an apparently fully elaborated local let reference.

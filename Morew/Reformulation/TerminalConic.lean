@@ -168,11 +168,12 @@ private def materializeTerminalConic (state : ReformState)
     let formName ← mkAuxDeclName (kind := `_terminalConicForm)
     let form ← mkAuxDefinitionFor formName prepared.form (zetaDelta := true) (compile := false)
     modifyEnv (addNoncomputable · formName)
-    -- Canonical predicates may have reduced a zero-valued model definition,
+    -- Canonical predicates may have reduced a zero or negated model definition,
     -- while the retained view deliberately still refers to its binding. These
     -- equalities check their agreement without rewriting the displayed body.
     let normalizationLemmas := state.normalizationLemmas ++
-      #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩]
+      #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩,
+        ⟨mkCIdent ``sub_neg_eq_add⟩, ⟨mkCIdent ``zero_add⟩, ⟨mkCIdent ``neg_neg⟩]
     return {
       view
       semantic

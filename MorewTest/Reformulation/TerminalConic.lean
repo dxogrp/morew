@@ -106,7 +106,7 @@ info: problem (x y t : ℝ)
   subject to
     first : x - y ∈ ({0} : Set ℝ)
     bounds_conic_1 : t - x ∈ ℝ₊
-    bounds_conic_2 : t - -x ∈ ℝ₊
+    bounds_conic_2 : t + x ∈ ℝ₊
     bounds_conic_3 : 1 - y ∈ ℝ₊
     domainLog_conic_1 : x - 1 ∈ ℝ₊
     domainLog_conic_2 : (t, 1, x) ∈ EXP
@@ -161,9 +161,9 @@ info: problem (x t loss_aux : ℝ) (loss_aux_1 loss_aux_2 : Fin 2 → ℝ)
   subject to
     loss_conic_1 : loss_aux ∈ ℝ₊
     loss_conic_1_1 : ∀ (i : Fin 2), (![0, x] i - t, 1, loss_aux_1 i) ∈ EXP
-    loss_conic_2 : 1 - ∑ x, loss_aux_1 x ∈ ℝ₊
+    loss_conic_2 : 1 - ∑ i, loss_aux_1 i ∈ ℝ₊
     loss_conic_3 : ∀ (i : Fin 2), (![0, -x] i - t, 1, loss_aux_2 i) ∈ EXP
-    loss_conic_4 : 1 - ∑ x, loss_aux_2 x ∈ ℝ₊
+    loss_conic_4 : 1 - ∑ i, loss_aux_2 i ∈ ℝ₊
     last : 10 - t ∈ ℝ₊
 -/
 #guard_msgs in
@@ -303,11 +303,11 @@ example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     automaticTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     selectedTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 - -(Parameter.coeff ⬝ᵥ x) ∈ ℝ₊ := Iff.rfl
+      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
 
 end FiniteInstances
 
