@@ -79,9 +79,6 @@ run_cmd liftTermElabM do
   expectAmbiguous (← `(fun _ : ℝ => max (0 : ℝ) 1 ≤ min 2 3))
     #["Morew.Rewrite.maxEpigraph", "Morew.Rewrite.minHypograph"]
   expectUnique (← `(fun p : ℝ × ℝ => |(2 : ℝ)| ≤ min p.1 p.2)) 2
-  let fallback ← elaborate (← `(fun p : ℝ × ℝ => |(2 : ℝ)| ≤ min p.1 p.2))
-  let .ok _ ← Morew.Elab.Conic.Rewrite.planUnique fallback
-    | throwError "fully certified fallback was not selected"
   expectUnique (← `(fun x : ℝ => x ^ 2 ≤ Real.log 2)) 1
   expectUnique (← `(fun x : ℝ => |x| ≤ Real.exp 2)) 2
   expectUnique (← `(fun x : ℝ => Real.exp x ≤ 3)) 1
