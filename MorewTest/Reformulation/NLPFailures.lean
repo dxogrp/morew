@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
+import MorewTest.Diagnostics
 
 /-! # Targeted NLP diagnostics and transactional failure -/
 
@@ -139,8 +140,7 @@ def auxiliarySource :=
       norm : ‖WithLp.toLp 1 v‖ ≤ 3
       later : 1 ≤ |v 0|
 
-/-- error: constraint `later`: no supported exact NLP rule -/
-#guard_msgs (substring := true) in
+#guard_error_fragments ["constraint `later`: no supported exact NLP rule"] in
 assert_atomic_nlp%
 reformulation afterAuxiliary : auxiliarySource certificate failedAlias := by
   nlp at norm
