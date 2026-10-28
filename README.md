@@ -40,22 +40,6 @@ problem (u t : ℝ)
     epigraph_t : u ^ 2 ≤ t
 ```
 
-## Development
-
-`make build` builds both the library and the compile-time tests with warnings
-treated as errors. `make check` additionally lints the library and replays the
-compiled library and test declarations through the kernel. The build is
-incremental; linting and kernel replay run on every check.
-
-Make defaults to four Lake/linter workers. Override this with
-`make LEAN_NUM_THREADS=8 check`, or set `LEAN_NUM_THREADS` in your environment.
-Each Morew compiler process uses one worker, and kernel replay remains serial.
-Dependency packages retain their own compiler settings, so this is not a strict
-CPU limit for the entire process tree.
-
-For focused work, build individual test modules and their dependencies with,
-for example, `LEAN_NUM_THREADS=4 lake build --wfail +MorewTest.NLP.Registry`.
-
 ## License
 
 Morew is licensed under the [Apache License, Version 2.0](LICENSE).
