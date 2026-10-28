@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP
+import MorewTest.Environment
 
 /-!
 # Domain certification state and source preservation
@@ -73,7 +74,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let error ← isolatedFailure feasible #[good, bad] .feasibleInclusion
   unless error.sourceIndex? == some 1 do
     throwError "failure did not identify the later source"
-  unless (← getEnv).constants.toList.length == environment.constants.toList.length do
+  unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed domain certification leaked auxiliary declarations"
   discard <| isolatedSuccess feasible #[good]
   if ← unresolved.mvarId!.isAssigned then

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
+import MorewTest.Environment
 
 /-!
 # Exact selected-row planning
@@ -84,9 +85,8 @@ private def rejected (term : TSyntax `term) (message : String)
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "failed planning leaked scratch metavariables"
-    for (name, _) in (← getEnv).constants.toList do
-      unless environment.contains name do
-        throwError "failed planning leaked declaration {name}"
+    if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+      throwError "failed planning leaked declaration {name}"
 
 private def expectUsing (term rule : TSyntax `term) (rowCount : Nat)
     (auxiliary : Bool := false) (parameters : Nat := 0) : TermElabM Unit :=

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Terminal
 import MorewTest.Affine.Support
+import MorewTest.Environment
 
 /-!
 # Whole-problem conic planner tests
@@ -242,7 +243,7 @@ run_cmd liftTermElabM do
   let message ← error.reason.toString
   unless message.contains "firstBad" && message.contains "conic at firstBad using rule" do
     throwError "terminal planning did not report the earliest remaining failure: {message}"
-  unless (← getEnv).constants.toList.length == before.constants.toList.length do
+  unless MorewTest.sameLocalDeclarationNames before (← getEnv) do
     throwError "failed terminal planning leaked auxiliary declarations"
 
 run_cmd liftTermElabM do

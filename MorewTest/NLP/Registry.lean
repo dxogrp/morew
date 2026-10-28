@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
 import MorewTest.Rewrite.Registry.Source
+import MorewTest.Environment
 
 /-!
 # Registered NLP rules
@@ -54,9 +55,8 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "registered NLP planning leaked scratch metavariables"
-    for (name, _) in (← getEnv).constants.toList do
-      unless environment.contains name do
-        throwError "registered NLP planning leaked declaration {name}"
+    if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+      throwError "registered NLP planning leaked declaration {name}"
     unless result.rowPredicates.size == expected.size do
       throwError "registered NLP row count changed"
     for actual in result.rowPredicates, expected in expected do
@@ -82,9 +82,8 @@ private def reject (term : TSyntax `term) (message : String)
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "failed registered NLP planning leaked scratch metavariables"
-    for (name, _) in (← getEnv).constants.toList do
-      unless environment.contains name do
-        throwError "failed registered NLP planning leaked declaration {name}"
+    if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+      throwError "failed registered NLP planning leaked declaration {name}"
 
 noncomputable def userAbs (x : ℝ) : ℝ := |x|
 

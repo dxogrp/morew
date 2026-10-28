@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 import Lean.Meta.Tactic.AuxLemma
+import MorewTest.Environment
 
 /-!
 # Certified exact-rule selection
@@ -69,9 +70,8 @@ private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
     unless message.contains name do throwError "ambiguity omitted rule {name}: {message}"
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "ambiguous selection leaked scratch metavariables"
-  for (name, _) in (← getEnv).constants.toList do
-    unless environment.contains name do
-      throwError "ambiguous selection leaked auxiliary declaration {name}"
+  if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+    throwError "ambiguous selection leaked auxiliary declaration {name}"
 
 run_cmd liftTermElabM do
   expectAmbiguous (← `(fun _ : ℝ => Real.exp 0 ≤ Real.log 2))

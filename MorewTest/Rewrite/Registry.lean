@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Rewrite.Registry.Source
 import Morew.Elab.Rewrite.Match
+import MorewTest.Environment
 
 /-!
 # Scoped registry and structural matching regressions
@@ -96,9 +97,8 @@ private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Uni
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "rejected helper matching leaked scratch metavariables"
-    for (name, _) in (← getEnv).constants.toList do
-      unless environment.contains name do
-        throwError "rejected helper matching leaked declaration {name}"
+    if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+      throwError "rejected helper matching leaked declaration {name}"
 
 private noncomputable def proofDomainValue (x : ℝ) (_f : (|x| ≤ 3) → ℝ) : ℝ := x
 
