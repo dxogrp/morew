@@ -51,17 +51,26 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     .restrictedDomain 0 (some ``Real.log)
   assertRejected (← `(fun x : ℝ => |x| - |x|)) .nonsmooth 0 (some ``abs)
 
-/-! Named functions remain opaque to the certifier, even when reducible. -/
+/-! Disabling expansion retains the original named-helper boundary. -/
 
+set_option morew.smooth.maxExpansionDepth 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertRejected (← `(fun x : ℝ => hiddenSquare x)) .unknownHead 0 (some ``hiddenSquare)
   assertRejected (← `(fun x : ℝ => inlineSquare x)) .unknownHead 0 (some ``inlineSquare)
   assertRejected (← `(fun x : ℝ => ignoredArgument x)) .unknownHead 0 (some ``ignoredArgument)
   assertRejected (← `(hiddenSquare ∘ Real.exp)) .unknownHead 0 (some ``hiddenSquare)
   assertRejected (← `(Real.exp ∘ hiddenSquare)) .unknownHead 0 (some ``hiddenSquare)
-  assertRejected (← `(fun f : ℝ → ℝ => fun x : ℝ => f x)) .unknownHead 1
   assertRejected (← `(fun x : ℝ => let f := hiddenSquare; f x))
     .unknownHead 0 (some ``hiddenSquare)
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSmooth (← `(fun x : ℝ => hiddenSquare x))
+  assertSmooth (← `(fun x : ℝ => inlineSquare x))
+  assertSmooth (← `(fun x : ℝ => ignoredArgument x))
+  assertSmooth (← `(hiddenSquare ∘ Real.exp))
+  assertSmooth (← `(Real.exp ∘ hiddenSquare))
+  assertSmooth (← `(fun x : ℝ => let f := hiddenSquare; f x))
+  assertRejected (← `(fun f : ℝ → ℝ => fun x : ℝ => f x)) .unknownHead 1
   assertRejected (← `(fun x : ℝ => hiddenSquare (Real.log x)))
     .restrictedDomain 0 (some ``Real.log)
   assertSmooth (← `(fun c : ℝ => fun x : ℝ => hiddenSquare c + x)) 1

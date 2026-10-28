@@ -222,7 +222,8 @@ reformulation unrelatedIndexTarget : (unrelatedIndex c) := by
   nlp
 end IndexScope
 
--- Retaining evidence is not permission to unfold a decision-dependent helper.
+-- The helper expands to x² + 1, whose positivity can be proved independently
+-- of the decision-dependent proof let. Disabling expansion retains opacity.
 def helperSource :=
   problem (x : ℝ)
     minimize x
@@ -232,8 +233,15 @@ def helperSource :=
 
 /-- error: constraint `hidden` is not certified as a smooth NLP by the available rules: -/
 #guard_msgs (substring := true) in
+set_option morew.smooth.maxExpansionDepth 0 in
+reformulation opaqueHelperTarget : helperSource := by
+  nlp
+
 reformulation helperTarget : helperSource := by
   nlp
+
+example : GlobalEquivalence helperSource helperTarget := helperTarget.equivalence
+example : NLP.Form helperTarget := helperTarget.nlpForm
 
 end
 end MorewTest.Reformulation.TerminalNLPEvidence

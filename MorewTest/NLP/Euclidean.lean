@@ -9,8 +9,8 @@ import MorewTest.NLP.DomainSupport
 # Native Euclidean smoothness and domain certificates
 
 Coordinate extraction and construction preserve the exact original function,
-including symbolic and empty dimensions. The extension does not unfold helpers
-or broaden the value arguments inspected behind unknown helper heads.
+including symbolic and empty dimensions. Bounded smooth helper expansion keeps
+the existing independent-helper argument policy and native-operation checks.
 -/
 
 namespace MorewTest.NLP.Euclidean
@@ -82,8 +82,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     #[fun x : ℝ => mixedHelper (WithLp.toLp 2 (fun _i : Fin 1 => 0), Real.log 0) + x])))
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => scalarHelper (Real.log 0) + x]))) .feasibleInclusion
+  assertSmooth (← `(fun x : ℝ => scalarHelper x))
+  assertSmooth (← `(fun x : EuclideanSpace ℝ (Fin 1) => euclideanHelper x))
+  assertRejected (← `(fun x : EuclideanSpace ℝ (Fin 1) => ‖x‖)) .unknownHead
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
   assertRejected (← `(fun x : ℝ => scalarHelper x)) .unknownHead
   assertRejected (← `(fun x : EuclideanSpace ℝ (Fin 1) => euclideanHelper x)) .unknownHead
-  assertRejected (← `(fun x : EuclideanSpace ℝ (Fin 1) => ‖x‖)) .unknownHead
 
 end MorewTest.NLP.Euclidean

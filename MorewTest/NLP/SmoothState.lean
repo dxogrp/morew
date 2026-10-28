@@ -309,22 +309,26 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       withLetDecl `fixedArgumentAlias type binding fun aliasBinding =>
         checkStructuralSource (mkApp builder aliasBinding)
 
-/-! Structural reduction must retain actual dependencies and must not unfold
-named value helpers, even when an abbreviation ignores its argument. -/
+/-! Expansion does not bypass native-operation or dependency checks. Turning it
+off also restores the rejection of a scalar abbreviation that ignores its argument. -/
 
 private abbrev hiddenExponent (_ : ℝ) : ℕ := 2
 private abbrev hiddenIndex (_ : ℝ) : Fin 2 := 0
 private def hiddenIndices (_ : ℝ) : Finset ℕ := {0, 1}
 private abbrev hiddenValue (_ : ℝ) : ℝ := 1
 
+set_option morew.smooth.maxExpansionDepth 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun x : ℝ => hiddenValue x)) .unknownHead 0 (some ``hiddenValue)
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSmooth (← `(fun x : ℝ => hiddenValue x))
   assertRejected (← `(fun x : ℝ => Real.log ((fun y : ℝ => y) x)))
     .restrictedDomain 0 (some ``Real.log)
   assertRejected (← `(fun x : ℝ => |(fun y : ℝ => y) x|))
     .nonsmooth 0 (some ``abs)
   assertRejected (← `(fun f : ℝ → ℝ => fun x : ℝ => f ((fun y : ℝ => y) x)))
     .unknownHead 1
-  assertRejected (← `(fun x : ℝ => hiddenValue x)) .unknownHead 0 (some ``hiddenValue)
   assertRejected (← `(fun x : ℝ => Real.log (hiddenValue x)))
     .restrictedDomain 0 (some ``Real.log)
   assertRejected (← `(fun x : ℝ => |hiddenValue x|)) .nonsmooth 0 (some ``abs)

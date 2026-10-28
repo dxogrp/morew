@@ -118,8 +118,10 @@ private noncomputable def ignoredScalar (_value : ℝ) : ℝ := 0
 private noncomputable def ignoredPair (_value : ℝ × ℝ) : ℝ := 0
 private noncomputable def ignoredVector (_value : Fin 2 → ℝ) : ℝ := 0
 
-/-! Helpers do not unfold, and constant helper arguments keep their own requirements. -/
+/-! Disabling expansion restores helper opacity. Independent constant calls
+keep their own argument requirements even with expansion enabled. -/
 
+set_option morew.smooth.maxExpansionDepth 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => hiddenSquare x])))
     .unknownHead 0 (some 0) none (some ``hiddenSquare)
@@ -131,6 +133,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ignoredScalar (Real.log x)])))
     .feasibleInclusion 0 (some 0) none (some ``Real.log)
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), hiddenSquare x]))) .unknownHead
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertDomain (← `(((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => hiddenSquare x])))
+  assertDomain (← `(((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => inlineSquare x])))
+  assertDomain (← `(((fun x : ℝ => 1 ≤ x),
+    #[fun x : ℝ => ignoredScalar (Real.log x)])))
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredScalar (Real.log x)])))
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), hiddenSquare x])))
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun _x : ℝ => ignoredScalar (Real.log 0)]))) .feasibleInclusion
   assertDomainRejected (← `(((fun _x : ℝ => True),
@@ -149,8 +163,6 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ignoredPair (((1 : ℝ), Real.sqrt 0) ^ (0 : Nat)) + x])))
     .feasibleInclusion
-  assertDomainRejected (← `(((fun _x : ℝ => True),
-    #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), hiddenSquare x]))) .unknownHead
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ∑ _i ∈ (∅ : Finset Nat), |x|]))) .nonsmooth
   assertDomainRejected (← `(((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => |x|]))) .nonsmooth
@@ -184,7 +196,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     #[fun x : ℝ => ignoredVector
       (@HMul.hMul (Fin 2 → ℝ) (Fin 2 → ℝ) (Fin 2 → ℝ)
         ⟨fun _ _ => fun _ => 0⟩ (fun _ => 0) (fun _ => 0)) + x]))) .invalidInstance
-  -- The fallback is only for fixed values; it adds no vector calculus rule.
+  -- An eligible outer helper may erase its decision-dependent argument.
+  assertDomain (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => ignoredVector ((fun _i => x) * (fun _i => (2 : ℝ)))])))
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  -- Without expansion, fixed-value fallback adds no vector calculus rule.
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => ignoredVector ((fun _i => x) * (fun _i => (2 : ℝ)))])))
     .invalidInstance

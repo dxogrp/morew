@@ -361,13 +361,17 @@ run_cmd liftTermElabM do
   unless (← error.reason.toString).contains "generated row" do
     throwError "named model target did not fail at the target grammar boundary"
 
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd liftTermElabM do
+  rejected (← `(input (fun x : ℝ => |hiddenSquare x| ≤ 3) #[])) "generated row"
+
 run_cmd liftTermElabM do
   rejected (← `(input (fun x : ℝ => x ^ 2 ≤ 3) #[])) "no supported exact NLP rule"
   rejected (← `(input (fun x : ℝ => 0 ≤ |x|) #[])) "no supported exact NLP rule"
   rejected (← `(input (fun x : ℝ => |x| = 1) #[])) "no supported exact NLP rule"
   rejected (← `(input (fun x : ℝ => Real.exp |x| ≤ 3) #[])) "entire selected predicate"
   rejected (← `(input (fun x : ℝ => hiddenAbs x ≤ 3) #[])) "no supported exact NLP rule"
-  rejected (← `(input (fun x : ℝ => |hiddenSquare x| ≤ 3) #[])) "generated row"
+  expect (← `(input (fun x : ℝ => |hiddenSquare x| ≤ 3) #[])) 2
   rejected (← `(fun (s : Finset ℕ) (hs : s.Nonempty) (a : ℕ → ℝ) =>
     (input (fun x : ℝ => s.sup' hs (fun i => Real.log (a i) + x ^ 2) ≤ 3) #[])))
     "domain" 3

@@ -25,6 +25,11 @@ Ordinary function arguments, proof arguments, and unsupported value spaces remai
 opaque. This policy is deliberately stricter than `Smooth.certifyGlobal`'s
 constant-function rule.
 
+Decision-dependent value helpers expand on demand under the shared source
+budget configured by `morew.smooth.*`. Native recognition and domain obligations
+still apply to their bodies. Independent helper bodies and whole predicates
+remain opaque, and each supplied source starts a fresh expansion session.
+
 Finite sums use precisely their supplied support. Nested restricted operations
 use continuity on their child domains. Inclusion proofs use admitted constraints,
 independent parameter evidence, and previously established domain conditions;

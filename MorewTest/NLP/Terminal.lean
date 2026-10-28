@@ -199,9 +199,22 @@ private def reject (source : PresentationState) (fragment : String) : MetaM Unit
 private def wrapped (x : ℝ) : Prop := x ≤ 3
 private def helper (x : ℝ) : ℝ := x ^ 2
 
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd liftTermElabM do
+  reject (← presentation (← `(fun x : ℝ => x ^ 2))
+    #[(`bad, ← `(fun x : ℝ => helper x ≤ 3))]) "bad"
+
+run_cmd liftTermElabM do
+  let source ← presentation (← `(fun x : ℝ => helper x))
+    #[(`bound, ← `(fun x : ℝ => helper x ≤ 3))]
+  let result ← checked source
+  count result 1
+  unless result.presentation.objective == source.objective &&
+      result.presentation.constraints[0]!.predicate == source.constraints[0]!.predicate do
+    throwError "helper certification changed the original objective or constraint"
+
 run_cmd liftTermElabM do
   for row in #[← `(fun x : ℝ => wrapped x),
-      ← `(fun x : ℝ => helper x ≤ 3),
       ← `(fun x : ℝ => |max x 0| ≤ 3),
       ← `(fun x : ℝ => ∀ t : ℝ, x ≤ t),
       ← `(fun x : ℝ => ∀ _i : Fin 0, x < 1)] do
