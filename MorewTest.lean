@@ -89,6 +89,7 @@ import MorewTest.Reformulation.ConeMembership
 import MorewTest.Reformulation.ConeMembership.Defined
 import MorewTest.Reformulation.ConeMembershipAliases
 import MorewTest.Reformulation.ConeMembershipReplay
+import MorewTest.Reformulation.ContextualRewrite
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
