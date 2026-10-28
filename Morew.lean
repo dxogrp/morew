@@ -20,6 +20,7 @@ import Morew.Elab.Affine.Space
 import Morew.Elab.Atom
 import Morew.Elab.Conic
 import Morew.Elab.Conic.Domain
+import Morew.Elab.Conic.Evidence
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan

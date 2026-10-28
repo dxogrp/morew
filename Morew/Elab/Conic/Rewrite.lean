@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Domain
+import Morew.Elab.Conic.Evidence
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Expr
 import Morew.Elab.State
@@ -54,19 +55,27 @@ private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := 
     if value > 0 && value ≤ 100000 then return some (← mkDecideProof goal)
   return none
 
+private partial def canonicalRealRange (goal : Expr) : MetaM Bool := do
+  let goal ← Expr.reduceStructure goal
+  if goal.isAppOfArity ``And 2 then
+    return (← canonicalRealRange goal.getAppArgs[0]!) &&
+      (← canonicalRealRange goal.getAppArgs[1]!)
+  unless goal.isAppOfArity ``LT.lt 4 || goal.isAppOfArity ``LE.le 4 do return false
+  let args := goal.getAppArgs
+  unless ← isDefEq args[0]! q(ℝ) do return false
+  let left : Q(ℝ) := args[2]!
+  let right : Q(ℝ) := args[3]!
+  let canonical : Q(Prop) := if goal.isAppOfArity ``LT.lt 4 then q($left < $right)
+    else q($left ≤ $right)
+  isDefEq goal canonical
+
 /-- Evidence for registered records uses the established bounded conic policy.
 The selected row is never among the supplied retained predicates. -/
 private def proveObligation (point : Expr) (retained : Array Expr)
     (evidence goal : Expr) : MetaM (Option Expr) := do
   let goal ← instantiateMVars goal
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
-  for declaration in ← getLCtx do
-    if declaration.isImplementationDetail then continue
-    let proof := declaration.toExpr
-    if (← Expr.depends point proof) || (← Morew.Elab.Rewrite.Plan.unresolved proof) then continue
-    if ← isDefEq declaration.type goal then
-      checkWithKernel proof
-      return some proof
+  if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
   if reduced.isAppOfArity ``LT.lt 4 || reduced.isAppOfArity ``LE.le 4 then
     let args := reduced.getAppArgs
@@ -83,6 +92,8 @@ private def proveObligation (point : Expr) (retained : Array Expr)
       if ← isDefEq reduced q(0 < $n) then
         if let some proof ← nonemptyEvidence? point n then return some proof
         throwError "registered conic rewrite was not certified: missing independent nonempty dimension evidence (0 < {n})"
+  if !(← Expr.depends point goal) && (← canonicalRealRange reduced) then
+    throwError "registered conic rewrite was not certified: missing independent real-parameter evidence; required {goal}"
   return none
 
 -- Preserve the conic consumer's structural policy without teaching the neutral
