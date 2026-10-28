@@ -29,6 +29,34 @@ structure ConstraintDecomposition {X : Type u} {V : Type v}
 
 namespace Problem
 
+/-- Replace a selected constraint by a predicate over a uniform auxiliary space.
+
+The target is defined on the original coordinates without a feasibility proof.
+Exactness may be supplied under the retained constraints by
+`conditionalConstraintLiftEquivalence`. -/
+def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
+    {source : X → Prop} (p : Problem X V)
+    (decomposition : ConstraintDecomposition p source)
+    (target : X → A → Prop) : Problem (X × A) V where
+  objective point := p.objective point.1
+  feasible point := decomposition.remainder point.1 ∧ target point.1 point.2
+
+@[simp]
+theorem liftConstraintConditional_objective
+    {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
+    (p : Problem X V) (decomposition : ConstraintDecomposition p source)
+    (target : X → A → Prop) (point : X × A) :
+    (p.liftConstraintConditional decomposition target).objective point =
+      p.objective point.1 := rfl
+
+@[simp]
+theorem liftConstraintConditional_feasible
+    {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
+    (p : Problem X V) (decomposition : ConstraintDecomposition p source)
+    (target : X → A → Prop) (point : X × A) :
+    (p.liftConstraintConditional decomposition target).feasible point ↔
+      decomposition.remainder point.1 ∧ target point.1 point.2 := Iff.rfl
+
 /-- Replace one factor of a problem's feasible predicate by an exact
 auxiliary-variable lift.
 
@@ -156,6 +184,34 @@ predicate preserves global optimization behavior.
 
 The forward map uses classical choice only to select an auxiliary witness.
 The certificate does not require that witness to be unique or computable. -/
+noncomputable def conditionalConstraintLiftEquivalence
+    {X : Type u} {V : Type v} {A : Type w} {source : X → Prop} [Preorder V]
+    (p : Problem X V)
+    (decomposition : ConstraintDecomposition p source)
+    (target : X → A → Prop)
+    (source_iff_exists : ∀ x, decomposition.remainder x →
+      (source x ↔ ∃ a, target x a)) :
+    GlobalEquivalence p (p.liftConstraintConditional decomposition target) where
+  forward := {
+    map := fun x => by
+      have hparts : decomposition.remainder x.1 ∧ source x.1 :=
+        (decomposition.feasible_iff x.1).mp x.2
+      have hexists : ∃ a, target x.1 a :=
+        (source_iff_exists x.1 hparts.1).mp hparts.2
+      exact ⟨(x.1, Classical.choose hexists), hparts.1,
+        Classical.choose_spec hexists⟩
+    objective_le := fun _ => le_rfl }
+  backward := {
+    map := fun point => by
+      have hsource : source point.1.1 :=
+        (source_iff_exists point.1.1 point.2.1).mpr ⟨point.1.2, point.2.2⟩
+      exact ⟨point.1.1,
+        (decomposition.feasible_iff point.1.1).mpr
+          ⟨point.2.1, hsource⟩⟩
+    objective_le := fun _ => le_rfl }
+
+/-- Replacing a constraint by an unconditional exact lift preserves global
+optimization behavior. -/
 noncomputable def exactConstraintLiftEquivalence
     {X : Type u} {V : Type v} {source : X → Prop} [Preorder V]
     (p : Problem X V)
