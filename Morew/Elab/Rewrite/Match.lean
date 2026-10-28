@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Rewrite.Registry
 import Morew.Elab.Rewrite.Plan
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Checked matching of exact representations
@@ -140,7 +142,7 @@ private def solveProof (point proof : Expr) (prove? : Prove) : MetaM Bool := do
   if ← isProp type then
     for declaration in ← getLCtx do
       unless declaration.isImplementationDetail ||
-          (← Affine.depends point declaration.toExpr) do
+          (← Expr.depends point declaration.toExpr) do
         if ← isDefEq declaration.type type then
           proof.mvarId!.assign declaration.toExpr
           return false
@@ -161,12 +163,12 @@ private def checkIndependent (point : Expr) (arguments : Array Expr) : MetaM Uni
     -- instead come from the source itself, independent hypotheses, or the
     -- consumer's checked callback, whose use is recorded in the result.
     if (← isClass? type).isSome then
-      if (← Affine.depends point type) || (← Affine.depends point argument) then
+      if (← Expr.depends point type) || (← Expr.depends point argument) then
         throwError "representation instance depends on the decision variable: {argument}"
     else if !(← isProof argument) then
-      if ← Affine.depends point type then
+      if ← Expr.depends point type then
         throwError "representation parameter type depends on the decision variable: {type}"
-      if (← Affine.depends point argument) && !(← Affine.isSupportedSpace type) then
+      if (← Expr.depends point argument) && !(← Expr.isSupportedSpace type) then
         throwError "representation shape parameter depends on the decision variable: {argument}"
 
 /-- Expose representation fields and binding syntax while retaining every
@@ -252,7 +254,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   unless existsType.isAppOfArity ``Exists 2 do
     throwError "internal error: representation target is not existential"
   let auxiliary ← expose (← instantiateMVars existsType.getAppArgs[0]!)
-  if ← Affine.depends point auxiliary then
+  if ← Expr.depends point auxiliary then
     throwError "representation auxiliary type depends on the decision variable"
   checkWithKernel proof
   let target ← expose existsType.getAppArgs[1]!
@@ -260,8 +262,8 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
 
 private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
     (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
-  let result : Except (Bool × Exception) α ← Affine.withIsolatedMVars do
-    let tryAttempt := fun reverse inputMode => Affine.withIsolatedMVars do
+  let result : Except (Bool × Exception) α ← State.withIsolatedMVars do
+    let tryAttempt := fun reverse inputMode => State.withIsolatedMVars do
       let matched ← try attempt point sourceBody (← prepare) prove? reverse inputMode
         catch exception => return .error (false, exception)
       try return .ok (← accept matched)

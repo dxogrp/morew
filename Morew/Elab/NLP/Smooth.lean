@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
 import Morew.Elab.NLP.Space
-import Morew.Elab.Affine
+import Morew.Elab.Expr
+import Morew.Elab.State
+import Morew.Elab.Expansion
 import Morew.Elab.Atom
 import Lean.Meta.Check
 
@@ -143,13 +145,13 @@ private structure Context where
   inferDomains : Bool := false
   prior : Array Expr := #[]
   facts? : Option Domain.Evidence.FactsProvider := none
-  expansion : HelperExpansion.Config
+  expansion : Expansion.Config
   helpers : Array Expr := #[]
 
 private abbrev CertifyM :=
-  ReaderT Context (StateRefT HelperExpansion.Session (ExceptT SmoothError MetaM))
+  ReaderT Context (StateRefT Expansion.Session (ExceptT SmoothError MetaM))
 
-private def expansionConfig : MetaM HelperExpansion.Config := do
+private def expansionConfig : MetaM Expansion.Config := do
   let options ← getOptions
   return {
     depth := morew.smooth.maxExpansionDepth.get options
@@ -160,6 +162,32 @@ private def expansionConfig : MetaM HelperExpansion.Config := do
     nodesOption := `morew.smooth.maxExpansionNodes
     label := "smooth"
   }
+
+-- Smooth certification follows only the selected product field or pending
+-- application. Keep its named-Problem boundary here, outside the shared engine;
+-- affine certification has its own policy for inspecting problem containers.
+private partial def unfoldValueHead? (config : Expansion.Config) (expression : Expr)
+    (depth : Nat) : Expansion.ExpandM (Option Expansion.Step) := do
+  unless Expansion.enabled config do return none
+  let producesProblem ← forallTelescopeReducing (← inferType expression) fun _ result => do
+    return (← whnf result).isAppOfArity ``Morew.Problem 2
+  unless producesProblem do
+    if let some step ← Expansion.unfoldHead? config expression depth then return some step
+  let head := expression.getAppFn
+  let arguments := expression.getAppArgs
+  if (head.isConstOf ``Prod.fst || head.isConstOf ``Prod.snd) && arguments.size ≥ 3 then
+    return (← unfoldValueHead? config arguments[2]! depth).map fun step =>
+      { step with expression := mkAppN head (arguments.set! 2 step.expression) }
+  match expression with
+  | .proj ``Prod index value =>
+    return (← unfoldValueHead? config value depth).map fun step =>
+      { step with expression := .proj ``Prod index step.expression }
+  | .app function argument =>
+    if !head.isConst then
+      return (← unfoldValueHead? config function depth).map fun step =>
+        { step with expression := mkApp step.expression argument }
+  | _ => pure ()
+  return none
 
 private def reject (expression : Expr) (kind : SmoothFailureKind)
     (reason : MessageData) (obligation? : Option Expr := none) : CertifyM α := do
@@ -176,10 +204,10 @@ private def reject (expression : Expr) (kind : SmoothFailureKind)
       m!"cannot certify smoothness of {(← read).source}: at {expression}: {reason}"
   }
 
-private def expansionAction (action : HelperExpansion.ExpandM α) : CertifyM α := do
+private def expansionAction (action : Expansion.ExpandM α) : CertifyM α := do
   let state ← get
   let state := { state with helper? := (← read).helpers.back? }
-  match ← HelperExpansion.run action state with
+  match ← Expansion.run action state with
   | .ok (value, state) =>
     set state
     return value
@@ -190,7 +218,7 @@ private partial def supportedSpaceShape (euclidean : Bool) (type : Expr) : MetaM
   let type ← whnf type
   if type.isConstOf ``Real then return true
   if euclidean then
-    if (← Affine.Space.euclideanDimension? type).isSome then return true
+    if (← Expr.euclideanDimension? type).isSome then return true
   if type.isAppOfArity ``Prod 2 then
     return (← supportedSpaceShape euclidean type.getAppArgs[0]!) &&
       (← supportedSpaceShape euclidean type.getAppArgs[1]!)
@@ -229,7 +257,7 @@ private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
 -- accidentally agree with standard arithmetic on a particular input.
 private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Unit := do
   let source := source.consumeMData
-  let expected ← Affine.reduceStructure expected
+  let expected ← Expr.reduceStructure expected
   let actualArgs := source.getAppArgs
   let expectedArgs := expected.getAppArgs
   unless source.getAppFn == expected.getAppFn && actualArgs.size == expectedArgs.size &&
@@ -299,15 +327,15 @@ private def checkPointwisePrefix (expression type : Expr) (power : Bool) : Certi
 -- native siblings retain the original structural-reduction behavior.
 private def chargeSubstitution (value : Expr) (arguments : Array Expr) : CertifyM Unit := do
   unless (← read).helpers.isEmpty do
-    expansionAction <| HelperExpansion.chargeBeta value arguments (← read).expansion
+    expansionAction <| Expansion.chargeBeta value arguments (← read).expansion
 
 private partial def reduceStructure (point expression : Expr)
     (preserveLets : Bool := true) : CertifyM Expr := do
   let reduce := fun expression preserve =>
-    Affine.reduceStructure expression preserve (opaqueProblemDependencies? := some point)
+    Expr.reduceStructure expression preserve (opaqueProblemDependencies? := some point)
   if (← read).helpers.isEmpty then return ← reduce expression preserveLets
   let reduced ← expansionAction <|
-    HelperExpansion.reduceChecked expression reduce (← read).expansion
+    Expansion.reduceChecked expression reduce (← read).expansion
   if !preserveLets then
     if let .letE name type value body _ := reduced then
       chargeSubstitution (.lam name type body .default) #[value]
@@ -321,13 +349,13 @@ private partial def reduceStructure (point expression : Expr)
 private def reduceLocalStructure (point expression : Expr)
     (preserveEvidence : Bool := false) : CertifyM Expr := do
   let step (value : Expr) : CertifyM TransformStep := do
-    if !(← Affine.depends point value) then return .done value
+    if !(← Expr.depends point value) then return .done value
     -- A helper-local proof or instance belongs to the child being certified,
     -- not to a preliminary normalization pass over its surrounding operation.
     if preserveEvidence && !(← read).helpers.isEmpty then
       if let .letE _ type evidence _ _ := value then
         if ((← isProp type) || (← isClass? type).isSome) &&
-            !(← Affine.depends point type) && !(← Affine.depends point evidence) then
+            !(← Expr.depends point type) && !(← Expr.depends point evidence) then
           return .done value
     let mut reduced ← reduceStructure point value false
     if reduced.isAppOfArity ``Function.comp 6 then
@@ -362,7 +390,7 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
 
 private def fixedArgument (point expression : Expr) (what : String) : CertifyM Expr := do
   let reduced ← reduceLocalStructure point expression
-  if ← Affine.depends point reduced then
+  if ← Expr.depends point reduced then
     reject expression .dependency m!"{what} depends on a decision variable"
   return reduced
 
@@ -465,7 +493,7 @@ private def hoistProjectionLets : Expr → Expr
 private partial def certifyBody (point expression : Expr) : CertifyM Certificate := do
   let expression := hoistProjectionLets (← reduceStructure point expression)
   if let .letE name type value body nondep := expression then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
+    if (← Expr.depends point type) || (← Expr.depends point value) then
       chargeSubstitution (.lam name type body .default) #[value]
       return ← certifyBody point (body.instantiate1 value)
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
@@ -481,19 +509,19 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   unless ← supportedSpace type do
     reject expression .unsupportedSpace m!"unsupported smooth value type {type}"
   let inferDomains := (← read).inferDomains
-  let independent := !(← Affine.depends point expression)
+  let independent := !(← Expr.depends point expression)
   if independent && !inferDomains then
     return ← constant point expression (← univInfo point)
   -- Selecting a helper-produced tuple/function must not require certifying its
   -- unused fields. Only the pending decision-dependent selection is exposed;
   -- native operations and independent coefficients keep their own boundaries.
-  if !independent && HelperExpansion.enabled (← read).expansion then
+  if !independent && Expansion.enabled (← read).expansion then
     let head := expression.getAppFn
     let structural := match head with
       | .proj ``Prod .. => true
       | _ => false
     if structural then
-      if let some step ← expansionAction <| HelperExpansion.unfoldValueHead?
+      if let some step ← expansionAction <| unfoldValueHead?
           (← read).expansion expression (← read).helpers.size then
         return ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
           unless ← Domain.Evidence.complete step.expression do
@@ -504,7 +532,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     return { info with
       smooth := ← construct point expression ``Morew.NLP.Smooth.id #[info.domain] }
   if let .proj ``WithLp 0 value := expression then
-    if (← Affine.Space.euclideanDimension? (← inferType value)).isSome then
+    if (← Expr.euclideanDimension? (← inferType value)).isSome then
       let child ← certifyBody point value
       return { child with
         smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
@@ -552,14 +580,14 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let args := expression.getAppArgs
   let name := head.constName?
   if name == some ``WithLp.toLp && args.size == 3 then
-    if (← Affine.Space.euclideanDimension? type).isSome then
+    if (← Expr.euclideanDimension? type).isSome then
       let child ← certifyBody point args[2]!
       return { child with
         smooth := ← construct point expression ``Morew.NLP.Smooth.toEuclidean
           #[← operandFunction point args[2]! child.smooth, child.smooth]
           (intermediateSpaces := #[← inferType args[2]!]) }
   if name == some ``WithLp.ofLp && args.size == 3 then
-    if (← Affine.Space.euclideanDimension? (← inferType args[2]!)).isSome then
+    if (← Expr.euclideanDimension? (← inferType args[2]!)).isSome then
       let child ← certifyBody point args[2]!
       return { child with
         smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
@@ -649,7 +677,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
       -- Explicit Real.rpow was previously an unknown application. Retain its
       -- operand diagnostics in global mode; HPow's old boundary is above.
       for argument in args do
-        if (← Affine.depends point argument) && (← supportedSpace (← inferType argument)) then
+        if (← Expr.depends point argument) && (← supportedSpace (← inferType argument)) then
           discard <| certifyBody point argument
       reject expression .unknownHead "unsupported function, coercion, or operation"
     let restricted := atom.kind == .log || atom.kind == .sqrt || atom.kind == .inv || atom.kind == .rpow
@@ -719,8 +747,8 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   -- After structural dependency normalization, open eligible heads before
   -- certifying their arguments: the body may discard an argument that would
   -- otherwise fail native certification.
-  if !independent && HelperExpansion.enabled (← read).expansion then
-    if let some step ← expansionAction <| HelperExpansion.unfoldValueHead?
+  if !independent && Expansion.enabled (← read).expansion then
+    if let some step ← expansionAction <| unfoldValueHead?
         (← read).expansion expression (← read).helpers.size then
       return ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
         unless ← Domain.Evidence.complete step.expression do
@@ -738,7 +766,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   -- their native evaluation requirements. Function and proof arguments do not.
   let mut children : Array Certificate := #[]
   for argument in args do
-    if (independent || (← Affine.depends point argument)) &&
+    if (independent || (← Expr.depends point argument)) &&
         (← helperArgumentSpace (← inferType argument)) then
       let child ← withReader (fun ctx => { ctx with
         prior := ctx.prior ++ children.map (·.included) }) <| certifyBody point argument
@@ -800,7 +828,7 @@ Rejection restores the environment as well as metavariables, and carries the
 failing typed term.
 -/
 def certifyGlobal (source : Expr) : MetaM (Except SmoothError Expr) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       let type ← whnf (← inferType source)
       let decision := match type with
@@ -825,7 +853,7 @@ Previously proved inclusion certificates may supply earlier domain facts. -/
 def certifyOnFeasible (feasible source : Expr) (prior : Array Expr := #[])
     (facts? : Option Domain.Evidence.FactsProvider := none) :
     MetaM (Except SmoothError Certificate) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       let expansion ← expansionConfig
       let result ← ((certifyCore source

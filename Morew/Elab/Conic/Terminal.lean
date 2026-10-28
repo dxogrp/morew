@@ -8,6 +8,8 @@ import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Reformulation.Replace
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Whole-problem exact conic planning
@@ -203,14 +205,14 @@ private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Prepared)
       (contextual.certifiedRows.map fun row => some #[row]) contextual.domain none rewrite
 
 private def originalError (original : PresentationState) (origin : Nat)
-    (error : Affine.AffineError) : MetaM Affine.AffineError := do
+    (error : Expr.Error) : MetaM Expr.Error := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   let reason ← addMessageContext
     m!"constraint `{label}`: {error.reason}\nunsupported expression: {error.expression}\nuse `conic at {label} using rule` with an exact representation before `conic`"
   return { error with reason }
 
 private partial def lower (original : PresentationState) (work : Work)
-    (provider : Affine.EvidenceProvider) : MetaM (Except Affine.AffineError Work) := do
+    (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Work) := do
   let mut work := work
   let mut firstError? := none
   for index in [:work.presentation.constraints.size] do
@@ -292,8 +294,8 @@ emitting declarations. Failed attempts restore caller metavariables and the
 environment. The first unresolved row is reported only after all later rows
 have had an opportunity to supply a newly exposed retained margin. -/
 def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
-    MetaM (Except Affine.AffineError Result) :=
-  Affine.withIsolatedMVars do
+    MetaM (Except Expr.Error Result) :=
+  State.withIsolatedMVars do
     try
       for expression in #[presentation.domainType, presentation.valueType,
           presentation.objective] ++ presentation.constraints.map (·.predicate) do

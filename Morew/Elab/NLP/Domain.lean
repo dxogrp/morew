@@ -4,6 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.NLP.Smooth
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Inferred open domains with certified feasible inclusion
@@ -121,7 +123,7 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
   }
   for index in [:sources.size] do
     let source := sources[index]!
-    if ← Affine.hasUnresolved source then
+    if ← Expr.hasUnresolved source then
       return .error {
         source, sourceIndex? := some index, expression := source, type := ← inferType source
         kind := .unresolved
@@ -178,7 +180,7 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
     unless ← isDefEq (← inferType result.smooth[i]!) expected do
       throwError "domain certificate changed source {i} or its analytic instances"
   for proof in result.smooth ++ #[result.domainIsOpen, result.feasibleMemDomain] do
-    if proof.hasSorry || (← Affine.hasUnresolved proof) then
+    if proof.hasSorry || (← Expr.hasUnresolved proof) then
       throwError "domain certificate contains unresolved evidence or a placeholder"
     checkWithKernel proof
   return .ok result
@@ -191,7 +193,7 @@ are evidence only: no new domain condition is added to their predicate.
 -/
 def certify (feasible : Expr) (sources : Array Expr) :
     MetaM (Except DomainError DomainResult) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       certifyCore feasible sources
     catch exception =>
@@ -206,7 +208,7 @@ grammar. The provider receives the actual feasibility proof; all returned analyt
 and inclusion certificates are checked against that unchanged predicate. -/
 def certifyWithEvidence (feasible : Expr) (sources : Array Expr)
     (facts : Evidence.FactsProvider) : MetaM (Except DomainError DomainResult) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       certifyCore feasible sources (some facts)
     catch exception =>

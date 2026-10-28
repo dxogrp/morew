@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Affine
+import Morew.Elab.Expr
 import Morew.Elab.Affine.Space
 import Morew.Elab.Affine.State
 import Morew.Elab.Affine.Expansion
@@ -54,12 +55,23 @@ namespace Morew.Elab.Affine
 
 open Lean Lean.Meta Qq
 
-/-- An unsupported expression together with a diagnostic retaining its context. -/
-structure AffineError where
-  /-- The smallest expression at which recognition failed. -/
-  expression : Expr
-  /-- Explanation, including the pretty-printing context of the expression. -/
-  reason : MessageData
+/-- Compatibility alias for the shared expression-recognition diagnostic. -/
+abbrev AffineError := Morew.Elab.Expr.Error
+
+namespace AffineError
+
+/-- Compatibility constructor for the shared expression-recognition diagnostic. -/
+@[match_pattern]
+abbrev mk (expression : Expr) (reason : MessageData) : AffineError :=
+  Morew.Elab.Expr.Error.mk expression reason
+
+/-- Compatibility projection for the expression at which recognition failed. -/
+abbrev expression (error : AffineError) : Expr := Morew.Elab.Expr.Error.expression error
+
+/-- Compatibility projection for the contextual recognition diagnostic. -/
+abbrev reason (error : AffineError) : MessageData := Morew.Elab.Expr.Error.reason error
+
+end AffineError
 
 instance : ToMessageData AffineError := ⟨(·.reason)⟩
 
@@ -87,176 +99,31 @@ private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
       m!"cannot certify affine expression {expression}: {reason}"
   }
 
--- Follow local declaration values AND types. Merely checking `hasFVar` on a
--- coefficient misses dependencies hidden behind a local let or an instance.
-private partial def inspectLocals (expression : Expr) (point? : Option FVarId)
-    (seen : FVarIdSet := {}) : MetaM (Bool × Bool) := do
-  let expression ← instantiateMVars expression
-  let mut dependent := false
-  let mut unresolved := expression.hasMVar
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    if point? == some id then dependent := true
-    unless seen.contains id do
-      seen := seen.insert id
-      if let some declaration := (← getLCtx).find? id then
-        let (dep, hole) ← inspectLocals declaration.type point? seen
-        dependent := dependent || dep
-        unresolved := unresolved || hole
-        if let some value := declaration.value? (allowNondep := true) then
-          let (dep, hole) ← inspectLocals value point? seen
-          dependent := dependent || dep
-          unresolved := unresolved || hole
-  return (dependent, unresolved)
+/-- Compatibility wrapper for shared local dependency and metavariable inspection. -/
+private abbrev inspectLocals (expression : Expr) (point? : Option FVarId)
+    (seen : FVarIdSet := {}) : MetaM (Bool × Bool) :=
+  Morew.Elab.Expr.inspectLocals expression point? seen
 
-/-- Whether an expression depends on the decision free variable, following
-local declaration values and types as well as resolved metavariables. -/
-def depends (point expression : Expr) : MetaM Bool := do
-  return (← inspectLocals expression (some point.fvarId!)).1
+/-- Compatibility wrapper for shared decision-dependence inspection. -/
+abbrev depends (point expression : Expr) : MetaM Bool :=
+  Morew.Elab.Expr.depends point expression
 
-/-- Check for unresolved metavariables, including those hidden in the types or
-values of referenced local declarations. Shared by proof-producing recognizers. -/
-def hasUnresolved (expression : Expr) : MetaM Bool := do
-  return (← inspectLocals expression none).2
+/-- Compatibility wrapper for shared unresolved-metavariable inspection. -/
+abbrev hasUnresolved (expression : Expr) : MetaM Bool :=
+  Morew.Elab.Expr.hasUnresolved expression
 
-/-- Reduce local lets, applications, projections, and compiler-generated tuple
-matches while preserving named arithmetic and user function heads.
+/-- Compatibility wrapper for shared structural reduction, preserving its options. -/
+abbrev reduceStructure (expression : Expr) (preserveLets : Bool := false)
+    (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr :=
+  Morew.Elab.Expr.reduceStructure expression preserveLets opaqueProblemDependencies?
 
-Only problem-container fields and single-alternative product matchers may
-unfold named declarations. This is internal support for typed presentations.
-With `preserveLets`, stop at a head let so the caller can retain its evidence
-and local instances while recognizing the body. When `opaqueProblemDependencies?`
-is supplied, named problem containers depending on that local variable remain
-opaque; inline structural containers are still reduced.
--/
-partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
-    (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr := do
-  let expression := (← instantiateMVars expression).consumeMData
-  match expression with
-  | .letE _ _ value body _ =>
-    if preserveLets then pure expression
-    else reduceStructure (body.instantiate1 value) false opaqueProblemDependencies?
-  | .fvar id =>
-    if let some value := (← id.getDecl).value? (allowNondep := true) then
-      reduceStructure value preserveLets opaqueProblemDependencies?
-    else pure expression
-  | .proj name index value =>
-    let value ← reduceStructure value preserveLets opaqueProblemDependencies?
-    if let .letE binding type value body nondep := value then
-      -- Move only the projection through a preserved let. Recognition can then
-      -- inspect its evidence in the original scope before reducing the body.
-      pure (.letE binding type value (.proj name index body) nondep)
-    else if value.isAppOf ``Prod.mk then
-      reduceStructure value.getAppArgs[index + 2]! preserveLets opaqueProblemDependencies?
-    else pure (.proj name index value)
-  | .app .. =>
-    let arguments := expression.getAppArgs
-    let function ← reduceStructure expression.getAppFn preserveLets opaqueProblemDependencies?
-    if let .letE name type value body nondep := function then
-      return ← reduceStructure (.letE name type value
-        (mkAppN body (arguments.map (·.liftLooseBVars 0 1))) nondep)
-        preserveLets opaqueProblemDependencies?
-    if function.isLambda then
-      return ← reduceStructure (function.beta arguments) preserveLets opaqueProblemDependencies?
-    if (function.isConstOf ``Prod.casesOn || function.isConstOf ``Prod.rec) &&
-        arguments.size >= 5 then
-      let value := arguments[if function.isConstOf ``Prod.casesOn then 3 else 4]!
-      let branch := arguments[if function.isConstOf ``Prod.casesOn then 4 else 3]!
-      let fields := #[Expr.proj ``Prod 0 value, Expr.proj ``Prod 1 value]
-      return ← reduceStructure (mkAppN (branch.beta fields)
-        (arguments.extract 5 arguments.size)) preserveLets opaqueProblemDependencies?
-    if let some name := function.constName? then
-      if let some matcher ← getMatcherInfo? name then
-        if matcher.numAlts == 1 && arguments.size >= matcher.arity then
-          let mut productsOnly := decide (matcher.numDiscrs > 0)
-          for i in [matcher.getFirstDiscrPos:matcher.getFirstAltPos] do
-            let type ← whnf (← inferType arguments[i]!)
-            productsOnly := productsOnly && type.isAppOfArity ``Prod 2
-          if productsOnly then
-            let declaration ← getConstInfo name
-            if let some value := declaration.value? then
-              let value := value.instantiateLevelParams
-                declaration.levelParams function.constLevels!
-              return ← reduceStructure (value.beta arguments)
-                preserveLets opaqueProblemDependencies?
-    if (function.isConstOf ``Prod.fst || function.isConstOf ``Prod.snd) &&
-        arguments.size >= 3 then
-      let projection := .proj ``Prod
-        (if function.isConstOf ``Prod.fst then 0 else 1) arguments[2]!
-      return ← reduceStructure (mkAppN projection (arguments.extract 3 arguments.size))
-        preserveLets opaqueProblemDependencies?
-    if (function.isConstOf ``Morew.Problem.objective ||
-        function.isConstOf ``Morew.Problem.feasible) && arguments.size >= 3 then
-      -- The model declaration is the container being inspected; its objective
-      -- and constraint function heads remain intact after selecting the field.
-      let problem ← match opaqueProblemDependencies? with
-        | some point =>
-          if ← depends point arguments[2]! then
-            reduceStructure arguments[2]! preserveLets opaqueProblemDependencies?
-          else whnf arguments[2]!
-        | none => whnf arguments[2]!
-      if problem.isAppOf ``Morew.Problem.mk then
-        let index := if function.isConstOf ``Morew.Problem.objective then 2 else 3
-        return ← reduceStructure (mkAppN problem.getAppArgs[index]!
-          (arguments.extract 3 arguments.size)) preserveLets opaqueProblemDependencies?
-    return mkAppN function arguments
-  | _ => pure expression
+/-- Compatibility wrapper for shared real-space shape recognition. -/
+abbrev isSupportedSpace (type : Expr) : MetaM Bool :=
+  Morew.Elab.Expr.isSupportedSpace type
 
-/-- Whether a type has the supported real/Euclidean/product/finite-function shape. -/
-partial def isSupportedSpace (type : Expr) : MetaM Bool := do
-  let type ← whnf type
-  if type.isConstOf ``Real then return true
-  if (← Space.euclideanDimension? type).isSome then return true
-  if type.isAppOfArity ``Prod 2 then
-    return (← isSupportedSpace type.getAppArgs[0]!) &&
-      (← isSupportedSpace type.getAppArgs[1]!)
-  if let .forallE _ index body _ := type then
-    let body ← Core.betaReduce (← whnf body)
-    if body.hasLooseBVars || (← isProp index) then return false
-    -- Shape validation needs finiteness, not an enumeration in the ambient
-    -- context. Indexed operations retain their own elaborated Fintype instance.
-    let finiteType ← mkAppM ``Finite #[index]
-    unless (← synthInstance? finiteType).isSome do return false
-    return ← isSupportedSpace body
-  return false
-
-/-- Recover finiteness proofs from `Finite` evidence and `Fintype` indexing
-instances already present in the typed source. Local lets are substituted, but
-named helpers are not expanded.
-Instances mentioning a source binder are never promoted into the caller's scope.
-Only `Finite` proofs are collected: each operation keeps its own enumeration. -/
-def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
-  let mut pending := [source]
-  let mut seen : ExprSet := {}
-  let mut instances := #[]
-  while let expression :: rest := pending do
-    pending := rest
-    if seen.contains expression then continue
-    seen := seen.insert expression
-    let expression ← if expression.hasLooseBVars then
-        pure expression.consumeMData.headBeta
-      else reduceStructure expression (preserveLets := true)
-    unless expression.hasLooseBVars do
-      -- Inspect the elaborated type rather than operation names or the spelling
-      -- of a let annotation. This also handles aliased classes and coefficients
-      -- such as Fintype.card, without expanding their definitions.
-      let type ← whnf (← inferType expression)
-      if type.isAppOfArity ``Finite 1 then
-        unless instances.contains expression do
-          instances := instances.push expression
-      else if type.isAppOfArity ``Fintype 1 then
-        let proof ← mkAppOptM ``Finite.of_fintype
-          #[some type.getAppArgs[0]!, some expression]
-        unless instances.contains proof do
-          instances := instances.push proof
-    match expression with
-    | .letE _ _ value body _ => pending := value :: body.instantiate1 value :: pending
-    | .lam _ _ body _ | .forallE _ _ body _ => pending := body :: pending
-    | .app f a => pending := f :: a :: pending
-    | .proj _ _ value => pending := value :: pending
-    | .mdata _ value => pending := value :: pending
-    | _ => pure ()
-  return instances
+/-- Compatibility wrapper for shared source-local finiteness discovery. -/
+abbrev sourceFiniteInstances (source : Expr) : MetaM (Array Expr) :=
+  Morew.Elab.Expr.sourceFiniteInstances source
 
 /-- Discover additional finite-index evidence hidden in transparent value helpers.
 This is used only after a direct certification attempt fails. It never changes

@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import MorewTest.NLP.HelperFixtures
 import MorewTest.NLP.DomainSupport
 import MorewTest.Environment
+import Morew.Elab.Affine
 
 /-!
 # Shared smooth helper budgets and atomic failures

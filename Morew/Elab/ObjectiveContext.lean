@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Atom
 import Morew.Elab.Conic.Domain
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Checked context proofs for bound lifts
@@ -52,8 +54,8 @@ local-definition free variables retain their identities. `reduceStructure`
 additionally reduces computational lets, projections, and tuple matchers, for
 use after an occurrence has already been selected. -/
 partial def sameExpression (left right : Expr) (reduceStructure : Bool := false) : MetaM Bool := do
-  let left ← if reduceStructure then Affine.reduceStructure left else pure left.consumeMData
-  let right ← if reduceStructure then Affine.reduceStructure right else pure right.consumeMData
+  let left ← if reduceStructure then Expr.reduceStructure left else pure left.consumeMData
+  let right ← if reduceStructure then Expr.reduceStructure right else pure right.consumeMData
   if left == right then return true
   -- Lean may extract instance proof fields (notably OfNat's AtLeastTwo
   -- evidence) into auxiliary theorems when a source declaration is compiled.
@@ -124,11 +126,11 @@ private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :=
   return some (args[if ge then 3 else 2]!, args[if ge then 2 else 3]!)
 
 private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
-  if (← Affine.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
+  if (← Expr.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
   let value : Q(ℝ) := value
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
-      if !(← Affine.depends point declaration.toExpr) &&
+      if !(← Expr.depends point declaration.toExpr) &&
           !(← Morew.Elab.Rewrite.Plan.unresolved declaration.toExpr) then
         if ← isDefEq declaration.type q($value ≤ 0) then
           checkWithKernel declaration.toExpr
@@ -154,8 +156,8 @@ private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :
   return none
 
 private partial def inequality (point left right bound : Expr) : ContextM Expr := do
-  let left ← Affine.reduceStructure left
-  let right ← Affine.reduceStructure right
+  let left ← Expr.reduceStructure left
+  let right ← Expr.reduceStructure right
   -- Only the supplied bound may justify a changed leaf. Unfold the proposition
   -- wrapper (for example BoundDirection.Rel), not either endpoint.
   if let some (lower, upper) ← boundRelation? (← inferType bound) then
@@ -181,7 +183,7 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
   | .mul =>
     for i in [:2] do
       let coefficient := lhs[i]!
-      if (← same coefficient rhs[i]!) && !(← Affine.depends point coefficient) then
+      if (← same coefficient rhs[i]!) && !(← Expr.depends point coefficient) then
         let j := 1 - i
         if let some sign ← Conic.Domain.constantSign? point coefficient false then
           let attempt : Except MessageData Expr ← liftM (inequality point lhs[j]! rhs[j]! bound).run
@@ -194,8 +196,8 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
     reject left right "multiplication requires an unchanged decision-independent scalar with a proved sign"
 
 private partial def predicate (point source target bound sourceProof : Expr) : ContextM Expr := do
-  let source ← Affine.reduceStructure source
-  let target ← Affine.reduceStructure target
+  let source ← Expr.reduceStructure source
+  let target ← Expr.reduceStructure target
   if ← same source target then return sourceProof
   if source.isAppOfArity ``And 2 && target.isAppOfArity ``And 2 then
     let sourceArgs := source.getAppArgs
@@ -215,7 +217,7 @@ private partial def predicate (point source target bound sourceProof : Expr) : C
 
 private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM Expr) :
     MetaM (Except MessageData Expr) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     for input in inputs do
       if ← Morew.Elab.Rewrite.Plan.unresolved input then
         return .error m!"cannot certify an unresolved bound context"

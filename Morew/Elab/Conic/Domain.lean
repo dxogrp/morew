@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Plan
+import Morew.Elab.Expr
 
 /-!
 # Retained lower bounds for exact conic rewrites
@@ -26,12 +27,12 @@ private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ valu
 /-- Prove the sign of an independent real constant from an independent local
 hypothesis or bounded numeral/rational evaluation, using canonical real order. -/
 def constantSign? (point value : Expr) (strict : Bool) : MetaM (Option Expr) := do
-  if (← Affine.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
+  if (← Expr.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
   let value : Q(ℝ) := value
   let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
-      if !(← Affine.depends point declaration.toExpr) &&
+      if !(← Expr.depends point declaration.toExpr) &&
           !(← Morew.Elab.Rewrite.Plan.unresolved declaration.toExpr) then
         if ← isDefEq declaration.type obligation then
           checkWithKernel declaration.toExpr
@@ -80,7 +81,7 @@ private theorem nonnegativeOfMembership {value : ℝ} (bound : value ∈ ℝ₊)
 private def signInMembership? (point value body evidence : Expr) (strict : Bool) :
     MetaM (Option Expr) := do
   let some coordinate ← nonnegativeScalarValue? point body | return none
-  let coordinate ← Affine.reduceStructure coordinate
+  let coordinate ← Expr.reduceStructure coordinate
   if !strict && (← isDefEq coordinate value) then
     return some (← mkAppM ``nonnegativeOfMembership #[evidence])
   unless coordinate.isAppOfArity ``HSub.hSub 6 do return none
@@ -98,9 +99,9 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
 
 private partial def signInRow? (point value body evidence : Expr) (strict : Bool) :
     MetaM (Option Expr) := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+  let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type initial rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point initial) then
+    if (← Expr.depends point type) || (← Expr.depends point initial) then
       return ← signInRow? point value (rest.instantiate1 initial) evidence strict
     return ← withLetDecl name type initial (nondep := nondep) fun binding => do
       let proof? ← signInRow? point value (rest.instantiate1 binding) evidence strict
@@ -119,7 +120,7 @@ private partial def signInRow? (point value body evidence : Expr) (strict : Bool
   unless (← isDefEq args[0]! q(ℝ)) &&
       (← isDefEq args[1]! (mkConst ``Real.instLE)) do return none
   let epsilon := args[if ge then 3 else 2]!
-  let upper ← Affine.reduceStructure args[if ge then 2 else 3]!
+  let upper ← Expr.reduceStructure args[if ge then 2 else 3]!
   unless ← isDefEq upper value do return none
   let some sign ← constantSign? point epsilon strict | return none
   return some (← mkAppM

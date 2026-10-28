@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.Basic
-import Morew.Elab.Affine.Space
+import Morew.Elab.Expr
 import Lean.Meta.Basic
 import Qq
 
@@ -72,7 +72,7 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
-  else if let some n ← Affine.Space.euclideanDimension? shape then
+  else if let some n ← Expr.euclideanDimension? shape then
     finishSpace type (← mkAppM ``Structure.euclidean #[n])
   else if shape.isAppOfArity ``Prod 2 then
     let left ← buildSpace shape.getAppArgs[0]!
@@ -101,7 +101,7 @@ partial def structuralDomain (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     return shape
-  if let some dimension ← Affine.Space.euclideanDimension? shape then
+  if let some dimension ← Expr.euclideanDimension? shape then
     let n : Q(Nat) := dimension
     return q(EuclideanSpace ℝ (Fin $n))
   if shape.isAppOfArity ``Prod 2 then

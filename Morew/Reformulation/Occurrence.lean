@@ -8,6 +8,7 @@ import Morew.Elab.Rewrite.Plan
 import Morew.Reformulation.Syntax
 import Morew.Transform.Context
 import Morew.Elab.ObjectiveContext
+import Morew.Elab.Expr
 
 /-!
 # Bounds at selected occurrences
@@ -157,13 +158,13 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"
     let auxiliaryType ← zetaReduce (← inferType needle)
     for binding in binders do
-      if ← Morew.Elab.Affine.depends binding auxiliaryType then
+      if ← Morew.Elab.Expr.depends binding auxiliaryType then
         throwErrorAt selector "the selected type depends on a decision variable; dependent auxiliaries are unsupported"
     let preorderType ← mkAppM ``Preorder #[auxiliaryType]
     let preorder ← synthInstance preorderType
     let preorder ← zetaReduce preorder
     for binding in binders do
-      if ← Morew.Elab.Affine.depends binding preorder then
+      if ← Morew.Elab.Expr.depends binding preorder then
         throwErrorAt selector "the selected order instance depends on a decision variable"
     withLocalDeclD binderName auxiliaryType fun auxiliary => do
       let (replaced, count) ← (replaceOccurrence body needle auxiliary row?.isSome).run 0

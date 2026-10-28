@@ -8,6 +8,8 @@ import Morew.Elab.Rewrite.Match
 import Morew.Elab.NLP.Rules
 import Morew.Elab.Rewrite.Plan
 import Morew.Elab.NLP.Rows
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Exact replacement planning for selected nonlinear constraints
@@ -28,7 +30,7 @@ namespace Morew.Elab.NLP.Rewrite
 open Lean Lean.Meta
 
 /-- Diagnostics identify the original selected predicate and the failed check. -/
-abbrev Error := Affine.AffineError
+abbrev Error := Expr.Error
 
 /-- A checked exact replacement before presentation names are allocated. -/
 structure Result extends Morew.Elab.Rewrite.Plan.Result where
@@ -49,22 +51,22 @@ private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 private partial def structural (point expression : Expr) (preserveLets : Bool := false) :
     MetaM Expr := do
   let step (value : Expr) : MetaM TransformStep := do
-    let reduced ← Affine.reduceStructure value (preserveLets := preserveLets)
+    let reduced ← Expr.reduceStructure value (preserveLets := preserveLets)
       (opaqueProblemDependencies? := some point)
     let reduced := if reduced.isAppOf ``Function.comp && reduced.getAppNumArgs ≥ 6 then
         let args := reduced.getAppArgs
         mkAppN (mkApp args[3]! (mkApp args[4]! args[5]!)) (args.extract 6 args.size)
       else reduced
     if let .letE name type binding body nondep := reduced then
-      if preserveLets && !(← Affine.depends point type) &&
-          !(← Affine.depends point binding) then
+      if preserveLets && !(← Expr.depends point type) &&
+          !(← Expr.depends point binding) then
         return ← withLetDecl name type binding (nondep := nondep) fun bindingVar => do
           let body ← structural point (body.instantiate1 bindingVar) preserveLets
           return .done (← mkLetFVars #[bindingVar] body
             (usedLetOnly := false) (generalizeNondepLet := false))
       return .visit (body.instantiate1 binding)
     if reduced != value then return .visit reduced
-    if !(← Affine.depends point value) then return .done value
+    if !(← Expr.depends point value) then return .done value
     return .continue
   Meta.transform expression (pre := step) (post := step)
 
@@ -143,7 +145,7 @@ private def matchAndFinish (source domain : Expr)
     -- No retained-evidence callback is supplied to either matcher. Exactness
     -- remains unconditional; only the finished rows use feasibility evidence.
     matchRule point body fun matched => do
-      if ← Affine.depends point matched.auxiliary then
+      if ← Expr.depends point matched.auxiliary then
         throwError "the auxiliary space depends on a decision variable"
       let target ← mkLambdaFVars #[point] matched.target
       let pointwise ← mkLambdaFVars #[point] matched.sourceIff
@@ -247,7 +249,7 @@ private def planCore (source : Expr) (retained : Array Expr)
     if let some name := declaration? then
       return .ok (← finishDeclaration name finishLift)
     if let some rule := rule? then
-      let direct : Except Exception Result ← Affine.withIsolatedMVars do
+      let direct : Except Exception Result ← State.withIsolatedMVars do
         try return .ok (← finishLift (← customLift source domain rule))
         catch exception => return .error exception
       match direct with
@@ -266,7 +268,7 @@ private def planCore (source : Expr) (retained : Array Expr)
     let mut firstError? := none
     for selected in ← registeredCandidates source domain do
       let reachedTarget ← IO.mkRef false
-      let attempt : Except (Bool × Error) Result ← Affine.withIsolatedMVars do
+      let attempt : Except (Bool × Error) Result ← State.withIsolatedMVars do
         try
           return .ok (← finishDeclaration selected fun lift => do
             reachedTarget.set true
@@ -294,11 +296,11 @@ ambiguous selection restore caller metavariables and environment declarations. -
 def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
     (insertionIndex : Nat := 0) (declaration? : Option Name := none) :
     MetaM (Except Error Result) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       let mut instances := #[]
       for expression in #[source] ++ retained ++ rule?.toArray do
-        for inst in ← Affine.sourceFiniteInstances expression do
+        for inst in ← Expr.sourceFiniteInstances expression do
           unless instances.contains inst do instances := instances.push inst
       Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))

@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Affine
+import Morew.Elab.Expr
 import Lean.Meta.Basic
 import Lean.Meta.Transform
 import Qq
@@ -56,19 +57,9 @@ noncomputable def pi (ι : Type*) {Y : Type*} (a : Structure Y) :
 
 end Structure
 
-/-- Recognize exactly a real Euclidean space indexed by `Fin n`, including aliases. -/
-def euclideanDimension? (type : Expr) : MetaM (Option Expr) := do
-  let shape ← whnf type
-  unless shape.isAppOfArity ``WithLp 2 do return none
-  unless ← isDefEq shape.getAppArgs[0]! q((2 : ENNReal)) do return none
-  let coordinates ← whnf shape.getAppArgs[1]!
-  let .forallE _ index body _ := coordinates | return none
-  let body ← Core.betaReduce (← whnf body)
-  if body.hasLooseBVars then return none
-  unless body.isConstOf ``Real do return none
-  let index ← whnf index
-  unless index.isAppOfArity ``Fin 1 do return none
-  return some index.getAppArgs[0]!
+/-- Compatibility wrapper for shared finite real Euclidean-space recognition. -/
+abbrev euclideanDimension? (type : Expr) : MetaM (Option Expr) :=
+  Morew.Elab.Expr.euclideanDimension? type
 
 private structure BuiltSpace where
   data : Expr

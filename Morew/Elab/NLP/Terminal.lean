@@ -7,6 +7,8 @@ import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Rewrite.Decomposition
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Whole-problem smooth-NLP planning
@@ -150,7 +152,7 @@ private def applyPrepared (work : Work) (index : Nat) (prepared : Rewrite.Result
 private def decompose (domain predicate : Expr) : MetaM (Array Expr × Expr) :=
   withLocalDeclD `point domain fun point => do
     let (bodies, proof) ← Decomposition.split (mkApp predicate point)
-      (fun body => Affine.reduceStructure body (preserveLets := true)
+      (fun body => Expr.reduceStructure body (preserveLets := true)
         (opaqueProblemDependencies? := some point))
     let predicates ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let proof ← instantiateMVars (← mkLambdaFVars #[point] proof)
@@ -186,14 +188,14 @@ private def tryGroupCore (work : Work) (index : Nat) : MetaM (Option Work) := do
   return none
 
 private def tryGroup (work : Work) (index : Nat) : MetaM (Option Work) := do
-  let result : Except Unit Work ← Affine.withIsolatedMVars do
+  let result : Except Unit Work ← State.withIsolatedMVars do
     match ← tryGroupCore work index with
     | some next => return .ok next
     | none => return .error ()
   return result.toOption
 
 private def originalError (original : PresentationState) (origin : Nat)
-    (error : Domain.DomainError) (ruleError : Affine.AffineError) : MetaM Domain.DomainError := do
+    (error : Domain.DomainError) (ruleError : Rewrite.Error) : MetaM Domain.DomainError := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   return { error with
     rowIndex? := some origin
@@ -253,7 +255,7 @@ private def planCore (presentation : PresentationState) : MetaM (Except Domain.D
 /-- Plan deterministic exact lowering and certify the complete final problem.
 No visible names or declarations are emitted. Failures restore caller state. -/
 def plan (presentation : PresentationState) : MetaM (Except Domain.DomainError Result) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
           presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
@@ -261,7 +263,7 @@ def plan (presentation : PresentationState) : MetaM (Except Domain.DomainError R
           throwError "terminal NLP validation requires fully elaborated expressions without placeholders"
       let mut instances := #[]
       for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
-        for inst in ← Affine.sourceFiniteInstances source do
+        for inst in ← Expr.sourceFiniteInstances source do
           unless instances.contains inst do instances := instances.push inst
       Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map

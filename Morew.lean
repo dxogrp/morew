@@ -24,7 +24,8 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
-import Morew.Elab.HelperExpansion
+import Morew.Elab.Expansion
+import Morew.Elab.Expr
 import Morew.Elab.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
 import Morew.Elab.NLP.Form
@@ -44,6 +45,7 @@ import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Rewrite.Plan
 import Morew.Elab.Rewrite.Registry
+import Morew.Elab.State
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.NLP

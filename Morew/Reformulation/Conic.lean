@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rewrite
 import Morew.Reformulation.Replace
+import Morew.Elab.Expr
 
 /-!
 # Targeted exact conic rewriting
@@ -119,7 +120,7 @@ def prepareConic (state : ReformState) (step : Syntax)
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
     let (rule?, declaration?) ← Replace.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
-    let result : Except Morew.Elab.Affine.AffineError Prepared ←
+    let result : Except Morew.Elab.Expr.Error Prepared ←
       Morew.Elab.Conic.Plan.withPresentationFiniteInstances
         Morew.Elab.Conic.Plan.Prepared.replaceFVars presentation do
         if let some name := declaration? then do
