@@ -24,6 +24,7 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Terminal
+import Morew.Elab.HelperExpansion
 import Morew.Elab.NLP.Domain
 import Morew.Elab.NLP.Domain.Evidence
 import Morew.Elab.NLP.Form
