@@ -3,6 +3,8 @@ version = "0.1.0"
 defaultTargets = ["Morew", "MorewTest"]
 lintDriver = "batteries/runLinter"
 lintDriverArgs = ["Morew"]
+# Compile each Morew module with one worker; Lake schedules modules in parallel.
+weakLeanArgs = ["-j1"]
 
 [[lean_lib]]
 name = "Morew"
