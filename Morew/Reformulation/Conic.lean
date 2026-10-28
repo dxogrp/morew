@@ -54,7 +54,10 @@ and a positive denominator margin, including zero numerators. Finite nonempty
 log-sum-exp and softplus use one finite auxiliary vector, one grouped family of
 exponential memberships, and one sum bound. Domain evidence is taken only from
 independent constants or retained entries; no selected constraint proves its
-own domain.
+own domain. Custom records may use subtype inputs or proof parameters discharged
+by this same retained-margin policy, including when their checked replacement
+introduces auxiliary variables. Their targets must remain independent of the
+temporary retained-feasibility proof.
 -/
 
 namespace Morew.Reformulation.Internal

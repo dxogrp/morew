@@ -35,7 +35,10 @@ component followed by `_nlp_1`, `_nlp_2`, and so on; auxiliaries use `_aux`.
 The shared allocator freshens collisions without changing untouched labels.
 
 Domain evidence comes from checked closed comparisons in the proposed target,
-including generated guards, after exactness has been proved independently.
+including generated guards, after exactness has been checked using only retained
+constraints. Rule premises can use independent hypotheses and bounded reasoning
+from retained closed comparisons, including compatible finite coordinates. The
+selected row and generated guards cannot prove their own replacement premises.
 Unsupported retained rows and the objective remain untouched. This step is
 nonterminal and emits no whole-model `NLP.Form`. Bare `nlp` performs terminal
 whole-model validation and emits a concrete form and representability proof.

@@ -520,7 +520,8 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
   return .ok result
 
 /-- Certify precisely the supplied generated rows using checked evidence from the
-exact proposed feasibility. The caller first checks its unconditional exact lift.
+exact proposed feasibility. The caller first checks exactness, using only retained
+constraints when that exactness is conditional.
 Unsupported retained leaves contribute no facts. Public `Domain.certify` keeps
 its stricter whole-predicate grammar. Caller state is restored on every outcome. -/
 def certifyRows (feasible : Expr) (rows : Array Expr) :

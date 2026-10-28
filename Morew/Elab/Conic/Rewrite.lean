@@ -15,8 +15,8 @@ import Morew.Elab.State
 Automatic discovery and explicit certificate selection share checked matching and
 conic target certification. Every automatic candidate comes from `@[morew_conic]`, including built-ins.
 Both targeted and terminal callers require one fully certified replacement.
-Retained evidence can discharge domain obligations for same-domain replacements;
-conditional auxiliary lifts remain outside this API.
+Retained evidence can discharge rule premises before generated rows are certified.
+Conditional replacements preserve the retained constraints and may introduce auxiliaries.
 -/
 
 namespace Morew.Elab.Conic.Rewrite

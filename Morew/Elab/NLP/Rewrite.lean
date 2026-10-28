@@ -15,7 +15,7 @@ import Morew.Elab.State
 # Exact replacement planning for selected nonlinear constraints
 
 Registered rules match a complete selected predicate. Every candidate first supplies an
-unconditional exact lift and then certifies only its generated residuals on an
+exact lift, possibly conditional on retained constraints, and then certifies its residuals on an
 open domain containing the proposed feasible set. Retained predicates remain
 unchanged, including predicates outside the generated-row grammar.
 

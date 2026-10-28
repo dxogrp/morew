@@ -56,11 +56,25 @@ sorted order. `conic at bound using shiftedAbsEpigraph` and the corresponding
 expressions use ordinary Lean elaboration. Explicit selection never falls back
 to another rule, and a namespace by itself gives a declaration no priority.
 
-Unconditional exact records may introduce auxiliaries. Conic consumers can
-also discharge input-domain obligations from retained constraints under their
-existing margin policy, but only for replacements without auxiliaries. NLP
-exactness is unconditional; retained and generated rows can still justify the
-evaluation domains of the resulting smooth residuals.
+All four representation families may express rule premises through subtype
+inputs or declaration proof parameters, without changing the model's original
+decision type. For example, an epigraph representation of
+`fun x : {x : ℝ // 0 < x} => Real.log x.1` can use a real auxiliary and target
+`x.1 = Real.exp u ∧ u ≤ t`. The retained model constraint `1 ≤ x` establishes
+its input premise; the selected logarithm bound cannot establish that premise.
+
+Consumers first check `∀ x, C x → (P x ↔ ∃ u, Q x u)`, where `C` contains
+exactly the retained constraints. The auxiliary type is decision-independent,
+and the target cannot depend on the temporary proof of `C`. Original coordinates
+and retained rows are preserved. `Unit` auxiliaries introduce no coordinate.
+
+Conic uses its existing direct-margin evidence policy. NLP uses bounded
+arithmetic over checked retained closed comparisons and compatible finite
+coordinates; for example, it can combine `1 ≤ y` and `y ≤ x`. Unsupported
+retained predicates are not used as evidence. Only after exactness is checked
+may NLP use generated guards as well as retained rows to certify the evaluation
+domains of the resulting smooth residuals. Generated rows never prove their
+own replacement's premises.
 -/
 
 namespace Morew.Elab.Rewrite.Registry
