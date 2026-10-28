@@ -2,10 +2,6 @@ BLUE := \033[36m
 BOLD := \033[1m
 RESET := \033[0m
 
-# Bound Lake and linter worker pools; command-line and environment overrides win.
-LEAN_NUM_THREADS ?= 4
-export LEAN_NUM_THREADS
-
 LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest
 
 .DEFAULT_GOAL := help
@@ -60,4 +56,3 @@ help: ## display this help message
 	@printf "  make $(BLUE)<target>$(RESET)\n\n"
 	@printf "$(BOLD)Targets:$(RESET)\n"
 	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_-]+:.*?##/ { printf "  $(BLUE)%-15s$(RESET) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-	@printf "\nOverride Lake/linter workers with: make LEAN_NUM_THREADS=8 check\n"
