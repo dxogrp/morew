@@ -353,5 +353,119 @@ example : IsSmoothNLP explicitNLP := explicitNLP.isSmoothNLP
 
 end Ambiguous
 
+namespace ProductInputs
+
+def firstMagnitude (x : ℝ) : ℝ := |x|
+
+-- The rule uses the full decision carrier, but leaves its second coordinate
+-- unconstrained by matching. Declaration lookup must retain that coordinate.
+def wholePointRule (bound : ℝ) :
+    ExactConstraintLift
+      (fun p : {p : ℝ × ℝ // 0 ≤ p.1} => firstMagnitude p.1.1 ≤ bound) where
+  Auxiliary := ℝ
+  target p u := u = p.1.1 ∧ u ≤ bound
+  source_iff_exists p := by
+    simp only [firstMagnitude, abs_of_nonneg p.2, exists_eq_left]
+
+attribute [local morew_conic] wholePointRule
+attribute [local morew_nlp] wholePointRule
+
+def wholePointSource :=
+  problem (x y : ℝ)
+    minimize y
+    subject to
+      retained : 1 ≤ x
+      bound : firstMagnitude x ≤ 2
+
+reformulation concreteConic : wholePointSource := by
+  conic at bound using (wholePointRule 2)
+
+reformulation concreteNLP : wholePointSource := by
+  nlp at bound using (wholePointRule 2)
+
+reformulation namedConic : wholePointSource := by
+  conic at bound using wholePointRule
+
+reformulation namedNLP : wholePointSource := by
+  nlp at bound using wholePointRule
+
+reformulation automaticConic : wholePointSource := by
+  conic at bound
+
+reformulation automaticNLP : wholePointSource := by
+  nlp at bound
+
+reformulation terminalConic : wholePointSource := by
+  conic
+
+reformulation terminalNLP : wholePointSource := by
+  nlp
+
+example (x y u : ℝ) : namedConic.feasible ((x, y), u) ↔
+    1 ≤ x ∧ u = x ∧ u ≤ 2 := Iff.rfl
+example : namedConic = concreteConic := rfl
+example : namedNLP = concreteNLP := rfl
+example : automaticConic = concreteConic := rfl
+example : automaticNLP = concreteNLP := rfl
+example : terminalConic.conicForm.data.toProblem = terminalConic :=
+  terminalConic.conicForm.represents
+example : terminalNLP.nlpForm.data.toProblem = terminalNLP := terminalNLP.nlpForm.represents
+
+def shiftedMagnitude (x y : ℝ) : ℝ := |x| + y
+
+-- Here the guarded pair is inferred from operands inside a larger decision
+-- space. Whole-point fallback cannot supply this input.
+def productRule :
+    EpigraphRepresentation
+      (fun p : {p : ℝ × ℝ // 0 ≤ p.1} => shiftedMagnitude p.1.1 p.1.2) where
+  Auxiliary := ℝ
+  target p t u := u = p.1.1 ∧ u + p.1.2 ≤ t
+  source_iff_exists p t := by
+    simp only [shiftedMagnitude, abs_of_nonneg p.2, exists_eq_left]
+
+attribute [local morew_conic] productRule
+attribute [local morew_nlp] productRule
+
+def productSource :=
+  problem (x y t : ℝ)
+    minimize t
+    subject to
+      retained : 1 ≤ x
+      bound : shiftedMagnitude x y ≤ t
+
+reformulation productConic : productSource := by
+  conic at bound using productRule
+
+reformulation productNLP : productSource := by
+  nlp at bound using productRule
+
+reformulation productAutomaticConic : productSource := by
+  conic at bound
+
+reformulation productAutomaticNLP : productSource := by
+  nlp at bound
+
+example (x y t u : ℝ) : productConic.feasible (((x, y), t), u) ↔
+    1 ≤ x ∧ u = x ∧ u + y ≤ t := Iff.rfl
+example : productAutomaticConic = productConic := rfl
+example : productAutomaticNLP = productNLP := rfl
+example : GlobalEquivalence productSource productConic := productConic.equivalence
+example : GlobalEquivalence productSource productNLP := productNLP.equivalence
+
+def productMissingGuard :=
+  problem (x y t : ℝ) minimize t subject to bound : shiftedMagnitude x y ≤ t
+
+#guard_error_fragments ["constraint `bound`", "missing nonnegative constant margin"] in
+assert_contextual_atomic%
+reformulation productMissingConic : productMissingGuard := by
+  conic at bound using productRule
+
+#guard_error_fragments ["constraint `bound`", "missing retained premise"] in
+assert_contextual_atomic%
+reformulation productMissingNLP : productMissingGuard := by
+  nlp at bound using productRule
+
+end ProductInputs
+
 end
 end MorewTest.Reformulation.ContextualRewrite

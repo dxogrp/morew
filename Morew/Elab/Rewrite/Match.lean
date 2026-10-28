@@ -47,7 +47,9 @@ private partial def inputValue (type : Expr) (depth : Nat := 0) :
   if type.isAppOfArity ``Subtype 2 then
     let (value, proofs) ← inputValue type.getAppArgs[0]! (depth + 1)
     let proof ← mkFreshExprMVar (mkApp type.getAppArgs[1]! value)
-    return (← mkAppM ``Subtype.mk #[value, proof], proofs.push proof)
+    let input ← mkAppOptM ``Subtype.mk
+      #[some type.getAppArgs[0]!, some type.getAppArgs[1]!, some value, some proof]
+    return (input, proofs.push proof)
   return (← mkFreshExprMVar type, #[])
 
 -- Concrete exact records describe the whole current point. A subtype domain
@@ -294,18 +296,22 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
       let (family, inputType, _) ← Registry.representation type
-      if family == .exact && exactInput == .whole &&
+      let subtypeWhole := family == .exact &&
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
-          !(← isDefEq inputType (← inferType point)) then
+          !(← isDefEq inputType (← inferType point))
+      if exactInput == .whole && subtypeWhole then
         -- Retry only subtype wrappers around the same complete decision point.
         -- Concrete records never acquire declaration-style input inference.
         return ← tryAttempt false .subtypeWhole
       if family == .graph || (family == .exact && exactInput == .infer) then
         -- Retry the whole checked attempt: a matched graph orientation may
         -- still fail the consumer's target certification. Exact records also
-        -- retain the whole-input fallback for unused inputs or coordinates.
+        -- retain the whole-input fallback for unused inputs or coordinates,
+        -- including subtype guards around the complete decision point.
         match ← tryAttempt (family == .graph)
-            (if family == .exact then .whole else exactInput) with
+            (if family == .exact then
+              if subtypeWhole then .subtypeWhole else .whole
+            else exactInput) with
         | .ok value => return .ok value
         | .error failure =>
           -- Prefer an actual target-certification failure to a mismatch.
