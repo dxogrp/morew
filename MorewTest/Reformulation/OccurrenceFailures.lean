@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Command
+import MorewTest.Environment
 
 /-!
 # Occurrence-bound selection failures and atomicity
@@ -30,9 +31,8 @@ elab "assert_occurrence_atomic% " nested:command : command => do
   let before ← Lean.getEnv
   try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
   let after ← Lean.getEnv
-  for (name, _) in after.constants.toList do
-    unless before.contains name do
-      Lean.throwError m!"failed occurrence lift leaked declaration {name}"
+  if let some name := MorewTest.newLocalDeclaration? before after then
+    Lean.throwError m!"failed occurrence lift leaked declaration {name}"
 
 def source :=
   problem (x : ℝ)

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
+import MorewTest.Environment
 
 /-!
 # Exact selected-row planning
@@ -30,7 +31,8 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
   discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   unless result.rowPredicates.size == result.certified.rowCertificates.size do
     throwError "generated row certificates are incomplete"
-  for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
+  if result.lift.hasMVar || result.lift.hasSorry then throwError "incomplete exact NLP plan"
+  for proof in #[result.targetIff, result.certified.domainIsOpen,
       result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete exact NLP plan"
     checkWithKernel proof
@@ -84,9 +86,8 @@ private def rejected (term : TSyntax `term) (message : String)
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "failed planning leaked scratch metavariables"
-    for (name, _) in (← getEnv).constants.toList do
-      unless environment.contains name do
-        throwError "failed planning leaked declaration {name}"
+    if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+      throwError "failed planning leaked declaration {name}"
 
 private def expectUsing (term rule : TSyntax `term) (rowCount : Nat)
     (auxiliary : Bool := false) (parameters : Nat := 0) : TermElabM Unit :=

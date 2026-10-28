@@ -34,6 +34,8 @@ import MorewTest.Conic.SecondOrderRows
 import MorewTest.Conic.Terminal
 import MorewTest.Core
 import MorewTest.Diagnostics
+import MorewTest.Environment
+import MorewTest.EnvironmentRollback
 import MorewTest.ExactConstraintLift
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew
 import MorewTest.Diagnostics
+import MorewTest.Environment
 
 /-!
 # Custom exact certificates with second-order targets
@@ -156,9 +157,8 @@ elab "assert_atomic_reformulation% " nested:command : command => do
   let before ← Lean.getEnv
   try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
   let after ← Lean.getEnv
-  for (name, _) in after.constants.toList do
-    unless before.contains name do
-      Lean.throwError "failed reformulation leaked auxiliary declaration {name}"
+  if let some name := MorewTest.newLocalDeclaration? before after then
+    Lean.throwError m!"failed reformulation leaked auxiliary declaration {name}"
 
 #guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
 assert_atomic_reformulation%

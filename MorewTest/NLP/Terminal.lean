@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Terminal
 import MorewTest.NLP.DomainSupport
+import MorewTest.Environment
 
 /-!
 # Complete NLP planning and retained evidence
@@ -113,8 +114,8 @@ run_cmd liftTermElabM do
   unless context.mvarCounter == (← getMCtx).mvarCounter &&
       context.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "exhausted domain search leaked metavariables"
-  for (name, _) in (← getEnv).constants.toList do
-    unless environment.contains name do throwError "exhausted domain search leaked {name}"
+  if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+    throwError "exhausted domain search leaked {name}"
   let result ← checked source
   unless result.rowOrigins == #[0, 0, 1, 1, 2, 2, 2, 3, 3, 3] &&
       result.auxiliaries.map (·.1) == #[2, 3] do
@@ -144,8 +145,8 @@ run_cmd liftTermElabM do
       unless context.mvarCounter == (← getMCtx).mvarCounter &&
           context.lmvarCounter == (← getMCtx).lmvarCounter do
         throwError "caller resource exhaustion leaked metavariables"
-      for (name, _) in (← getEnv).constants.toList do
-        unless environment.contains name do throwError "caller resource exhaustion leaked {name}"
+      if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+        throwError "caller resource exhaustion leaked {name}"
 
 -- A constant nonsmooth head is a smooth constant. Its two syntactically
 -- applicable rewrite rules must not force an unnecessary ambiguity failure.
@@ -192,8 +193,8 @@ private def reject (source : PresentationState) (fragment : String) : MetaM Unit
   unless context.mvarCounter == (← getMCtx).mvarCounter &&
       context.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "failed terminal planning leaked metavariables"
-  for (name, _) in (← getEnv).constants.toList do
-    unless environment.contains name do throwError "failed planning leaked {name}"
+  if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+    throwError "failed planning leaked {name}"
 
 private def wrapped (x : ℝ) : Prop := x ≤ 3
 private def helper (x : ℝ) : ℝ := x ^ 2

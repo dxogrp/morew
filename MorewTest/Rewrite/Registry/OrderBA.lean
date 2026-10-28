@@ -5,7 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Rewrite.Registry.Second
 import MorewTest.Rewrite.Registry.First
-import Mathlib.Tactic
 
 open Lean Lean.Meta Lean.Elab.Term
 

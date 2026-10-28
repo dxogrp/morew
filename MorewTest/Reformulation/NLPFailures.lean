@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation
 import MorewTest.Diagnostics
+import MorewTest.Environment
 
 /-! # Targeted NLP diagnostics and transactional failure -/
 
@@ -129,9 +130,8 @@ reformulation strict : strictSource := by
 elab "assert_atomic_nlp% " nested:command : command => do
   let before ← Lean.getEnv
   try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  for (name, _) in (← Lean.getEnv).constants.toList do
-    unless before.contains name do
-      Lean.throwError "failed NLP reformulation leaked auxiliary declaration {name}"
+  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
+    Lean.throwError m!"failed NLP reformulation leaked auxiliary declaration {name}"
 
 def auxiliarySource :=
   problem (v : Fin 1 → ℝ)

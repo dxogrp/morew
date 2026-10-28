@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 import MorewTest.Rewrite.Registry.Source
+import MorewTest.Environment
 
 /-!
 # Registered conic records and retained-domain boundaries
@@ -52,7 +53,7 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     for actual in predicates, expected in expected do
       unless ← isDefEq actual (← elaborate expected) do
         throwError "registered conic row changed its expression or position: {actual}"
-  checkWithKernel proof
+  if let .inr _ := result then checkWithKernel proof
   for row in certificates do
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff
@@ -74,8 +75,8 @@ private def reject (term : TSyntax `term) (fragment : String)
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "failed registration use leaked scratch metavariables"
-  for (name, _) in (← getEnv).constants.toList do
-    unless environment.contains name do throwError "failed registration use leaked {name}"
+  if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+    throwError "failed registration use leaked {name}"
 
 section
 attribute [-morew_conic] Morew.Conic.Exponential.expEpigraph

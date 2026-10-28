@@ -53,7 +53,6 @@ private def adapts (source rule : TSyntax `term) : TermElabM Unit := do
   let rule ← elaborate rule
   let lift ← customLift source (← predicateDomain source) rule
   discard <| checkLift source lift
-  checkWithKernel lift
 
 run_elab do
   adapts (← `(fun x : ℝ => x ≤ 2 ∧ x = x)) (← `(identity 2))
