@@ -34,8 +34,8 @@ private def check (term : TSyntax `term) (rows : Nat)
       | .error error => throwError "registered NLP plan failed: {error.reason}"
     unless result.rowPredicates.size == rows do
       throwError "registered NLP plan has the wrong replacement shape"
-    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    if result.lift.hasMVar || result.lift.hasSorry then
+    result.toResult.check source retained
+    if result.certificate.expression.hasMVar || result.certificate.expression.hasSorry then
       throwError "incomplete registered NLP evidence"
     for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
@@ -64,8 +64,8 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
     for actual in result.rowPredicates, expected in expected do
       unless ← isDefEq actual expected do
         throwError "registered NLP row changed its expression or position: {actual}"
-    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    if result.lift.hasMVar || result.lift.hasSorry then
+    result.toResult.check source #[]
+    if result.certificate.expression.hasMVar || result.certificate.expression.hasSorry then
       throwError "incomplete registered NLP evidence"
     for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
@@ -150,15 +150,16 @@ run_cmd liftTermElabM do
 noncomputable def guardedShiftedRule (c : ℝ) (_hc : 0 < c) :
     EpigraphRepresentation (shiftedAbs c) := shiftedRule c
 
--- Declaration premises may use independent local hypotheses. Retained rows
--- remain available only for generated smoothness/domain certification, never
--- for establishing the unconditional exact replacement on the NLP path.
+-- Declaration premises may use independent local hypotheses or checked retained
+-- comparisons. The generated target is certified only after exactness.
 run_cmd liftTermElabM do
   check (← `(fun (c : ℝ) (_hc : 0 < c) =>
     input (fun x : ℝ => shiftedAbs c x ≤ 3) #[])) 2
     (some ``guardedShiftedRule) 2
+  check (← `(fun c : ℝ => input (fun x : ℝ => shiftedAbs c x ≤ 3)
+    #[(fun _ : ℝ => 1 ≤ c)])) 2 (some ``guardedShiftedRule) 1
   reject (← `(fun c : ℝ => input (fun x : ℝ => shiftedAbs c x ≤ 3)
-    #[(fun _ : ℝ => 1 ≤ c)])) "missing domain evidence"
+    #[(fun _ : ℝ => 0 < c)])) "missing retained premise"
     (some ``guardedShiftedRule) 1
 
 attribute [morew_nlp] shiftedRule

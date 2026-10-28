@@ -60,8 +60,8 @@ private def materializeNLP (state : ReformState) (index : Nat)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
-    let replacement ← Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
-      prepared.lift prepared.auxiliary? prepared.nextDomain prepared.rowPredicates prepared.targetIff
+    let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
+      typed.presentation index prepared.toResult
     -- The analytic evidence must cover this precise ordered replacement, not
     -- a stronger predicate or merely the selected row's original domain.
     let feasible ← mkAppM ``Morew.Problem.feasible #[replacement.targetProblem]
@@ -77,7 +77,7 @@ private def materializeNLP (state : ReformState) (index : Nat)
       auxiliary? := prepared.auxiliary?
       nextDomain := prepared.nextDomain
       rowPredicates := prepared.rowPredicates
-      certificate := prepared.lift
+      certificate := prepared.certificate.expression
       replacement
     } allocation
 

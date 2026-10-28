@@ -21,15 +21,11 @@ namespace MorewTest.Conic.Rewrite
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.Conic MorewTest.Affine
 
-private def checkPrepared (source : Expr) (result : Plan.Prepared) : MetaM Nat := do
-  let (predicates, rows) ← match result with
-    | .inl exact => do
-      discard <| Morew.Elab.Rewrite.Plan.checkLift source exact.lift
-      checkWithKernel exact.targetIff
-      pure (exact.rowPredicates, exact.certifiedRows)
-    | .inr contextual => do
-      checkWithKernel contextual.conditionalIff
-      pure (contextual.rowPredicates, contextual.certifiedRows)
+private def checkPrepared (source : Expr) (result : Plan.Result)
+    (retained : Array Expr := #[]) : MetaM Nat := do
+  result.toResult.check source retained
+  let predicates := result.rowPredicates
+  let rows := result.certifiedRows
   unless predicates.size == rows.size do throwError "missing certified replacement rows"
   for row in rows do
     for expression in #[row.constraint, row.pointwiseIff] do
@@ -50,7 +46,7 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
     | match result with
       | .error error => throwError "expected a unique exact rule: {error.reason}"
       | .ok _ => throwError "unreachable selection result"
-  unless (← checkPrepared source result) == count do
+  unless (← checkPrepared source result retained) == count do
     throwError "unexpected automatic row count"
 
 private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :

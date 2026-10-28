@@ -74,7 +74,7 @@ run_elab do
   let row₂ ← elaborate (← `(fun x : ℝ => x = x))
   let targetIff ← elaborate (← `(fun x : ℝ => (Iff.rfl : (x ≤ 2 ∧ x = x) ↔ _)))
   let result : Result := {
-    lift, auxiliary? := none, nextDomain := mkConst ``Real
+    certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
     rowPredicates := #[row₁, row₂], targetIff }
   result.checkTargetIff
   expectRejected ({ result with rowPredicates := #[row₂, row₁] }.checkTargetIff)
@@ -82,7 +82,7 @@ run_elab do
   let lift ← elaborate (← `(Morew.ExactConstraintLift.ofIff
     (fun _ : ℝ => True) (fun _ => Iff.rfl)))
   let targetIff ← elaborate (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
-  ({ lift, auxiliary? := none, nextDomain := mkConst ``Real
+  ({ certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
      rowPredicates := #[], targetIff } : Result).checkTargetIff
   let lift ← elaborate (← `(auxiliary))
   let nextDomain ← mkAppM ``Prod #[mkConst ``Real, mkConst ``Real]
@@ -91,7 +91,7 @@ run_elab do
   let targetIff ← elaborate (← `(fun p : ℝ × ℝ =>
     (Iff.rfl : (p.2 = 0 ∧ p.1 ≤ 1) ↔ _)))
   let result : Result := {
-    lift, auxiliary? := some (mkConst ``Real), nextDomain
+    certificate := .exact lift, auxiliary? := some (mkConst ``Real), nextDomain
     rowPredicates := #[row₁, row₂], targetIff }
   result.checkTargetIff
   expectRejected ({ result with auxiliary? := none }.checkTargetIff)
@@ -110,11 +110,12 @@ run_elab do
         (rows.toList.map (mkApp · point))
       mkLambdaFVars #[point] (mkApp (mkConst ``Iff.rfl) body)
     let result : Result := {
-      lift, auxiliary? := none, nextDomain := mkConst ``Real
+      certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
       rowPredicates := rows, targetIff }
     return result.replaceFVars #[bound] #[two]
   result.checkTargetIff
-  for expression in #[result.lift, result.nextDomain, result.targetIff] ++ result.rowPredicates do
+  for expression in #[result.certificate.expression, result.nextDomain, result.targetIff] ++
+      result.rowPredicates do
     if expression.hasFVar || expression.hasMVar then
       throwError "scoped evidence escaped the shared replacement"
 

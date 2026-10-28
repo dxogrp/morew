@@ -32,29 +32,34 @@ private def conjunction (rows : Array Expr) : Expr :=
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-  let (predicates, certificates, proofs) ← match ← Rewrite.planUnique source retained with
+  let result ← match ← Rewrite.planUnique source retained with
     | .error error => throwError "expected a second-order plan for {source}: {error.reason}"
-    | .ok (.inl result) =>
+    | .ok result => pure result
+  result.toResult.check source retained
+  let predicates := result.rowPredicates
+  let certificates := result.certifiedRows
+  let proofs := #[result.certificate.expression, result.targetIff]
+  match result.certificate with
+    | .exact lift =>
       if contextual then throwError "a retained-margin rewrite escaped its context"
       if result.auxiliary?.isSome then throwError "an unconditional rewrite added an auxiliary"
       unless ← isDefEq result.nextDomain domain do throwError "exact rewrite changed the domain"
-      discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-      if result.lift.hasMVar || result.lift.hasSorry then
+      discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
+      if lift.hasMVar || lift.hasSorry then
         throwError "second-order planning returned an incomplete certificate"
-      result.toResult.checkTargetIff
-      pure (result.rowPredicates, result.certifiedRows, #[result.targetIff])
-    | .ok (.inr result) =>
+    | .contextual auxiliary target conditionalIff =>
       unless contextual do throwError "an unconditional rewrite retained unused domain evidence"
-      unless ← isDefEq result.domain domain do
+      unless result.auxiliary?.isNone && (← isDefEq auxiliary (mkConst ``Unit)) do
+        throwError "same-domain contextual rewrite added an auxiliary"
+      unless ← isDefEq result.nextDomain domain do
         throwError "second-order planning changed the decision domain"
       let expected ← withLocalDeclD `point domain fun point => do
         let remainder := conjunction (retained.map (mkApp · point))
-        let target := conjunction (result.rowPredicates.map (mkApp · point))
+        let target ← mkAppM ``Exists #[mkApp target point]
         let equivalence ← mkAppM ``Iff #[mkApp source point, target]
         mkForallFVars #[point] (← mkArrow remainder equivalence)
-      unless ← isDefEq (← inferType result.conditionalIff) expected do
+      unless ← isDefEq (← inferType conditionalIff) expected do
         throwError "conditional certificate does not retain the exact source and remainder"
-      pure (result.rowPredicates, result.certifiedRows, #[result.conditionalIff])
   unless predicates.size == 1 && certificates.size == 1 do
     throwError "second-order planning must produce exactly one cone row"
   let some row := certificates[0]? | throwError "missing certified row"
@@ -247,9 +252,9 @@ function-space norms produce nonnegative rows, while Euclidean norms produce SOC
 run_cmd liftTermElabM do
   let ordinary ← elaborate (← `(fun x : Fin 2 → ℝ => ‖x‖ ≤ 3))
   let euclidean ← elaborate (← `(fun x : EuclideanSpace ℝ (Fin 2) => ‖x‖ ≤ 3))
-  let .ok (.inl ordinaryResult) ← Rewrite.planUnique ordinary
+  let .ok ordinaryResult ← Rewrite.planUnique ordinary
     | throwError "ordinary L∞ norm did not produce an unconditional replacement"
-  let .ok (.inl euclideanResult) ← Rewrite.planUnique euclidean
+  let .ok euclideanResult ← Rewrite.planUnique euclidean
     | throwError "Euclidean norm did not produce an unconditional replacement"
   let scalar := Lean.mkConst ``Morew.Conic.Cone.nonnegativeScalar
   let vector ← mkAppM ``Morew.Conic.Cone.nonnegative #[mkNatLit 2]
@@ -257,8 +262,10 @@ run_cmd liftTermElabM do
   for (source, result, cones) in
       #[(ordinary, ordinaryResult, #[scalar, vector, vector]),
         (euclidean, euclideanResult, #[soc])] do
-    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    result.toResult.checkTargetIff
+    let .exact lift := result.certificate
+      | throwError "norm replacement acquired retained assumptions"
+    discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
+    result.toResult.check source #[]
     if result.auxiliary?.isSome then throwError "norm replacement introduced an auxiliary"
     unless result.rowPredicates.size == cones.size && result.certifiedRows.size == cones.size do
       throwError "norm replacement has the wrong row count"

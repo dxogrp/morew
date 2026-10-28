@@ -49,16 +49,19 @@ private def rowCone (constraint : Expr) : MetaM Expr := do
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) (auxiliary : Bool := false) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-  match ← Rewrite.planUnique source retained with
-  | .error error => throwError "expected an exponential plan: {error.reason}"
-  | .ok (.inl result) =>
+  let result ← match ← Rewrite.planUnique source retained with
+    | .error error => throwError "expected an exponential plan: {error.reason}"
+    | .ok result => pure result
+  result.toResult.check source retained
+  match result.certificate with
+  | .exact lift =>
       if contextual then throwError "retained domain evidence escaped its contextual certificate"
       unless result.auxiliary?.isSome == auxiliary do throwError "unexpected auxiliary decision space"
       let expectedRows := if auxiliary then 2 else 1
       unless result.rowPredicates.size == expectedRows do throwError "unexpected generated row count"
-      discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+      discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
       checkWithKernel result.targetIff
-      if result.lift.hasMVar || result.targetIff.hasMVar || result.lift.hasSorry then
+      if lift.hasMVar || result.targetIff.hasMVar || lift.hasSorry then
         throwError "incomplete exact exponential lift"
       let nextDomain ← match result.auxiliary? with
         | none => pure domain
@@ -81,20 +84,22 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
         let cone ← rowCone firstRow.constraint
         unless ← isDefEq cone (mkConst ``Morew.Conic.Cone.exponential) do
           throwError "scalar rewrite was not certified as an exponential cone"
-  | .ok (.inr result) =>
+  | .contextual auxiliaryType target conditionalIff =>
       unless contextual && !auxiliary do throwError "unexpected contextual exponential plan"
-      unless ← isDefEq result.domain domain do throwError "contextual rewrite changed the domain"
+      unless result.auxiliary?.isNone && (← isDefEq auxiliaryType (mkConst ``Unit)) do
+        throwError "same-domain contextual rewrite added an auxiliary"
+      unless ← isDefEq result.nextDomain domain do throwError "contextual rewrite changed the domain"
       unless result.rowPredicates.size == 1 do throwError "contextual rewrite added extra rows"
       let expected ← withLocalDeclD `point domain fun point => do
         let remainder := conjunction (retained.map (mkApp · point))
-        let rows := conjunction (result.rowPredicates.map (mkApp · point))
+        let target ← mkAppM ``Exists #[mkApp target point]
         mkForallFVars #[point]
-          (← mkArrow remainder (← mkAppM ``Iff #[mkApp source point, rows]))
-      unless ← isDefEq (← inferType result.conditionalIff) expected do
+          (← mkArrow remainder (← mkAppM ``Iff #[mkApp source point, target]))
+      unless ← isDefEq (← inferType conditionalIff) expected do
         throwError "contextual certificate changed the exact source or retained conjunction"
-      if result.conditionalIff.hasMVar || result.conditionalIff.hasSorry then
+      if conditionalIff.hasMVar || conditionalIff.hasSorry then
         throwError "incomplete contextual exponential certificate"
-      checkWithKernel result.conditionalIff
+      checkWithKernel conditionalIff
       checkRows domain result.rowPredicates result.certifiedRows
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
@@ -290,27 +295,36 @@ run_cmd liftTermElabM do
 /-! The shared contextual adapter must retain row conjunctions beyond the
 singleton shape used by second-order rewrites. -/
 
+private def independentPlan (source proof : Expr) : MetaM Plan.Result := do
+  let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
+  let certificate ← withLocalDeclD `point domain fun point => do
+    withLocalDeclD `retained (mkConst ``True) fun retained => do
+      let auxiliary := Lean.mkConst ``Unit
+      let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary =>
+        mkLambdaFVars #[auxiliary] (mkApp source point)
+      Morew.Elab.Rewrite.Plan.closeCertificate source point retained auxiliary target
+        ((mkApp2 proof point retained).headBeta)
+  let .exact _ := certificate
+    | throwError "an independent replacement remained contextual"
+  certificate.check source #[]
+  Plan.finish source domain certificate #[] {}
+
 run_cmd liftTermElabM do
   let domain := Lean.mkConst ``Real
   let source ← elaborate (← `(fun _x : ℝ => True))
-  let proof ← elaborate (← `(fun (_x : ℝ) (_h : True) => (Iff.rfl : True ↔ True)))
-  let .inl result ← Plan.prepareContextual source #[] {
-      domain, rowPredicates := #[], certifiedRows := #[], conditionalIff := proof }
-    | throwError "an unconditional empty replacement remained contextual"
-  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+  let proof ← elaborate (← `(fun (_x : ℝ) (_h : True) =>
+    (show True ↔ ∃ _ : Unit, True from by simp)))
+  let result ← independentPlan source proof
+  result.toResult.check source #[]
   checkWithKernel result.targetIff
   unless result.rowPredicates.isEmpty && result.auxiliary?.isNone do
     throwError "empty replacement gained rows or an auxiliary"
   let source ← elaborate (← `(fun x : ℝ => x ≤ 1 ∧ 0 ≤ x))
-  let rows ← #[← elaborate (← `(fun x : ℝ => x ≤ 1)),
-    ← elaborate (← `(fun x : ℝ => 0 ≤ x))].mapM pure
   let proof ← elaborate (← `(fun (x : ℝ) (_h : True) =>
-    (Iff.rfl : (x ≤ 1 ∧ 0 ≤ x) ↔ (x ≤ 1 ∧ 0 ≤ x))))
-  let .inl result ← Plan.prepareContextual source #[] {
-      domain, rowPredicates := rows, certifiedRows := ← Plan.certifyRows rows,
-      conditionalIff := proof }
-    | throwError "an unconditional multi-row replacement remained contextual"
-  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+    (show (x ≤ 1 ∧ 0 ≤ x) ↔ ∃ _ : Unit, (x ≤ 1 ∧ 0 ≤ x) from by
+      simp only [exists_const])))
+  let result ← independentPlan source proof
+  result.toResult.check source #[]
   checkWithKernel result.targetIff
   checkRows domain result.rowPredicates result.certifiedRows
   unless result.rowPredicates.size == 2 && result.auxiliary?.isNone do

@@ -39,12 +39,9 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "registered conic planning leaked scratch metavariables"
-  if let .inl result := result then
-    discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    result.toResult.checkTargetIff
-  let (predicates, certificates, proof) := match result with
-    | .inl result => (result.rowPredicates, result.certifiedRows, result.lift)
-    | .inr result => (result.rowPredicates, result.certifiedRows, result.conditionalIff)
+  result.toResult.check source retained
+  let predicates := result.rowPredicates
+  let certificates := result.certifiedRows
   unless predicates.size == rows && certificates.size == rows do
     throwError "wrong number of certified registered rows"
   unless expected.isEmpty do
@@ -53,7 +50,7 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     for actual in predicates, expected in expected do
       unless ← isDefEq actual (← elaborate expected) do
         throwError "registered conic row changed its expression or position: {actual}"
-  if let .inr _ := result then checkWithKernel proof
+  checkWithKernel result.certificate.expression
   for row in certificates do
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff
@@ -220,8 +217,7 @@ run_cmd liftTermElabM do
   reject (← `(fun p : ℝ × ℝ => p.2 ≤ positiveLog p.1)) "positive constant margin"
   check (← `(fun t : ℝ => t ≤ positiveLog 2)) 1
 
-/-- The record is exact on its subtype, but using retained evidence together
-with a nontrivial auxiliary is intentionally beyond this registry consumer. -/
+/-- Retained subtype evidence supports a uniform nontrivial auxiliary. -/
 noncomputable def positiveLogWithAuxiliary :
     HypographRepresentation (fun x : {x : ℝ // 0 < x} => positiveLog x.1) where
   Auxiliary := ℝ
@@ -233,9 +229,10 @@ noncomputable def positiveLogWithAuxiliary :
 
 run_cmd liftTermElabM do
   let margin ← elaborate (← `(fun p : ℝ × ℝ => 1 ≤ p.1))
-  reject (← `(fun p : ℝ × ℝ => p.2 ≤ positiveLog p.1))
-    "retained-context exact replacements with auxiliary variables" #[margin]
+  check (← `(fun p : ℝ × ℝ => p.2 ≤ positiveLog p.1)) 2 #[margin]
     (some ``positiveLogWithAuxiliary)
+  reject (← `(fun p : ℝ × ℝ => p.2 ≤ positiveLog p.1))
+    "positive constant margin" #[] (some ``positiveLogWithAuxiliary)
   check (← `(fun t : ℝ => t ≤ positiveLog 2)) 2 #[]
     (some ``positiveLogWithAuxiliary)
 
@@ -253,10 +250,11 @@ run_cmd liftTermElabM do
   lambdaBoundedTelescope term 2 fun _ source => do
     match ← Morew.Elab.Conic.Rewrite.planDeclaration source ``quotientWithProofLet with
     | .error error => throwError "target-local nonzero evidence was lost: {error.reason}"
-    | .ok (.inl result) =>
-      checkWithKernel result.lift
+    | .ok result =>
+      let .exact lift := result.certificate
+        | throwError "independent target proof unexpectedly used retained rows"
+      checkWithKernel lift
       for row in result.certifiedRows do checkWithKernel row.pointwiseIff
-    | .ok (.inr _) => throwError "independent target proof unexpectedly used retained rows"
 
 noncomputable def positiveShift (c x : ℝ) : ℝ := Real.log c + x
 
@@ -270,7 +268,7 @@ noncomputable def positiveShiftRule (c : ℝ) (hc : 0 < c) :
     simpa only [exists_const, positiveShift, sub_le_iff_le_add] using
       Conic.Exponential.le_log_iff c (t - x) hc
 
-/-- Conditional auxiliary restrictions also apply to declaration proof parameters. -/
+/-- Declaration proof parameters use the same contextual auxiliary support. -/
 noncomputable def positiveShiftAuxiliary (c : ℝ) (hc : 0 < c) :
     HypographRepresentation (positiveShift c) where
   Auxiliary := ℝ
@@ -285,9 +283,10 @@ run_cmd liftTermElabM do
   check (← `(fun p : ℝ × ℝ × ℝ => p.2.2 ≤ positiveShift p.1 p.2.1)) 1 #[margin]
   reject (← `(fun p : ℝ × ℝ × ℝ => p.2.2 ≤ positiveShift p.1 p.2.1))
     "positive constant margin"
-  reject (← `(fun p : ℝ × ℝ × ℝ => p.2.2 ≤ positiveShift p.1 p.2.1))
-    "retained-context exact replacements with auxiliary variables" #[margin]
+  check (← `(fun p : ℝ × ℝ × ℝ => p.2.2 ≤ positiveShift p.1 p.2.1)) 2 #[margin]
     (some ``positiveShiftAuxiliary)
+  reject (← `(fun p : ℝ × ℝ × ℝ => p.2.2 ≤ positiveShift p.1 p.2.1))
+    "positive constant margin" #[] (some ``positiveShiftAuxiliary)
   check (← `(fun p : ℝ × ℝ => p.2 ≤ positiveShift 2 p.1)) 2 #[]
     (some ``positiveShiftAuxiliary)
 

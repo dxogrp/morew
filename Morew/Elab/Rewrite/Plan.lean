@@ -20,10 +20,41 @@ namespace Morew.Elab.Rewrite.Plan
 
 open Lean Lean.Meta
 
+/-- Exactness is either unconditional or checked under precisely the retained
+constraints. Contextual targets have a uniform auxiliary type and do not take
+a retained-feasibility proof as an argument. -/
+inductive Certificate where
+  | exact (lift : Expr)
+  | contextual (auxiliary target sourceIffExists : Expr)
+
+/-- The proof-bearing expression shared when storing a replacement. -/
+def Certificate.expression : Certificate → Expr
+  | .exact lift => lift
+  | .contextual _ _ sourceIffExists => sourceIffExists
+
+/-- Substitute scoped evidence through every part of an exactness certificate. -/
+def Certificate.replaceFVars (certificate : Certificate)
+    (oldVars newVars : Array Expr) : Certificate :=
+  let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
+  match certificate with
+  | .exact lift => .exact (replace lift)
+  | .contextual auxiliary target sourceIffExists =>
+    .contextual (replace auxiliary) (replace target) (replace sourceIffExists)
+
+/-- The uniform auxiliary type of either kind of certificate. -/
+def Certificate.auxiliaryType : Certificate → MetaM Expr
+  | .exact lift => do whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
+  | .contextual auxiliary _ _ => whnf auxiliary
+
+/-- The proof-independent target on original and auxiliary coordinates. -/
+def Certificate.targetFunction : Certificate → MetaM Expr
+  | .exact lift => mkAppM ``Morew.ExactConstraintLift.target #[lift]
+  | .contextual _ target _ => pure target
+
 /-- The exact replacement data shared by target-specific planners. -/
 structure Result where
-  /-- A checked exact lift of the complete selected predicate. -/
-  lift : Expr
+  /-- Checked exactness for the complete selected predicate. -/
+  certificate : Certificate
   /-- The auxiliary type, with definitionally `Unit` auxiliaries erased. -/
   auxiliary? : Option Expr
   /-- The original decision domain, or its product with the auxiliary type. -/
@@ -36,7 +67,7 @@ structure Result where
 /-- Substitute scoped evidence through every expression in an exact replacement. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
   let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
-  { lift := replace result.lift
+  { certificate := result.certificate.replaceFVars oldVars newVars
     auxiliary? := result.auxiliary?.map replace
     nextDomain := replace result.nextDomain
     rowPredicates := result.rowPredicates.map replace
@@ -82,6 +113,20 @@ partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
         if ← unresolved value seen then return true
   return false
 
+private partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) :
+    MetaM Bool := do
+  let expression ← instantiateMVars expression
+  if expression.hasSorry then return true
+  let mut seen := seen
+  for id in (collectFVars {} expression).fvarIds do
+    unless seen.contains id do
+      seen := seen.insert id
+      let declaration ← id.getDecl
+      if ← hasPlaceholders declaration.type seen then return true
+      if let some value := declaration.value? (allowNondep := true) then
+        if ← hasPlaceholders value seen then return true
+  return false
+
 /-- Read the decision domain of a fully elaborated predicate. -/
 def predicateDomain (predicate : Expr) : MetaM Expr := do
   let type ← whnf (← inferType predicate)
@@ -103,6 +148,77 @@ def checkLift (source lift : Expr) : MetaM Expr := do
     throwError "the exact certificate contains unresolved metavariables; supply its input and bound maps explicitly"
   checkWithKernel lift
   return lift
+
+/-- Check exactness against the selected predicate and the current ordered
+retained rows. Rechecking here prevents a contextual certificate from being
+applied with stale or selected-row assumptions. -/
+def Certificate.check (certificate : Certificate) (source : Expr)
+    (retained : Array Expr) : MetaM Unit := do
+  let expressions := match certificate with
+    | .exact lift => #[lift]
+    | .contextual auxiliary target sourceIffExists => #[auxiliary, target, sourceIffExists]
+  for expression in #[source] ++ retained ++ expressions do
+    if ← hasPlaceholders expression then
+      throwError "the exact certificate contains unresolved placeholders"
+  if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
+  let domain ← predicateDomain source
+  for row in retained do
+    if ← unresolved row then throwError "unresolved metavariables in retained constraints"
+    unless ← isDefEq (← predicateDomain row) domain do
+      throwError "retained constraint has a different decision domain"
+  match certificate with
+  | .exact lift => discard <| checkLift source lift
+  | .contextual auxiliary target sourceIffExists =>
+    for expression in #[auxiliary, target, sourceIffExists] do
+      if ← unresolved expression then
+        throwError "conditional exact certificate contains unresolved metavariables"
+      checkWithKernel expression
+    let targetType ← mkArrow domain (← mkArrow auxiliary (mkSort .zero))
+    unless ← isDefEq (← inferType target) targetType do
+      throwError "conditional exact target does not have the original domain and uniform auxiliary type"
+    let expected ← withLocalDeclD `point domain fun point => do
+      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let existence ← mkAppM ``Exists #[mkApp target point]
+      let iff := mkApp2 (mkConst ``Iff) (mkApp source point) existence
+      mkForallFVars #[point] (← mkArrow remainder iff)
+    unless ← isDefEq (← inferType sourceIffExists) expected do
+      throwError "conditional exact certificate does not match the selected row and retained constraints"
+
+/-- Close a pointwise match without letting retained proofs enter its target
+or auxiliary type. Independent exactness keeps the unconditional fast path. -/
+def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
+    MetaM Certificate := do
+  let auxiliary ← instantiateMVars auxiliary
+  let target ← instantiateMVars target
+  let sourceIff ← instantiateMVars sourceIff
+  for expression in #[source, auxiliary, target, sourceIff] do
+    if ← unresolved expression then
+      throwError "exact replacement contains unresolved metavariables"
+    if ← hasPlaceholders expression then
+      throwError "the exact certificate contains unresolved placeholders"
+  if ← Expr.depends point auxiliary then
+    throwError "the auxiliary type depends on a decision variable"
+  if ← Expr.depends evidence auxiliary then
+    throwError "the auxiliary type depends on retained feasibility evidence"
+  if ← Expr.depends evidence target then
+    throwError "generated rows depend on retained feasibility evidence"
+  unless ← isDefEq (← inferType point) (← predicateDomain source) do
+    throwError "the exact replacement point has a different decision domain"
+  unless ← isDefEq (← inferType target) (← mkArrow auxiliary (mkSort .zero)) do
+    throwError "the exact replacement target has a different auxiliary type"
+  let existence ← mkAppM ``Exists #[target]
+  let expected := mkApp2 (mkConst ``Iff) (mkApp source point) existence
+  unless ← isDefEq (← inferType sourceIff) expected do
+    throwError "the exact certificate does not describe the entire selected predicate"
+  checkWithKernel sourceIff
+  let closedTarget ← mkLambdaFVars #[point] target
+  if !(← Expr.depends evidence sourceIff) then
+    let pointwise ← mkLambdaFVars #[point] sourceIff
+    let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, closedTarget, pointwise]
+    return .exact (← checkLift source lift)
+  let conditional ← mkLambdaFVars #[point, evidence] sourceIff
+  checkWithKernel conditional
+  return .contextual auxiliary closedTarget conditional
 
 private def adaptRepresentation (source domain rule : Expr) (adapter : Name)
     (inputType outputType : Expr) : MetaM Expr := do
@@ -143,18 +259,49 @@ smooth planning checks exactness before using generated rows as domain evidence.
 def Result.checkTargetIff (result : Result)
     (mismatchMessage : MessageData :=
       "internal error: target decomposition does not match the exact lift") : MetaM Unit := do
-  let expected ← withLocalDeclD `point result.nextDomain fun point => do
-    let target ← match result.auxiliary? with
-      | none =>
-        mkAppM ``Morew.ExactConstraintLift.target #[result.lift, point, mkConst ``Unit.unit]
-      | some _ =>
-        mkAppM ``Morew.ExactConstraintLift.target
-          #[result.lift, .proj ``Prod 0 point, .proj ``Prod 1 point]
+  let auxiliary ← result.certificate.auxiliaryType
+  let targetFunction ← result.certificate.targetFunction
+  for expression in #[auxiliary, targetFunction, result.nextDomain, result.targetIff] ++
+      result.auxiliary?.toArray ++ result.rowPredicates do
+    if ← unresolved expression then throwError "exact replacement contains unresolved metavariables"
+    if ← hasPlaceholders expression then
+      throwError "the exact replacement contains unresolved placeholders"
+  let targetType ← whnf (← inferType targetFunction)
+  let .forallE _ domain _ _ := targetType
+    | throwError "the exact target is not a function on the original decision domain"
+  unless ← isDefEq targetType (← mkArrow domain (← mkArrow auxiliary (mkSort .zero))) do
+    throwError "the exact target does not have a uniform auxiliary type"
+  let nextDomain ← match result.auxiliary? with
+    | none =>
+      unless ← isDefEq auxiliary (mkConst ``Unit) do
+        throwError "the exact replacement omitted its auxiliary coordinates"
+      pure domain
+    | some supplied =>
+      unless ← isDefEq supplied auxiliary do
+        throwError "the exact replacement has a different auxiliary type"
+      if ← isDefEq auxiliary (mkConst ``Unit) then
+        throwError "Unit auxiliaries must not introduce decision coordinates"
+      mkAppM ``Prod #[domain, auxiliary]
+  unless ← isDefEq result.nextDomain nextDomain do
+    throwError "the exact replacement has a different decision domain"
+  for row in result.rowPredicates do
+    unless ← isDefEq (← predicateDomain row) nextDomain do
+      throwError "a generated row has a different decision domain"
+  let expected ← withLocalDeclD `point nextDomain fun point => do
+    let target := match result.auxiliary? with
+      | none => mkApp2 targetFunction point (mkConst ``Unit.unit)
+      | some _ => mkApp2 targetFunction (.proj ``Prod 0 point) (.proj ``Prod 1 point)
     let rows := result.rowPredicates.toList.map (mkApp · point)
     mkForallFVars #[point]
       (mkApp2 (mkConst ``Iff) target (Decomposition.conjunction rows))
   unless ← isDefEq (← inferType result.targetIff) expected do
     throwError mismatchMessage
   checkWithKernel result.targetIff
+
+/-- Validate both exactness under the current retained context and the complete
+decision layout and ordered target decomposition. -/
+def Result.check (result : Result) (source : Expr) (retained : Array Expr) : MetaM Unit := do
+  result.certificate.check source retained
+  result.checkTargetIff
 
 end Morew.Elab.Rewrite.Plan

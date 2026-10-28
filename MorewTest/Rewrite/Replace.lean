@@ -82,8 +82,8 @@ private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
   let lift ← checkedTerm liftSyntax
   let rows ← newRows.mapM checkedTerm
   let targetIff ← checkedTerm targetIffSyntax
-  let result ← Morew.Elab.Reformulation.Replace.rewriteConstraint presentation index lift auxiliary?
-    nextDomain rows targetIff
+  let result ← Morew.Elab.Reformulation.Replace.applyReplacement presentation index {
+    certificate := .exact lift, auxiliary?, nextDomain, rowPredicates := rows, targetIff }
   let expected ← checkedTerm expectedSyntax
   unless ← isDefEq result.targetProblem expected do
     throwError "rewrite produced the wrong target problem"
@@ -186,6 +186,80 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   catch _ => pure true
   unless rejected do
     throwError "contextual replacement accepted evidence from the selected row"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  for sense in #[ObjectiveSense.minimize, ObjectiveSense.maximize] do
+    let domain := Lean.mkConst ``Real
+    let valueType ← if sense == .maximize then mkAppM ``OrderDual #[domain] else pure domain
+    let objective ← checkedTerm (← `(fun x : ℝ => x))
+    let objective ← mkAppOptM ``id #[some (← mkArrow domain valueType), some objective]
+    let predicates ← #[← `(fun x : ℝ => x ≤ 3 ∧ 0 ≤ x),
+      ← `(fun x : ℝ => x ≤ 5), ← `(fun _ : ℝ => True)].mapM checkedTerm
+    let presentation : PresentationState := {
+      sense, domainType := domain, valueType, objective
+      binders := #[{ name := `x, type := domain }]
+      constraints := predicates.mapIdx fun i predicate => {
+        name := Name.mkSimple s!"row_{i}", predicate } }
+    let target ← checkedTerm (← `(fun x a : ℝ => a = x))
+    let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
+      (show x ≤ 5 ↔ ∃ a : ℝ, a = x from
+        ⟨fun _ => ⟨x, rfl⟩, fun _ => h.1.1.trans (by norm_num)⟩)))
+    let nextDomain ← mkAppM ``Prod #[domain, domain]
+    let row ← checkedTerm (← `(fun p : ℝ × ℝ => p.2 = p.1))
+    let targetIff ← checkedTerm (← `(fun p : ℝ × ℝ =>
+      (Iff.rfl : p.2 = p.1 ↔ p.2 = p.1)))
+    let prepared : Morew.Elab.Rewrite.Plan.Result := {
+      certificate := .contextual domain target proof
+      auxiliary? := some domain, nextDomain, rowPredicates := #[row], targetIff }
+    let result ← Morew.Elab.Reformulation.Replace.applyReplacement presentation 1 prepared
+    let feasible ← checkedTerm (← `(fun p : ℝ × ℝ =>
+      (p.1 ≤ 3 ∧ 0 ≤ p.1) ∧ p.2 = p.1 ∧ True))
+    let nextObjective ← withLocalDeclD `point nextDomain fun point => do
+      mkLambdaFVars #[point] (mkApp objective (.proj ``Prod 0 point))
+    let expected ← mkAppM ``Problem.mk #[nextObjective, feasible]
+    unless ← isDefEq result.targetProblem expected do
+      throwError "conditional auxiliary replacement changed retained rows or coordinates"
+    let order ← synthInstance (← mkAppM ``Preorder #[valueType])
+    let expectedType ← mkAppOptM ``GlobalEquivalence
+      #[some domain, some nextDomain, some valueType, some order,
+        some (← presentation.canonicalProblem), some expected]
+    unless ← isDefEq (← inferType result.equivalence) expectedType do
+      throwError "conditional auxiliary equivalence has the wrong endpoints or optimization order"
+    checkWithKernel result.equivalence
+    let invalid ← checkedTerm (← `(fun (x : ℝ) (_h : x ≤ 5) =>
+      (show x ≤ 5 ↔ ∃ a : ℝ, a = x from ⟨fun _ => ⟨x, rfl⟩, fun _ => _h⟩)))
+    let rejected ← try
+      discard <| Morew.Elab.Reformulation.Replace.applyReplacement presentation 1
+        { prepared with certificate := .contextual domain target invalid }
+      pure false
+    catch _ => pure true
+    unless rejected do throwError "conditional auxiliary replacement used its selected row as evidence"
+    -- Unit exactness uses the same certificate path without changing coordinates.
+    let target ← checkedTerm (← `(fun (_ : ℝ) (_ : Unit) => True))
+    let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
+      (show x ≤ 5 ↔ ∃ _ : Unit, True from
+        ⟨fun _ => ⟨(), trivial⟩, fun _ => h.1.1.trans (by norm_num)⟩)))
+    let targetIff ← checkedTerm (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
+    let result ← Morew.Elab.Reformulation.Replace.applyReplacement presentation 1 {
+      certificate := .contextual (Lean.mkConst ``Unit) target proof
+      auxiliary? := none, nextDomain := domain, rowPredicates := #[], targetIff }
+    let feasible ← checkedTerm (← `(fun x : ℝ => (x ≤ 3 ∧ 0 ≤ x) ∧ True))
+    unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[objective, feasible]) do
+      throwError "conditional Unit replacement changed the decision domain"
+    checkWithKernel result.equivalence
+    -- An unused non-Unit auxiliary is still part of the exact decision layout.
+    let target ← checkedTerm (← `(fun (_ : ℝ) (_ : ℝ) => True))
+    let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
+      (show x ≤ 5 ↔ ∃ _ : ℝ, True from
+        ⟨fun _ => ⟨0, trivial⟩, fun _ => h.1.1.trans (by norm_num)⟩)))
+    let targetIff ← checkedTerm (← `(fun _ : ℝ × ℝ => (Iff.rfl : True ↔ True)))
+    let result ← Morew.Elab.Reformulation.Replace.applyReplacement presentation 1 {
+      certificate := .contextual domain target proof
+      auxiliary? := some domain, nextDomain, rowPredicates := #[], targetIff }
+    let feasible ← checkedTerm (← `(fun p : ℝ × ℝ => (p.1 ≤ 3 ∧ 0 ≤ p.1) ∧ True))
+    unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[nextObjective, feasible]) do
+      throwError "conditional replacement dropped unused auxiliary coordinates"
+    checkWithKernel result.equivalence
 
 end
 
