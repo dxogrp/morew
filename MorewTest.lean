@@ -149,6 +149,7 @@ import MorewTest.Rewrite.Registry.OrderAB
 import MorewTest.Rewrite.Registry.OrderBA
 import MorewTest.Rewrite.Registry.Second
 import MorewTest.Rewrite.Registry.Source
+import MorewTest.Rewrite.Registry.Types
 import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions

@@ -101,6 +101,10 @@ structure Entry where
   head : Name
   /-- A fixed output-type head, or a wildcard for generic output types. -/
   outputHead? : Option Name := none
+  /-- Fixed type-valued operation arguments, indexed by their application position.
+  Generic type arguments remain wildcards; full types and instances are checked
+  by the matcher rather than trusted from this closed discovery metadata. -/
+  typeArgumentHeads : Array (Nat × Name) := #[]
   deriving BEq, Inhabited
 
 /-- Reduce binding syntax without unfolding named mathematical functions. -/
@@ -170,20 +174,34 @@ def representation (type : Expr) : MetaM (Family × Expr × Expr) := do
     return (.hypograph, args[0]!, args[3]!)
   throwError "expected ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation; reduced type is {type}"
 
+private def fixedTypeHead? (type : Expr) : MetaM (Option Name) := do
+  let type ← whnf type
+  -- A stuck type family can reduce to a different head once declaration
+  -- parameters are inferred. Such types must remain lookup wildcards.
+  if type.hasFVar || type.hasMVar then return none
+  return type.getAppFn.constName?
+
+private def typeArgumentHeads (expression : Expr) : MetaM (Array (Nat × Name)) := do
+  let mut heads := #[]
+  for argument in expression.getAppArgs, index in [:expression.getAppNumArgs] do
+    if (← whnf (← inferType argument)).isSort then
+      if let some head ← fixedTypeHead? argument then
+        heads := heads.push (index, head)
+  return heads
+
 private def entry (declaration : Name) : MetaM Entry := do
   let type := (← getConstInfo declaration).type
   forallTelescopeReducing type fun _ body => do
     let body ← whnf body
     let (family, input, represented) ← representation body
-    let outputHead? ← if family == .exact then pure none else do
-      let output ← whnf body.getAppArgs[1]!
-      pure output.getAppFn.constName?
+    let outputHead? ← if family == .exact then pure none else fixedTypeHead? body.getAppArgs[1]!
     withLocalDeclD `input input fun input => do
       let body ← structural (mkApp represented input)
       let .const head _ := body.getAppFn
         | throwError "cannot register {declaration}: the represented source has no fixed operation head: {body}; reduced type is {← whnf (← inferType (← mkConstWithFreshMVarLevels declaration))}"
       let head := if family == .exact && head == ``GE.ge then ``LE.le else head
-      return { declaration, family, head, outputHead? }
+      let typeArgumentHeads ← if family == .exact then pure #[] else typeArgumentHeads body
+      return { declaration, family, head, outputHead?, typeArgumentHeads }
 
 private def makeExtension (name : Name) : IO (SimpleScopedEnvExtension Entry (Array Entry)) :=
   registerSimpleScopedEnvExtension {
@@ -221,20 +239,31 @@ def entries (target : Target) : CoreM (Array Entry) := do
   return (extension.getState (← getEnv)).qsort fun a b =>
     a.declaration.toString < b.declaration.toString
 
-private def operationHead? (expression : Expr) : MetaM (Option Name) := do
+private def operation? (expression : Expr) :
+    MetaM (Option (Name × Array (Nat × Name))) := do
   let expression ← structural expression
-  return match expression.getAppFn with
-    | .const name _ => some name
-    | _ => none
+  let .const name _ := expression.getAppFn | return none
+  return some (name, ← typeArgumentHeads expression)
 
-/-- Discover only source-head/orientation-compatible declarations. Matching and
-target certification still run before a candidate can be accepted. -/
+private def compatibleOperation (entry : Entry)
+    (operation : Option (Name × Array (Nat × Name))) : Bool :=
+  match operation with
+  | none => false
+  | some (head, actualTypes) =>
+    head == entry.head && entry.typeArgumentHeads.all fun (index, expected) =>
+      match actualTypes.find? (·.1 == index) with
+      | some (_, actual) => expected == actual
+      | none => true
+
+/-- Discover only source-head, orientation, and fixed-type-compatible declarations.
+Generic type arguments remain candidates. Matching and target certification
+still run before a candidate can be accepted. -/
 def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
   let type ← whnf (← inferType source)
   let .forallE _ domain _ _ := type | throwError "expected a constraint predicate"
   withLocalDeclD `point domain fun point => do
     let body ← structural (mkApp source point)
-    let sourceHead ← operationHead? body
+    let sourceHead := body.getAppFn.constName?
     let sourceHead := if sourceHead == some ``GE.ge then some ``LE.le else sourceHead
     let args := body.getAppArgs
     let mut epi := none
@@ -243,23 +272,23 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
     let mut graphRight := none
     let mut outputHead? := none
     if body.isAppOfArity ``LE.le 4 then
-      outputHead? := (← whnf args[0]!).getAppFn.constName?
-      epi ← operationHead? args[2]!
-      hypo ← operationHead? args[3]!
+      outputHead? ← fixedTypeHead? args[0]!
+      epi ← operation? args[2]!
+      hypo ← operation? args[3]!
     else if body.isAppOfArity ``GE.ge 4 then
-      outputHead? := (← whnf args[0]!).getAppFn.constName?
-      epi ← operationHead? args[3]!
-      hypo ← operationHead? args[2]!
+      outputHead? ← fixedTypeHead? args[0]!
+      epi ← operation? args[3]!
+      hypo ← operation? args[2]!
     else if body.isAppOfArity ``Eq 3 then
-      outputHead? := (← whnf args[0]!).getAppFn.constName?
-      graphLeft ← operationHead? args[1]!
-      graphRight ← operationHead? args[2]!
+      outputHead? ← fixedTypeHead? args[0]!
+      graphLeft ← operation? args[1]!
+      graphRight ← operation? args[2]!
     return (← entries target).filterMap fun entry =>
       let compatible := match entry.family with
         | .exact => sourceHead == some entry.head
-        | .epigraph => epi == some entry.head
-        | .hypograph => hypo == some entry.head
-        | .graph => graphLeft == some entry.head || graphRight == some entry.head
+        | .epigraph => compatibleOperation entry epi
+        | .hypograph => compatibleOperation entry hypo
+        | .graph => compatibleOperation entry graphLeft || compatibleOperation entry graphRight
       let compatibleType := match entry.outputHead?, outputHead? with
         | some expected, some actual => expected == actual
         | _, _ => true
