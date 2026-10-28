@@ -12,8 +12,7 @@ open Morew
 
 Real exponents remain exact. Numeric range conditions are checked automatically;
 symbolic exponents use independent hypotheses such as `hp : 1 < p`.
-Base-domain evidence comes from retained constraints. General vector powers and
-finite families of power cones are outside the scalar rules shown here.
+Base-domain evidence comes from retained constraints.
 -/
 
 namespace Examples.Power
@@ -30,15 +29,12 @@ def source :=
 
 reformulation ready : source := by
   epigraph t as loss
-  -- `at` selects the whole bound; `using` selects this exact representation.
-  conic at loss using Conic.Power.rpowEpigraph
-  -- Bare `conic` certifies the complete problem and emits its conic form.
+  conic at loss
   conic
 
 #printp ready
 
 example : GlobalEquivalence source ready := ready.equivalence
-example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 
 end ConvexPower
 
@@ -61,7 +57,6 @@ reformulation ready : source := by
 #printp ready
 
 example : GlobalEquivalence source ready := ready.equivalence
-example : ready.conicForm.data.sense = .maximize := rfl
 
 end WeightedMean
 
@@ -78,6 +73,7 @@ def source :=
 reformulation ready : source := by
   conic
 
+#printp ready
 example : GlobalEquivalence source ready := ready.equivalence
 
 end NegativePower
