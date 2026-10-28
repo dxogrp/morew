@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.NLP.Rows
 import Morew.Elab.NLP.Domain
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Certification of generated smooth constraint rows
@@ -147,7 +149,7 @@ private def canonicalRelation (body : Expr) (relation : Relation)
   isDefEq body.getAppArgs[1]! expected.getAppArgs[1]!
 
 private def structural (point body : Expr) : MetaM Expr :=
-  Affine.reduceStructure body (opaqueProblemDependencies? := some point)
+  Expr.reduceStructure body (opaqueProblemDependencies? := some point)
 
 private def addUnique (values : Array Expr) (value : Expr) : Array Expr :=
   if values.contains value then values else values.push value
@@ -159,7 +161,7 @@ private def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) :
   unless proposition.isAppOfArity ``Membership.mem 5 do return none
   let args := proposition.getAppArgs
   unless (← whnf args[1]!).isAppOfArity ``Finset 1 do return none
-  if (← Affine.depends point args[3]!) || (← Affine.depends point args[4]!) then return none
+  if (← Expr.depends point args[3]!) || (← Expr.depends point args[4]!) then return none
   let native ← mkAppOptM ``Finset.mem_def #[some args[0]!, some args[4]!, some args[3]!]
   let expected := (← inferType native).getAppArgs[0]!
   unless ← isDefEq args[2]! expected.getAppArgs[2]! do return none
@@ -173,7 +175,7 @@ private partial def collectIndices (point expression : Expr)
   let mut values := values
   let mut facts := facts
   unless expression.hasLooseBVars || expression.isSort || expression.isMVar do
-    if !(← Affine.depends point expression) && (← Domain.Evidence.complete expression) then
+    if !(← Expr.depends point expression) && (← Domain.Evidence.complete expression) then
       let type ← whnf (← inferType expression)
       if type.isAppOfArity ``Fin 1 then values := addUnique values expression
       if type.isAppOfArity ``Subtype 2 then
@@ -198,7 +200,7 @@ private def indexContext (point obligation : Expr) : MetaM (Array Expr × Array 
   let mut facts := #[]
   for declaration in ← getLCtx do
     if declaration.isImplementationDetail then continue
-    if ← Affine.depends point declaration.toExpr then continue
+    if ← Expr.depends point declaration.toExpr then continue
     unless ← Domain.Evidence.complete declaration.toExpr do continue
     if ← isProp declaration.type then
       facts := addUnique facts declaration.toExpr
@@ -252,7 +254,7 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
     let indexShape ← whnf index
     let isFinite := indexShape.isAppOfArity ``Fin 1
     let isSupport := (← finiteMembership? point index).isSome
-    if ← Affine.depends point index then return #[]
+    if ← Expr.depends point index then return #[]
     let mut result := #[]
     for candidate in (if isSupport then support else indices) do
       if result.size ≥ 128 then break
@@ -336,10 +338,10 @@ private def hoistProjectionLets : Expr → Expr
   | expression => expression
 
 private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
-  let body := hoistProjectionLets (← Affine.reduceStructure body (preserveLets := true)
+  let body := hoistProjectionLets (← Expr.reduceStructure body (preserveLets := true)
     (opaqueProblemDependencies? := some point))
   if let .letE name type value rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
+    if (← Expr.depends point type) || (← Expr.depends point value) then
       return ← certifyBody point (rest.instantiate1 value)
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← certifyBody point (rest.instantiate1 binding)
@@ -391,7 +393,7 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
         #[result.domain, left, right, result.smooth[0]!]
       return ⟨result.domain, result.domainIsOpen, result.feasibleMemDomain, proof, block⟩
     if let some size ← vectorSize? type then
-      if ← Affine.depends point size then reject body "the vector dimension depends on a decision"
+      if ← Expr.depends point size then reject body "the vector dimension depends on a decision"
       let equivalent ← mkAppM (vectorRule relation) #[lhs, rhs]
       let expanded := (← inferType equivalent).getAppArgs[1]!
       let result ← certifyBody point expanded
@@ -408,7 +410,7 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
     let indexShape ← whnf index
     unless indexShape.isAppOfArity ``Fin 1 do
       reject body "generated families require an index of type Fin n"
-    if ← Affine.depends point index then reject body "the family index type depends on a decision"
+    if ← Expr.depends point index then reject body "the family index type depends on a decision"
     let context ← read
     let outcome ← withLocalDecl name info index fun i => do
       ((do
@@ -523,7 +525,7 @@ Unsupported retained leaves contribute no facts. Public `Domain.certify` keeps
 its stricter whole-predicate grammar. Caller state is restored on every outcome. -/
 def certifyRows (feasible : Expr) (rows : Array Expr) :
     MetaM (Except Domain.DomainError Result) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       certifyCore feasible rows
     catch exception =>

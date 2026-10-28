@@ -10,6 +10,7 @@ import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support
 import MorewTest.Reformulation.AffineHelperSource
 import MorewTest.Environment
+import Morew.Elab.Expr
 
 /-!
 # Affine helper certification in conic reformulations
@@ -217,7 +218,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
     (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetLift e a)))
   lambdaBoundedTelescope expression 3 fun _ pair => do
-    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let rule := pair.getAppArgs[3]!
     match ← Morew.Elab.Conic.Rewrite.planExplicit source rule with
@@ -231,7 +232,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       ((fun x : ι → ℝ => x (e 0) ^ 2 ≤ 1),
        (fun x : ι → ℝ => finiteDot e a x ≤ 10))))
   lambdaBoundedTelescope expression 3 fun _ pair => do
-    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
     match ← Morew.Elab.Conic.Rewrite.planUnique source retained with
@@ -245,7 +246,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       ((fun x : ι → ℝ => Real.exp (x (e 0)) ≤ 1),
        (fun x : ι → ℝ => finiteDot e a x ≤ 10))))
   lambdaBoundedTelescope expression 3 fun _ pair => do
-    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
     match ← Morew.Elab.Conic.Rewrite.planUnique source retained with

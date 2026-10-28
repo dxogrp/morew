@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Domain
 import Morew.Elab.Rewrite.Match
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Checked exact conic rewriting
@@ -35,13 +37,13 @@ private theorem dimensionPositiveOfNe (n : Nat) (h : n ≠ 0) : 0 < n :=
   Nat.pos_of_ne_zero h
 
 private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := do
-  if (← Affine.depends point dimension) || (← Morew.Elab.Rewrite.Plan.unresolved dimension) then return none
+  if (← Expr.depends point dimension) || (← Morew.Elab.Rewrite.Plan.unresolved dimension) then return none
   let n : Q(Nat) := dimension
   let goal : Q(Prop) := q(0 < $n)
   let nonzero : Q(Prop) := q($n ≠ 0)
   for declaration in ← getLCtx do
     let evidence := declaration.toExpr
-    if (← Affine.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
+    if (← Expr.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
     if ← isDefEq declaration.type goal then return some evidence
     if ← isDefEq declaration.type nonzero then
       return some (← mkAppM ``dimensionPositiveOfNe #[dimension, evidence])
@@ -53,7 +55,7 @@ private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := 
     checkWithKernel proof
     return some proof
   catch _ => saved.restore
-  if let some value ← getNatValue? (← Affine.reduceStructure dimension) then
+  if let some value ← getNatValue? (← Expr.reduceStructure dimension) then
     if value > 0 && value ≤ 100000 then return some (← mkDecideProof goal)
   return none
 
@@ -65,11 +67,11 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   for declaration in ← getLCtx do
     let proof := declaration.toExpr
-    if (← Affine.depends point proof) || (← Morew.Elab.Rewrite.Plan.unresolved proof) then continue
+    if (← Expr.depends point proof) || (← Morew.Elab.Rewrite.Plan.unresolved proof) then continue
     if ← isDefEq declaration.type goal then
       checkWithKernel proof
       return some proof
-  let reduced ← Affine.reduceStructure goal
+  let reduced ← Expr.reduceStructure goal
   if reduced.isAppOfArity ``LT.lt 4 || reduced.isAppOfArity ``LE.le 4 then
     let args := reduced.getAppArgs
     let strict := reduced.isAppOfArity ``LT.lt 4
@@ -91,14 +93,14 @@ private def proveObligation (point : Expr) (retained : Array Expr)
 -- registry about model containers or compiler-generated product matchers.
 private def matchingBody (expression : Expr) : MetaM Expr := do
   Meta.transform expression (pre := fun value => do
-    let reduced ← Affine.reduceStructure value (preserveLets := true)
+    let reduced ← Expr.reduceStructure value (preserveLets := true)
     if reduced != value then return .visit reduced
     return .continue)
 
 private def materialize (source domain point evidence : Expr) (retained : Array Expr)
     (matched : Match.Result) (provider : Affine.EvidenceProvider) : MetaM Plan.Prepared := do
   let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
-  if ← Affine.depends point auxiliary then throwError "the auxiliary type depends on a decision variable"
+  if ← Expr.depends point auxiliary then throwError "the auxiliary type depends on a decision variable"
   let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary => do
     let body ← Plan.exposeTarget (mkApp matched.target auxiliary)
     let reduceProjection (value : Expr) : MetaM TransformStep := do
@@ -110,9 +112,9 @@ private def materialize (source domain point evidence : Expr) (retained : Array 
     let body ← Meta.transform body (pre := reduceProjection) (post := reduceProjection)
     mkLambdaFVars #[auxiliary] body
   let proof ← instantiateMVars matched.sourceIff
-  if ← Affine.depends evidence target then
+  if ← Expr.depends evidence target then
     throwError "generated cone rows depend on retained feasibility evidence"
-  if !(← Affine.depends evidence proof) then
+  if !(← Expr.depends evidence proof) then
     let target ← mkLambdaFVars #[point] target
     let pointwise ← mkLambdaFVars #[point] proof
     let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, target, pointwise]
@@ -135,8 +137,8 @@ private def materialize (source domain point evidence : Expr) (retained : Array 
 private def attempt (source : Expr) (retained : Array Expr)
     (matchRule : Expr → Expr → (Expr → MetaM (Option Expr)) →
       (Match.Result → MetaM Plan.Prepared) → MetaM Plan.Prepared)
-    (provider : Affine.EvidenceProvider) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Plan.Prepared) :=
+  State.withIsolatedMVars do
     try
       if ← Morew.Elab.Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
       let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
@@ -144,8 +146,8 @@ private def attempt (source : Expr) (retained : Array Expr)
         if ← Morew.Elab.Rewrite.Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
         unless ← isDefEq (← Morew.Elab.Rewrite.Plan.predicateDomain row) domain do
           throwError "retained constraint has a different decision domain"
-      let mut instances ← Affine.sourceFiniteInstances source
-      for row in retained do instances := instances ++ (← Affine.sourceFiniteInstances row)
+      let mut instances ← Expr.sourceFiniteInstances source
+      for row in retained do instances := instances ++ (← Expr.sourceFiniteInstances row)
       let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances Plan.Prepared.replaceFVars instances.toList do
         withLocalDeclD `point domain fun point =>
           Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
@@ -161,8 +163,8 @@ private def attempt (source : Expr) (retained : Array Expr)
 /-- Select an explicitly named declaration, registered or not. There is no
 fallback to any other rule when matching, exactness, or affine checking fails. -/
 def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+  State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
       attempt source retained
         (fun point body prove accept => Match.declaration point body name accept prove) provider
@@ -172,8 +174,8 @@ expressions. If that adapter cannot prepare the record, typed matching may
 reconstruct subtype inputs using the existing retained-domain policy. Both
 attempts use exactly the supplied record; registered rules are never searched. -/
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+  State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
       let direct ← Plan.plan source rule provider
       if let .ok result := direct then return .ok (.inl result)
@@ -182,8 +184,8 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
 
 /-- Certify all registered candidates and require a unique success. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Plan.Prepared) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+  State.withIsolatedMVars do
     try
       if ← Morew.Elab.Rewrite.Plan.unresolved predicate then
         throwError "unresolved metavariables in selected predicate"

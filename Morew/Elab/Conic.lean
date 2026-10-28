@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Conic
 import Morew.Elab.Affine
-import Morew.Elab.Affine.State
+import Morew.Elab.State
 import Morew.Elab.Conic.Space
 import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Expr
 
 /-!
 # Checked affine row normalization
@@ -125,7 +126,7 @@ private def realOrder? (type : Expr) : MetaM (Option Expr) := do
     #[domain, family, orders]
 
 private def rowError (expression : Expr) (reason : MessageData)
-    (label? : Option Name) : MetaM Affine.AffineError := do
+    (label? : Option Name) : MetaM Expr.Error := do
   let reason := match label? with
     | none => m!"constraint: {reason}"
     | some label => m!"constraint `{label}`: {reason}"
@@ -152,11 +153,11 @@ private partial def hasUnresolved (expression : Expr)
 -- instances. Dependent lets must be substituted before abstracting the point;
 -- independent values are substituted into both results before leaving scope.
 private partial def withPredicateLets (point body : Expr)
-    (action : Expr → MetaM (Except Affine.AffineError RowResult)) :
-    MetaM (Except Affine.AffineError RowResult) := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+    (action : Expr → MetaM (Except Expr.Error RowResult)) :
+    MetaM (Except Expr.Error RowResult) := do
+  let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
+    if (← Expr.depends point type) || (← Expr.depends point value) then
       return ← withPredicateLets point (rest.instantiate1 value) action
     withLetDecl name type value (nondep := nondep) fun binding => do
       match ← withPredicateLets point (rest.instantiate1 binding) action with
@@ -170,16 +171,16 @@ private partial def withPredicateLets (point body : Expr)
     action body
 
 private def membershipData (point body : Expr) (label? : Option Name) :
-    MetaM (Except Affine.AffineError (Expr × Expr)) := do
+    MetaM (Except Expr.Error (Expr × Expr)) := do
   let args := body.getAppArgs
-  let carrier ← Affine.reduceStructure args[3]!
+  let carrier ← Expr.reduceStructure args[3]!
   let carrier := if carrier.isConstOf ``Morew.Conic.Cone.nonnegativeScalarCarrier then
       mkApp (mkConst ``Morew.Conic.Cone.carrier)
         (mkConst ``Morew.Conic.Cone.nonnegativeScalar)
     else carrier
   unless carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 do
     return .error (← rowError body "expected native supported cone membership" label?)
-  let cone ← Affine.reduceStructure carrier.getAppArgs[0]!
+  let cone ← Expr.reduceStructure carrier.getAppArgs[0]!
   unless cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
       cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
       cone.isAppOfArity ``Morew.Conic.Cone.zero 1 ||
@@ -188,7 +189,7 @@ private def membershipData (point body : Expr) (label? : Option Name) :
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
       cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
-  if ← Affine.depends point cone then
+  if ← Expr.depends point cone then
     return .error (← rowError body "cone dimension depends on the decision point" label?)
   let value := args[4]!
   let template := (← getConstInfo ``canonicalMembership).value!
@@ -203,7 +204,7 @@ private def membershipData (point body : Expr) (label? : Option Name) :
 /-- Recover a native scalar nonnegative-cone coordinate after checking its
 membership instance. This does not unfold wrappers or certify affinity. -/
 def nonnegativeScalarValue? (point body : Expr) : MetaM (Option Expr) := do
-  let result : Except Unit Expr ← Affine.withIsolatedMVars do
+  let result : Except Unit Expr ← State.withIsolatedMVars do
     if !(body.isAppOfArity ``Membership.mem 5) || (← hasUnresolved body) then
       return .error ()
     match ← membershipData point body none with
@@ -213,7 +214,7 @@ def nonnegativeScalarValue? (point body : Expr) : MetaM (Option Expr) := do
   return result.toOption
 
 private def singletonZeroData (point body : Expr) (label? : Option Name) :
-    MetaM (Except Affine.AffineError Expr) := do
+    MetaM (Except Expr.Error Expr) := do
   let args := body.getAppArgs
   let value := args[4]!
   let target ← whnf args[0]!
@@ -230,7 +231,7 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
       unless index.isAppOfArity ``Fin 1 do
         return .error (← rowError body "expected a finite-vector zero singleton" label?)
       let dimension := index.getAppArgs[0]!
-      if ← Affine.depends point dimension then
+      if ← Expr.depends point dimension then
         return .error (← rowError body "cone dimension depends on the decision point" label?)
       pure ((mkAppN (← getConstInfo ``canonicalVectorZeroMembership).value!
         #[dimension, value]).headBeta,
@@ -238,7 +239,7 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
   let canonicalArgs := canonical.getAppArgs
   unless ← isDefEq args[2]! canonicalArgs[2]! do
     return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
-  let singleton ← Affine.reduceStructure args[3]!
+  let singleton ← Expr.reduceStructure args[3]!
   let canonicalSingleton := canonicalArgs[3]!
   let canonicalSingletonArgs := canonicalSingleton.getAppArgs
   let zero ← if singleton.isAppOfArity ``Singleton.singleton 4 then do
@@ -250,7 +251,7 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
       pure singleton.getAppArgs[1]!
     else
       return .error (← rowError body "expected the canonical singleton zero set" label?)
-  let zero ← Affine.reduceStructure zero
+  let zero ← Expr.reduceStructure zero
   let canonicalZero := canonicalSingletonArgs[3]!
   let zeroArgs := zero.getAppArgs
   let validZero ← if zero.isAppOfArity ``OfNat.ofNat 3 then
@@ -267,7 +268,7 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
 
 private def normalizeZeroMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
-    MetaM (Except Affine.AffineError RowResult) := do
+    MetaM (Except Expr.Error RowResult) := do
   let data ← singletonZeroData point body label?
   if let .error error := data then return .error error
   let .ok value := data | throwError "internal error: missing checked singleton membership"
@@ -293,7 +294,7 @@ private def normalizeZeroMembershipRow (predicate domain point body : Expr)
 
 private def normalizeMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
-    MetaM (Except Affine.AffineError RowResult) := do
+    MetaM (Except Expr.Error RowResult) := do
   let data ← membershipData point body label?
   if let .error error := data then return .error error
   let .ok (cone, value) := data
@@ -323,8 +324,8 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
 -- Keep evidence lets inside the coordinate function where the affine reifier
 -- can use them. Quantifiers, conjunctions, and arbitrary helpers are not opened.
 private partial def exponentialFamilyCoordinates (point body : Expr)
-    (label? : Option Name) : MetaM (Except Affine.AffineError Expr) := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+    (label? : Option Name) : MetaM (Except Expr.Error Expr) := do
+  let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       match ← exponentialFamilyCoordinates point (rest.instantiate1 binding) label? with
@@ -345,16 +346,16 @@ private partial def exponentialFamilyCoordinates (point body : Expr)
 
 private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
-    MetaM (Except Affine.AffineError RowResult) := do
+    MetaM (Except Expr.Error RowResult) := do
   let .forallE name index rest info := body
     | return .error (← rowError body "expected a finite quantified membership" label?)
   let shape ← whnf index
   unless shape.isAppOfArity ``Fin 1 do
     return .error (← rowError body "quantified cone rows require one index of type Fin n" label?)
   let n := shape.getAppArgs[0]!
-  if ← Affine.depends point n then
+  if ← Expr.depends point n then
     return .error (← rowError body "cone dimension depends on the decision point" label?)
-  let coordinates : Except Affine.AffineError Expr ← withLocalDecl name info index fun i => do
+  let coordinates : Except Expr.Error Expr ← withLocalDecl name info index fun i => do
     match ← exponentialFamilyCoordinates point (rest.instantiate1 i) label? with
     | .error error => return .error error
     | .ok value => return .ok (← mkLambdaFVars #[point, i] value)
@@ -384,7 +385,7 @@ private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
   return .ok { constraint, pointwiseIff }
 
 private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.EvidenceProvider)
-    (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
+    (label? : Option Name) : MetaM (Except Expr.Error RowResult) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type
     | return .error (← rowError predicate "expected a predicate on the decision space" label?)
@@ -455,8 +456,8 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
       return .ok { constraint, pointwiseIff }
 
 private def withFiniteInstances (instances : List Expr)
-    (action : MetaM (Except Affine.AffineError RowResult)) :
-    MetaM (Except Affine.AffineError RowResult) := do
+    (action : MetaM (Except Expr.Error RowResult)) :
+    MetaM (Except Expr.Error RowResult) := do
   match instances with
   | [] => action
   | inst :: rest =>
@@ -469,11 +470,11 @@ private def withFiniteInstances (instances : List Expr)
         }
 
 private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvider)
-    (label? : Option Name) : MetaM (Except Affine.AffineError RowResult) := do
+    (label? : Option Name) : MetaM (Except Expr.Error RowResult) := do
   let predicate ← instantiateMVars predicate
   if ← hasUnresolved predicate then
     return .error (← rowError predicate "unresolved metavariables in predicate" label?)
-  withFiniteInstances (← Affine.sourceFiniteInstances predicate).toList do
+  withFiniteInstances (← Expr.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate provider label?
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, a canonical
@@ -483,10 +484,10 @@ Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/
 def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
-    (label? : Option Name := none) : MetaM (Except Affine.AffineError RowResult) :=
-  Affine.withIsolatedMVars do
+    (label? : Option Name := none) : MetaM (Except Expr.Error RowResult) :=
+  State.withIsolatedMVars do
     try
-      let direct ← Affine.withIsolatedMVars do
+      let direct ← State.withIsolatedMVars do
         try
           normalizeRowCore predicate provider label?
         catch error =>
@@ -503,10 +504,10 @@ def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
 /-- Recognize the real objective retained by a typed presentation. The explicit
 optimization sense and order-dual annotation remain in the presentation. -/
 def reifyObjective (presentation : Reformulation.PresentationState)
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Affine.AffineResult) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Affine.AffineResult) :=
+  State.withIsolatedMVars do
     let fail (expression : Expr) (reason : MessageData) :
-        MetaM (Except Affine.AffineError Affine.AffineResult) := do
+        MetaM (Except Expr.Error Affine.AffineResult) := do
       return .error {
         expression
         reason := ← addMessageContext m!"objective: {reason}"
@@ -530,7 +531,7 @@ def reifyObjective (presentation : Reformulation.PresentationState)
 
 /-- Normalize a typed named constraint, retaining its label in diagnostics. -/
 def normalizeConstraint (entry : Reformulation.ConstraintEntry)
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError RowResult) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error RowResult) :=
   normalizeRow entry.predicate provider (some entry.name)
 
 end Morew.Elab.Conic

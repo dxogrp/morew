@@ -4,8 +4,9 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Affine.State
+import Morew.Elab.State
 import Morew.Elab.Conic.Space
+import Morew.Elab.Expr
 
 /-!
 # Checked final cone-membership normalization
@@ -168,7 +169,7 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
   return { body := normalized, iff := proof, changed := true }
 
 private partial def normalizeBodyCore (original : Expr) : MetaM BodyNormalization := do
-  let body ← Affine.reduceStructure original (preserveLets := true)
+  let body ← Expr.reduceStructure original (preserveLets := true)
   if let .letE name type value rest nondep := body then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← normalizeBodyCore (rest.instantiate1 binding)
@@ -208,7 +209,7 @@ private partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
   return false
 
 private def isolated (action : MetaM α) : MetaM α := do
-  let result ← Affine.withIsolatedMVars (ε := Empty) do
+  let result ← State.withIsolatedMVars (ε := Empty) do
     return .ok (← action)
   match result with
   | .ok result => return result

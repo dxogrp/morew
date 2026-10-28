@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Atom
-import Morew.Elab.Affine
+import Morew.Elab.Expr
 import Morew.Reformulation.Presentation
 
 /-!
@@ -174,10 +174,10 @@ private def expandReplacementDefinitions (state : ReformState) (binderIndex : Na
             (some binderTypes[binderIndex]!)
           for definition in definitions, view in state.view.definitions do
             if expression.containsFVar definition.fvarId! &&
-                (← Morew.Elab.Affine.depends binders[binderIndex]! definition) then
+                (← Morew.Elab.Expr.depends binders[binderIndex]! definition) then
               throwErrorAt replacement
                 "substitution replacement uses model-local definition `{view.name.eraseMacroScopes}`, which depends on the decision variable being replaced"
-          if ← Morew.Elab.Affine.depends binders[binderIndex]! expression then
+          if ← Morew.Elab.Expr.depends binders[binderIndex]! expression then
             throwErrorAt replacement
               "substitution replacement depends on the decision variable being replaced"
           let mut expression := expression
@@ -314,7 +314,7 @@ private def preserveDefinitionExpressions (state : ReformState)
       withViewDefinitions state.view fun definitions => do
         definitions.anyM fun definition => do
           return (← isProof definition) ||
-            (← Morew.Elab.Affine.depends binders[binderIndex]! (← inferType definition))
+            (← Morew.Elab.Expr.depends binders[binderIndex]! (← inferType definition))
 
 /-- Check the complete proposed presentation before retaining simplification.
 Proof-bearing data can occur in definitions, the objective, or constraints;

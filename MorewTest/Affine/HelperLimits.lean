@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Affine.Support
 import MorewTest.Affine.HelperFixtures
+import Morew.Elab.Expr
 
 /-!
 # Deterministic helper expansion limits
@@ -151,7 +152,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let term ← `(fun x : ℝ => duplicate (x + x + x + x + x + x + x + x))
   let source ← elaborate term
   let prepared ← Expansion.prepare source fun expression preserve =>
-    reduceStructure expression preserve
+    Morew.Elab.Expr.reduceStructure expression preserve
   unless prepared.expression.sizeWithoutSharing > 200 do
     throwError "duplication regression no longer expands beyond the smaller limit"
   assertAffine term
@@ -293,7 +294,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let term ← `(fun x : Fin 2 → ℝ => projectedProblemDuplicate x)
   let source ← elaborate term
   let prepared ← Expansion.prepare source fun expression preserve =>
-    reduceStructure expression preserve
+    Morew.Elab.Expr.reduceStructure expression preserve
   unless prepared.expression.sizeWithoutSharing > 100 do
     throwError "problem projection regression no longer expands beyond the smaller limit"
   assertAffine term

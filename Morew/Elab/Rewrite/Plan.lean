@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Basic
-import Morew.Elab.Affine
+import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Decomposition
 
 /-!
@@ -57,9 +57,9 @@ def withScopedFiniteInstances {α : Type}
 partial def withScopedEvidence {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (point body : Expr) (action : MetaM α) : MetaM α := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+  let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
-    if (← Affine.depends point type) || (← Affine.depends point value) then
+    if (← Expr.depends point type) || (← Expr.depends point value) then
       return ← withScopedEvidence replace point (rest.instantiate1 value) action
     withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← withScopedEvidence replace point (rest.instantiate1 binding) action

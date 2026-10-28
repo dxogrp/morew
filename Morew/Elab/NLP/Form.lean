@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Rows
 import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Complete checked smooth-NLP forms
@@ -31,7 +33,7 @@ open Reformulation
 private partial def structuralDomain (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then return shape
-  if let some size ← Affine.Space.euclideanDimension? shape then
+  if let some size ← Expr.euclideanDimension? shape then
     let size : Q(Nat) := size
     return q(EuclideanSpace ℝ (Fin $size))
   if shape.isAppOfArity ``Prod 2 then
@@ -180,7 +182,7 @@ the current feasibility. Failed and successful attempts leave caller metavariabl
 unchanged. Objective sense is retained separately from representation equality. -/
 def buildForm (presentation : PresentationState) (cached : Array (Option Rows.Result) := #[]) :
     MetaM (Except Domain.DomainError Expr) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try buildFormCore presentation cached
     catch exception =>
       return .error (← formError presentation.objective exception.toMessageData)

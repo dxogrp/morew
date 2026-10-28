@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic
 import Morew.Elab.Rewrite.Plan
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Shared exact conic replacement planning
@@ -68,16 +70,16 @@ metavariables are discarded before retrying the unchanged source predicates. -/
 def withHelperFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (sources : Array Expr)
-    (action : MetaM (Except Affine.AffineError α)) :
-    MetaM (Except Affine.AffineError α) := Affine.withIsolatedMVars do
-  let failure (error : Exception) : MetaM (Except Affine.AffineError α) := do
+    (action : MetaM (Except Expr.Error α)) :
+    MetaM (Except Expr.Error α) := State.withIsolatedMVars do
+  let failure (error : Exception) : MetaM (Except Expr.Error α) := do
     return Except.error ({
       expression := sources[0]?.getD (mkConst ``True)
-      reason := ← addMessageContext error.toMessageData } : Affine.AffineError)
+      reason := ← addMessageContext error.toMessageData } : Expr.Error)
   try
     let replaceResult := fun result oldVars newVars =>
       result.map (fun value => replace value oldVars newVars)
-    let direct ← Affine.withIsolatedMVars do
+    let direct ← State.withIsolatedMVars do
       try action catch error => failure error
     if let .ok result := direct then return .ok result
     let mut additional := #[]
@@ -96,12 +98,12 @@ bindings are substituted through the completed result before leaving scope. -/
 def withPresentationFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (presentation : Reformulation.PresentationState)
-    (action : MetaM (Except Affine.AffineError α)) :
-    MetaM (Except Affine.AffineError α) := do
+    (action : MetaM (Except Expr.Error α)) :
+    MetaM (Except Expr.Error α) := do
   let mut instances := #[]
   let sources := #[presentation.objective] ++ presentation.constraints.map (·.predicate)
   for source in sources do
-    for inst in ← Affine.sourceFiniteInstances source do
+    for inst in ← Expr.sourceFiniteInstances source do
       unless instances.contains inst do
         instances := instances.push inst
   withHelperFiniteInstances replace sources do
@@ -126,7 +128,7 @@ private abbrev conjunction := Decomposition.conjunction
 -- or arithmetic operands are unfolded.
 /-- Reduce checked representation target fields without unfolding predicate helpers. -/
 partial def exposeTarget (body : Expr) : MetaM Expr := do
-  let body ← Affine.reduceStructure body (preserveLets := true)
+  let body ← Expr.reduceStructure body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
     | some ``Morew.ExactConstraintLift.target => some 3
@@ -167,7 +169,7 @@ private def finishCore (source domain lift : Expr) (provider : Affine.EvidencePr
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
   let auxiliary? := if noAuxiliary then none else some auxiliary
   let nextDomain ← if noAuxiliary then pure domain else mkAppM ``Prod #[domain, auxiliary]
-  unless ← Affine.isSupportedSpace nextDomain do
+  unless ← Expr.isSupportedSpace nextDomain do
     throwError "unsupported exact-lift decision space {nextDomain}; expected real scalars, products, or finite function spaces"
   let targetFunction ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
   let (rowPredicates, targetIff) ← withLocalDeclD `point nextDomain fun point => do
@@ -187,7 +189,7 @@ private def finishCore (source domain lift : Expr) (provider : Affine.EvidencePr
 def finish (source domain lift : Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let target ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
   let result ← withHelperFiniteInstances Result.replaceFVars #[target] do
-    let result ← withFiniteInstances (← Affine.sourceFiniteInstances target).toList do
+    let result ← withFiniteInstances (← Expr.sourceFiniteInstances target).toList do
       finishCore source domain lift provider
     return .ok result
   match result with
@@ -203,7 +205,7 @@ def prepareContextual (source : Expr) (retained : Array Expr)
     let remainder := conjunction (retained.toList.map (mkApp · point))
     withLocalDeclD `retained remainder fun evidence => do
       let proof := (mkApp2 result.conditionalIff point evidence).headBeta
-      if ← Affine.depends evidence proof then return none
+      if ← Expr.depends evidence proof then return none
       let targetBody := conjunction (result.rowPredicates.toList.map (mkApp · point))
       let target ← mkLambdaFVars #[point] targetBody
       let pointwise ← mkLambdaFVars #[point] proof
@@ -227,13 +229,13 @@ def prepareContextual (source : Expr) (retained : Array Expr)
 /-- Adapt an explicit record for the entire selected predicate and certify its rows.
 Caller metavariables and the environment are restored on failure. -/
 private def planDirect (sourcePredicate rule : Expr)
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Affine.AffineError Result) :=
-  Affine.withIsolatedMVars do
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Result) :=
+  State.withIsolatedMVars do
     try
       let source ← instantiateMVars sourcePredicate
       if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
       let domain ← predicateDomain source
-      let result ← withFiniteInstances (← Affine.sourceFiniteInstances source).toList do
+      let result ← withFiniteInstances (← Expr.sourceFiniteInstances source).toList do
         withLocalDeclD `point domain fun point =>
           withPredicateEvidence point (mkApp source point) do
             let lift ← customLift source domain rule
@@ -248,8 +250,8 @@ private def planDirect (sourcePredicate rule : Expr)
 /-- Certify an explicit record, exposing finite evidence from helpers only if
 the direct attempt fails. Adaptation always uses the original predicate. -/
 def plan (sourcePredicate rule : Expr) (provider : Affine.EvidenceProvider := {}) :
-    MetaM (Except Affine.AffineError Result) :=
-  Affine.withIsolatedMVars do
+    MetaM (Except Expr.Error Result) :=
+  State.withIsolatedMVars do
     withHelperFiniteInstances Result.replaceFVars #[sourcePredicate]
       (planDirect sourcePredicate rule provider)
 

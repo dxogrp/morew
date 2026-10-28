@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Form
 import MorewTest.Affine.Support
+import Morew.Elab.Expr
 
 /-!
 # Whole-problem conic forms
@@ -256,7 +257,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let .ok row ← Elab.Conic.normalizeRow predicate
       | throwError "source-local nonzero evidence did not certify the original row"
     let bare ← withLocalDeclD `point initial.domainType fun point => do
-      mkLambdaFVars #[point] (← Elab.Affine.reduceStructure (mkApp predicate point))
+      mkLambdaFVars #[point] (← Morew.Elab.Expr.reduceStructure (mkApp predicate point))
     let empty ← MorewTest.Affine.elaborate (← `(fun _ : ℝ => True))
     let presentation := { initial with constraints := #[
       { name := `bounds, predicate := bare }, { name := `empty, predicate := empty }] }

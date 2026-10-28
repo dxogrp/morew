@@ -299,9 +299,9 @@ run_cmd liftTermElabM do
   check (← `(input (fun p : ℝ × ℝ => userSquare p.1 = p.2) #[])) 1
 
 -- A graph orientation is usable only after its generated rows are certified.
--- The first source below initially matches the constant input, leaving the
--- unsupported decision-dependent helper `shift x` in the target. Retrying with
--- the other orientation must discard that attempt's metavariables and declarations.
+-- With expansion disabled, the first source initially matches the constant
+-- input, leaving the unsupported decision-dependent helper `shift x` in the
+-- target. Retrying the other orientation must discard the failed attempt's state.
 noncomputable def shift (x : ℝ) : ℝ := x + 1
 
 @[morew_nlp] noncomputable def shiftGraph : GraphRepresentation shift where
@@ -309,6 +309,7 @@ noncomputable def shift (x : ℝ) : ℝ := x + 1
   target x y _ := y = x + 1
   source_iff_exists x y := by simp only [shift, exists_const]
 
+set_option morew.smooth.maxExpansionDepth 0 in
 run_cmd liftTermElabM do
   exactRows (← `(input (fun x : ℝ => shift x = shift 3)
     #[(fun x : ℝ => shift 3 = x + 1)]))
@@ -323,6 +324,11 @@ run_cmd liftTermElabM do
     #[(fun x : ℝ => shift 3 = x + 1)])) (rule? := some concreteRule)
   exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
     #[(fun x : ℝ => shift 3 = x + 1)])) (rule? := some concreteRule)
+
+-- With expansion enabled, either generated orientation can be certified.
+run_cmd liftTermElabM do
+  check (← `(input (fun x : ℝ => shift x = shift 3) #[])) 1
+  check (← `(input (fun x : ℝ => shift 3 = shift x) #[])) 1
 
 -- One general Euclidean registration handles both carrier spellings. Adding the
 -- specialized record is a real second success, not an implicit priority choice.

@@ -4,6 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Plan
+import Morew.Elab.Expr
+import Morew.Elab.State
 
 /-!
 # Persistent certified conic forms
@@ -122,7 +124,7 @@ private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
 
 private def buildFormCore (presentation : PresentationState) (provider : Affine.EvidenceProvider)
     (certifiedRows : Array (Option (Array RowResult))) :
-    MetaM (Except Affine.AffineError Expr) := do
+    MetaM (Except Expr.Error Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
     if ← Morew.Elab.Rewrite.Plan.unresolved expression then
@@ -208,8 +210,8 @@ contains checked rows in decomposed predicate order; `none` normalizes the entry
 Cached constraints and proofs are checked against their current predicates. -/
 def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
-    MetaM (Except Affine.AffineError Expr) :=
-  Affine.withIsolatedMVars do
+    MetaM (Except Expr.Error Expr) :=
+  State.withIsolatedMVars do
     try
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars)

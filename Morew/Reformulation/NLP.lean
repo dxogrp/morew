@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.NLP.Rewrite
 import Morew.Reformulation.Replace
+import Morew.Elab.Expr
 
 /-!
 # Targeted exact smooth reformulations
@@ -95,7 +96,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
     -- fallback is intentionally not part of smooth certification.
     let mut instances := #[]
     for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
-      for inst in ← Morew.Elab.Affine.sourceFiniteInstances source do
+      for inst in ← Morew.Elab.Expr.sourceFiniteInstances source do
         unless instances.contains inst do instances := instances.push inst
     let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
       (fun result oldVars newVars => result.map

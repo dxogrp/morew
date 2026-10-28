@@ -6,13 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 import Lean.Meta.Basic
 
 /-!
-# State isolation for certified affine recognition
+# State isolation for proof-producing elaborators
 
 Recognition must not assign caller metavariables. Successful proof terms may,
 however, depend on auxiliary declarations produced by an evidence callback.
 -/
 
-namespace Morew.Elab.Affine
+namespace Morew.Elab.State
 
 open Lean Lean.Meta
 
@@ -44,4 +44,4 @@ def withIsolatedMVars {ε α : Type} (action : MetaM (Except ε α)) :
   setEnv environment
   return result
 
-end Morew.Elab.Affine
+end Morew.Elab.State

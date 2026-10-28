@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Mathlib.Analysis.Normed.Module.FiniteDimension
-import Morew.Elab.Affine.Space
+import Morew.Elab.Expr
 import Lean.Meta.Basic
 
 /-!
@@ -84,7 +84,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
-  else if let some n ← Affine.Space.euclideanDimension? shape then
+  else if let some n ← Expr.euclideanDimension? shape then
     let coordinates ← buildSpace (← mkArrow (← mkAppM ``Fin #[n]) (mkConst ``Real))
     let data ← mkAppM ``Structure.euclidean #[n]
     finishSpace type data coordinates.instances

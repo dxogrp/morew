@@ -3,12 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Affine
+import Morew.Elab.Expr
 import Morew.Elab.NLP.Space
 import Morew.NLP.Domain
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import Lean.Meta.Check
+import Morew.Elab.State
 
 /-!
 # Evidence admitted for open nonlinear evaluation domains
@@ -50,7 +51,7 @@ private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM
 referenced local values and types. Unrelated local declarations do not affect
 completeness. Shared by smoothness, domain, and exact-replacement certification. -/
 def complete (expression : Expr) : MetaM Bool := do
-  return !(← Affine.hasUnresolved expression) &&
+  return !(← Expr.hasUnresolved expression) &&
     !(← (hasPlaceholders expression).run' {})
 
 /-- Internal source of checked facts projected from the supplied feasibility proof.
@@ -68,7 +69,7 @@ private def admissionFailure (index : Nat) (expression : Expr) (reason : Message
 
 private partial def admitBody (point expression : Expr) (index : Nat) :
     MetaM (Except AdmissionError Nat) := do
-  let expression ← Affine.reduceStructure expression
+  let expression ← Expr.reduceStructure expression
     (opaqueProblemDependencies? := some point)
   if expression.isAppOfArity ``And 2 then
     let args := expression.getAppArgs
@@ -96,7 +97,7 @@ Named predicates stay opaque. Strict inequalities, disequalities, quantifiers,
 and altered order instances cannot serve as source rows.
 -/
 def admit (feasible : Expr) : MetaM (Except AdmissionError Unit) :=
-  Affine.withIsolatedMVars do
+  State.withIsolatedMVars do
     try
       unless ← complete feasible do
         return .error (← admissionFailure 0 feasible
@@ -117,7 +118,7 @@ def admit (feasible : Expr) : MetaM (Except AdmissionError Unit) :=
 Local structural lets are reduced without unfolding named predicates.
 -/
 partial def rowFacts (point feasibleProof : Expr) : MetaM (Array Expr) := do
-  let type ← Affine.reduceStructure (← inferType feasibleProof)
+  let type ← Expr.reduceStructure (← inferType feasibleProof)
     (opaqueProblemDependencies? := some point)
   if type.isAppOfArity ``And 2 then
     let left ← rowFacts point (← mkAppM ``And.left #[feasibleProof])
@@ -255,10 +256,10 @@ private def proveCore (point target : Expr) (facts : Array Expr) : MetaM Expr :=
     if ← isProp declaration.type then
       context := context.setKind declaration.fvarId .implDetail
       if !declaration.isImplementationDetail &&
-          !(← Affine.depends point declaration.toExpr) && (← complete declaration.toExpr) then
+          !(← Expr.depends point declaration.toExpr) && (← complete declaration.toExpr) then
         approved := approved ++ (← splitFacts declaration.toExpr)
     else if !declaration.isImplementationDetail &&
-        !(← Affine.depends point declaration.toExpr) && (← complete declaration.toExpr) then
+        !(← Expr.depends point declaration.toExpr) && (← complete declaration.toExpr) then
       candidates := candidates.push declaration.toExpr
   let parameterPool := approved
   for candidate in candidates do
@@ -289,7 +290,7 @@ restores state. No unresolved metavariables or placeholders can escape.
 def prove? (point target : Expr) (facts : Array Expr := #[]) : MetaM (Option Expr) := do
   let saved ← saveState
   let result : Except Unit Expr ← tryCatchRuntimeEx
-    (Affine.withIsolatedMVars do
+    (State.withIsolatedMVars do
       try
         let context ← readThe Core.Context
         let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000

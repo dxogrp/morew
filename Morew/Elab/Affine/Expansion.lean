@@ -4,17 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Affine
-import Morew.Core
-import Lean.Meta.Match.MatcherInfo
-import Lean.Meta.RecExt
+import Morew.Elab.Expansion
 
 /-!
 # Bounded helper expansion for affine certification
 
-Expansion supplies a temporary, definitionally equal expression to the affine
-certifier. It never changes stored model expressions. Arithmetic operation
-prefixes, proof terms, local evidence, and unsupported native operations remain
-intact; only ordinary transparent, nonrecursive helper definitions are opened.
+Affine recognition retains its eager expansion policy and its own locally
+scoped options. The shared engine supplies accounting and structural reduction.
 -/
 
 /-- Maximum nested helper expansions; zero disables expansion. -/
@@ -38,6 +34,7 @@ register_option morew.affine.maxExpansionNodes : Nat := {
 namespace Morew.Elab.Affine.Expansion
 
 open Lean Lean.Meta
+open Morew.Elab.Expansion (ExpandM reduceChecked unfoldHead?)
 
 /-- The temporary expression and the number of helper occurrences expanded. -/
 structure Result where
@@ -46,81 +43,21 @@ structure Result where
   /-- Number of helper occurrences expanded, counting repeated applications. -/
   expansions : Nat
 
-private structure Limits where
-  depth : Nat
-  steps : Nat
-  nodes : Nat
-
-private def limits : MetaM Limits := do
+private def config : MetaM Morew.Elab.Expansion.Config := do
   let options ← getOptions
   return {
     depth := morew.affine.maxExpansionDepth.get options
     steps := morew.affine.maxExpansionSteps.get options
     nodes := morew.affine.maxExpansionNodes.get options
+    depthOption := `morew.affine.maxExpansionDepth
+    stepsOption := `morew.affine.maxExpansionSteps
+    nodesOption := `morew.affine.maxExpansionNodes
+    label := "affine"
   }
 
 /-- Whether every helper-expansion budget is nonzero. -/
 def enabled : MetaM Bool := do
-  let bounds ← limits
-  return bounds.depth != 0 && bounds.steps != 0 && bounds.nodes != 0
-
-private structure State where
-  steps : Nat := 0
-  nodes : Nat := 0
-  cache : ExprMap Expr := {}
-  helper? : Option Expr := none
-
-private abbrev ExpandM := StateRefT State MetaM
-
--- Saturating arithmetic makes preflight costs independent of large argument
--- duplication. Counting stops as soon as the available budget is exceeded.
-private def cappedAdd (cap a b : Nat) : Nat := min (cap + 1) (a + b)
-
-private partial def expressionSize (expression : Expr) (cap : Nat)
-    (arguments : Array Nat := #[]) (offset : Nat := 0) : Nat :=
-  if cap == 0 then 1 else
-  match expression with
-  | .bvar index =>
-    if offset ≤ index && index - offset < arguments.size then
-      min (cap + 1) arguments[arguments.size - 1 - (index - offset)]!
-    else 1
-  | .app f a =>
-    let first := expressionSize f (cap - 1) arguments offset
-    if first ≥ cap then cap + 1
-    else 1 + first + expressionSize a (cap - 1 - first) arguments offset
-  | .lam _ type body _ | .forallE _ type body _ =>
-    let first := expressionSize type (cap - 1) arguments offset
-    if first ≥ cap then cap + 1
-    else 1 + first + expressionSize body (cap - 1 - first) arguments (offset + 1)
-  | .letE _ type value body _ =>
-    let first := expressionSize type (cap - 1) arguments offset
-    if first ≥ cap then cap + 1 else
-    let second := expressionSize value (cap - 1 - first) arguments offset
-    if first + second ≥ cap then cap + 1
-    else 1 + first + second +
-      expressionSize body (cap - 1 - first - second) arguments (offset + 1)
-  | .proj _ _ value | .mdata _ value =>
-    1 + expressionSize value (cap - 1) arguments offset
-  | _ => 1
-
--- Estimate the complete beta result before instantiating any arguments. Each
--- occurrence of a parameter pays for its argument, even if the DAG shares it.
-private def applicationSize (value : Expr) (arguments : Array Expr) (cap : Nat) : Nat := Id.run do
-  if arguments.isEmpty then return expressionSize value cap
-  let mut body := value.consumeMData
-  let mut used := 0
-  while used < arguments.size do
-    match body with
-    | .lam _ _ next _ =>
-      used := used + 1
-      body := next.consumeMData
-    | _ => break
-  let sizes := (arguments.extract 0 used).map (expressionSize · cap)
-  let mut size := expressionSize body cap sizes
-  for argument in arguments[used:] do
-    if size > cap then return cap + 1
-    size := cappedAdd cap (size + 1) (expressionSize argument cap)
-  return size
+  return Morew.Elab.Expansion.enabled (← config)
 
 -- Keep each native operation's type/instance prefix intact, including when
 -- its result is applied to further arguments (for example, a vector index).
@@ -151,82 +88,6 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else none
   if first < arity then some first else none
 
-private def nativeBoundary (name : Name) : Bool :=
-  [``HAdd.hAdd, ``HSub.hSub, ``HMul.hMul, ``HDiv.hDiv, ``HSMul.hSMul,
-    ``HPow.hPow, ``Neg.neg, ``Prod.mk, ``Matrix.vecCons, ``Matrix.vecEmpty, ``Fin.elim0,
-    ``Finset.sum, `Finset.sup', `Finset.inf',
-    ``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul, ``WithLp.toLp, ``WithLp.ofLp,
-    ``LE.le, ``GE.ge, ``LT.lt, ``Eq, ``And, ``Membership.mem,
-    `ite, `dite, `cond, `Decidable.decide, `abs, ``Norm.norm, ``NNNorm.nnnorm, ``ENorm.enorm,
-    `Inv.inv, `Min.min, `Max.max, `PosPart.posPart, `min, `max, `Finset.prod, `tsum,
-    `Real.exp, `Real.log, `Real.sqrt, `Real.rpow, `Real.sin, `Real.cos,
-    `Real.tan, `Real.arcsin, `Real.arccos, `Real.arctan, `Real.sinh,
-    `Real.cosh, `Real.tanh, `Complex.exp, `Complex.log].contains name
-
-private structure Helper where
-  value : Expr
-  levelParams : List Name
-  levels : List Level
-
-private def helperValue? (expression : Expr) : MetaM (Option Helper) := do
-  let .const name levels := expression.getAppFn | return none
-  if nativeBoundary name then return none
-  let environment ← getEnv
-  if environment.isProjectionFn name then return none
-  if (← getMatcherInfo? name).isSome then return none
-  if ← isRecursiveDefinition name then return none
-  if (← getReducibilityStatus name) == .irreducible then return none
-  -- Transcendental primitive implementations are recognition boundaries, even
-  -- when implemented by transparent definitions rather than opaque constants.
-  if let some index := environment.getModuleIdxFor? name then
-    let moduleName := environment.header.modules[index.toNat]!.module
-    if (`Mathlib.Analysis.SpecialFunctions).isPrefixOf moduleName then return none
-  let .defnInfo declaration ← getConstInfo name | return none
-  unless declaration.safety == .safe do return none
-  -- Do not discover a hidden constraint by unfolding a predicate or a proof.
-  let type ← inferType expression
-  if ← isProp type then return none
-  let returnsType ← forallTelescopeReducing type fun _ result => do
-    return (← whnf result).isSort
-  if returnsType then return none
-  return some { value := declaration.value, levelParams := declaration.levelParams, levels }
-
-private def exhausted (source : Expr) (option : Name) (limit : Nat) : ExpandM α :=
-  throwError "affine helper expansion of {source} exhausted {option} (limit {limit})"
-
-private def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Limits) :
-    ExpandM Unit := do
-  let state ← get
-  let cost := applicationSize value arguments (bounds.nodes - state.nodes)
-  if cost > bounds.nodes - state.nodes then
-    exhausted (state.helper?.getD value) `morew.affine.maxExpansionNodes bounds.nodes
-  modify fun state => { state with nodes := state.nodes + cost }
-
--- Ordinary helpers and helpers exposing a problem container use the same
--- eligibility, cache, and pre-substitution accounting.
-private def unfoldHelper (expression : Expr) (helper : Helper) (bounds : Limits)
-    (depth : Nat) : ExpandM Expr := do
-  if depth ≥ bounds.depth then
-    exhausted expression `morew.affine.maxExpansionDepth bounds.depth
-  let state ← get
-  if state.steps ≥ bounds.steps then
-    exhausted expression `morew.affine.maxExpansionSteps bounds.steps
-  let arguments := expression.getAppArgs
-  let cost := applicationSize helper.value arguments (bounds.nodes - state.nodes)
-  if cost > bounds.nodes - state.nodes then
-    exhausted expression `morew.affine.maxExpansionNodes bounds.nodes
-  let expanded := match state.cache[expression]? with
-    | some expanded => expanded
-    | none =>
-      let value := helper.value.instantiateLevelParams helper.levelParams helper.levels
-      value.beta arguments
-  modify fun state => { state with
-    steps := state.steps + 1
-    nodes := state.nodes + cost
-    cache := state.cache.insert expression expanded
-    helper? := some expression }
-  return expanded
-
 -- Preserve blocked field selections without leaving named inner projections
 -- for the downstream structural reducer to open through unrestricted whnf.
 private partial def rawProblemProjections (source : Expr) : Expr :=
@@ -243,10 +104,10 @@ private partial def rawProblemProjections (source : Expr) : Expr :=
 -- Expose a container by opening exactly one eligible helper along its head.
 -- Rebuilding projections/applications lets visit keep the increased depth for
 -- the entire field selection, without traversing unused constructor fields.
-private partial def unfoldContainer? (expression : Expr) (bounds : Limits)
+private partial def unfoldContainer? (expression : Expr) (bounds : Morew.Elab.Expansion.Config)
     (depth : Nat) : ExpandM (Option Expr) := do
-  if let some helper ← helperValue? expression then
-    return some (← unfoldHelper expression helper bounds depth)
+  if let some step ← unfoldHead? bounds expression depth then
+    return some step.expression
   let head := expression.getAppFn
   let arguments := expression.getAppArgs
   if (head.isConstOf ``Morew.Problem.objective ||
@@ -263,84 +124,8 @@ private partial def unfoldContainer? (expression : Expr) (bounds : Limits)
   | _ => pure ()
   return none
 
--- A helper can expose a higher-order beta redex, for example
--- `apply (fun x => x + x) largeArgument`. Check that substitution as well as
--- the initial delta-beta step; otherwise its duplicated arguments evade the
--- node budget. Original helper-free structural reduction stays unchanged.
-private partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr)
-    (bounds : Limits) : ExpandM Expr := do
-  if (← get).steps == 0 then return ← reduce source true
-  let expression := (← instantiateMVars source).consumeMData
-  match expression with
-  | .fvar id =>
-    if let some value := (← id.getDecl).value? (allowNondep := true) then
-      -- Repeated local aliases duplicate their bodies in the temporary tree,
-      -- even though the original let expression stored that body only once.
-      chargeBeta value #[] bounds
-      return ← reduceChecked value reduce bounds
-    return expression
-  | .letE .. => return expression
-  | .proj name index value =>
-    let value ← reduceChecked value reduce bounds
-    if name == ``Prod && value.isAppOf ``Prod.mk then
-      return ← reduceChecked value.getAppArgs[index + 2]! reduce bounds
-    return .proj name index value
-  | .app .. =>
-    let arguments := expression.getAppArgs
-    let function ← reduceChecked expression.getAppFn reduce bounds
-    if let .letE name type value body nondep := function then
-      return .letE name type value
-        (mkAppN body (arguments.map (·.liftLooseBVars 0 1))) nondep
-    if function.isLambda then
-      chargeBeta function arguments bounds
-      return ← reduceChecked (function.beta arguments) reduce bounds
-    if (function.isConstOf ``Prod.casesOn || function.isConstOf ``Prod.rec) &&
-        arguments.size ≥ 5 then
-      let value := arguments[if function.isConstOf ``Prod.casesOn then 3 else 4]!
-      let branch := arguments[if function.isConstOf ``Prod.casesOn then 4 else 3]!
-      let fields := #[Expr.proj ``Prod 0 value, Expr.proj ``Prod 1 value]
-      chargeBeta branch fields bounds
-      return ← reduceChecked (mkAppN (branch.beta fields)
-        (arguments.extract 5 arguments.size)) reduce bounds
-    if let some name := function.constName? then
-      if let some matcher ← getMatcherInfo? name then
-        if matcher.numAlts == 1 && arguments.size ≥ matcher.arity then
-          let mut productsOnly := decide (matcher.numDiscrs > 0)
-          for i in [matcher.getFirstDiscrPos:matcher.getFirstAltPos] do
-            let type ← whnf (← inferType arguments[i]!)
-            productsOnly := productsOnly && type.isAppOfArity ``Prod 2
-          if productsOnly then
-            let declaration ← getConstInfo name
-            if let some value := declaration.value? then
-              chargeBeta value arguments bounds
-              let value := value.instantiateLevelParams
-                declaration.levelParams function.constLevels!
-              return ← reduceChecked (value.beta arguments) reduce bounds
-    if (function.isConstOf ``Prod.fst || function.isConstOf ``Prod.snd) &&
-        arguments.size ≥ 3 then
-      let projection := Expr.proj ``Prod
-        (if function.isConstOf ``Prod.fst then 0 else 1) arguments[2]!
-      return ← reduceChecked (mkAppN projection (arguments.extract 3 arguments.size))
-        reduce bounds
-    if (function.isConstOf ``Morew.Problem.objective ||
-        function.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
-      -- Select only an exposed constructor. Named container definitions must
-      -- go through bounded helper unfolding in visit, never unrestricted whnf.
-      let problem ← reduceChecked arguments[2]! reduce bounds
-      if let .letE name type value body nondep := problem then
-        -- Keep container-local proofs and instances in scope around the field.
-        let inner := (arguments.map (·.liftLooseBVars 0 1)).set! 2 body
-        return .letE name type value (mkAppN function inner) nondep
-      if problem.isAppOfArity ``Morew.Problem.mk 4 then
-        let index := if function.isConstOf ``Morew.Problem.objective then 2 else 3
-        return ← reduceChecked (mkAppN problem.getAppArgs[index]!
-          (arguments.extract 3 arguments.size)) reduce bounds
-      return mkAppN function (arguments.set! 2 problem)
-    return mkAppN function arguments
-  | _ => return expression
-
 private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr)
-    (bounds : Limits) (depth : Nat) : ExpandM Expr := do
+    (bounds : Morew.Elab.Expansion.Config) (depth : Nat) : ExpandM Expr := do
   let expression ← reduceChecked source reduce bounds
   match expression with
   | .lam name type body info =>
@@ -390,9 +175,8 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
     for i in [3:arguments.size] do
       expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
     return rawProblemProjections (mkAppN head expanded)
-  if let some helper ← helperValue? expression then
-    let expanded ← unfoldHelper expression helper bounds depth
-    return ← visit expanded reduce bounds (depth + 1)
+  if let some step ← unfoldHead? bounds expression depth then
+    return ← visit step.expression reduce bounds (depth + 1)
   -- An applied local vector or lambda may contain helper expressions. Unknown
   -- constant heads remain boundaries, including predicates and native atoms.
   if !head.isConst then
@@ -412,11 +196,12 @@ handles only existing structural reductions; helper unfolding lives here.
 Proof and instance lets remain available to evidence collection and reification.
 Zero in any option disables all helper expansion. -/
 def prepare (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Result := do
-  let bounds ← limits
-  if bounds.depth == 0 || bounds.steps == 0 || bounds.nodes == 0 then
+  let bounds ← config
+  if !Morew.Elab.Expansion.enabled bounds then
     return { expression := source, expansions := 0 }
-  let (expression, state) ← (visit source reduce bounds 0).run {}
-  return { expression, expansions := state.steps }
+  match ← Morew.Elab.Expansion.run (visit source reduce bounds 0) with
+  | .ok (expression, state) => return { expression, expansions := state.steps }
+  | .error error => throwError error.toMessageData bounds.label
 
 /-- Expand safe helper heads without modifying the source presentation. -/
 def expand (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Expr := do

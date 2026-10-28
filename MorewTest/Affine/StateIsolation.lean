@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic
+import Morew.Elab.Expr
 import Lean.Meta.Tactic.AuxLemma
 
 /-!
@@ -28,7 +29,7 @@ private inductive EntryPoint where
   deriving Repr
 
 private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.EvidenceProvider) :
-    MetaM (Except Affine.AffineError (Array Expr)) := do
+    MetaM (Except Morew.Elab.Expr.Error (Array Expr)) := do
   match entry with
   | .affine =>
     return (← Affine.reifyAffine source provider).map fun result =>

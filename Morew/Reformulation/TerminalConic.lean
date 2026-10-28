@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Terminal
 import Morew.Reformulation.Replace
+import Morew.Elab.Expr
 
 /-!
 # Terminal cone-membership conversion
@@ -34,8 +35,8 @@ private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM Str
 -- comparisons to convert retains its original spelling.
 private partial def normalizeRetainedBody (original target : Expr) :
     MetaM Morew.Elab.Conic.BodyNormalization := do
-  let body ← Morew.Elab.Affine.reduceStructure original (preserveLets := true)
-  let target ← Morew.Elab.Affine.reduceStructure target
+  let body ← Morew.Elab.Expr.reduceStructure original (preserveLets := true)
+  let target ← Morew.Elab.Expr.reduceStructure target
   if let .letE name type value rest nondep := body then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← normalizeRetainedBody (rest.instantiate1 binding) target

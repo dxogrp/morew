@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Affine
+import Morew.Elab.Expr
 
 /-!
 # Checked conjunction decomposition
@@ -102,7 +102,7 @@ def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
     throwError "expected a predicate on the decision space"
   withLocalDeclD `point domain fun point => do
     let (bodies, proof) ← Decomposition.split (mkApp predicate point)
-      (fun body => Affine.reduceStructure body (preserveLets := true))
+      (fun body => Expr.reduceStructure body (preserveLets := true))
     let predicates ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let proof ← instantiateMVars (← mkLambdaFVars #[point] proof)
     let expected ← mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
