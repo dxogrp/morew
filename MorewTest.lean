@@ -26,6 +26,7 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
+import MorewTest.Conic.Power
 import MorewTest.Conic.Registry
 import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder

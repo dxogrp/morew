@@ -7,6 +7,10 @@ import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Exponential.Representations
 import Morew.Conic.Polyhedral
+import Morew.Conic.Power
+import Morew.Conic.Power.Basic
+import Morew.Conic.Power.Cone
+import Morew.Conic.Power.Representations
 import Morew.Conic.SecondOrder
 import Morew.Conic.SecondOrder.Representations
 import Morew.Core
