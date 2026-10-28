@@ -5,7 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Rewrite.Registry.Source
 import Morew.Elab.Rewrite.Match
-import Mathlib.Tactic
 
 /-!
 # Scoped registry and structural matching regressions
