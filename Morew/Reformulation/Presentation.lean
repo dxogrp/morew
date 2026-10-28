@@ -524,11 +524,13 @@ private def delabPowerConeMembership : Delab := do
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
   let asSet := (mkAppN (← getConstInfo ``presentationPowerSetMembership).value!
     #[exponent, args[4]!]).headBeta
-  unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
-    return ← withOptions (fun options => options.setBool `pp.explicit true
-      |>.setBool `pp.instances true) delabApp
   let value ← withNaryArg 4 delab
   let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
+  unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
+    -- Protect just the canonical set-membership instance. Making the whole
+    -- bundled proposition explicit also exposes arithmetic proofs, which the
+    -- readable printer can omit and thereby make impossible to replay.
+    return ← `(@Membership.mem _ _ $(mkCIdent ``Set.instMembership) (POW $exponent) $value)
   `($value ∈ POW $exponent)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in

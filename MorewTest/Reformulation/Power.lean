@@ -285,6 +285,52 @@ example : Conic.Form (continued p hp) := continued.conicForm p hp
 
 end Symbolic
 
+namespace ShadowedMembership
+
+def marker : Set (ℝ × ℝ × ℝ) := Set.univ
+
+-- Using the instance in an untouched row retains it in the target's actual
+-- parameter telescope, where it must not capture generated power membership.
+variable [Membership (ℝ × ℝ × ℝ) (Set (ℝ × ℝ × ℝ))]
+
+def source :=
+  problem (x t : ℝ)
+    minimize t
+    subject to
+      domain : 0 ≤ x
+      other : (x, t, x) ∈ marker
+      bound : Real.rpow x (3 / 2) ≤ t
+      later : Real.rpow x (5 / 2) ≤ t
+
+reformulation target : source := by
+  conic at bound
+
+example : GlobalEquivalence source target := target.equivalence
+
+run_cmd do
+  for (replay, copy) in [(true, `exactCopy), (false, `displayCopy)] do
+    let environment ← Lean.getEnv
+    let view? := if replay then Morew.Syntax.getProblemView? environment ``target
+      else Morew.Syntax.getProblemDisplayView? environment ``target
+    let some view := view? | Lean.throwError "missing shadowed-membership presentation"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    let name := Lean.mkIdent copy
+    Lean.Elab.Command.elabCommand (← `(def $name := $term))
+    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copy)
+    if declaration.type.hasMVar || declaration.type.hasSorry ||
+        declaration.value!.hasMVar || declaration.value!.hasSorry then
+      Lean.throwError "power membership replay contains unresolved terms or placeholders"
+
+example : exactCopy = target := rfl
+example : displayCopy = target := rfl
+
+reformulation continued : target := by
+  conic at later
+
+example : GlobalEquivalence target continued := continued.equivalence
+
+end ShadowedMembership
+
 -- Re-elaborating stored views checks exact membership instances and cone proofs.
 run_cmd do
   for (original, copy) in [(``Scalar.targeted, `scalarCopy),
