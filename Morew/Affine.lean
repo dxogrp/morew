@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Mathlib.Data.Real.Basic
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.AffineSpace.AffineMap
 import Mathlib.LinearAlgebra.Matrix.ToLin
@@ -125,6 +126,26 @@ noncomputable def powOne {f : X → ℝ} (a : Certified f) :
     Certified (fun x => f x ^ (1 : ℕ)) where
   map := a.map
   correct x := (a.correct x).trans (pow_one (f x)).symm
+
+/-- The real zeroth power is constant even for a nonaffine base. -/
+noncomputable def rpowZeroSource (f : X → ℝ) :
+    Certified (fun x => Real.rpow (f x) 0) where
+  map := AffineMap.const ℝ X 1
+  correct x := (Real.rpow_zero (f x)).symm
+
+/-- The real first power preserves a scalar affine function without a sign premise. -/
+noncomputable def rpowOne {f : X → ℝ} (a : Certified f) :
+    Certified (fun x => Real.rpow (f x) 1) where
+  map := a.map
+  correct x := (a.correct x).trans (Real.rpow_one (f x)).symm
+
+/-- The canonical real-power notation for the zeroth-power construction. -/
+noncomputable def rpowNotationZeroSource (f : X → ℝ) :
+    Certified (fun x => f x ^ (0 : ℝ)) := rpowZeroSource f
+
+/-- The canonical real-power notation for the first-power construction. -/
+noncomputable def rpowNotationOne {f : X → ℝ} (a : Certified f) :
+    Certified (fun x => f x ^ (1 : ℝ)) := rpowOne a
 
 /-- Pair two certified affine functions. -/
 noncomputable def pair {f : X → Y} {g : X → Z}

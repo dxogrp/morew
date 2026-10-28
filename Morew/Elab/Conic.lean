@@ -7,6 +7,8 @@ import Morew.Conic
 import Morew.Elab.Affine
 import Morew.Elab.State
 import Morew.Elab.Conic.Space
+import Morew.Elab.Conic.Evidence
+import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 
@@ -68,6 +70,11 @@ private theorem normalizeLE
 -- custom membership relation that happens to agree at the selected tuple.
 private def canonicalMembership (cone : Morew.Conic.Cone) (value : cone.Space) : Prop :=
   value ∈ cone.carrier
+
+private def canonicalPowerMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
+  value ∈ Morew.Conic.Cone.powerSet α
+
+private def powerExponentRange (α : ℝ) : Prop := 0 < α ∧ α < 1
 
 private theorem normalizeMembership
     {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
@@ -174,6 +181,24 @@ private def membershipData (point body : Expr) (label? : Option Name) :
     MetaM (Except Expr.Error (Expr × Expr)) := do
   let args := body.getAppArgs
   let carrier ← Expr.reduceStructure args[3]!
+  if carrier.isAppOfArity ``Morew.Conic.Cone.powerSet 1 then
+    let exponent := carrier.getAppArgs[0]!
+    if ← Expr.depends point exponent then
+      return .error (← rowError body "power cone exponent depends on the decision point" label?)
+    let value := args[4]!
+    let template := (← getConstInfo ``canonicalPowerMembership).value!
+    let canonical := (mkAppN template #[exponent, value]).headBeta
+    unless ← isDefEq args[2]! canonical.getAppArgs[2]! do
+      return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
+    unless ← isDefEq body canonical do
+      return .error (← rowError body "membership does not match the canonical power cone set" label?)
+    let range := (mkApp (← getConstInfo ``powerExponentRange).value! exponent).headBeta
+    let some evidence ← Evidence.proveIndependent? point range
+      | return .error (← rowError body
+          m!"missing independent power cone exponent evidence: required 0 < {exponent} ∧ {exponent} < 1" label?)
+    let cone ← mkAppM ``Morew.Conic.Cone.power #[exponent, evidence]
+    checkWithKernel cone
+    return .ok (cone, value)
   let carrier := if carrier.isConstOf ``Morew.Conic.Cone.nonnegativeScalarCarrier then
       mkApp (mkConst ``Morew.Conic.Cone.carrier)
         (mkConst ``Morew.Conic.Cone.nonnegativeScalar)
@@ -187,10 +212,17 @@ private def membershipData (point body : Expr) (label? : Option Name) :
       cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
       cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
+      cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
       cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
+  if cone.isAppOfArity ``Morew.Conic.Cone.power 2 &&
+      (← Evidence.hasPlaceholders cone) then
+    return .error (← rowError body "power cone contains unresolved placeholders" label?)
   if ← Expr.depends point cone then
-    return .error (← rowError body "cone dimension depends on the decision point" label?)
+    let description := if cone.isAppOfArity ``Morew.Conic.Cone.power 2 then
+      "power cone parameter depends on the decision point"
+      else "cone dimension depends on the decision point"
+    return .error (← rowError body description label?)
   let value := args[4]!
   let template := (← getConstInfo ``canonicalMembership).value!
   let canonical := (mkAppN template #[cone, value]).headBeta
@@ -397,7 +429,9 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOfArity ``Membership.mem 5 then
         if (← whnfUntil body.getAppArgs[1]! ``Set).isSome then
-          return ← normalizeZeroMembershipRow predicate domain point body provider label?
+          unless (← Expr.reduceStructure body.getAppArgs[3]!).isAppOfArity
+              ``Morew.Conic.Cone.powerSet 1 do
+            return ← normalizeZeroMembershipRow predicate domain point body provider label?
         return ← normalizeMembershipRow predicate domain point body provider label?
       if body.isForall then
         return ← normalizeExponentialFamilyRow predicate domain point body provider label?

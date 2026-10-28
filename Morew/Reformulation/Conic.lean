@@ -58,6 +58,28 @@ own domain. Custom records may use subtype inputs or proof parameters discharged
 by this same retained-margin policy, including when their checked replacement
 introduces auxiliary variables. Their targets must remain independent of the
 temporary retained-feasibility proof.
+
+Real powers use exact power-cone representations. Exponents greater than one
+require nonnegative bases; negative exponents require positive bases. Fractional
+powers and binary weighted geometric means support lower bounds through one
+nonnegative auxiliary, including when the original lower bound is negative.
+Native `Real.rpow` and canonical real-exponent `^` spellings have separate
+registered records. Exponent range evidence uses independent hypotheses and
+bounded exact numeral/rational evaluation; it does not combine symbolic
+inequalities automatically. Canonical real exponents zero and one also have
+targeted affine replacements, without base-domain restrictions. Affine
+certification recognizes these endpoints in objectives and rows while preserving
+their expressions: zero powers certify as constant one, and first powers reuse
+the affine base. Endpoint matching does not rewrite symbolic exponents using
+equality hypotheses. Natural-number squares keep their existing SOC rules.
+
+Power-cone rows display as `(x, y, z) ∈ POW α`. Direct use of this notation
+requires a checked independent proof of `0 < α ∧ α < 1` during conic
+certification. Generated numeric parameters simplify to exact rationals, for
+example `1 / (1 - -1 / 2)` becomes `2 / 3`; symbolic parameters and named helper
+constants retain their expressions. Stored presentation retains the actual range
+proof for imported replay. The supported power rules are scalar; grouped power-cone families and
+general vector power atoms are not recognized by these rules.
 -/
 
 namespace Morew.Reformulation.Internal

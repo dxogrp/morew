@@ -282,8 +282,29 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     let proof ← nonzeroProof point args[5]! provider
     return ← construct point expression ``Morew.Affine.Certified.divConst
       #[numerator, args[5]!, proof] (some 2)
+  if name == some ``Real.rpow && args.size == 2 then
+    let exponent ← Expr.reduceStructure args[1]!
+    unless ← Expr.depends point exponent do
+      if ← isDefEq exponent q((0 : ℝ)) then
+        let source ← functionOf point args[0]!
+        return ← construct point expression ``Morew.Affine.Certified.rpowZeroSource
+          #[source] (some 2)
+      if ← isDefEq exponent q((1 : ℝ)) then
+        let base ← reifyBody point args[0]! provider
+        return ← construct point expression ``Morew.Affine.Certified.rpowOne #[base] (some 2)
+    reject expression "a decision-dependent real power is supported only with exponent 0 or 1"
   if name == some ``HPow.hPow && args.size == 6 then
     let exponent ← Expr.reduceStructure args[5]!
+    if ← isDefEq (← inferType exponent) q(ℝ) then
+      unless ← Expr.depends point exponent do
+        if ← isDefEq exponent q((0 : ℝ)) then
+          let source ← functionOf point args[4]!
+          return ← construct point expression ``Morew.Affine.Certified.rpowNotationZeroSource
+            #[source] (some 2)
+        if ← isDefEq exponent q((1 : ℝ)) then
+          let base ← reifyBody point args[4]! provider
+          return ← construct point expression ``Morew.Affine.Certified.rpowNotationOne #[base] (some 2)
+      reject expression "a decision-dependent real power is supported only with exponent 0 or 1"
     if ← isDefEq (← inferType exponent) (mkConst ``Nat) then
       if (← getNatValue? exponent) == some 0 then
         let source ← functionOf point args[4]!

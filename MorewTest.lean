@@ -5,6 +5,7 @@ import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.HelperLimits
 import MorewTest.Affine.Helpers
 import MorewTest.Affine.LocalContext
+import MorewTest.Affine.RealPower
 import MorewTest.Affine.Reification
 import MorewTest.Affine.StateIsolation
 import MorewTest.Affine.Support
@@ -26,6 +27,10 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
+import MorewTest.Conic.Power
+import MorewTest.Conic.PowerEvidence
+import MorewTest.Conic.PowerFailures
+import MorewTest.Conic.PowerRules
 import MorewTest.Conic.Registry
 import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
@@ -118,6 +123,9 @@ import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
+import MorewTest.Reformulation.Power
+import MorewTest.Reformulation.PowerSource
+import MorewTest.Reformulation.PowerWorkflow
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
@@ -148,6 +156,7 @@ import MorewTest.Rewrite.Registry.OrderAB
 import MorewTest.Rewrite.Registry.OrderBA
 import MorewTest.Rewrite.Registry.Second
 import MorewTest.Rewrite.Registry.Source
+import MorewTest.Rewrite.Registry.Types
 import MorewTest.Rewrite.Replace
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
