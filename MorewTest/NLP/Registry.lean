@@ -360,4 +360,107 @@ run_cmd liftTermElabM do
     (some ``Morew.Rewrite.norm2Epigraph)
 end
 
+-- The premise is essential: dropping nonnegativity changes the represented bound.
+noncomputable def nonnegativeAbsRule :
+    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+  Auxiliary := ℝ
+  target x t u := u = x.1 ∧ u ≤ t
+  source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property]
+
+-- NLP retains its bounded arithmetic policy: two closed rows can establish a
+-- premise, while unsupported strict/opaque rows remain unavailable as evidence.
+run_cmd liftTermElabM do
+  check (← `(input (fun p : ℝ × ℝ => userAbs p.1 ≤ 3)
+    #[(fun p : ℝ × ℝ => 0 ≤ p.2), (fun p : ℝ × ℝ => p.2 ≤ p.1)]))
+    2 (some ``nonnegativeAbsRule)
+  reject (← `(input (fun x : ℝ => userAbs x ≤ 3) #[]))
+    "missing retained premise" (some ``nonnegativeAbsRule)
+  reject (← `(input (fun x : ℝ => userAbs x ≤ 3) #[(fun x : ℝ => 0 < x)]))
+    "missing retained premise" (some ``nonnegativeAbsRule)
+
+-- The same callback specializes finite evidence only at compatible indices
+-- actually present in the obligation; a different coordinate proves nothing.
+run_cmd liftTermElabM do
+  check (← `(fun (n : ℕ) (i : Fin n) => input
+    (fun v : Fin n → ℝ => userAbs (v i) ≤ 3)
+    #[(fun v : Fin n → ℝ => ∀ j, 0 ≤ v j)]))
+    2 (some ``nonnegativeAbsRule) 2
+  check (← `(input (fun v : Fin 2 → ℝ => userAbs (v 1) ≤ 3)
+    #[(fun v : Fin 2 → ℝ => (0 : Fin 2 → ℝ) ≤ v)]))
+    2 (some ``nonnegativeAbsRule)
+  reject (← `(input (fun v : Fin 2 → ℝ => userAbs (v 1) ≤ 3)
+    #[(fun v : Fin 2 → ℝ => 0 ≤ v 0)]))
+    "missing retained premise" (some ``nonnegativeAbsRule)
+
+-- A uniform finite auxiliary remains a family even in dimension zero.
+noncomputable def nonnegativeAbsVectorRule (n : ℕ) :
+    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+  Auxiliary := Fin n → ℝ
+  target x t u := (∀ i, u i = x.1) ∧ x.1 ≤ t
+  source_iff_exists x t := by
+    simp only [userAbs, abs_of_nonneg x.property]
+    exact ⟨fun h => ⟨fun _ => x.1, fun _ => rfl, h⟩, fun ⟨_, _, h⟩ => h⟩
+
+run_cmd liftTermElabM do
+  let rule ← Domain.elaborate (← `(nonnegativeAbsVectorRule 0))
+  Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
+    #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
+    let .ok result ← Morew.Elab.NLP.Rewrite.plan source retained (some rule)
+      | throwError "zero-dimensional contextual auxiliary was rejected"
+    unless result.auxiliary?.isSome do throwError "finite auxiliary was erased as Unit"
+    result.toResult.check source retained
+    for proof in result.certified.rowCertificates do checkWithKernel proof
+
+run_cmd liftTermElabM do
+  let expression ← Domain.elaborate (← `(fun n : ℕ => nonnegativeAbsVectorRule n))
+  lambdaBoundedTelescope expression 1 fun _ rule => do
+    Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
+      #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
+      let .ok result ← Morew.Elab.NLP.Rewrite.plan source retained (some rule)
+        | throwError "symbolic contextual auxiliary was rejected"
+      unless result.auxiliary?.isSome do throwError "finite auxiliary was erased as Unit"
+      result.toResult.check source retained
+      for proof in result.certified.rowCertificates do checkWithKernel proof
+
+noncomputable def nonnegativeAbsGraph :
+    GraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+  Auxiliary := ℝ
+  target x y u := u = x.1 ∧ y = u
+  source_iff_exists x y := by simp [userAbs, abs_of_nonneg x.property]
+
+noncomputable def nonnegativeAbsHypograph :
+    HypographRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+  Auxiliary := ℝ
+  target x t u := u = x.1 ∧ t ≤ u
+  source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property]
+
+run_cmd liftTermElabM do
+  check (← `(input (fun x : ℝ => userAbs x = 3)
+    #[(fun x : ℝ => 0 ≤ x)])) 2 (some ``nonnegativeAbsGraph)
+  check (← `(input (fun x : ℝ => 3 = userAbs x)
+    #[(fun x : ℝ => 0 ≤ x)])) 2 (some ``nonnegativeAbsGraph)
+  check (← `(input (fun x : ℝ => 3 ≤ userAbs x)
+    #[(fun x : ℝ => 0 ≤ x)])) 2 (some ``nonnegativeAbsHypograph)
+
+-- Once conditional exactness is checked, a generated equality may justify
+-- smooth evaluation. The analogous zero guard is mathematically exact under
+-- Lean's total logarithm, but fails the intended positive-domain policy.
+noncomputable def nonnegativeAbsLogRule (c : ℝ) (hc : Real.log c = 0) :
+    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+  Auxiliary := ℝ
+  target x t u := u = c ∧ x.1 + Real.log u ≤ t
+  source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property, hc]
+
+run_cmd liftTermElabM do
+  let rule ← Domain.elaborate (← `(nonnegativeAbsLogRule 1 Real.log_one))
+  Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
+    #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
+    let .ok result ← Morew.Elab.NLP.Rewrite.plan source retained (some rule)
+      | throwError "generated equality did not establish the conditional target's domain"
+    result.toResult.check source retained
+    checkWithKernel result.certified.feasibleMemDomain
+  let invalid ← Domain.elaborate (← `(nonnegativeAbsLogRule 0 Real.log_zero))
+  reject (← `(input (fun x : ℝ => userAbs x ≤ 3)
+    #[(fun x : ℝ => 0 ≤ x)])) "generated row certification failed" (rule? := some invalid)
+
 end MorewTest.NLP.Registry

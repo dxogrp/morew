@@ -199,6 +199,39 @@ run_cmd liftTermElabM do
 
 end StructuralHelperOpacity
 
+private noncomputable def nonnegativeAbs (x : ℝ) : ℝ := |x|
+
+private noncomputable def nonnegativeAbsGraph :
+    GraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+  Auxiliary := ℝ
+  target x y u := u = x.val ∧ y = u
+  source_iff_exists x y := by simp [nonnegativeAbs, abs_of_nonneg x.property]
+
+private noncomputable def nonnegativeAbsEpigraph :
+    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+  Auxiliary := ℝ
+  target x t u := u = x.val ∧ u ≤ t
+  source_iff_exists x t := by simp [nonnegativeAbs, abs_of_nonneg x.property]
+
+section
+attribute [local morew_conic] nonnegativeAbsGraph nonnegativeAbsEpigraph
+
+run_cmd liftTermElabM do
+  let margin ← elaborate (← `(fun p : ℝ × ℝ => 0 ≤ p.1))
+  let expected := #[← `(fun p : (ℝ × ℝ) × ℝ => p.2 = p.1.1),
+    ← `(fun p : (ℝ × ℝ) × ℝ => p.1.2 = p.2)]
+  check (← `(fun p : ℝ × ℝ => p.2 = nonnegativeAbs p.1)) 2 #[margin]
+    (expected := expected)
+  check (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 = p.2)) 2 #[margin]
+    (some ``nonnegativeAbsGraph) (expected := expected)
+  reject (← `(fun p : ℝ × ℝ => p.2 = nonnegativeAbs p.1))
+    "nonnegative constant margin" #[] (some ``nonnegativeAbsGraph)
+  check (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 ≤ p.2)) 2 #[margin]
+    (expected := #[expected[0]!, ← `(fun p : (ℝ × ℝ) × ℝ => p.2 ≤ p.1.2)])
+  reject (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 ≤ p.2))
+    "nonnegative constant margin" #[] (some ``nonnegativeAbsEpigraph)
+end
+
 noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x
 
 /-- Domain restriction is checked through a subtype, with no trusted metadata. -/
@@ -235,6 +268,38 @@ run_cmd liftTermElabM do
     "positive constant margin" #[] (some ``positiveLogWithAuxiliary)
   check (← `(fun t : ℝ => t ≤ positiveLog 2)) 2 #[]
     (some ``positiveLogWithAuxiliary)
+
+private def hiddenPositive (c : ℝ) : Prop := 0 < c
+
+-- A retained row about parameters still belongs to the controlled row policy;
+-- it cannot become an independent local hypothesis merely by ignoring x.
+run_cmd liftTermElabM do
+  for row in #[← `(fun c : ℝ => fun _x : ℝ => 0 < c),
+      ← `(fun c : ℝ => fun _x : ℝ => hiddenPositive c)] do
+    let term ← elaborate (← `(fun c : ℝ => fun x : ℝ => x ≤ positiveLog c))
+    let row ← elaborate row
+    lambdaBoundedTelescope term 1 fun parameters source => do
+      let before ← getMCtx
+      let environment ← getEnv
+      let retained := #[mkApp row parameters[0]!]
+      let .error error ← Morew.Elab.Conic.Rewrite.planDeclaration source
+          ``positiveLogWithAuxiliary retained
+        | throwError "parameter-only retained rows bypassed the checked margin policy"
+      unless (← error.reason.toString).contains "positive constant margin" do
+        throwError "unexpected parameter-only margin diagnostic: {error.reason}"
+      unless before.mvarCounter == (← getMCtx).mvarCounter do
+        throwError "rejected parameter-only margin leaked metavariables"
+      if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+        throwError "rejected parameter-only margin leaked declaration {name}"
+  let term ← elaborate (← `(fun (c : ℝ) (_h : 0 < c) =>
+    fun x : ℝ => x ≤ positiveLog c))
+  lambdaBoundedTelescope term 2 fun _ source => do
+    let .ok result ← Morew.Elab.Conic.Rewrite.planDeclaration source
+        ``positiveLogWithAuxiliary
+      | throwError "an independent parameter hypothesis was rejected"
+    let .exact _ := result.certificate
+      | throwError "an independent parameter hypothesis retained a row context"
+    result.toResult.check source #[]
 
 /-- Target-local proof lets must remain available to the affine consumer. -/
 noncomputable def quotientWithProofLet (c : ℝ) (h : c = 1) :
