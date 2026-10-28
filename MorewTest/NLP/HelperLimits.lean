@@ -35,19 +35,20 @@ private def unchanged (before : MetavarContext) (environment : Environment) : Me
     throwError "helper certification leaked declaration {name}"
 
 private def assertLimit (term : TSyntax `term) (option : String)
-    (helper : String) (limit : Nat) : TermElabM Unit := do
-  let source ← elaborate term
-  let before ← getMCtx
-  let environment ← getEnv
-  let result ← Morew.Elab.NLP.Smooth.certifyGlobal source
-  unchanged before environment
-  let .error error := result | throwError "smooth helper expansion exceeded {option}"
-  unless error.kind == .expansionLimit && error.source == source do
-    throwError "expected a structured helper limit failure: {error.reason}"
-  let message ← error.reason.toString
-  unless message.contains option && message.contains helper &&
-      message.contains s!"limit {limit}" do
-    throwError "helper limit diagnostic omitted its option, helper, or configured limit: {message}"
+    (helper : String) (limit : Nat) (parameterCount : Nat := 0) : TermElabM Unit := do
+  let expression ← elaborate term
+  lambdaBoundedTelescope expression parameterCount fun _ source => do
+    let before ← getMCtx
+    let environment ← getEnv
+    let result ← Morew.Elab.NLP.Smooth.certifyGlobal source
+    unchanged before environment
+    let .error error := result | throwError "smooth helper expansion exceeded {option}"
+    unless error.kind == .expansionLimit && error.source == source do
+      throwError "expected a structured helper limit failure: {error.reason}"
+    let message ← error.reason.toString
+    unless message.contains option && message.contains helper &&
+        message.contains s!"limit {limit}" do
+      throwError "helper limit diagnostic omitted its option, helper, or configured limit: {message}"
 
 set_option morew.smooth.maxExpansionDepth 0 in
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -101,6 +102,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun x : ℝ =>
     ((fun y : ℝ => y + y + y + y), (0 : ℝ)).1
       (x + x + x + x + x + x + x + x)))
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let z := y + y + y + y
+    (z + z + z + z) * x)) 1
 
 -- All inputs fit the limit; helper substitution creates the oversized tree.
 set_option morew.smooth.maxExpansionNodes 200 in
@@ -116,6 +121,34 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless (← elaborate term).sizeWithoutSharing < 200 do
       throwError "growth regression no longer starts below its node budget"
     assertLimit term "morew.smooth.maxExpansionNodes" helper 200
+  assertLimit (← `(fun c : ℝ => fun x : ℝ => duplicateIndependentLet c x))
+    "morew.smooth.maxExpansionNodes" "duplicateIndependentLet" 200 1
+  assertLimit (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    repeatCoefficient y x))
+    "morew.smooth.maxExpansionNodes" "repeatCoefficient" 200 1
+  assertLimit (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let p := (y, (0 : ℝ))
+    repeatCoefficient p.1 x))
+    "morew.smooth.maxExpansionNodes" "repeatCoefficient" 200 1
+  assertLimit (← `(fun c : ℝ => fun x : Fin 2 → ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    ∑ i, let p := (y, i)
+         repeatCoefficient p.1 (x i)))
+    "morew.smooth.maxExpansionNodes" "repeatCoefficient" 200 1
+
+-- Closing the inner binding multiplies the outer binding's occurrences.
+-- Charging only each original let body would fit this limit incorrectly.
+set_option morew.smooth.maxExpansionNodes 1500 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertLimit (← `(fun c : ℝ => fun x : ℝ => chainedIndependentLets c x))
+    "morew.smooth.maxExpansionNodes" "chainedIndependentLets" 1500 1
+  assertLimit (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let z := y + y + y + y
+    repeatCoefficient z x))
+    "morew.smooth.maxExpansionNodes" "repeatCoefficient" 1500 1
 
 set_option morew.smooth.maxExpansionNodes 10000 in
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -126,6 +159,22 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun x : ℝ => projectedDuplicate.1
     (x + x + x + x + x + x + x + x)))
   assertSmooth (← `(fun x : ℝ => aliasDuplicate x))
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => duplicateIndependentLet c x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => chainedIndependentLets c x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let z := y + y + y + y
+    repeatCoefficient z x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let p := (y, (0 : ℝ))
+    repeatCoefficient p.1 x)) 1
+  assertSmooth (← `(fun c : ℝ => fun x : Fin 2 → ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    ∑ i, let p := (y, i)
+         repeatCoefficient p.1 (x i))) 1
+  Domain.assertDomain (← `(fun c : ℝ => ((fun _x : ℝ => True),
+    #[fun x : ℝ => chainedIndependentLets c x]))) 1
 
 -- Cache hits still consume the cumulative node budget for every occurrence.
 set_option morew.smooth.maxExpansionNodes 32 in
@@ -134,6 +183,14 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertLimit (← `(fun x : ℝ => square x + square x))
     "morew.smooth.maxExpansionNodes" "square" 32
   assertSmooth (← `(fun x : ℝ => square x))
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => square x +
+    (let y := c + c + c + c + c + c + c + c
+     let z := y + y + y + y
+     (z + z + z + z) * x))) 1
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ =>
+    let y := c + c + c + c + c + c + c + c
+    let z := y + y + y + y
+    square x + (z + z + z + z) * x)) 1
 
 -- Local options restore on leaving their command and do not cross certifiers.
 set_option morew.affine.maxExpansionDepth 0 in
@@ -196,6 +253,27 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let .error error := result | throwError "helper expansion erased an incomplete argument"
     unless error.kind == .unresolved && error.source == source do
       throwError "helper expansion changed the unresolved-input boundary"
+
+-- This dependent helper would erase its entire argument once expanded. Input
+-- validation must inspect the original local alias before that can happen.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSmooth (← `(fun c : ℝ => fun x : ℝ => ignored (c + x))) 1
+  let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => ignored (c + x)))
+  let missing ← mkFreshExprMVar (mkConst ``Real)
+  withLetDecl `coefficient (mkConst ``Real) missing fun coefficient => do
+    let source := mkApp builder coefficient
+    if source.hasMVar then
+      throwError "ignored-argument hole is not hidden in its local alias"
+    let before ← getMCtx
+    let environment ← getEnv
+    let result ← Morew.Elab.NLP.Smooth.certifyGlobal source
+    unchanged before environment
+    let .error error := result
+      | throwError "dependent helper expansion erased an incomplete argument"
+    unless error.kind == .unresolved && error.source == source do
+      throwError "dependent helper expansion changed the unresolved-input boundary"
+  if ← missing.mvarId!.isAssigned then
+    throwError "ignored-argument validation filled a caller hole"
 
 set_option morew.smooth.maxExpansionSteps 1 in
 run_cmd Lean.Elab.Command.liftTermElabM do

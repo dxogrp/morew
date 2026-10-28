@@ -147,9 +147,20 @@ private structure Context where
   facts? : Option Domain.Evidence.FactsProvider := none
   expansion : Expansion.Config
   helpers : Array Expr := #[]
+  aliases : Array FVarId := #[]
+
+-- A helper can duplicate a native outer alias before that alias is closed.
+-- Retain only its model value, never the surrounding native expression/proof.
+private structure PendingHelperModel where
+  expression : Expr
+  helper : Expr
+  helperMessage : MessageData
+
+private structure CertifyState extends Expansion.Session where
+  pendingModels : Array PendingHelperModel := #[]
 
 private abbrev CertifyM :=
-  ReaderT Context (StateRefT Expansion.Session (ExceptT SmoothError MetaM))
+  ReaderT Context (StateRefT CertifyState (ExceptT SmoothError MetaM))
 
 private def expansionConfig : MetaM Expansion.Config := do
   let options ← getOptions
@@ -204,14 +215,22 @@ private def reject (expression : Expr) (kind : SmoothFailureKind)
       m!"cannot certify smoothness of {(← read).source}: at {expression}: {reason}"
   }
 
-private def expansionAction (action : Expansion.ExpandM α) : CertifyM α := do
+private def expansionAction (action : Expansion.ExpandM α)
+    (attribution? : Option PendingHelperModel := none) : CertifyM α := do
   let state ← get
-  let state := { state with helper? := (← read).helpers.back? }
-  match ← Expansion.run action state with
-  | .ok (value, state) =>
-    set state
+  let lexicalHelper? := (← read).helpers.back?
+  let helper? := match attribution? with
+    | some model => some model.helper
+    | none => lexicalHelper?
+  let expansion := { state.toSession with helper? }
+  match ← Expansion.run action expansion with
+  | .ok (value, expansion) =>
+    set { state with toSession := expansion }
     return value
   | .error error =>
+    let error := match attribution? with
+      | some model => { error with expressionMessage := model.helperMessage }
+      | none => error
     reject error.expression .expansionLimit (error.toMessageData (← read).expansion.label)
 
 private partial def supportedSpaceShape (euclidean : Bool) (type : Expr) : MetaM Bool := do
@@ -245,6 +264,43 @@ private def certificateFunction (proof : Expr) : MetaM Expr := do
   unless type.isAppOf ``ContDiffOn do
     throwError "internal smooth constructor returned an unexpected proposition"
   return type.getAppArgs[type.getAppNumArgs - 2]!
+
+-- Bind parameters whose scopes may end before an outer alias closes. The
+-- active aliases stay free so their later substitutions can be checked.
+private def closeModelParameters (aliases : Array FVarId) (expression : Expr) : MetaM Expr := do
+  let parameters := (← getLCtx).getFVars.filter fun parameter =>
+    !aliases.contains parameter.fvarId!
+  mkLambdaFVars parameters expression (usedOnly := true)
+
+private def rememberHelperModel (point helper : Expr) (result : Certificate) : CertifyM Unit := do
+  let context ← read
+  unless context.helpers.isEmpty && !context.aliases.isEmpty do return
+  let expression ← closeModelParameters context.aliases
+    ((← certificateFunction result.smooth).beta #[point])
+  unless context.aliases.any expression.containsFVar do return
+  let helperMessage ← addMessageContext m!"{helper}"
+  let helper ← mkLambdaFVars (← getLCtx).getFVars helper
+    (usedOnly := true) (generalizeNondepLet := false)
+  modify fun state => { state with
+    pendingModels := state.pendingModels.push { expression, helper, helperMessage } }
+
+-- Only helper-origin values pay for closing native outer aliases. Updating
+-- each retained value here makes chained aliases account for inner duplication;
+-- records disappear as soon as no active outer alias remains in their value.
+private def closePendingModels (name : Name) (type binding value : Expr) : CertifyM Unit := do
+  let aliases := (← read).aliases
+  let bounds := (← read).expansion
+  let mut pending := #[]
+  for model in (← get).pendingModels do
+    let mut expression := model.expression
+    if expression.containsFVar binding.fvarId! then
+      expansionAction (Expansion.chargeBeta
+        (.lam name type (expression.abstract #[binding]) .default) #[value] bounds) (some model)
+      expression := expression.replaceFVars #[binding] #[value]
+      expression ← closeModelParameters aliases expression
+    if aliases.any expression.containsFVar then
+      pending := pending.push { model with expression }
+  modify fun state => { state with pendingModels := pending }
 
 -- Reuse the body already certified for an operand. This carries selective
 -- expansion through native compositions into domain proof search without a
@@ -501,7 +557,17 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     -- so keep them transparent until every returned field is closed below.
     let nondep := nondep && (← read).helpers.isEmpty
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← certifyBody point (body.instantiate1 binding)
+      let result ← withReader (fun context =>
+        if context.helpers.isEmpty then { context with aliases := context.aliases.push binding.fvarId! }
+        else context) <| certifyBody point (body.instantiate1 binding)
+      unless (← read).helpers.isEmpty do
+        -- Inner lets may already have multiplied this binding's occurrences.
+        -- Charge its substitution in the actual certified value before closing
+        -- the local scope, without counting duplication in proof bookkeeping.
+        let certified := (← certificateFunction result.smooth).beta #[point]
+        if certified.containsFVar binding.fvarId! then
+          chargeSubstitution (.lam name type (certified.abstract #[binding]) .default) #[value]
+      closePendingModels name type binding value
       return {
         domain := ← result.domain.replaceFVarsM #[binding] #[value]
         isOpen := ← result.isOpen.replaceFVarsM #[binding] #[value]
@@ -527,10 +593,12 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if structural then
       if let some step ← expansionAction <| unfoldValueHead?
           (← read).expansion expression (← read).helpers.size then
-        return ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
+        let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
           unless ← Domain.Evidence.complete step.expression do
             reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
           certifyBody point step.expression
+        rememberHelperModel point step.helper result
+        return result
   if expression == point then
     let info ← univInfo point
     return { info with
@@ -754,10 +822,12 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   if !independent && Expansion.enabled (← read).expansion then
     if let some step ← expansionAction <| unfoldValueHead?
         (← read).expansion expression (← read).helpers.size then
-      return ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
+      let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
         unless ← Domain.Evidence.complete step.expression do
           reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
         certifyBody point step.expression
+      rememberHelperModel point step.helper result
+      return result
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← supportedSpace vectorType) then

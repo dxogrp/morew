@@ -97,6 +97,14 @@ def duplicate (x : ℝ) : ℝ := x + x + x + x
 def duplicateLet (x : ℝ) : ℝ :=
   let y := x + x + x + x + x + x + x + x
   y + y + y + y
+def duplicateIndependentLet (c x : ℝ) : ℝ :=
+  let y := c + c + c + c + c + c + c + c
+  (y + y + y + y) * x
+def chainedIndependentLets (c x : ℝ) : ℝ :=
+  let y := c + c + c + c + c + c + c + c
+  let z := y + y + y + y
+  (z + z + z + z) * x
+def repeatCoefficient (c x : ℝ) : ℝ := (c + c + c + c) * x
 def applyHelper (f : ℝ → ℝ) (x : ℝ) : ℝ := f x
 def projectedDuplicate : (ℝ → ℝ) × ℝ := ((fun x => x + x + x + x), 0)
 def aliasDuplicate (x : ℝ) : ℝ :=
