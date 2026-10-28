@@ -181,6 +181,85 @@ run_elab do
   matched (← `(fun x : ℝ => bounded (x + 1))) ``boundedRule
   matched (← `(fun p : ℝ × ℝ => bounded (p.1 + 1))) ``boundedRule
 
+private noncomputable def exactSubtypeRule : Morew.ExactConstraintLift
+    (fun x : {x : ℝ // 0 ≤ x} => |x.val| ≤ 3) where
+  Auxiliary := ℝ
+  target x u := u = x.val ∧ u ≤ 3
+  source_iff_exists x := by simp [abs_of_nonneg x.property]
+
+private noncomputable def exactNestedSubtypeRule : Morew.ExactConstraintLift
+    (fun x : {x : {x : ℝ // 0 ≤ x} // x.val ≤ 2} => |x.val.val| ≤ 3) where
+  Auxiliary := ℝ
+  target x u := u = x.val.val ∧ u ≤ 3
+  source_iff_exists x := by simp [abs_of_nonneg x.val.property]
+
+-- Explicit exact records may wrap the whole decision in checked subtypes.
+-- They must not inherit declaration matching's arbitrary input maps.
+private def explicitExactMatch (source rule retained : TSyntax `term)
+    (expected? : Option (Array Nat)) : TermElabM Unit := do
+  let source ← elaborate source
+  let rule ← elaborate rule
+  let retained ← elaborate retained
+  let domain ← Plan.predicateDomain source
+  withLocalDeclD `point domain fun point => do
+    withLocalDeclD `retained (mkApp retained point) fun hypothesis => do
+      let facts ← #[``And.left, ``And.right].mapM fun name => mkAppM name #[hypothesis]
+      let calls ← IO.mkRef (#[] : Array Nat)
+      let before ← getMCtx
+      let environment ← getEnv
+      let result? ← try
+          let result ← Match.rule point (mkApp source point) rule pure fun wanted => do
+            for i in [:facts.size] do
+              if ← isDefEq wanted (← inferType facts[i]!) then
+                calls.modify (·.push i)
+                return some facts[i]!
+            return none
+          pure (some result)
+        catch error =>
+          if expected?.isSome then
+            throwError "explicit exact matching {rule} on {source}: {error.toMessageData}"
+          pure none
+      unless before.mvarCounter == (← getMCtx).mvarCounter &&
+          before.lmvarCounter == (← getMCtx).lmvarCounter do
+        throwError "explicit subtype matching leaked scratch metavariables"
+      if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
+        throwError "explicit subtype matching leaked declaration {name}"
+      match expected?, result? with
+      | none, none => pure ()
+      | some expected, some result =>
+        unless (← calls.get) == expected do
+          throwError "explicit subtype guards were not solved from inner to outer"
+        unless result.usedEvidence == !expected.isEmpty do
+          throwError "explicit subtype matching misreported retained evidence"
+        let target ← mkAppM ``Exists #[result.target]
+        unless ← isDefEq (← inferType result.sourceIff)
+            (mkApp2 (mkConst ``Iff) (mkApp source point) target) do
+          throwError "explicit subtype matching changed the entire selected predicate"
+        checkWithKernel result.sourceIff
+      | none, some _ => throwError "explicit exact matching inferred an unsupported input"
+      | some _, none => throwError "explicit exact matching rejected checked subtype guards"
+
+run_elab do
+  let guards ← `(fun x : ℝ => 0 ≤ x ∧ x ≤ 2)
+  explicitExactMatch (← `(fun x : ℝ => |x| ≤ 3)) (← `(exactSubtypeRule)) guards
+    (some #[0])
+  explicitExactMatch (← `(fun x : ℝ => |x| ≤ 3)) (← `(exactNestedSubtypeRule)) guards
+    (some #[0, 1])
+  explicitExactMatch (← `(fun x : {x : ℝ // 0 ≤ x} => |x.val| ≤ 3))
+    (← `(exactSubtypeRule)) (← `(fun _ : {x : ℝ // 0 ≤ x} => True ∧ True))
+    (some #[])
+  explicitExactMatch (← `(fun x : ℝ => bounded x)) (← `(boundedRule)) guards
+    (some #[])
+  explicitExactMatch (← `(fun x : ℝ => bounded (x + 1))) (← `(boundedRule)) guards none
+  explicitExactMatch (← `(fun p : ℝ × ℝ => bounded p.1)) (← `(boundedRule))
+    (← `(fun _ : ℝ × ℝ => True ∧ True)) none
+  explicitExactMatch (← `(fun x : ℝ => |x + 1| ≤ 3)) (← `(exactSubtypeRule)) guards none
+  explicitExactMatch (← `(fun x : ℝ => |x| ≤ 4)) (← `(exactSubtypeRule)) guards none
+  explicitExactMatch (← `(fun p : ℝ × ℝ => |p.1| ≤ 3)) (← `(exactSubtypeRule))
+    (← `(fun p : ℝ × ℝ => 0 ≤ p.1 ∧ p.1 ≤ 2)) none
+  explicitExactMatch (← `(fun x : ℝ => |x| ≤ 3)) (← `(exactSubtypeRule))
+    (← `(fun _ : ℝ => True ∧ True)) none
+
 run_elab do
   matched (← `(fun p : ℝ × ℝ => p.2 = shifted 3 p.1)) ``shiftedGraph
   matched (← `(fun p : ℝ × ℝ => shifted 3 p.1 = p.2)) ``shiftedGraph
