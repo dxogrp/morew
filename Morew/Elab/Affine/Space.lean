@@ -57,10 +57,6 @@ noncomputable def pi (ι : Type*) {Y : Type*} (a : Structure Y) :
 
 end Structure
 
-/-- Compatibility wrapper for shared finite real Euclidean-space recognition. -/
-abbrev euclideanDimension? (type : Expr) : MetaM (Option Expr) :=
-  Morew.Elab.Expr.euclideanDimension? type
-
 private structure BuiltSpace where
   data : Expr
   instances : Array Expr
@@ -81,7 +77,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
-  else if let some n ← euclideanDimension? shape then
+  else if let some n ← Expr.euclideanDimension? shape then
     finishSpace type (← mkAppM ``Structure.euclidean #[n])
   else if shape.isAppOfArity ``Prod 2 then
     let left ← buildSpace shape.getAppArgs[0]!

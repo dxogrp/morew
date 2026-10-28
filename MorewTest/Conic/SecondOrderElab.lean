@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
+import Morew.Elab.Expr
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
@@ -92,7 +93,7 @@ private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
     (failure? : Option String := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ pair => do
-    let pair ← Morew.Elab.Affine.reduceStructure pair
+    let pair ← Morew.Elab.Expr.reduceStructure pair
     unless pair.isAppOfArity ``Prod.mk 4 do throwError "expected a source/retained pair"
     let source := pair.getAppArgs[2]!
     let some retained ← getArrayLit? pair.getAppArgs[3]!

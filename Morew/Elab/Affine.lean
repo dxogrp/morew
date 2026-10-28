@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Affine
 import Morew.Elab.Expr
 import Morew.Elab.Affine.Space
-import Morew.Elab.Affine.State
+import Morew.Elab.State
 import Morew.Elab.Affine.Expansion
 import Morew.Core
 import Mathlib.Tactic.NormNum
@@ -55,26 +55,6 @@ namespace Morew.Elab.Affine
 
 open Lean Lean.Meta Qq
 
-/-- Compatibility alias for the shared expression-recognition diagnostic. -/
-abbrev AffineError := Morew.Elab.Expr.Error
-
-namespace AffineError
-
-/-- Compatibility constructor for the shared expression-recognition diagnostic. -/
-@[match_pattern]
-abbrev mk (expression : Expr) (reason : MessageData) : AffineError :=
-  Morew.Elab.Expr.Error.mk expression reason
-
-/-- Compatibility projection for the expression at which recognition failed. -/
-abbrev expression (error : AffineError) : Expr := Morew.Elab.Expr.Error.expression error
-
-/-- Compatibility projection for the contextual recognition diagnostic. -/
-abbrev reason (error : AffineError) : MessageData := Morew.Elab.Expr.Error.reason error
-
-end AffineError
-
-instance : ToMessageData AffineError := ⟨(·.reason)⟩
-
 /-- Optional proof provision for metaprogram authors using the restricted division
 rule. The default provider relies on local hypotheses and bounded evaluation. -/
 structure EvidenceProvider where
@@ -90,50 +70,25 @@ structure AffineResult where
   /-- A proof of `∀ x, map x = source x`. -/
   pointwiseEquality : Expr
 
-private abbrev ReifyM := ExceptT AffineError MetaM
+private abbrev ReifyM := ExceptT Expr.Error MetaM
 
 private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
-  throwThe AffineError {
+  throwThe Expr.Error {
     expression
     reason := ← addMessageContext
       m!"cannot certify affine expression {expression}: {reason}"
   }
-
-/-- Compatibility wrapper for shared local dependency and metavariable inspection. -/
-private abbrev inspectLocals (expression : Expr) (point? : Option FVarId)
-    (seen : FVarIdSet := {}) : MetaM (Bool × Bool) :=
-  Morew.Elab.Expr.inspectLocals expression point? seen
-
-/-- Compatibility wrapper for shared decision-dependence inspection. -/
-abbrev depends (point expression : Expr) : MetaM Bool :=
-  Morew.Elab.Expr.depends point expression
-
-/-- Compatibility wrapper for shared unresolved-metavariable inspection. -/
-abbrev hasUnresolved (expression : Expr) : MetaM Bool :=
-  Morew.Elab.Expr.hasUnresolved expression
-
-/-- Compatibility wrapper for shared structural reduction, preserving its options. -/
-abbrev reduceStructure (expression : Expr) (preserveLets : Bool := false)
-    (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr :=
-  Morew.Elab.Expr.reduceStructure expression preserveLets opaqueProblemDependencies?
-
-/-- Compatibility wrapper for shared real-space shape recognition. -/
-abbrev isSupportedSpace (type : Expr) : MetaM Bool :=
-  Morew.Elab.Expr.isSupportedSpace type
-
-/-- Compatibility wrapper for shared source-local finiteness discovery. -/
-abbrev sourceFiniteInstances (source : Expr) : MetaM (Array Expr) :=
-  Morew.Elab.Expr.sourceFiniteInstances source
 
 /-- Discover additional finite-index evidence hidden in transparent value helpers.
 This is used only after a direct certification attempt fails. It never changes
 the predicate or objective retained by the caller. -/
 def helperFiniteInstances (source : Expr) : MetaM (Array Expr) := do
   unless ← Expansion.enabled do return #[]
-  let prepared ← Expansion.prepare source (fun expression preserve => reduceStructure expression preserve)
+  let prepared ← Expansion.prepare source
+    (fun expression preserve => Expr.reduceStructure expression preserve)
   if prepared.expansions == 0 then return #[]
-  let original ← sourceFiniteInstances source
-  return (← sourceFiniteInstances prepared.expression).filter (!original.contains ·)
+  let original ← Expr.sourceFiniteInstances source
+  return (← Expr.sourceFiniteInstances prepared.expression).filter (!original.contains ·)
 
 private def withFiniteInstances (instances : List Expr) (action : ReifyM Expr) :
     ReifyM Expr := do
@@ -156,7 +111,7 @@ private def certifiedFunction (certificate : Expr) : MetaM Expr := do
 -- nonstandard operation could coincide with the standard one on these operands.
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
-  let expected ← reduceStructure expected
+  let expected ← Expr.reduceStructure expected
   let sourceArgs := source.getAppArgs
   let expectedArgs := expected.getAppArgs
   unless source.getAppFn == expected.getAppFn &&
@@ -177,7 +132,7 @@ private def finish (point source certificate : Expr)
   return certificate
 
 private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : ReifyM Expr := do
-  if ← depends point inst then
+  if ← Expr.depends point inst then
     reject inst "the finite indexing instance depends on a decision variable"
   mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
 
@@ -198,14 +153,14 @@ private def construct (point source : Expr) (name : Name) (args : Array Expr)
   finish point source certificate operandCount?
 
 private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
-  if ← depends point divisor then
+  if ← Expr.depends point divisor then
     reject divisor "the divisor depends on a decision variable"
   let zero : Expr := q((0 : ℝ))
   let obligation ← mkAppM ``Ne #[divisor, zero]
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
       if ← isDefEq declaration.type obligation then
-        let (dependent, unresolved) ← inspectLocals declaration.toExpr (some point.fvarId!)
+        let (dependent, unresolved) ← Expr.inspectLocals declaration.toExpr (some point.fvarId!)
         if dependent then
           reject divisor "nonzero evidence depends on the decision point"
         if unresolved then
@@ -215,7 +170,7 @@ private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : 
     if let some proof ← provide obligation then
       unless ← isDefEq (← inferType proof) obligation do
         reject divisor "supplied evidence does not prove that the divisor is nonzero"
-      let (dependent, unresolved) ← inspectLocals proof (some point.fvarId!)
+      let (dependent, unresolved) ← Expr.inspectLocals proof (some point.fvarId!)
       if dependent then
         reject divisor "nonzero evidence depends on the decision point"
       if unresolved then
@@ -239,24 +194,24 @@ private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : 
   reject divisor m!"missing nonzero evidence; required {obligation}"
 
 private partial def reifyBody (point expression : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
-  let expression ← reduceStructure expression (preserveLets := true)
+  let expression ← Expr.reduceStructure expression (preserveLets := true)
   if let .letE name type value body nondep := expression then
     -- A local alias of the decision point must be substituted before building
     -- a new function binder. Independent lets retain useful proof/instance scope.
-    if (← depends point type) || (← depends point value) then
+    if (← Expr.depends point type) || (← Expr.depends point value) then
       return ← reifyBody point (body.instantiate1 value) provider
     return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
       reifyBody point (body.instantiate1 binding) provider
   let type ← inferType expression
-  unless ← isSupportedSpace type do
+  unless ← Expr.isSupportedSpace type do
     reject expression m!"unsupported affine value type {type}"
   let domain ← inferType point
-  if !(← depends point expression) then
+  if !(← Expr.depends point expression) then
     return ← construct point expression ``Morew.Affine.Certified.const #[domain, expression]
   if expression == point then
     return ← construct point expression ``Morew.Affine.Certified.id #[domain]
   if let .proj ``WithLp 0 value := expression then
-    if (← Space.euclideanDimension? (← inferType value)).isSome then
+    if (← Expr.euclideanDimension? (← inferType value)).isSome then
       let value ← reifyBody point value provider
       return ← construct point expression ``Morew.Affine.Certified.ofEuclidean #[value]
   if let .proj ``Prod index value := expression then
@@ -273,11 +228,11 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   let args := expression.getAppArgs
   let name := head.constName?
   if name == some ``WithLp.toLp && args.size == 3 then
-    if (← Space.euclideanDimension? type).isSome then
+    if (← Expr.euclideanDimension? type).isSome then
       let value ← reifyBody point args[2]! provider
       return ← construct point expression ``Morew.Affine.Certified.toEuclidean #[value]
   if name == some ``WithLp.ofLp && args.size == 3 then
-    if (← Space.euclideanDimension? (← inferType args[2]!)).isSome then
+    if (← Expr.euclideanDimension? (← inferType args[2]!)).isSome then
       let value ← reifyBody point args[2]! provider
       return ← construct point expression ``Morew.Affine.Certified.ofEuclidean #[value]
   if name == some ``HAdd.hAdd && args.size == 6 then
@@ -294,11 +249,11 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``HMul.hMul && args.size == 6 then
     let left := args[4]!
     let right := args[5]!
-    if !(← depends point left) then
+    if !(← Expr.depends point left) then
       let rightMap ← reifyBody point right provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstLeft
         #[left, rightMap] (some 2)
-    if !(← depends point right) then
+    if !(← Expr.depends point right) then
       let leftMap ← reifyBody point left provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstRight
         #[leftMap, right] (some 2)
@@ -307,8 +262,8 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     reject expression "both factors of multiplication depend on decision variables"
   if name == some ``HSMul.hSMul && args.size == 6 then
     let coefficient := args[4]!
-    if ← depends point coefficient then
-      if !(← depends point args[5]!) && (← isDefEq type (mkConst ``Real)) &&
+    if ← Expr.depends point coefficient then
+      if !(← Expr.depends point args[5]!) && (← isDefEq type (mkConst ``Real)) &&
           (← isDefEq (← inferType coefficient) (mkConst ``Real)) then
         let scalar ← reifyBody point coefficient provider
         return ← construct point expression ``Morew.Affine.Certified.smulConst
@@ -328,7 +283,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← construct point expression ``Morew.Affine.Certified.divConst
       #[numerator, args[5]!, proof] (some 2)
   if name == some ``HPow.hPow && args.size == 6 then
-    let exponent ← reduceStructure args[5]!
+    let exponent ← Expr.reduceStructure args[5]!
     if ← isDefEq (← inferType exponent) (mkConst ``Nat) then
       if (← getNatValue? exponent) == some 0 then
         let source ← functionOf point args[4]!
@@ -348,7 +303,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← construct point expression ``Morew.Affine.Certified.vecCons #[first, rest]
   if name == some ``Finset.sum && args.size == 5 then
     let set := args[3]!
-    if ← depends point set then
+    if ← Expr.depends point set then
       reject set "the finite sum's index set depends on a decision variable"
     let family ← withLocalDeclD `i args[0]! fun i => do
       let certificate ← reifyBody point (mkApp args[4]! i) provider
@@ -358,11 +313,11 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← withIndexInstance point args[2]! do
       let left := args[5]!
       let right := args[6]!
-      if !(← depends point left) then
+      if !(← Expr.depends point left) then
         let rightMap ← reifyBody point right provider
         return ← construct point expression ``Morew.Affine.Certified.dotConstLeft
           #[left, rightMap] (some 2)
-      if !(← depends point right) then
+      if !(← Expr.depends point right) then
         let leftMap ← reifyBody point left provider
         return ← construct point expression ``Morew.Affine.Certified.dotConstRight
           #[leftMap, right] (some 2)
@@ -373,7 +328,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← withIndexInstance point args[4]! do
       let matrix := if name == some ``Matrix.mulVec then args[5]! else args[6]!
       let vector := if name == some ``Matrix.mulVec then args[6]! else args[5]!
-      if ← depends point matrix then
+      if ← Expr.depends point matrix then
         -- Diagnose an unsupported entry first, then the coefficient's dependence.
         discard <| reifyBody point matrix provider
         reject matrix "the coefficient matrix depends on a decision variable"
@@ -388,21 +343,21 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   -- function application under the guise of a projection.
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
-    if vectorType.isForall && (← isSupportedSpace vectorType) then
-      if ← depends point index then
+    if vectorType.isForall && (← Expr.isSupportedSpace vectorType) then
+      if ← Expr.depends point index then
         reject index "the vector index depends on a decision variable"
       let vectorMap ← reifyBody point vector provider
       return ← construct point expression ``Morew.Affine.Certified.eval #[vectorMap, index]
   -- Prefer a failing inner operand to its enclosing unsupported application.
   for argument in args do
-    if (← depends point argument) && (← isSupportedSpace (← inferType argument)) then
+    if (← Expr.depends point argument) && (← Expr.isSupportedSpace (← inferType argument)) then
       discard <| reifyBody point argument provider
   reject expression "unsupported function, coercion, or nonlinear operation"
 
 private def reifyCore (source : Expr) (provider : EvidenceProvider)
     (original? : Option Expr := none) : ReifyM AffineResult := do
   let source ← instantiateMVars source
-  if (← inspectLocals source none).2 then
+  if (← Expr.inspectLocals source none).2 then
     reject source "unresolved metavariables are not supported"
   let type ← whnf (← inferType source)
   let .forallE _ domain codomain _ := type
@@ -410,10 +365,10 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
   if codomain.hasLooseBVars then
     reject source "dependent result types are not supported"
   let original := original?.getD source
-  let instances ← sourceFiniteInstances source
-  let originalInstances ← if original?.isSome then sourceFiniteInstances original else pure #[]
+  let instances ← Expr.sourceFiniteInstances source
+  let originalInstances ← if original?.isSome then Expr.sourceFiniteInstances original else pure #[]
   let certificate ← withFiniteInstances (instances ++ originalInstances).toList do
-    unless ← isSupportedSpace domain do
+    unless ← Expr.isSupportedSpace domain do
       reject source m!"unsupported decision space {domain}"
     withLocalDeclD `point domain fun point => do
       reifyBody point (mkApp source point) provider
@@ -443,15 +398,16 @@ bounded numeral/rational evaluation. Supplied evidence is checked against
 `c ≠ 0`; it does not weaken the global pointwise correctness obligation.
 -/
 def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
-    MetaM (Except AffineError AffineResult) := withIsolatedMVars do
+    MetaM (Except Expr.Error AffineResult) := State.withIsolatedMVars do
   try
-    let direct ← withIsolatedMVars <| (reifyCore source provider).run
+    let direct ← State.withIsolatedMVars <| (reifyCore source provider).run
     if let .ok result := direct then return .ok result
     unless ← Expansion.enabled do return direct
     -- Do not expand an incompletely elaborated term or allow expansion to
     -- discard an unresolved argument before the original input is checked.
-    if (← inspectLocals source none).2 then return direct
-    let prepared ← Expansion.prepare source (fun expression preserve => reduceStructure expression preserve)
+    if (← Expr.inspectLocals source none).2 then return direct
+    let prepared ← Expansion.prepare source
+      (fun expression preserve => Expr.reduceStructure expression preserve)
     if prepared.expansions == 0 then return direct
     match ← (reifyCore prepared.expression provider (some source)).run with
     | .ok result => return .ok result

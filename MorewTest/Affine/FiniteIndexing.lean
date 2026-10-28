@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Affine.Support
+import Morew.Elab.Expr
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.Matrix.ToLin
 
@@ -140,7 +141,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let boundEvidence ← `(fun x : ℕ → ℝ => fun i : Empty =>
     let finiteEvidence : Finite ℕ := Empty.elim i
     x 0)
-  unless (← sourceFiniteInstances (← elaborate boundEvidence)).isEmpty do
+  unless (← Morew.Elab.Expr.sourceFiniteInstances (← elaborate boundEvidence)).isEmpty do
     throwError "binder-dependent finiteness evidence escaped its scope"
   assertUnsupported boundEvidence
   assertUnsupported (← `(fun x : ℕ → ℝ => fun i : Empty =>
