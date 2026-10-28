@@ -15,7 +15,7 @@ import Morew.Elab.State
 # Exact replacement planning for selected nonlinear constraints
 
 Registered rules match a complete selected predicate. Every candidate first supplies an
-unconditional exact lift and then certifies only its generated residuals on an
+exact lift, possibly conditional on retained constraints, and then certifies its residuals on an
 open domain containing the proposed feasible set. Retained predicates remain
 unchanged, including predicates outside the generated-row grammar.
 
@@ -103,18 +103,19 @@ private partial def retainSourceEvidence (point source body : Expr) : MetaM Expr
       mkLetFVars #[binding] body (usedLetOnly := false) (generalizeNondepLet := false)
   else return body
 
-private def finish (source domain lift : Expr) (retained : Array Expr)
+private def finish (source domain : Expr) (certificate : Morew.Elab.Rewrite.Plan.Certificate)
+    (retained : Array Expr)
     (insertionIndex : Nat) : MetaM Result := do
   -- Exactness is checked before any generated constraint can supply evidence.
-  let lift ← Morew.Elab.Rewrite.Plan.checkLift source lift
-  unless ← Domain.Evidence.complete lift do
+  certificate.check source retained
+  unless ← Domain.Evidence.complete certificate.expression do
     throwError "the exact certificate contains unresolved placeholders"
-  let auxiliary ← whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
+  let auxiliary ← whnf (← certificate.auxiliaryType)
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
   let auxiliary? := if noAuxiliary then none else some auxiliary
   let nextDomain ← if noAuxiliary then pure domain else mkAppM ``Prod #[domain, auxiliary]
   discard <| Space.withCanonicalSpaces #[nextDomain] (pure (mkConst ``True.intro))
-  let targetFunction ← mkAppM ``Morew.ExactConstraintLift.target #[lift]
+  let targetFunction ← certificate.targetFunction
   let (rowPredicates, targetIff, feasible) ← withLocalDeclD `point nextDomain fun point => do
     let original := if noAuxiliary then point else .proj ``Prod 0 point
     let auxiliary := if noAuxiliary then mkConst ``Unit.unit else .proj ``Prod 1 point
@@ -129,29 +130,33 @@ private def finish (source domain lift : Expr) (retained : Array Expr)
     let feasible ← mkLambdaFVars #[point] (conjunction allBodies.toList)
     return (rows, targetIff, feasible)
   let prepared : Morew.Elab.Rewrite.Plan.Result := {
-    lift, auxiliary?, nextDomain, rowPredicates, targetIff }
+    certificate, auxiliary?, nextDomain, rowPredicates, targetIff }
   prepared.checkTargetIff "internal error: target decomposition changed the exact lift"
   let certified ← match ← Rows.certifyRows feasible rowPredicates with
     | .ok certified => pure certified
     | .error error => throwError "generated row certification failed: {error.reason}"
   return { toResult := prepared, certified }
 
-private def matchAndFinish (source domain : Expr)
-    (matchRule : Expr → Expr →
+private def proveObligation (point evidence obligation : Expr) : MetaM (Option Expr) := do
+  let facts ← Rows.factsProvider point evidence obligation
+  if let some proof ← Domain.Evidence.prove? point obligation facts then return some proof
+  throwError "registered NLP rewrite was not certified: missing retained premise {obligation}"
+
+private def matchAndFinish (source domain : Expr) (retained : Array Expr)
+    (matchRule : Expr → Expr → Morew.Elab.Rewrite.Match.Prove →
       (Morew.Elab.Rewrite.Match.Result → MetaM Result) → MetaM Result)
-    (finishLift : Expr → MetaM Result) : MetaM Result :=
+    (finishCertificate : Morew.Elab.Rewrite.Plan.Certificate → MetaM Result) : MetaM Result :=
   withLocalDeclD `point domain fun point => do
     let body ← structural point (mkApp source point)
-    -- No retained-evidence callback is supplied to either matcher. Exactness
-    -- remains unconditional; only the finished rows use feasibility evidence.
-    matchRule point body fun matched => do
-      if ← Expr.depends point matched.auxiliary then
-        throwError "the auxiliary space depends on a decision variable"
-      let target ← mkLambdaFVars #[point] matched.target
-      let pointwise ← mkLambdaFVars #[point] matched.sourceIff
-      let lift ← instantiateMVars (← mkAppM ``Morew.ExactConstraintLift.mk
-        #[matched.auxiliary, target, pointwise])
-      finishLift lift
+    let remainder := conjunction (retained.toList.map (mkApp · point))
+    withLocalDecl `retained .default remainder (kind := .implDetail) fun evidence => do
+      matchRule point body (proveObligation point evidence) fun matched => do
+        let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
+        let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary => do
+          mkLambdaFVars #[auxiliary] (← exposeTarget point (mkApp matched.target auxiliary))
+        let certificate ← Morew.Elab.Rewrite.Plan.closeCertificate source point evidence
+          auxiliary target matched.sourceIff
+        finishCertificate certificate
 
 private def registeredCandidates (source domain : Expr) : MetaM (Array Name) :=
   withLocalDeclD `point domain fun point => do
@@ -243,26 +248,34 @@ private def planCore (source : Expr) (retained : Array Expr)
     for row in retained do
       unless ← isDefEq (← inferType row) (← mkArrow domain (mkSort .zero)) do
         throwError "a retained row has a different decision space"
-    let finishLift := fun lift => finish source domain lift retained insertionIndex
-    let finishDeclaration := fun name accept => matchAndFinish source domain
-      (fun point body => Morew.Elab.Rewrite.Match.declaration point body name) accept
+    let finishCertificate := fun certificate => finish source domain certificate retained insertionIndex
+    let finishDeclaration := fun name accept => matchAndFinish source domain retained
+      (fun point body prove accept => Morew.Elab.Rewrite.Match.declaration point body name accept prove) accept
     if let some name := declaration? then
-      return .ok (← finishDeclaration name finishLift)
+      return .ok (← finishDeclaration name finishCertificate)
     if let some rule := rule? then
       let direct : Except Exception Result ← State.withIsolatedMVars do
-        try return .ok (← finishLift (← customLift source domain rule))
+        try return .ok (← finishCertificate (.exact (← customLift source domain rule)))
         catch exception => return .error exception
       match direct with
       | .ok result => return .ok result
       | .error original =>
-        -- Keep the existing concrete-record adapters, including exact lifts'
-        -- full-source check. Only graph orientation needs a certified retry.
-        unless (← whnf (← inferType rule)).isAppOfArity ``Morew.GraphRepresentation 3 do
-          throw original
+        -- Retry only the supplied record, retaining concrete exact lifts' whole-input
+        -- interpretation. Target checking belongs inside graph-orientation retries.
+        let reachedTarget ← IO.mkRef false
+        let reachedPremise ← IO.mkRef false
         try
-          return .ok (← matchAndFinish source domain
-            (fun point body => Morew.Elab.Rewrite.Match.rule point body rule) finishLift)
-        catch _ => throw original
+          return .ok (← matchAndFinish source domain retained
+            (fun point body prove accept =>
+              Morew.Elab.Rewrite.Match.rule point body rule accept fun obligation => do
+                reachedPremise.set true
+                prove obligation)
+            (fun certificate => do
+              reachedTarget.set true
+              finishCertificate certificate))
+        catch error =>
+          if (← reachedTarget.get) || (← reachedPremise.get) then throw error
+          throw original
     let mut successes : Array (Name × Result) := #[]
     let mut firstMatchError? := none
     let mut firstError? := none
@@ -270,9 +283,9 @@ private def planCore (source : Expr) (retained : Array Expr)
       let reachedTarget ← IO.mkRef false
       let attempt : Except (Bool × Error) Result ← State.withIsolatedMVars do
         try
-          return .ok (← finishDeclaration selected fun lift => do
+          return .ok (← finishDeclaration selected fun certificate => do
             reachedTarget.set true
-            finishLift lift)
+            finishCertificate certificate)
         catch exception => return .error (← reachedTarget.get, ← failure source exception)
       match attempt with
       | .ok result => successes := successes.push (selected, result)

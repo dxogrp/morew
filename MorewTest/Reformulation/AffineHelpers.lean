@@ -158,8 +158,10 @@ namespace TypedPlans
 open Lean Lean.Meta
 
 private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
-  discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-  for proof in #[result.lift, result.targetIff] do
+  let .exact lift := result.certificate
+    | throwError "finite evidence changed an unconditional lift into a contextual lift"
+  discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
+  for proof in #[lift, result.targetIff] do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
   checkWithKernel result.targetIff
   for row in result.certifiedRows do
@@ -173,8 +175,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (a : ι → ℝ) => fun x : ι → ℝ => |finiteDot e a x| ≤ 1))
   lambdaBoundedTelescope expression 3 fun _ source => do
     match ← Morew.Elab.Conic.Rewrite.planUnique source with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional lift into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite polyhedral plan failed: {error.reason}"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -182,8 +183,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (a : ι → ℝ) => fun x : ι → ℝ => ‖(![finiteDot e a x] : Fin 1 → ℝ)‖ ≤ 10))
   lambdaBoundedTelescope expression 3 fun _ source => do
     match ← Morew.Elab.Conic.Rewrite.planUnique source with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional lift into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite norm-coordinate plan failed: {error.reason}"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -192,8 +192,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (fun i => (i : ℝ) * finiteDot e a x) ≤ 10))
   lambdaBoundedTelescope expression 3 fun _ source => do
     match ← Morew.Elab.Conic.Rewrite.planUnique source with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional lift into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite supremum-coordinate plan failed: {error.reason}"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -202,8 +201,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (fun i => (i : ℝ) * finiteDot e a x)))
   lambdaBoundedTelescope expression 3 fun _ source => do
     match ← Morew.Elab.Conic.Rewrite.planUnique source with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional lift into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite infimum-coordinate plan failed: {error.reason}"
 
 def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
@@ -222,8 +220,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let source := pair.getAppArgs[2]!
     let rule := pair.getAppArgs[3]!
     match ← Morew.Elab.Conic.Rewrite.planExplicit source rule with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional lift into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite explicit-target plan failed: {error.reason}"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -236,8 +233,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
     match ← Morew.Elab.Conic.Rewrite.planUnique source retained with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional square into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite second-order plan failed: {error.reason}"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
@@ -250,8 +246,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
     match ← Morew.Elab.Conic.Rewrite.planUnique source retained with
-    | .ok (.inl result) => checkExact source result
-    | .ok (.inr _) => throwError "finite evidence changed an unconditional exponential into a contextual lift"
+    | .ok result => checkExact source result
     | .error error => throwError "hidden finite exponential plan failed: {error.reason}"
 
 end TypedPlans

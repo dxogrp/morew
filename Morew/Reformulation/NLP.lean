@@ -35,7 +35,10 @@ component followed by `_nlp_1`, `_nlp_2`, and so on; auxiliaries use `_aux`.
 The shared allocator freshens collisions without changing untouched labels.
 
 Domain evidence comes from checked closed comparisons in the proposed target,
-including generated guards, after exactness has been proved independently.
+including generated guards, after exactness has been checked using only retained
+constraints. Rule premises can use independent hypotheses and bounded reasoning
+from retained closed comparisons, including compatible finite coordinates. The
+selected row and generated guards cannot prove their own replacement premises.
 Unsupported retained rows and the objective remain untouched. This step is
 nonterminal and emits no whole-model `NLP.Form`. Bare `nlp` performs terminal
 whole-model validation and emits a concrete form and representability proof.
@@ -60,8 +63,8 @@ private def materializeNLP (state : ReformState) (index : Nat)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
-    let replacement ← Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
-      prepared.lift prepared.auxiliary? prepared.nextDomain prepared.rowPredicates prepared.targetIff
+    let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
+      typed.presentation index prepared.toResult
     -- The analytic evidence must cover this precise ordered replacement, not
     -- a stronger predicate or merely the selected row's original domain.
     let feasible ← mkAppM ``Morew.Problem.feasible #[replacement.targetProblem]
@@ -77,7 +80,7 @@ private def materializeNLP (state : ReformState) (index : Nat)
       auxiliary? := prepared.auxiliary?
       nextDomain := prepared.nextDomain
       rowPredicates := prepared.rowPredicates
-      certificate := prepared.lift
+      certificate := prepared.certificate.expression
       replacement
     } allocation
 

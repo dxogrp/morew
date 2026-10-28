@@ -15,20 +15,14 @@ import Morew.Elab.State
 Automatic discovery and explicit certificate selection share checked matching and
 conic target certification. Every automatic candidate comes from `@[morew_conic]`, including built-ins.
 Both targeted and terminal callers require one fully certified replacement.
-Retained evidence can discharge domain obligations for same-domain replacements;
-conditional auxiliary lifts remain outside this API.
+Retained evidence can discharge rule premises before generated rows are certified.
+Conditional replacements preserve the retained constraints and may introduce auxiliaries.
 -/
 
 namespace Morew.Elab.Conic.Rewrite
 
 open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite
-
-private theorem existsUnitIff (p : Unit → Prop) : (∃ u, p u) ↔ p () := by
-  constructor
-  · rintro ⟨⟨⟩, h⟩
-    exact h
-  · exact fun h => ⟨(), h⟩
 
 private theorem dimensionPositive (n : Nat) [Nonempty (Fin n)] : 0 < n :=
   Fin.pos_iff_nonempty.mpr inferInstance
@@ -42,6 +36,7 @@ private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := 
   let goal : Q(Prop) := q(0 < $n)
   let nonzero : Q(Prop) := q($n ≠ 0)
   for declaration in ← getLCtx do
+    if declaration.isImplementationDetail then continue
     let evidence := declaration.toExpr
     if (← Expr.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
     if ← isDefEq declaration.type goal then return some evidence
@@ -66,6 +61,7 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   let goal ← instantiateMVars goal
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   for declaration in ← getLCtx do
+    if declaration.isImplementationDetail then continue
     let proof := declaration.toExpr
     if (← Expr.depends point proof) || (← Morew.Elab.Rewrite.Plan.unresolved proof) then continue
     if ← isDefEq declaration.type goal then
@@ -98,7 +94,7 @@ private def matchingBody (expression : Expr) : MetaM Expr := do
     return .continue)
 
 private def materialize (source domain point evidence : Expr) (retained : Array Expr)
-    (matched : Match.Result) (provider : Affine.EvidenceProvider) : MetaM Plan.Prepared := do
+    (matched : Match.Result) (provider : Affine.EvidenceProvider) : MetaM Plan.Result := do
   let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
   if ← Expr.depends point auxiliary then throwError "the auxiliary type depends on a decision variable"
   let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary => do
@@ -111,33 +107,14 @@ private def materialize (source domain point evidence : Expr) (retained : Array 
       return .continue
     let body ← Meta.transform body (pre := reduceProjection) (post := reduceProjection)
     mkLambdaFVars #[auxiliary] body
-  let proof ← instantiateMVars matched.sourceIff
-  if ← Expr.depends evidence target then
-    throwError "generated cone rows depend on retained feasibility evidence"
-  if !(← Expr.depends evidence proof) then
-    let target ← mkLambdaFVars #[point] target
-    let pointwise ← mkLambdaFVars #[point] proof
-    let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, target, pointwise]
-    let lift ← Morew.Elab.Rewrite.Plan.checkLift source lift
-    return .inl (← Plan.finish source domain lift provider)
-  unless ← isDefEq auxiliary (mkConst ``Unit) do
-    throwError "retained-context exact replacements with auxiliary variables are not supported"
-  let raw := mkApp target (mkConst ``Unit.unit)
-  let eliminated ← mkAppM ``Iff.trans #[proof, ← mkAppM ``existsUnitIff #[target]]
-  let (rows, decomposition) ← Plan.splitTarget raw
-  let rowPredicates ← rows.toArray.mapM fun row => mkLambdaFVars #[point] row
-  let conditionalIff ← mkLambdaFVars #[point, evidence]
-    (← mkAppM ``Iff.trans #[eliminated, decomposition])
-  if ← Morew.Elab.Rewrite.Plan.unresolved conditionalIff then
-    throwError "registered conic certificate contains unresolved metavariables"
-  checkWithKernel conditionalIff
-  let certifiedRows ← Plan.certifyRows rowPredicates provider
-  Plan.prepareContextual source retained { domain, rowPredicates, certifiedRows, conditionalIff }
+  let certificate ← Morew.Elab.Rewrite.Plan.closeCertificate source point evidence
+    auxiliary target matched.sourceIff
+  Plan.finish source domain certificate retained provider
 
 private def attempt (source : Expr) (retained : Array Expr)
     (matchRule : Expr → Expr → (Expr → MetaM (Option Expr)) →
-      (Match.Result → MetaM Plan.Prepared) → MetaM Plan.Prepared)
-    (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Plan.Prepared) :=
+      (Match.Result → MetaM Plan.Result) → MetaM Plan.Result)
+    (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     try
       if ← Morew.Elab.Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
@@ -148,11 +125,12 @@ private def attempt (source : Expr) (retained : Array Expr)
           throwError "retained constraint has a different decision domain"
       let mut instances ← Expr.sourceFiniteInstances source
       for row in retained do instances := instances ++ (← Expr.sourceFiniteInstances row)
-      let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances Plan.Prepared.replaceFVars instances.toList do
+      let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances Plan.Result.replaceFVars instances.toList do
         withLocalDeclD `point domain fun point =>
-          Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Prepared.replaceFVars point (mkApp source point) do
+          Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Result.replaceFVars point (mkApp source point) do
             let bodies := retained.map (mkApp · point)
-            withLocalDeclD `retained (Decomposition.conjunction bodies.toList) fun evidence => do
+            withLocalDecl `retained .default (Decomposition.conjunction bodies.toList)
+                (kind := .implDetail) fun evidence => do
               let body ← matchingBody (mkApp source point)
               matchRule point body (proveObligation point bodies evidence) fun matched =>
                 materialize source domain point evidence retained matched provider
@@ -163,9 +141,9 @@ private def attempt (source : Expr) (retained : Array Expr)
 /-- Select an explicitly named declaration, registered or not. There is no
 fallback to any other rule when matching, exactness, or affine checking fails. -/
 def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
-    Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
+    Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       attempt source retained
         (fun point body prove accept => Match.declaration point body name accept prove) provider
 
@@ -174,17 +152,17 @@ expressions. If that adapter cannot prepare the record, typed matching may
 reconstruct subtype inputs using the existing retained-domain policy. Both
 attempts use exactly the supplied record; registered rules are never searched. -/
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
-    Plan.withHelperFiniteInstances Plan.Prepared.replaceFVars (#[source] ++ retained) do
+    Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       let direct ← Plan.plan source rule provider
-      if let .ok result := direct then return .ok (.inl result)
+      if let .ok result := direct then return .ok result
       attempt source retained
         (fun point body prove accept => Match.rule point body rule accept prove) provider
 
 /-- Certify all registered candidates and require a unique success. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Prepared) :=
+    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     try
       if ← Morew.Elab.Rewrite.Plan.unresolved predicate then
@@ -193,7 +171,7 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
       let lookup ← withLocalDeclD `point domain fun point => do
         mkLambdaFVars #[point] (← matchingBody (mkApp predicate point))
       let candidates ← Registry.candidates .conic lookup
-      let mut successes : Array (Name × Plan.Prepared) := #[]
+      let mut successes : Array (Name × Plan.Result) := #[]
       let mut failures : Array MessageData := #[]
       for name in candidates do
         match ← planDeclaration predicate name retained provider with

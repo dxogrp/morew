@@ -54,7 +54,10 @@ and a positive denominator margin, including zero numerators. Finite nonempty
 log-sum-exp and softplus use one finite auxiliary vector, one grouped family of
 exponential memberships, and one sum bound. Domain evidence is taken only from
 independent constants or retained entries; no selected constraint proves its
-own domain.
+own domain. Custom records may use subtype inputs or proof parameters discharged
+by this same retained-margin policy, including when their checked replacement
+introduces auxiliary variables. Their targets must remain independent of the
+temporary retained-feasibility proof.
 -/
 
 namespace Morew.Reformulation.Internal
@@ -62,23 +65,7 @@ namespace Morew.Reformulation.Internal
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 open Morew.Elab.Reformulation
 
-private abbrev Prepared := Morew.Elab.Conic.Plan.Prepared
-
-private def Prepared.rowPredicates : Prepared → Array Expr
-  | .inl exact => exact.rowPredicates
-  | .inr contextual => contextual.rowPredicates
-
-private def Prepared.auxiliary? : Prepared → Option Expr
-  | .inl exact => exact.auxiliary?
-  | .inr _ => none
-
-private def Prepared.nextDomain : Prepared → Expr
-  | .inl exact => exact.nextDomain
-  | .inr contextual => contextual.domain
-
-private def Prepared.certificate : Prepared → Expr
-  | .inl exact => exact.lift
-  | .inr contextual => contextual.conditionalIff
+private abbrev Prepared := Morew.Elab.Conic.Plan.Result
 
 private def conicStyle : Replace.Style := {
   family := "conic", diagnostic := "conic", certificateKind := `_conicCertificate
@@ -94,19 +81,14 @@ private def materializeConic (state : ReformState) (index : Nat)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared : Prepared :=
-      Morew.Elab.Conic.Plan.Prepared.replaceFVars prepared preparedVars sectionFVars
-    let replacement ← match prepared with
-      | .inl result => do
-        Morew.Elab.Reformulation.Replace.rewriteConstraint typed.presentation index
-          result.lift result.auxiliary? result.nextDomain result.rowPredicates result.targetIff
-      | .inr contextual => do
-        Morew.Elab.Reformulation.Replace.rewriteConstraintContextual typed.presentation index
-          contextual.rowPredicates contextual.conditionalIff
+      Morew.Elab.Conic.Plan.Result.replaceFVars prepared preparedVars sectionFVars
+    let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
+      typed.presentation index prepared.toResult
     Replace.finish conicStyle state typed index {
       auxiliary? := prepared.auxiliary?
       nextDomain := prepared.nextDomain
       rowPredicates := prepared.rowPredicates
-      certificate := prepared.certificate
+      certificate := prepared.certificate.expression
       replacement
     } allocation
 
@@ -122,7 +104,7 @@ def prepareConic (state : ReformState) (step : Syntax)
     let predicate := presentation.constraints[index]!.predicate
     let result : Except Morew.Elab.Expr.Error Prepared ←
       Morew.Elab.Conic.Plan.withPresentationFiniteInstances
-        Morew.Elab.Conic.Plan.Prepared.replaceFVars presentation do
+        Morew.Elab.Conic.Plan.Result.replaceFVars presentation do
         if let some name := declaration? then do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size

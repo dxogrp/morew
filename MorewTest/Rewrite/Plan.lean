@@ -74,7 +74,7 @@ run_elab do
   let row₂ ← elaborate (← `(fun x : ℝ => x = x))
   let targetIff ← elaborate (← `(fun x : ℝ => (Iff.rfl : (x ≤ 2 ∧ x = x) ↔ _)))
   let result : Result := {
-    lift, auxiliary? := none, nextDomain := mkConst ``Real
+    certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
     rowPredicates := #[row₁, row₂], targetIff }
   result.checkTargetIff
   expectRejected ({ result with rowPredicates := #[row₂, row₁] }.checkTargetIff)
@@ -82,7 +82,7 @@ run_elab do
   let lift ← elaborate (← `(Morew.ExactConstraintLift.ofIff
     (fun _ : ℝ => True) (fun _ => Iff.rfl)))
   let targetIff ← elaborate (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
-  ({ lift, auxiliary? := none, nextDomain := mkConst ``Real
+  ({ certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
      rowPredicates := #[], targetIff } : Result).checkTargetIff
   let lift ← elaborate (← `(auxiliary))
   let nextDomain ← mkAppM ``Prod #[mkConst ``Real, mkConst ``Real]
@@ -91,7 +91,7 @@ run_elab do
   let targetIff ← elaborate (← `(fun p : ℝ × ℝ =>
     (Iff.rfl : (p.2 = 0 ∧ p.1 ≤ 1) ↔ _)))
   let result : Result := {
-    lift, auxiliary? := some (mkConst ``Real), nextDomain
+    certificate := .exact lift, auxiliary? := some (mkConst ``Real), nextDomain
     rowPredicates := #[row₁, row₂], targetIff }
   result.checkTargetIff
   expectRejected ({ result with auxiliary? := none }.checkTargetIff)
@@ -110,12 +110,97 @@ run_elab do
         (rows.toList.map (mkApp · point))
       mkLambdaFVars #[point] (mkApp (mkConst ``Iff.rfl) body)
     let result : Result := {
-      lift, auxiliary? := none, nextDomain := mkConst ``Real
+      certificate := .exact lift, auxiliary? := none, nextDomain := mkConst ``Real
       rowPredicates := rows, targetIff }
     return result.replaceFVars #[bound] #[two]
   result.checkTargetIff
-  for expression in #[result.lift, result.nextDomain, result.targetIff] ++ result.rowPredicates do
+  for expression in #[result.certificate.expression, result.nextDomain, result.targetIff] ++
+      result.rowPredicates do
     if expression.hasFVar || expression.hasMVar then
       throwError "scoped evidence escaped the shared replacement"
+
+private theorem conditionalExact (x : ℝ) (retained : x = 0) :
+    x ≤ 1 ↔ ∃ a : ℝ, a = x :=
+  ⟨fun _ => ⟨x, rfl⟩, fun _ => retained.le.trans zero_le_one⟩
+
+run_elab do
+  let domain := Lean.mkConst ``Real
+  let source ← elaborate (← `(fun x : ℝ => x ≤ 1))
+  let retained ← elaborate (← `(fun x : ℝ => x = 0))
+  let target ← elaborate (← `(fun x a : ℝ => a = x))
+  let proof ← elaborate (← `(conditionalExact))
+  let certificate : Certificate := .contextual domain target proof
+  certificate.check source #[retained]
+  expectRejected (certificate.check source #[])
+  expectRejected (certificate.check source #[source])
+  let nextDomain ← mkAppM ``Prod #[domain, domain]
+  let row ← elaborate (← `(fun p : ℝ × ℝ => p.2 = p.1))
+  let targetIff ← elaborate (← `(fun p : ℝ × ℝ => (Iff.rfl : p.2 = p.1 ↔ _)))
+  let result : Result := {
+    certificate, auxiliary? := some domain, nextDomain
+    rowPredicates := #[row], targetIff }
+  result.check source #[retained]
+  expectRejected ({ result with auxiliary? := none }.checkTargetIff)
+  expectRejected ({ result with auxiliary? := some (mkConst ``Bool) }.checkTargetIff)
+  expectRejected ({ result with nextDomain := domain }.checkTargetIff)
+  let closed ← withLocalDeclD `point domain fun point => do
+    withLocalDeclD `retained (mkApp retained point) fun evidence => do
+      let pointwise := mkApp2 proof point evidence
+      let closed ← closeCertificate source point evidence domain (mkApp target point) pointwise
+      match closed with
+      | .contextual .. => pure ()
+      | .exact _ => throwError "retained-dependent exactness lost its context"
+      -- Auxiliary families may not depend on original coordinates.
+      withLocalDeclD `family (← mkArrow domain (mkSort (.succ .zero))) fun family => do
+        expectRejected do
+          discard <| closeCertificate source point evidence (mkApp family point)
+            (mkApp target point) pointwise
+      -- Proof-dependent targets remain forbidden even when hidden in a local let.
+      let dependentType ← mkArrow (← inferType evidence) (← mkArrow domain (mkSort .zero))
+      withLocalDeclD `dependentTarget dependentType fun dependent => do
+        let value := mkApp dependent evidence
+        withLetDecl `alias (← inferType value) value fun binding => do
+          expectRejected do
+            discard <| closeCertificate source point evidence domain binding pointwise
+      return closed
+  closed.check source #[retained]
+  for expression in #[← closed.auxiliaryType, ← closed.targetFunction, closed.expression] do
+    if expression.hasFVar || expression.hasMVar then
+      throwError "temporary conditional evidence escaped certificate closure"
+  -- These ignored arguments reduce away, so the otherwise valid certificates
+  -- are rejected specifically for placeholders hidden in local values/types.
+  for synthetic in [false, true] do
+    let placeholder ← mkSorry (mkConst ``Nat) synthetic
+    withLetDecl `targetAlias (mkConst ``Nat) placeholder fun binding => do
+      let targetBuilder ← elaborate (← `(fun (_ : ℕ) (x a : ℝ) => a = x))
+      expectRejected ((Certificate.contextual domain (mkApp targetBuilder binding) proof).check
+        source #[retained])
+      let auxiliaryBuilder ← elaborate (← `(fun _ : ℕ => ℝ))
+      expectRejected ((Certificate.contextual (mkApp auxiliaryBuilder binding) target proof).check
+        source #[retained])
+      let proofBuilder ← elaborate (← `(fun _ : ℕ => conditionalExact))
+      expectRejected ((Certificate.contextual domain target (mkApp proofBuilder binding)).check
+        source #[retained])
+      let sourceBuilder ← elaborate (← `(fun (_ : ℕ) (x : ℝ) => x ≤ 1))
+      expectRejected (certificate.check (mkApp sourceBuilder binding) #[retained])
+    let placeholder ← mkSorry domain synthetic
+    let typeBuilder ← elaborate (← `(fun _ : ℝ => ℝ))
+    withLocalDeclD `bound (mkApp typeBuilder placeholder) fun bound => do
+      let retainedBuilder ← elaborate (← `(fun (_ : ℝ) (x : ℝ) => x = 0))
+      expectRejected (certificate.check source #[mkApp retainedBuilder bound])
+
+run_elab do
+  let source ← elaborate (← `(fun x : ℝ => x ≤ 1))
+  let lift ← elaborate (← `(auxiliary))
+  let target ← mkAppM ``Morew.ExactConstraintLift.target #[lift]
+  let proof ← mkAppM ``Morew.ExactConstraintLift.source_iff_exists #[lift]
+  let certificate ← withLocalDeclD `point (mkConst ``Real) fun point => do
+    withLocalDeclD `retained (mkConst ``True) fun evidence => do
+      closeCertificate source point evidence (mkConst ``Real)
+        (mkApp target point) (mkApp proof point)
+  match certificate with
+  | .exact _ => pure ()
+  | .contextual .. => throwError "independent exactness was unnecessarily made conditional"
+  certificate.check source #[]
 
 end MorewTest.Rewrite.Plan

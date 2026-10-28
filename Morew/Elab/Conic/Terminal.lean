@@ -191,18 +191,11 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
     index := index + leaves.size
   return work
 
-private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Prepared) : MetaM Work := do
-  match prepared with
-  | .inl exact =>
-    let rewrite ← rewriteConstraint work.presentation index exact.lift exact.auxiliary?
-      exact.nextDomain exact.rowPredicates exact.targetIff
-    applyReplacement work index exact.rowPredicates
-      (exact.certifiedRows.map fun row => some #[row]) exact.nextDomain exact.auxiliary? rewrite
-  | .inr contextual =>
-    let rewrite ← rewriteConstraintContextual work.presentation index
-      contextual.rowPredicates contextual.conditionalIff
-    applyReplacement work index contextual.rowPredicates
-      (contextual.certifiedRows.map fun row => some #[row]) contextual.domain none rewrite
+private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Result) : MetaM Work := do
+  let rewrite ← Morew.Elab.Reformulation.Replace.applyReplacement
+    work.presentation index prepared.toResult
+  applyReplacement work index prepared.rowPredicates
+    (prepared.certifiedRows.map fun row => some #[row]) prepared.nextDomain prepared.auxiliary? rewrite
 
 private def originalError (original : PresentationState) (origin : Nat)
     (error : Expr.Error) : MetaM Expr.Error := do

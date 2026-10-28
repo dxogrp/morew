@@ -25,44 +25,13 @@ structure Result extends Morew.Elab.Rewrite.Plan.Result where
   /-- Checked affine cone rows corresponding to `rowPredicates`. -/
   certifiedRows : Array RowResult
 
-/-- A same-domain replacement certified under exactly the retained row conjunction. -/
-structure ContextualResult where
-  /-- The unchanged decision domain. -/
-  domain : Expr
-  /-- Generated predicates in presentation order. -/
-  rowPredicates : Array Expr
-  /-- Checked affine cone constraints for all generated predicates. -/
-  certifiedRows : Array RowResult
-  /-- `∀ x, remainder x → (source x ↔ conjunction rowPredicates x)`. -/
-  conditionalIff : Expr
-
-/-- Rebase a contextual replacement, including its retained domain evidence. -/
-def ContextualResult.replaceFVars (result : ContextualResult)
-    (oldVars newVars : Array Expr) : ContextualResult := {
-  domain := result.domain.replaceFVars oldVars newVars
-  rowPredicates := result.rowPredicates.map (·.replaceFVars oldVars newVars)
-  certifiedRows := result.certifiedRows.map fun row => {
-    constraint := row.constraint.replaceFVars oldVars newVars
-    pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars }
-  conditionalIff := result.conditionalIff.replaceFVars oldVars newVars
-}
-
-/-- Either an unconditional exact lift or a replacement using retained evidence. -/
-abbrev Prepared := Sum Result ContextualResult
-
-/-- Rebase all expressions of an unconditional replacement. -/
+/-- Rebase all expressions of a checked replacement. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
   let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
   { toResult := result.toResult.replaceFVars oldVars newVars
     certifiedRows := result.certifiedRows.map fun row => {
       constraint := replace row.constraint
       pointwiseIff := replace row.pointwiseIff } }
-
-/-- Rebase either kind of checked replacement. -/
-def Prepared.replaceFVars (result : Prepared) (oldVars newVars : Array Expr) : Prepared :=
-  match result with
-  | .inl exact => .inl (exact.replaceFVars oldVars newVars)
-  | .inr contextual => .inr (contextual.replaceFVars oldVars newVars)
 
 /-- Retry a failed certificate with safe finite evidence exposed by helpers.
 Direct recognition keeps its original fast path; speculative declarations and
@@ -121,8 +90,6 @@ def withPredicateEvidence (point body : Expr)
     (action : MetaM Result) : MetaM Result :=
   withScopedEvidence Result.replaceFVars point body action
 
-private abbrev conjunction := Decomposition.conjunction
-
 -- Adapters can leave another representation's target projection at the head.
 -- Expose only these record fields, stopping before arbitrary predicate helpers
 -- or arithmetic operands are unfolded.
@@ -164,67 +131,39 @@ def certifyRows (predicates : Array Expr) (provider : Affine.EvidenceProvider :=
     | .ok row => pure row
     | .error error => throwError "generated row: {error.reason}"
 
-private def finishCore (source domain lift : Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
-  let auxiliary ← whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
+private def finishCore (source domain : Expr) (certificate : Certificate)
+    (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
+  certificate.check source retained
+  let auxiliary ← whnf (← certificate.auxiliaryType)
   let noAuxiliary ← isDefEq auxiliary (mkConst ``Unit)
   let auxiliary? := if noAuxiliary then none else some auxiliary
   let nextDomain ← if noAuxiliary then pure domain else mkAppM ``Prod #[domain, auxiliary]
   unless ← Expr.isSupportedSpace nextDomain do
     throwError "unsupported exact-lift decision space {nextDomain}; expected real scalars, products, or finite function spaces"
-  let targetFunction ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
+  let targetFunction ← whnf (← certificate.targetFunction)
   let (rowPredicates, targetIff) ← withLocalDeclD `point nextDomain fun point => do
     let target := if noAuxiliary then mkApp2 targetFunction point (mkConst ``Unit.unit)
       else mkApp2 targetFunction (.proj ``Prod 0 point) (.proj ``Prod 1 point)
     let (bodies, proof) ← splitTarget target
     let rows ← bodies.toArray.mapM fun body => mkLambdaFVars #[point] body
     return (rows, ← mkLambdaFVars #[point] proof)
-  let certifiedRows ← certifyRows rowPredicates provider
   let prepared : Morew.Elab.Rewrite.Plan.Result := {
-    lift, auxiliary?, nextDomain, rowPredicates, targetIff }
-  prepared.checkTargetIff
-  let _ ← checkLift source lift
+    certificate, auxiliary?, nextDomain, rowPredicates, targetIff }
+  prepared.check source retained
+  let certifiedRows ← certifyRows rowPredicates provider
   return { toResult := prepared, certifiedRows }
 
 /-- Split and certify every row of an exact lift. -/
-def finish (source domain lift : Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
-  let target ← whnf (← mkAppM ``Morew.ExactConstraintLift.target #[lift])
+def finish (source domain : Expr) (certificate : Certificate)
+    (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
+  let target ← whnf (← certificate.targetFunction)
   let result ← withHelperFiniteInstances Result.replaceFVars #[target] do
     let result ← withFiniteInstances (← Expr.sourceFiniteInstances target).toList do
-      finishCore source domain lift provider
+      finishCore source domain certificate retained provider
     return .ok result
   match result with
   | .ok result => return result
   | .error error => throwError error.reason
-
-/-- Discard unused retained assumptions while reusing the already certified rows.
-An unconditional same-domain proof becomes an ordinary exact lift; otherwise
-the complete conditional proof remains attached to the replacement. -/
-def prepareContextual (source : Expr) (retained : Array Expr)
-    (result : ContextualResult) : MetaM Prepared := do
-  let exact? ← withLocalDeclD `point result.domain fun point => do
-    let remainder := conjunction (retained.toList.map (mkApp · point))
-    withLocalDeclD `retained remainder fun evidence => do
-      let proof := (mkApp2 result.conditionalIff point evidence).headBeta
-      if ← Expr.depends evidence proof then return none
-      let targetBody := conjunction (result.rowPredicates.toList.map (mkApp · point))
-      let target ← mkLambdaFVars #[point] targetBody
-      let pointwise ← mkLambdaFVars #[point] proof
-      let lift ← instantiateMVars (← mkAppM ``Morew.ExactConstraintLift.ofIff
-        #[target, pointwise])
-      let lift ← checkLift source lift
-      let targetIff ← mkLambdaFVars #[point] (mkApp (mkConst ``Iff.rfl) targetBody)
-      checkWithKernel targetIff
-      return some ({
-        lift
-        auxiliary? := none
-        nextDomain := result.domain
-        rowPredicates := result.rowPredicates
-        targetIff
-        certifiedRows := result.certifiedRows
-      } : Result)
-  return match exact? with
-    | some exact => .inl exact
-    | none => .inr result
 
 /-- Adapt an explicit record for the entire selected predicate and certify its rows.
 Caller metavariables and the environment are restored on failure. -/
@@ -239,7 +178,7 @@ private def planDirect (sourcePredicate rule : Expr)
         withLocalDeclD `point domain fun point =>
           withPredicateEvidence point (mkApp source point) do
             let lift ← customLift source domain rule
-            finish source domain lift provider
+            finish source domain (.exact lift) #[] provider
       return .ok result
     catch error =>
       return .error {

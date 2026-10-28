@@ -152,8 +152,10 @@ run_cmd liftTermElabM do
     let losses ← mkAppM ``Prod.snd #[rest]
     let firstLoss ← mkAppM ``Prod.fst #[losses]
     let secondLoss ← mkAppM ``Prod.snd #[losses]
-    let .ok (.inl direct) ← Morew.Elab.Conic.Rewrite.planUnique absolute
+    let .ok direct ← Morew.Elab.Conic.Rewrite.planUnique absolute
       | throwError "source-local evidence did not certify the exact rule"
+    let .exact _ := direct.certificate
+      | throwError "source-local evidence acquired retained assumptions"
     for predicate in direct.rowPredicates do
       let .error _ ← normalizeRow predicate
         | throwError "fixture unexpectedly retained discoverable nonzero evidence"

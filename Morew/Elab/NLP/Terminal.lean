@@ -142,8 +142,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     auxiliaries, nextName }
 
 private def applyPrepared (work : Work) (index : Nat) (prepared : Rewrite.Result) : MetaM Work := do
-  let replacement ← Replace.rewriteConstraint work.presentation index prepared.lift
-    prepared.auxiliary? prepared.nextDomain prepared.rowPredicates prepared.targetIff
+  let replacement ← Replace.applyReplacement work.presentation index prepared.toResult
   applyReplacement work index prepared.rowPredicates
     (prepared.rowPredicates.mapIdx fun i _ => some (prepared.certified.select i))
     prepared.nextDomain prepared.auxiliary? replacement

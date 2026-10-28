@@ -47,8 +47,26 @@ private partial def inputValue (type : Expr) (depth : Nat := 0) :
   if type.isAppOfArity ``Subtype 2 then
     let (value, proofs) ← inputValue type.getAppArgs[0]! (depth + 1)
     let proof ← mkFreshExprMVar (mkApp type.getAppArgs[1]! value)
-    return (← mkAppM ``Subtype.mk #[value, proof], proofs.push proof)
+    let input ← mkAppOptM ``Subtype.mk
+      #[some type.getAppArgs[0]!, some type.getAppArgs[1]!, some value, some proof]
+    return (input, proofs.push proof)
   return (← mkFreshExprMVar type, #[])
+
+-- Concrete exact records describe the whole current point. A subtype domain
+-- may add checked guards around that point, but cannot infer a different input
+-- map. Nested guards are collected from the innermost carrier outwards.
+private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
+    MetaM (Expr × Array Expr) := do
+  if depth > 32 then throwError "representation input structure is too deeply nested"
+  if ← isDefEq type (← inferType point) then return (point, #[])
+  let type ← whnf type
+  unless type.isAppOfArity ``Subtype 2 do
+    throwError "the exact representation subtype carrier is not the decision space"
+  let (value, proofs) ← subtypeInputValue point type.getAppArgs[0]! (depth + 1)
+  let proof ← mkFreshExprMVar (mkApp type.getAppArgs[1]! value)
+  let input ← mkAppOptM ``Subtype.mk
+    #[some type.getAppArgs[0]!, some type.getAppArgs[1]!, some value, some proof]
+  return (input, proofs.push proof)
 
 private def normalizeComparison (expression : Expr) : MetaM Expr := do
   let expression ← Registry.structural expression
@@ -196,7 +214,7 @@ def expose (expression : Expr) : MetaM Expr := do
     return .continue)
 
 private inductive ExactInput where
-  | infer | whole
+  | infer | whole | subtypeWhole
   deriving BEq
 
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
@@ -205,10 +223,14 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
-  let (input, proofArguments) ← if family == .exact && exactInput == .whole then do
-      unless ← isDefEq inputType (← inferType point) do
-        throwError "the exact representation input is not the decision space"
-      pure (point, #[])
+  let (input, proofArguments) ← if family == .exact then
+      match exactInput with
+      | .whole => do
+        unless ← isDefEq inputType (← inferType point) do
+          throwError "the exact representation input is not the decision space"
+        pure (point, #[])
+      | .subtypeWhole => subtypeInputValue point inputType
+      | .infer => inputValue inputType
     else inputValue inputType
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
@@ -273,13 +295,23 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
     | .error original =>
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
-      let (family, _, _) ← Registry.representation type
+      let (family, inputType, _) ← Registry.representation type
+      let subtypeWhole := family == .exact &&
+          (← whnf inputType).isAppOfArity ``Subtype 2 &&
+          !(← isDefEq inputType (← inferType point))
+      if exactInput == .whole && subtypeWhole then
+        -- Retry only subtype wrappers around the same complete decision point.
+        -- Concrete records never acquire declaration-style input inference.
+        return ← tryAttempt false .subtypeWhole
       if family == .graph || (family == .exact && exactInput == .infer) then
         -- Retry the whole checked attempt: a matched graph orientation may
         -- still fail the consumer's target certification. Exact records also
-        -- retain the whole-input fallback for unused inputs or coordinates.
+        -- retain the whole-input fallback for unused inputs or coordinates,
+        -- including subtype guards around the complete decision point.
         match ← tryAttempt (family == .graph)
-            (if family == .exact then .whole else exactInput) with
+            (if family == .exact then
+              if subtypeWhole then .subtypeWhole else .whole
+            else exactInput) with
         | .ok value => return .ok value
         | .error failure =>
           -- Prefer an actual target-certification failure to a mismatch.
@@ -291,8 +323,9 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
 
 /-- Match and certify exactly the supplied record. Each alternative includes
 `accept` in its isolated attempt, preserving only a successful result's proof
-dependencies. Concrete exact lifts retain their whole-decision interpretation
-and require matching input types. Graph orientations count as one candidate. -/
+dependencies. Concrete exact lifts retain their whole-decision interpretation;
+subtype wrappers may add checked guards around that same point. Graph
+orientations count as one candidate. -/
 def rule {α : Type} (point sourceBody expression : Expr)
     (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
   checked point sourceBody (pure expression) accept prove? .whole

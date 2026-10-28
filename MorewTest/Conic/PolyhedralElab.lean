@@ -37,14 +37,16 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
       | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule
       | none => Morew.Elab.Conic.Rewrite.planUnique source
     let result ← match outcome with
-      | .ok (.inl result) => pure result
-      | .ok (.inr _) => throwError "an unconditional replacement acquired retained assumptions"
+      | .ok result => pure result
       | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
+    let .exact lift := result.certificate
+      | throwError "an unconditional replacement acquired retained assumptions"
     unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
       throwError "expected {rows} rows, got {result.rowPredicates.size}"
     unless result.auxiliary?.isSome == auxiliary do
       throwError "unexpected auxiliary-variable shape"
-    checkWithKernel result.lift
+    result.toResult.check source #[]
+    checkWithKernel lift
     checkWithKernel result.targetIff
     for row in result.certifiedRows do
       checkWithKernel row.constraint
@@ -66,8 +68,10 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
 elab "polyhedral_lift% " source:term : term => do
   let source ← elaborate source
   match ← Morew.Elab.Conic.Rewrite.planUnique source with
-  | .ok (.inl result) => pure result.lift
-  | .ok (.inr _) => throwError "an unconditional replacement acquired retained assumptions"
+  | .ok result =>
+    let .exact lift := result.certificate
+      | throwError "an unconditional replacement acquired retained assumptions"
+    pure lift
   | .error error => throwError "{error.reason}"
 
 def symbolicNorm (n : ℕ) : ExactConstraintLift (fun v : Fin n → ℝ => ‖v‖ ≤ 2) :=

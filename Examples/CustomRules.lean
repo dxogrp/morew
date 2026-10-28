@@ -71,5 +71,34 @@ example : GlobalEquivalence (fitting center) (selected center) :=
   selected.equivalence center
 example : IsConic (selected center) := selected.isConic center
 
+-- A subtype states the domain on which a representation is exact. Existing
+-- constraints must prove that condition before the rule introduces auxiliaries.
+def positiveLogEpigraph :
+    EpigraphRepresentation (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
+  Auxiliary := ℝ
+  target x t u := x.1 = Real.exp u ∧ u ≤ t
+  source_iff_exists x t := by
+    constructor
+    · intro h
+      exact ⟨Real.log x.1, (Real.exp_log x.2).symm, h⟩
+    · rintro ⟨u, hx, hu⟩
+      simpa only [hx, Real.log_exp] using hu
+
+def logarithmicBound :=
+  problem (x t : ℝ)
+    minimize t
+    subject to
+      positive : 1 ≤ x
+      bound : Real.log x ≤ t
+
+-- `positive` supplies 0 < x. The rewrite adds a real auxiliary u with
+-- x = exp u and u ≤ t; the retained positivity constraint stays in place.
+reformulation logarithmicNLP : logarithmicBound := by
+  nlp at bound using positiveLogEpigraph
+  nlp
+
+example : GlobalEquivalence logarithmicBound logarithmicNLP := logarithmicNLP.equivalence
+example : IsSmoothNLP logarithmicNLP := logarithmicNLP.isSmoothNLP
+
 end
 end Morew.Examples.CustomRules
