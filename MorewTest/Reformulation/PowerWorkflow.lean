@@ -98,7 +98,7 @@ example : GlobalEquivalence lifted ready := ready.equivalence
 example : Conic.Form ready := ready.conicForm
 example (x y a : ℝ) : lifted.feasible ((x, y), a) ↔
     0 ≤ x ∧ a + y ≤ 10 ∧ Real.rpow x (3 / 2) ≤ 20 ∧
-      (a, 1, x) ∈ POW (1 / (3 / 2)) := Iff.rfl
+      (a, 1, x) ∈ POW (2 / 3) := Iff.rfl
 example (x y a : ℝ) : lifted.objective ((x, y), a) = y := rfl
 
 end Nested

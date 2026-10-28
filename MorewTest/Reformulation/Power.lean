@@ -44,7 +44,7 @@ example : Conic.Form terminal := terminal.conicForm
 example : terminal.conicForm.data.toProblem = terminal := terminal.conicForm.represents
 example : terminal.conicForm.data.rowCount = 3 := rfl
 example (x t : ℝ) : targeted.feasible (x, t) ↔
-    0 ≤ 2 * x + 1 ∧ (t, 1, 2 * x + 1) ∈ POW (1 / (3 / 2)) ∧ t ≤ 10 := Iff.rfl
+    0 ≤ 2 * x + 1 ∧ (t, 1, 2 * x + 1) ∈ POW (2 / 3) ∧ t ≤ 10 := Iff.rfl
 example (x t : ℝ) : targeted.objective (x, t) = t := rfl
 
 def negativeSource :=
@@ -60,7 +60,29 @@ reformulation negativeTarget : negativeSource := by
 example : GlobalEquivalence negativeSource negativeTarget := negativeTarget.equivalence
 example : Conic.Form negativeTarget := negativeTarget.conicForm
 example (x t : ℝ) : negativeTarget.feasible (x, t) ↔
-    x - 1 / 2 ∈ ℝ₊ ∧ (t, x, 1) ∈ POW (1 / (1 - (-2))) := Iff.rfl
+    x - 1 / 2 ∈ ℝ₊ ∧ (t, x, 1) ∈ POW (1 / 3) := Iff.rfl
+
+def negativeFractionSource :=
+  problem (x t : ℝ)
+    minimize t
+    subject to
+      positive : 1 ≤ x
+      bound : x ^ (-1 / 2 : ℝ) ≤ t
+
+reformulation negativeFractionTarget : negativeFractionSource := by
+  conic at bound
+
+reformulation negativeFractionTerminal : negativeFractionSource := by
+  conic
+
+example : GlobalEquivalence negativeFractionSource negativeFractionTarget :=
+  negativeFractionTarget.equivalence
+example (x t : ℝ) : negativeFractionTarget.feasible (x, t) ↔
+    1 ≤ x ∧ (t, x, 1) ∈ POW (2 / 3) := Iff.rfl
+example (x t : ℝ) : negativeFractionTerminal.feasible (x, t) ↔
+    x - 1 ∈ ℝ₊ ∧ (t, x, 1) ∈ POW (2 / 3) := Iff.rfl
+example : negativeFractionTerminal.conicForm.data.toProblem = negativeFractionTerminal :=
+  negativeFractionTerminal.conicForm.represents
 
 def constantSource :=
   problem (t : ℝ)
@@ -157,6 +179,27 @@ example : (symbolicTarget.conicForm α hα).data.sense = .maximize := rfl
 
 end Direct
 
+namespace LocalExponent
+
+def source :=
+  problem (x t : ℝ)
+    let exponent : ℝ := -1 / 2
+    minimize t
+    subject to
+      positive : 1 ≤ x
+      bound : x ^ exponent ≤ t
+      untouched : exponent ≤ 0
+
+reformulation target : source := by
+  conic at bound
+
+example : GlobalEquivalence source target := target.equivalence
+example (x t : ℝ) : target.feasible (x, t) ↔
+    let exponent : ℝ := -1 / 2
+    1 ≤ x ∧ (t, x, 1) ∈ POW (2 / 3) ∧ exponent ≤ 0 := Iff.rfl
+
+end LocalExponent
+
 namespace Imported
 
 -- These conflicting names must not capture the imported source's frozen names.
@@ -194,6 +237,14 @@ reformulation importedContinuation : (PowerSource.rewritten offset) := by
   conic
 
 example : Conic.Form (importedContinuation offset) := importedContinuation.conicForm offset
+
+reformulation numericContinuation : PowerSource.numericTarget := by
+  conic
+
+example : GlobalEquivalence PowerSource.numericTarget numericContinuation :=
+  numericContinuation.equivalence
+example : numericContinuation.conicForm.data.toProblem = numericContinuation :=
+  numericContinuation.conicForm.represents
 
 end Imported
 
@@ -237,6 +288,7 @@ end Symbolic
 -- Re-elaborating stored views checks exact membership instances and cone proofs.
 run_cmd do
   for (original, copy) in [(``Scalar.targeted, `scalarCopy),
+      (``Scalar.negativeFractionTarget, `negativeFractionCopy),
       (``Hypograph.target, `hypographCopy), (``Direct.target, `directCopy)] do
     let some view := Morew.Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "missing power presentation"
@@ -245,12 +297,14 @@ run_cmd do
     Lean.Elab.Command.elabCommand (← `(def $name := $term))
 
 example : scalarCopy = Scalar.targeted := rfl
+example : negativeFractionCopy = Scalar.negativeFractionTarget := rfl
 example : hypographCopy = Hypograph.target := rfl
 example : directCopy = Direct.target := rfl
 
 -- The readable Set notation also re-elaborates, independently of exact replay.
 run_cmd do
   for (original, copy) in [(``Scalar.targeted, `scalarDisplayCopy),
+      (``Scalar.negativeFractionTarget, `negativeFractionDisplayCopy),
       (``Hypograph.target, `hypographDisplayCopy), (``Direct.target, `directDisplayCopy)] do
     let some view := Morew.Syntax.getProblemDisplayView? (← Lean.getEnv) original
       | Lean.throwError "missing readable power presentation"
@@ -259,6 +313,7 @@ run_cmd do
     Lean.Elab.Command.elabCommand (← `(def $name := $term))
 
 example : scalarDisplayCopy = Scalar.targeted := rfl
+example : negativeFractionDisplayCopy = Scalar.negativeFractionTarget := rfl
 example : hypographDisplayCopy = Hypograph.target := rfl
 example : directDisplayCopy = Direct.target := rfl
 
@@ -303,11 +358,21 @@ info: problem (x t : ℝ)
   minimize t
   subject to
     before : 0 ≤ base
-    bound_conic_1 : (t, 1, 2 * x + 1) ∈ POW (1 / (3 / 2))
+    bound_conic_1 : (t, 1, 2 * x + 1) ∈ POW (2 / 3)
     after : t ≤ 10
 -/
 #guard_msgs in
 #printp Scalar.targeted
+
+/--
+info: problem (x t : ℝ)
+  minimize t
+  subject to
+    positive : x - 1 ∈ ℝ₊
+    bound_conic_1 : (t, x, 1) ∈ POW (2 / 3)
+-/
+#guard_msgs in
+#printp Scalar.negativeFractionTerminal
 
 /--
 info: problem (x t bound_aux : ℝ)
@@ -329,6 +394,18 @@ info: problem (x y z : ℝ)
 -/
 #guard_msgs in
 #printp Direct.target
+
+/--
+info: problem (x t : ℝ)
+  let exponent : ℝ := -1 / 2
+  minimize t
+  subject to
+    positive : 1 ≤ x
+    bound_conic_1 : (t, x, 1) ∈ POW (2 / 3)
+    untouched : exponent ≤ 0
+-/
+#guard_msgs in
+#printp LocalExponent.target
 
 /--
 info: problem (x t : ℝ)

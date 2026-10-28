@@ -32,6 +32,17 @@ variable (offset : ℝ)
 reformulation rewritten : (source offset) := by
   conic at bound using (Morew.Conic.Power.rpowEpigraph exponent exponent_range)
 
+-- Numeric parameter normalization and its transported range proof survive imports.
+def numericSource :=
+  problem (x t : ℝ)
+    minimize t
+    subject to
+      positive : 1 ≤ x
+      bound : x ^ (-1 / 2 : ℝ) ≤ t
+
+reformulation numericTarget : numericSource := by
+  conic at bound
+
 end
 
 end MorewTest.Reformulation.PowerSource

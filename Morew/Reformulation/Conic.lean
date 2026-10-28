@@ -75,8 +75,10 @@ equality hypotheses. Natural-number squares keep their existing SOC rules.
 
 Power-cone rows display as `(x, y, z) ∈ POW α`. Direct use of this notation
 requires a checked independent proof of `0 < α ∧ α < 1` during conic
-certification. Stored presentation retains the actual range proof for imported
-replay. The supported power rules are scalar; grouped power-cone families and
+certification. Generated numeric parameters simplify to exact rationals, for
+example `1 / (1 - -1 / 2)` becomes `2 / 3`; symbolic parameters and named helper
+constants retain their expressions. Stored presentation retains the actual range
+proof for imported replay. The supported power rules are scalar; grouped power-cone families and
 general vector power atoms are not recognized by these rules.
 -/
 
