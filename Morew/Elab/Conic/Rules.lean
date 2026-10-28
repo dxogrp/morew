@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Rewrite.Polyhedral
 import Morew.Conic.SecondOrder.Representations
 import Morew.Conic.Exponential.Representations
+import Morew.Conic.Power.Representations
 import Morew.Elab.Rewrite.Registry
 
 /-!
@@ -41,3 +42,21 @@ attribute [morew_conic]
   Morew.Conic.Exponential.softplusNativeEpigraph
   Morew.Conic.Exponential.relativeEntropyEpigraph
   Morew.Conic.Exponential.relativeEntropyNativeEpigraph
+  Morew.Conic.Power.rpowEpigraph
+  Morew.Conic.Power.rpowNotationEpigraph
+  Morew.Conic.Power.rpowNegativeEpigraph
+  Morew.Conic.Power.rpowNegativeNotationEpigraph
+  Morew.Conic.Power.rpowHypograph
+  Morew.Conic.Power.rpowNotationHypograph
+  Morew.Conic.Power.weightedGeoMeanHypograph
+  Morew.Conic.Power.weightedGeoMeanNotationHypograph
+  Morew.Conic.Power.weightedGeoMeanLeftNotationHypograph
+  Morew.Conic.Power.weightedGeoMeanRightNotationHypograph
+  Morew.Conic.Power.rpowZeroEpigraph
+  Morew.Conic.Power.rpowZeroHypograph
+  Morew.Conic.Power.rpowOneEpigraph
+  Morew.Conic.Power.rpowOneHypograph
+  Morew.Conic.Power.rpowZeroNotationEpigraph
+  Morew.Conic.Power.rpowZeroNotationHypograph
+  Morew.Conic.Power.rpowOneNotationEpigraph
+  Morew.Conic.Power.rpowOneNotationHypograph
