@@ -29,6 +29,10 @@ private noncomputable def throughClosedProblem (x : ℝ) : ℝ :=
 
 private noncomputable def powerSquare (x : ℝ) : ℝ := x ^ 2
 
+private noncomputable def independentLet (c x : ℝ) : ℝ :=
+  let y := c + c
+  (y + y) * x
+
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun x : ℝ => square x))
   assertSmooth (← `(fun x : ℝ => shift x))
@@ -157,6 +161,17 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       let type ← inferType result.smooth[0]!
       unless type.isAppOfArity ``ContDiffOn 11 && type.getAppArgs[9]! == sources[0]! do
         throwError "domain certificate exposed its inspected helper body as the original function"
+
+-- Compiler-optimized helper lets must agree with their inline native form while
+-- domain certification checks the independent arithmetic inside their scope.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  Domain.withInput (← `(fun c : ℝ => ((fun _x : ℝ => True),
+    #[fun x : ℝ => let y := c + c; (y + y) * x,
+      fun x : ℝ => independentLet c x]))) 1 fun feasible sources => do
+      unless ← isDefEq sources[0]! sources[1]! do
+        throwError "independent-let helper and native control differ"
+      for source in sources do
+        discard <| Domain.checkSuccess feasible #[source]
 
 -- Certifying a sibling must not inspect an already independent helper's body.
 run_cmd Lean.Elab.Command.liftTermElabM do

@@ -496,6 +496,10 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if (← Expr.depends point type) || (← Expr.depends point value) then
       chargeSubstitution (.lam name type body .default) #[value]
       return ← certifyBody point (body.instantiate1 value)
+    -- Compiled helpers may mark lets as nondependent, making their local values
+    -- opaque to definitional equality. Their checked reductions use those values,
+    -- so keep them transparent until every returned field is closed below.
+    let nondep := nondep && (← read).helpers.isEmpty
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← certifyBody point (body.instantiate1 binding)
       return {
