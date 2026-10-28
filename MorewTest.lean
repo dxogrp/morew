@@ -66,6 +66,9 @@ import MorewTest.NLP.DomainState
 import MorewTest.NLP.DomainSupport
 import MorewTest.NLP.Euclidean
 import MorewTest.NLP.Form
+import MorewTest.NLP.HelperFixtures
+import MorewTest.NLP.HelperLimits
+import MorewTest.NLP.Helpers
 import MorewTest.NLP.Registry
 import MorewTest.NLP.Rewrite
 import MorewTest.NLP.RowData
@@ -122,6 +125,7 @@ import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
 import MorewTest.Reformulation.SecondOrderFailures
+import MorewTest.Reformulation.SmoothHelpers
 import MorewTest.Reformulation.SubstitutionBindingIdentity
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures
