@@ -123,6 +123,9 @@ import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
+import MorewTest.Reformulation.Power
+import MorewTest.Reformulation.PowerSource
+import MorewTest.Reformulation.PowerWorkflow
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source

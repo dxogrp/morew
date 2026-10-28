@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.State
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
+import Morew.Conic.Power.Cone
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
@@ -19,6 +20,11 @@ These helpers are shared by step implementations and command emission.
 namespace Morew.Reformulation.Internal
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
+
+-- Exact syntax can share a power cone's proof without enabling readable cone
+-- notation. This internal flag is also kept separate from ordinary printing.
+private def powerMembershipReplayOption : Name :=
+  `Morew.Reformulation.Internal.powerMembershipReplay
 
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
     (stx : Lean.Syntax) : Option Name := do
@@ -91,7 +97,8 @@ private partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
 
 private def stabilizeExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
   withOptions (fun options =>
-      options.set `pp.fullNames true |>.set `pp.privateNames true
+      options.setBool powerMembershipReplayOption true
+        |>.set `pp.fullNames true |>.set `pp.privateNames true
         |>.set `pp.explicit true |>.set `pp.instances true
         |>.set `pp.proofs true |>.set `pp.tagAppFns true
         |>.set `pp.deepTerms true |>.set `pp.structureInstanceTypes true
@@ -106,7 +113,7 @@ private def stabilizeExpressionSyntax (expression : Expr) : TermElabM (TSyntax `
 
 /-- Delaborate an expression with explicit arguments and fixed constant references. -/
 def exactExpressionSyntax (expression : Expr) : TermElabM (TSyntax `term) :=
-  withOptions (fun options => options.set `pp.all true
+  withOptions (fun options => options.setBool powerMembershipReplayOption true |>.set `pp.all true
       |>.set `pp.explicit true |>.set `pp.instances true
       |>.set `pp.proofs true |>.set `pp.deepTerms true
       |>.set `pp.structureInstances false |>.set `pp.beta true
@@ -449,6 +456,82 @@ private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
     | _ => pure false
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Morew.Conic.Cone.powerSet]
+private def delabPowerSet : Delab := do
+  unless (← getOptions).getBool coneNotationOption do failure
+  guard <| (← getExpr).isAppOfArity ``Morew.Conic.Cone.powerSet 1
+  let exponent ← withAppArg delab
+  `(POW $exponent)
+
+private def presentationPowerMembership (α : ℝ) (hα : 0 < α ∧ α < 1)
+    (value : ℝ × ℝ × ℝ) : Prop :=
+  value ∈ ((Morew.Conic.Cone.power α hα).carrier : ConvexCone ℝ (ℝ × ℝ × ℝ))
+
+@[instance_reducible]
+private def presentationPowerMembershipInstance :
+    Membership (ℝ × ℝ × ℝ) (ConvexCone ℝ (ℝ × ℝ × ℝ)) := inferInstance
+
+private def presentationPowerSetMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
+  value ∈ Morew.Conic.Cone.powerSet α
+
+-- Preserve the exact bundled cone and proof once, rather than repeating them
+-- in dependent coordinate and membership-instance arguments. Replaying the
+-- closed lambda template leaves ordinary structural beta reduction available
+-- to later commands, without introducing an opaque predicate helper.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Membership.mem]
+private def delabPowerConeReplay : Delab := do
+  let options ← getOptions
+  unless options.getBool `pp.explicit &&
+      (options.getBool coneNotationOption || options.getBool powerMembershipReplayOption) do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Membership.mem 5
+  let args := expression.getAppArgs
+  let carrier := args[3]!.consumeMData
+  guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
+  let cone := carrier.getAppArgs[0]!.consumeMData
+  guard <| cone.isAppOfArity ``Morew.Conic.Cone.power 2
+  let canonical := (mkAppN (← getConstInfo ``presentationPowerMembership).value!
+    #[cone.getAppArgs[0]!, cone.getAppArgs[1]!, args[4]!]).headBeta
+  guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
+  guard (← isDefEq expression canonical)
+  let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
+  let evidence ← withNaryArg 3 <| withAppArg <| withNaryArg 1 delab
+  let value ← withNaryArg 4 delab
+  let function ← `(fun α hα value =>
+    @Membership.mem _ _ $(mkCIdent ``presentationPowerMembershipInstance)
+      ($(mkCIdent ``Morew.Conic.Cone.carrier) ($(mkCIdent ``Morew.Conic.Cone.power) α hα)) value)
+  `($function $exponent $evidence $value)
+
+-- The bundled cone and the raw set use different membership instances. Rewrite
+-- only the complete readable proposition; exact replay retains the cone proof.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Membership.mem]
+private def delabPowerConeMembership : Delab := do
+  unless (← getOptions).getBool coneNotationOption &&
+      !(← getOptions).getBool `pp.explicit do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Membership.mem 5
+  let args := expression.getAppArgs
+  let carrier := args[3]!.consumeMData
+  guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
+  let cone := carrier.getAppArgs[0]!.consumeMData
+  guard <| cone.isAppOfArity ``Morew.Conic.Cone.power 2
+  let exponent := cone.getAppArgs[0]!
+  let evidence := cone.getAppArgs[1]!
+  let canonical := (mkAppN (← getConstInfo ``presentationPowerMembership).value!
+    #[exponent, evidence, args[4]!]).headBeta
+  guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
+  let asSet := (mkAppN (← getConstInfo ``presentationPowerSetMembership).value!
+    #[exponent, args[4]!]).headBeta
+  unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
+    return ← withOptions (fun options => options.setBool `pp.explicit true
+      |>.setBool `pp.instances true) delabApp
+  let value ← withNaryArg 4 delab
+  let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
+  `($value ∈ POW $exponent)
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 private def delabStoredInstance (arity instanceIndex : Nat) : Delab := do
   unless (← getOptions).getBool coneNotationOption &&
       !(← getOptions).getBool `pp.explicit do failure
@@ -536,6 +619,11 @@ def delabPresentationTerm (expression : Expr)
   -- Exact replay keeps them, and used proof bindings are never rewritten here.
   let expression ← if replay then pure expression else
     Meta.transform expression (pre := fun expression => do
+      -- Exact cone replay uses a closed lambda to share its range proof.
+      -- Readable presentations expose the resulting membership directly.
+      if expression.isApp && expression.getAppFn.isLambda &&
+          (expression.getAppFn.find? (·.isConstOf ``presentationPowerMembershipInstance)).isSome then
+        return .visit expression.headBeta
       if let .letE _ type value body _ := expression then
         if !body.hasLooseBVar 0 && (← isProp type) then
           return .visit (body.instantiate1 value)
