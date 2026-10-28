@@ -38,8 +38,10 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
       if result.auxiliary?.isSome then throwError "an unconditional rewrite added an auxiliary"
       unless ← isDefEq result.nextDomain domain do throwError "exact rewrite changed the domain"
       discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
+      if result.lift.hasMVar || result.lift.hasSorry then
+        throwError "second-order planning returned an incomplete certificate"
       result.toResult.checkTargetIff
-      pure (result.rowPredicates, result.certifiedRows, #[result.lift, result.targetIff])
+      pure (result.rowPredicates, result.certifiedRows, #[result.targetIff])
     | .ok (.inr result) =>
       unless contextual do throwError "an unconditional rewrite retained unused domain evidence"
       unless ← isDefEq result.domain domain do

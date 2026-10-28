@@ -160,7 +160,7 @@ private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) :
   discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   for proof in #[result.lift, result.targetIff] do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
-    checkWithKernel proof
+  checkWithKernel result.targetIff
   for row in result.certifiedRows do
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff

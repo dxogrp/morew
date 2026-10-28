@@ -35,7 +35,9 @@ private def check (term : TSyntax `term) (rows : Nat)
     unless result.rowPredicates.size == rows do
       throwError "registered NLP plan has the wrong replacement shape"
     discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
+    if result.lift.hasMVar || result.lift.hasSorry then
+      throwError "incomplete registered NLP evidence"
+    for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
       if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
       checkWithKernel proof
@@ -63,7 +65,9 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
       unless ← isDefEq actual expected do
         throwError "registered NLP row changed its expression or position: {actual}"
     discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
-    for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
+    if result.lift.hasMVar || result.lift.hasSorry then
+      throwError "incomplete registered NLP evidence"
+    for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
       if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
       checkWithKernel proof

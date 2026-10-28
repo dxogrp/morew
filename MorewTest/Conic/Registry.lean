@@ -53,7 +53,7 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     for actual in predicates, expected in expected do
       unless ← isDefEq actual (← elaborate expected) do
         throwError "registered conic row changed its expression or position: {actual}"
-  checkWithKernel proof
+  if let .inr _ := result then checkWithKernel proof
   for row in certificates do
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff

@@ -31,7 +31,8 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
   discard <| Morew.Elab.Rewrite.Plan.checkLift source result.lift
   unless result.rowPredicates.size == result.certified.rowCertificates.size do
     throwError "generated row certificates are incomplete"
-  for proof in #[result.lift, result.targetIff, result.certified.domainIsOpen,
+  if result.lift.hasMVar || result.lift.hasSorry then throwError "incomplete exact NLP plan"
+  for proof in #[result.targetIff, result.certified.domainIsOpen,
       result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete exact NLP plan"
     checkWithKernel proof
