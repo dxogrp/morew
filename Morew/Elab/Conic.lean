@@ -16,8 +16,8 @@ import Morew.Elab.Expr
 # Checked affine row normalization
 
 This internal API recognizes elaborated scalar and finite-vector equality and
-inequality predicates, and native second-order and exponential cone membership.
-A finite family of exponential memberships remains one quantified presentation
+inequality predicates, and native second-order, exponential and power cone membership.
+A finite family of exponential or power memberships remains one quantified presentation
 row and is certified against the finite product cone. The API returns a semantic
 cone row and a checked pointwise equivalence, without changing a problem or its
 presentation.
@@ -116,6 +116,18 @@ private theorem normalizeExponentialFamily
   rw [h x]
   exact Morew.Conic.Cone.mem_exponentialProduct (source x)
 
+private theorem normalizePowerFamily
+    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    (n : Nat) (α : Fin n → ℝ) (hα : ∀ i, 0 < α i ∧ α i < 1)
+    (map : X →ᵃ[ℝ] (Morew.Conic.Cone.powerProduct n α hα).Space)
+    (source : X → Fin n → ℝ × ℝ × ℝ) (h : ∀ x, map x = source x) :
+    ∀ x, (Morew.Conic.Constraint.mk (Morew.Conic.Cone.powerProduct n α hα) map).Holds x ↔
+      ∀ i, source x i ∈ Morew.Conic.Cone.powerSet (α i) := by
+  intro x
+  change map x ∈ (Morew.Conic.Cone.powerProduct n α hα).carrier ↔ _
+  rw [h x]
+  exact Morew.Conic.Cone.mem_powerProduct α hα (source x)
+
 /-- Return the canonical real or coordinatewise real order, rather than using
 an arbitrary local `LE` instance that happens to have the same operand type. -/
 private def realOrder? (type : Expr) : MetaM (Option Expr) := do
@@ -177,7 +189,8 @@ private partial def withPredicateLets (point body : Expr)
   else
     action body
 
-private def membershipData (point body : Expr) (label? : Option Name) :
+private def membershipData (point body : Expr) (label? : Option Name)
+    (index? : Option Expr := none) :
     MetaM (Except Expr.Error (Expr × Expr)) := do
   let args := body.getAppArgs
   let carrier ← Expr.reduceStructure args[3]!
@@ -193,7 +206,7 @@ private def membershipData (point body : Expr) (label? : Option Name) :
     unless ← isDefEq body canonical do
       return .error (← rowError body "membership does not match the canonical power cone set" label?)
     let range := (mkApp (← getConstInfo ``powerExponentRange).value! exponent).headBeta
-    let some evidence ← Evidence.proveIndependent? point range
+    let some evidence ← Evidence.proveIndependent? point range index?
       | return .error (← rowError body
           m!"missing independent power cone exponent evidence: required 0 < {exponent} ∧ {exponent} < 1" label?)
     let cone ← mkAppM ``Morew.Conic.Cone.power #[exponent, evidence]
@@ -213,13 +226,15 @@ private def membershipData (point body : Expr) (label? : Option Name) :
       cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
       cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
+      cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3 ||
       cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
-  if cone.isAppOfArity ``Morew.Conic.Cone.power 2 &&
-      (← Evidence.hasPlaceholders cone) then
+  let power := cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
+    cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3
+  if power && (← Evidence.hasPlaceholders cone) then
     return .error (← rowError body "power cone contains unresolved placeholders" label?)
   if ← Expr.depends point cone then
-    let description := if cone.isAppOfArity ``Morew.Conic.Cone.power 2 then
+    let description := if power then
       "power cone parameter depends on the decision point"
       else "cone dimension depends on the decision point"
     return .error (← rowError body description label?)
@@ -233,15 +248,16 @@ private def membershipData (point body : Expr) (label? : Option Name) :
     return .error (← rowError body "membership does not match the canonical cone" label?)
   return .ok (cone, value)
 
-/-- Recover a native scalar nonnegative-cone coordinate after checking its
+/-- Recover native scalar or finite-vector nonnegative-cone coordinates after checking the
 membership instance. This does not unfold wrappers or certify affinity. -/
-def nonnegativeScalarValue? (point body : Expr) : MetaM (Option Expr) := do
+def nonnegativeValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     if !(body.isAppOfArity ``Membership.mem 5) || (← hasUnresolved body) then
       return .error ()
     match ← membershipData point body none with
     | .ok (cone, value) =>
-        return if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar then .ok value else .error ()
+        return if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
+            cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 then .ok value else .error ()
     | .error _ => return .error ()
   return result.toOption
 
@@ -353,30 +369,44 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
     return (constraint, pointwiseIff)
   return .ok { constraint, pointwiseIff }
 
+private structure FamilyMember where
+  coordinates : Expr
+  /-- A power parameter and its range proof; `none` denotes the exponential cone. -/
+  power? : Option (Expr × Expr) := none
+
 -- Keep evidence lets inside the coordinate function where the affine reifier
--- can use them. Quantifiers, conjunctions, and arbitrary helpers are not opened.
-private partial def exponentialFamilyCoordinates (point body : Expr)
-    (label? : Option Name) : MetaM (Except Expr.Error Expr) := do
+-- can use them. Cone parameters retain only their own dependencies, so unused
+-- coordinate lets cannot capture the decision point in the bundled cone.
+-- Quantifiers, conjunctions, and arbitrary predicate helpers are not opened.
+private partial def familyMember (point index body : Expr)
+    (label? : Option Name) : MetaM (Except Expr.Error FamilyMember) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      match ← exponentialFamilyCoordinates point (rest.instantiate1 binding) label? with
+      match ← familyMember point index (rest.instantiate1 binding) label? with
       | .error error => return .error error
-      | .ok coordinates =>
-          return .ok (← mkLetFVars #[binding] coordinates
-            (usedLetOnly := false) (generalizeNondepLet := false))
+      | .ok member =>
+          let power? ← member.power?.mapM fun (exponent, range) => do
+            return (← mkLetFVars #[binding] exponent (generalizeNondepLet := false),
+              ← mkLetFVars #[binding] range (generalizeNondepLet := false))
+          return .ok {
+            coordinates := ← mkLetFVars #[binding] member.coordinates
+              (usedLetOnly := false) (generalizeNondepLet := false)
+            power?
+          }
   unless body.isAppOfArity ``Membership.mem 5 do
     return .error (← rowError body
-      "expected one exponential membership under the finite quantifier" label?)
-  match ← membershipData point body label? with
+      "expected one exponential membership or power membership under the finite quantifier" label?)
+  match ← membershipData point body label? (some index) with
   | .error error => return .error error
   | .ok (cone, coordinates) =>
-      unless cone.isConstOf ``Morew.Conic.Cone.exponential do
-        return .error (← rowError body
-          "finite quantified rows require the native exponential cone" label?)
-      return .ok coordinates
+      if cone.isConstOf ``Morew.Conic.Cone.exponential then return .ok { coordinates }
+      if cone.isAppOfArity ``Morew.Conic.Cone.power 2 then
+        return .ok { coordinates, power? := some (cone.getAppArgs[0]!, cone.getAppArgs[1]!) }
+      return .error (← rowError body
+        "finite quantified rows require the native exponential cone or power cone" label?)
 
-private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
+private def normalizeFiniteFamilyRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let .forallE name index rest info := body
@@ -387,24 +417,36 @@ private def normalizeExponentialFamilyRow (predicate domain point body : Expr)
   let n := shape.getAppArgs[0]!
   if ← Expr.depends point n then
     return .error (← rowError body "cone dimension depends on the decision point" label?)
-  let coordinates : Except Expr.Error Expr ← withLocalDecl name info index fun i => do
-    match ← exponentialFamilyCoordinates point (rest.instantiate1 i) label? with
+  let family : Except Expr.Error FamilyMember ← withLocalDecl name info index fun i => do
+    match ← familyMember point i (rest.instantiate1 i) label? with
     | .error error => return .error error
-    | .ok value => return .ok (← mkLambdaFVars #[point, i] value)
-  if let .error error := coordinates then return .error error
-  let .ok source := coordinates
-    | throwError "internal error: missing exponential family coordinates"
+    | .ok member =>
+        let power? ← member.power?.mapM fun (exponent, range) => do
+          return (← mkLambdaFVars #[i] exponent, ← mkLambdaFVars #[i] range)
+        return .ok { coordinates := ← mkLambdaFVars #[point, i] member.coordinates, power? }
+  if let .error error := family then return .error error
+  let .ok family := family
+    | throwError "internal error: missing finite family coordinates"
+  let source := family.coordinates
   let affine ← Affine.reifyAffine source provider
   if let .error error := affine then
     return .error (← rowError error.expression m!"cone coordinates: {error.reason}" label?)
   let .ok affine := affine
-    | throwError "internal error: missing affine exponential family"
-  let cone ← mkAppM ``Morew.Conic.Cone.exponentialProduct #[n]
+    | throwError "internal error: missing affine finite family"
+  if let some (exponent, range) := family.power? then
+    if (← Expr.depends point exponent) || (← Expr.depends point range) then
+      return .error (← rowError body "power cone parameter depends on the decision point" label?)
+  let (cone, theoremName, parameters) ← match family.power? with
+    | none => pure (← mkAppM ``Morew.Conic.Cone.exponentialProduct #[n],
+        ``normalizeExponentialFamily, #[n])
+    | some (exponent, range) => do
+        pure (← mkAppM ``Morew.Conic.Cone.powerProduct #[n, exponent, range],
+          ``normalizePowerFamily, #[n, exponent, range])
   let target ← whnf (← mkAppM ``Morew.Conic.Cone.Space #[cone])
   let (constraint, pointwiseIff) ← Space.withCanonicalConeSpaces domain target do
     let constraint ← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.mk #[cone, affine.map])
-    let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeExponentialFamily
-      #[n, affine.map, source, affine.pointwiseEquality])
+    let pointwiseIff ← instantiateMVars (← mkAppM theoremName
+      (parameters ++ #[affine.map, source, affine.pointwiseEquality]))
     if constraint.hasMVar || pointwiseIff.hasMVar then
       throwError "quantified row construction left unresolved metavariables"
     let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
@@ -434,7 +476,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
             return ← normalizeZeroMembershipRow predicate domain point body provider label?
         return ← normalizeMembershipRow predicate domain point body provider label?
       if body.isForall then
-        return ← normalizeExponentialFamilyRow predicate domain point body provider label?
+        return ← normalizeFiniteFamilyRow predicate domain point body provider label?
       let args := body.getAppArgs
       let equality := body.isAppOfArity ``Eq 3
       let greaterEqual := body.isAppOfArity ``GE.ge 4
@@ -512,8 +554,8 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
     normalizeRowWithInstances predicate provider label?
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, a canonical
-zero singleton, native nonnegative, zero, second-order, or exponential cone
-membership, or one finite quantified family of exponential memberships.
+zero singleton, native nonnegative, zero, second-order, exponential or power cone
+membership, or one finite quantified family of exponential or power memberships.
 Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/

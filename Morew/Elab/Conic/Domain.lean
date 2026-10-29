@@ -80,7 +80,7 @@ private theorem nonnegativeOfMembership {value : ℝ} (bound : value ∈ ℝ₊)
 
 private def signInMembership? (point value body evidence : Expr) (strict : Bool) :
     MetaM (Option Expr) := do
-  let some coordinate ← nonnegativeScalarValue? point body | return none
+  let some coordinate ← nonnegativeValue? point body | return none
   let coordinate ← Expr.reduceStructure coordinate
   if !strict && (← isDefEq coordinate value) then
     return some (← mkAppM ``nonnegativeOfMembership #[evidence])
