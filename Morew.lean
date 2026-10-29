@@ -10,6 +10,7 @@ import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
 import Morew.Conic.Power.Cone
+import Morew.Conic.Power.GeometricMean
 import Morew.Conic.Power.Norm
 import Morew.Conic.Power.Representations
 import Morew.Conic.SecondOrder
@@ -53,6 +54,7 @@ import Morew.Elab.Rewrite.Registry
 import Morew.Elab.State
 import Morew.Fn
 import Morew.Fn.Exponential
+import Morew.Fn.Power
 import Morew.NLP
 import Morew.NLP.Basic
 import Morew.NLP.Domain
