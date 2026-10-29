@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.Support
 import MorewTest.Environment
+import Lean.Meta.Tactic.AuxLemma
 
 /-!
 # Narrow automatic preference for the native L2 representation
@@ -91,6 +92,76 @@ private def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `te
     ← `(fun z : ((Fin 2 → ℝ) × ℝ) × (Fin 2 → ℝ) =>
       ∀ i, (z.2 i, z.1.2, z.1.1 i) ∈ POW $exponent)]
 
+-- Both built-in L2 candidates need an evidence-generated declaration. The
+-- preferred SOC certificate must retain its own declaration while discarding
+-- the power candidate's declaration; ambiguity must discard every candidate.
+private def checkCandidateEvidence (ambiguous : Bool := false) : TermElabM Unit := do
+  let expression ← elaborate (← `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>
+    fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 (fun i => z.1 i / c)‖ ≤ z.2))
+  lambdaBoundedTelescope expression 2 fun parameters source => do
+    let sentinel ← mkFreshExprMVar (mkConst ``Nat)
+    let assigned ← mkFreshExprMVar (mkConst ``Nat)
+    assigned.mvarId!.assign (mkNatLit 7)
+    let before ← getMCtx
+    let environment ← getEnv
+    let generated ← IO.mkRef (#[] : Array Name)
+    let provider : Morew.Elab.Affine.EvidenceProvider := {
+      nonzeroEvidence? := some fun obligation => do
+        let proof ← mkAppM ``And.left #[parameters[1]!]
+        unless ← isDefEq (← inferType proof) obligation do return none
+        let proof ← mkLambdaFVars parameters proof
+        let name ← mkAuxLemma [] (← inferType proof) proof (cache := false)
+        generated.modify (·.push name)
+        sentinel.mvarId!.assign (mkNatLit 19)
+        return some (mkAppN (mkConst name) parameters)
+    }
+    let outcome ← Morew.Elab.Conic.Rewrite.planUnique source #[] provider
+    let after ← getMCtx
+    unless before.mvarCounter == after.mvarCounter &&
+        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
+      throwError "candidate evidence leaked scratch metavariables"
+    for (id, value) in before.eAssignment.toList do
+      unless after.eAssignment.find? id == some value do
+        throwError "candidate evidence changed a caller assignment"
+    for (id, _) in before.decls.toList do
+      unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
+        throwError "candidate evidence assigned a caller hole"
+    if ← sentinel.mvarId!.isAssigned then
+      throwError "candidate evidence retained the callback's caller assignment"
+    unless (← instantiateMVars assigned) == mkNatLit 7 do
+      throwError "candidate evidence discarded a caller assignment"
+    let names ← generated.get
+    unless names.size == (if ambiguous then 3 else 2) &&
+        names.toList.eraseDups.length == names.size do
+      throwError "expected a separate evidence declaration from every norm candidate: {names}"
+    match outcome with
+    | .error error =>
+      unless ambiguous && (← error.reason.toString).contains "ambiguous exact conic rules" do
+        throwError "unexpected evidence-backed norm rejection: {error.reason}"
+      unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
+        throwError "ambiguous norm candidates retained generated declarations"
+    | .ok result =>
+      if ambiguous then throwError "evidence-backed norm ambiguity was accepted"
+      result.toResult.check source #[]
+      unless result.auxiliary?.isNone && result.certifiedRows.size == 1 do
+        throwError "evidence-backed L2 selection did not retain the SOC candidate"
+      let certificates := #[result.certificate.expression, result.targetIff] ++
+        result.certifiedRows.flatMap (fun row => #[row.constraint, row.pointwiseIff])
+      for certificate in certificates do
+        if certificate.hasMVar || certificate.hasSorry then
+          throwError "evidence-backed norm certificate is incomplete"
+        checkWithKernel certificate
+      let referenced := names.filter fun name =>
+        certificates.any fun certificate => (certificate.find? (·.isConstOf name)).isSome
+      unless referenced.size == 1 do
+        throwError "the SOC certificate must reference exactly its own evidence declaration"
+      for name in names do
+        unless (← getEnv).contains name == referenced.contains name do
+          throwError "norm preference retained evidence from a discarded candidate: {name}"
+
+run_cmd liftTermElabM do
+  checkCandidateEvidence
+
 run_cmd liftTermElabM do
   let source ← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2)
   check source (← socRows)
@@ -125,6 +196,7 @@ run_cmd liftTermElabM do
   check source (← socRows) false (some ``customSOC)
   check source (← powerRows (← `((1 / 2 : ℝ)))) true
     (some ``Morew.Conic.Power.normEpigraph)
+  checkCandidateEvidence true
 end
 
 noncomputable def customPower {n : Nat} (p : ℝ≥0∞) (hp : 1 < p.toReal) :

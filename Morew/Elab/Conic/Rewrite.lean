@@ -192,18 +192,24 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
       attempt source retained
         (fun point body prove accept => Match.rule point body rule accept prove) provider
 
+private structure CertifiedCandidate where
+  name : Name
+  result : Plan.Result
+  environment : Environment
+
 /-- Prefer the direct SOC norm representation only when it has fully certified.
 This relationship applies to these two built-in declarations, not their aliases
 or other custom rules. It neither restricts symbolic power exponents nor changes
 explicit selection, and it never removes a different successful candidate. -/
-private def preferSecondOrderNorm (successes : Array (Name × Plan.Result)) :
-    Array (Name × Plan.Result) :=
-  if successes.any (·.1 == ``Morew.Conic.SecondOrder.normEpigraph) then
-    successes.filter (·.1 != ``Morew.Conic.Power.normEpigraph)
+private def preferSecondOrderNorm (successes : Array CertifiedCandidate) :
+    Array CertifiedCandidate :=
+  if successes.any (·.name == ``Morew.Conic.SecondOrder.normEpigraph) then
+    successes.filter (·.name != ``Morew.Conic.Power.normEpigraph)
   else successes
 
-/-- Certify all registered candidates, apply the SOC/power norm preference, and
-require a unique remaining success. -/
+/-- Certify all registered candidates from the same environment, apply the
+SOC/power norm preference, and require a unique remaining success. Only the
+selected candidate's auxiliary declarations survive selection. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
@@ -214,16 +220,20 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
       let lookup ← withLocalDeclD `point domain fun point => do
         mkLambdaFVars #[point] (← matchingBody (mkApp predicate point))
       let candidates ← Registry.candidates .conic lookup
-      let mut successes : Array (Name × Plan.Result) := #[]
+      let environment ← getEnv
+      let mut successes : Array CertifiedCandidate := #[]
       let mut failures : Array MessageData := #[]
       for name in candidates do
         match ← planDeclaration predicate name retained provider with
-        | .ok result => successes := successes.push (name, result)
+        | .ok result => successes := successes.push ⟨name, result, ← getEnv⟩
         | .error error => failures := failures.push m!"{name}: {error.reason}"
+        setEnv environment
       successes := preferSecondOrderNorm successes
-      if let [(_, result)] := successes.toList then return .ok result
+      if let [selected] := successes.toList then
+        setEnv selected.environment
+        return .ok selected.result
       if successes.size > 1 then
-        let names := successes.toList.map fun (name, _) => name.toString
+        let names := successes.toList.map (·.name.toString)
         throwError "ambiguous exact conic rules: {String.intercalate ", " names}; select one with `using`"
       if failures.isEmpty then
         throwError "no supported registered conic rule matches the entire selected predicate and bound polarity"
