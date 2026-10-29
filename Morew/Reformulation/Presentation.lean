@@ -422,8 +422,6 @@ def packPoint (components : Array Expr) : MetaM Expr := do
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `Morew.Reformulation.Internal.coneNotation
 
-private def finIndexKnownTypeOption : Name := `Morew.Reformulation.Internal.finIndexKnownType
-
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
 private def delabConeCarrier : Delab := do
@@ -456,124 +454,6 @@ private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
     match ← trySynthInstance (← inferType stored) with
     | .some inferred => isDefEq stored inferred
     | _ => pure false
-
--- Readable finite indices may reduce literal arithmetic, but named dimensions
--- and altered arithmetic instances must retain their original expressions.
-private def presentationNatLiteral? (expression : Expr) (fuel : Nat := 32) :
-    MetaM (Option Nat) := do
-  let fuel + 1 := fuel | return none
-  let expression := expression.consumeMData
-  if let .lit (.natVal value) := expression then
-    return if value ≤ 100000 then some value else none
-  let args := expression.getAppArgs
-  if expression.isAppOfArity ``OfNat.ofNat 3 then
-    unless args[0]!.isConstOf ``Nat do return none
-    let native ← mkAppM ``instOfNatNat #[args[1]!]
-    unless ← isDefEq args[2]! native do return none
-    return ← presentationNatLiteral? args[1]! fuel
-  if expression.isAppOfArity ``Nat.succ 1 then
-    return (← presentationNatLiteral? args[0]! fuel).bind fun value =>
-      if value < 100000 then some (value + 1) else none
-  unless expression.isAppOfArity ``Nat.add 2 || expression.isAppOfArity ``Nat.sub 2 ||
-      expression.isAppOfArity ``HAdd.hAdd 6 || expression.isAppOfArity ``HSub.hSub 6 do
-    return none
-  let operation := expression.getBoundedAppFn 2
-  let addition := expression.isAppOfArity ``Nat.add 2 || expression.isAppOfArity ``HAdd.hAdd 6
-  unless ← isDefEq operation (mkConst (if addition then ``Nat.add else ``Nat.sub)) do return none
-  let some left ← presentationNatLiteral? args[args.size - 2]! fuel | return none
-  let some right ← presentationNatLiteral? args.back! fuel | return none
-  let value := if addition then left + right else left - right
-  return if value ≤ 100000 then some value else none
-
-private def presentationFinNumeral? (expression : Expr) : MetaM (Option Nat) :=
-  withoutModifyingState do
-    try
-      let args := expression.getAppArgs
-      let some dimension ← presentationNatLiteral? args[0]! | return none
-      let some value ← presentationNatLiteral? args[1]! | return none
-      -- Fin numerals use modulo; a constructor's value must already be in range.
-      unless value < dimension do return none
-      let numeral ← mkNumeral (← inferType expression) value
-      let native ← mkAppOptM ``Fin.instOfNat #[some args[0]!, none, some (mkNatLit value)]
-      unless (← isDefEq numeral.getAppArgs[2]! native) &&
-          (← isDefEq expression numeral) do return none
-      return some value
-    catch _ => return none
-
--- Keep Fin dimensions as written, including literal arithmetic. Normalizing
--- Fin (3 - 1) to Fin 2 can select different numeral or arithmetic instances
--- when a displayed local definition is elaborated again.
-
-open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
-@[delab app.Fin.mk]
-private def delabPresentationFinIndex : Delab := do
-  unless (← getOptions).getBool coneNotationOption &&
-      !(← getOptions).getBool `pp.explicit do failure
-  let expression ← getExpr
-  guard <| expression.isAppOfArity ``Fin.mk 3
-  if let some value ← presentationFinNumeral? expression then
-    -- Preserve the constructor's type when its surrounding context cannot
-    -- infer it; otherwise overloaded arithmetic may default to Nat on replay.
-    return ← withTypeAscription
-      (cond := !(← getPPOption (·.getBool finIndexKnownTypeOption)) ||
-        (← getPPOption getPPNumericTypes) ||
-        (← withType <| getPPOption getPPStructureInstanceType)) do
-        pure (quote value)
-  withNaryArg 1 do
-    let value ← getExpr
-    let showEmbedding (name : Name) : Delab := do
-      let index ← getExpr
-      let valid ← (show MetaM Bool from withoutModifyingState do
-        let candidate ← mkAppM name #[index]
-        return (← isDefEq (← inferType expression) (← inferType candidate)) &&
-          (← isDefEq expression candidate))
-      guard valid
-      let index ← delab
-      `($(mkCIdent name) $index)
-    if value.isAppOfArity ``Fin.val 2 then
-      return ← withNaryArg 1 <| showEmbedding ``Fin.castSucc
-    guard <| value.isAppOfArity ``Nat.add 2 || value.isAppOfArity ``HAdd.hAdd 6
-    guard (← (withoutModifyingState <|
-      isDefEq (value.getBoundedAppFn 2) (mkConst ``Nat.add) : MetaM Bool))
-    guard ((← (withoutModifyingState <|
-      presentationNatLiteral? value.getAppArgs.back! : MetaM (Option Nat))) == some 1)
-    withNaryArg (value.getAppNumArgs - 2) do
-      guard <| (← getExpr).isAppOfArity ``Fin.val 2
-      withNaryArg 1 <| showEmbedding ``Fin.succ
-
--- Check the coercion on a fresh natural: a custom coercion can agree with the
--- native cast at one value. Dependent coercions need a separate conservative
--- check, because index cleanup can change which operand-specific instance
--- matches even when the original and displayed operands are definitionally equal.
-private def presentationNatRealCoercionIsCanonical : MetaM Bool :=
-  withoutModifyingState do
-    let value ← mkFreshExprMVar (mkConst ``Nat)
-    let dependent ← mkAppM ``CoeDep #[mkConst ``Nat, value, mkConst ``Real]
-    unless (← SynthInstance.getInstances dependent).isEmpty do return false
-    withLocalDeclD `value (mkConst ``Nat) fun value => do
-      let .some coerced ← coerce? value (mkConst ``Real) | return false
-      let native := mkApp3 (mkConst ``Nat.cast [.zero])
-        (mkConst ``Real) (mkConst ``Real.instNatCast) value
-      isDefEq coerced native
-
-open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
-@[delab app.Nat.cast]
-private def delabPresentationFinRealCast : Delab := do
-  unless (← getOptions).getBool coneNotationOption &&
-      !(← getOptions).getBool `pp.explicit do failure
-  let expression ← getExpr
-  guard <| expression.isAppOfArity ``Nat.cast 3
-  let args := expression.getAppArgs
-  guard <| args[0]!.isConstOf ``Real && args[2]!.isAppOfArity ``Fin.val 2
-  guard (← (withoutModifyingState <|
-    isDefEq args[1]! (mkConst ``Real.instNatCast) : MetaM Bool))
-  guard (← presentationInstanceResynthesizes args[1]!)
-  let value ← withNaryArg 2 <| withOptions (fun options => options.setBool `pp.coercions false) delab
-  unless ← presentationNatRealCoercionIsCanonical do
-    -- Falling back to ordinary coercion notation would still select a dependent
-    -- instance after printing the cleaned-up operand. Keep the native cast itself.
-    return ← `(@$(mkCIdent ``Nat.cast) ℝ $(mkCIdent ``Real.instNatCast) $value)
-  `(($value : ℝ))
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.powerSet]
@@ -732,44 +612,6 @@ private def delabZeroConeMembership : Delab := do
   let type ← withNaryArg 1 delab
   `($value ∈ ($set : $type))
 
--- A direct application of a free decision function supplies its explicit Fin
--- parameter type. Mark only those arguments as safe to display without types;
--- all other Fin numerals retain their types, including under tuples and lambdas.
-private partial def markKnownFinArguments (expression : Expr) (position : Lean.SubExpr.Pos)
-    (options : PrettyPrinter.Delaborator.OptionsPerPos) :
-    MetaM PrettyPrinter.Delaborator.OptionsPerPos := do
-  match expression with
-  | .app function argument =>
-    let mut options := options
-    if function.isFVar && argument.consumeMData.isAppOfArity ``Fin.mk 3 then
-      if let .forallE _ domain _ .default ← whnf (← inferType function) then
-        if domain.isAppOfArity ``Fin 1 && !domain.hasMVar && !domain.hasLooseBVars then
-          let position := position.pushAppArg
-          let flags := (options.get? position).getD {}
-          options := options.insert position (flags.setBool finIndexKnownTypeOption true)
-    let nextOptions ← markKnownFinArguments function position.pushAppFn options
-    markKnownFinArguments argument position.pushAppArg nextOptions
-  | .lam _ type body _ | .forallE _ type body _ =>
-    let options ← markKnownFinArguments type position.pushBindingDomain options
-    markKnownFinArguments body position.pushBindingBody options
-  | .letE _ type value body _ =>
-    let options ← markKnownFinArguments type position.pushLetVarType options
-    let options ← markKnownFinArguments value position.pushLetValue options
-    markKnownFinArguments body position.pushLetBody options
-  | .proj _ _ value => markKnownFinArguments value position.pushProj options
-  | .mdata _ value => markKnownFinArguments value position options
-  | _ => return options
-
-private def presentationFinIndexOptions (expression : Expr) :
-    MetaM PrettyPrinter.Delaborator.OptionsPerPos := do
-  if (expression.find? (·.isAppOfArity ``Fin.mk 3)).isNone then return {}
-  let options ← getOptions
-  -- Supplying positional options disables delabCore's automatic analysis, so
-  -- preserve the full analysis only when the caller already requested it.
-  let result ← if getPPAnalyze options && !getPPAll options then
-    PrettyPrinter.Delaborator.topDownAnalyze expression else pure {}
-  markKnownFinArguments expression .root result
-
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
@@ -807,13 +649,7 @@ def delabPresentationTerm (expression : Expr)
         -- Cast notation would resynthesize coercions in the replaying context.
         |>.setBool `pp.coercions false
       else options) do
-    -- Match delabCore's preprocessing so the selective flags refer to the
-    -- same subexpression positions, including under pattern metadata.
-    let expression ← Meta.erasePatternRefAnnotations expression
-    let expression ← if getPPInstantiateMVars (← getOptions) then instantiateMVars expression
-      else pure expression
-    let optionsPerPos ← if replay then pure {} else presentationFinIndexOptions expression
-    let (stx, infos) ← PrettyPrinter.delabCore expression optionsPerPos
+    let (stx, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
     pure <| freezePresentationReferences infos binders

@@ -6,12 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation
 
 /-!
-# Readable finite power-cone chains
+# Finite power-cone chains and exact presentation replay
 
-Concrete chain indices have ordinary finite-index notation, and both their exact
-and readable presentations replay under conflicting consumer-side declarations.
-Symbolic targets retain exact replay; their readable views retain the dimensions
-and necessary embeddings, with omitted proofs.
+Finite power-cone chains retain exact replay under conflicting consumer-side
+declarations. Their readable views retain the dimensions and necessary embeddings,
+with omitted index proofs even at concrete dimensions. Readable replay is checked
+for the original source views, which do not omit these proofs.
 -/
 
 namespace MorewTest.Reformulation.PowerPrinting
@@ -36,11 +36,12 @@ info: problem (x : Fin 3 → ℝ) (t : ℝ) (mean_aux : Fin 3 → ℝ)
   maximize t
   subject to
     domain : 0 ≤ x
-    mean_conic_1 : mean_aux 0 = x 0
+    mean_conic_1 : mean_aux ⟨0, triple._proof_1⟩ = x ⟨0, triple._proof_1⟩
     mean_conic_2 : ∀ (j : Fin (3 - 1)),
-      (mean_aux (Fin.castSucc j), x (Fin.succ j), mean_aux (Fin.succ j)) ∈ POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
-    mean_conic_3 : 0 ≤ mean_aux 2
-    mean_conic_4 : t ≤ mean_aux 2
+      (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
+    mean_conic_3 : 0 ≤ mean_aux ⟨3 - 1, triple._proof_5⟩
+    mean_conic_4 : t ≤ mean_aux ⟨3 - 1, triple._proof_5⟩
 -/
 #guard_msgs in
 #printp triple
@@ -50,11 +51,12 @@ info: problem (x : Fin 1 → ℝ) (t : ℝ) (mean_aux : Fin 1 → ℝ)
   maximize t
   subject to
     domain : 0 ≤ x
-    mean_conic_1 : mean_aux 0 = x 0
+    mean_conic_1 : mean_aux ⟨0, singleton._proof_1⟩ = x ⟨0, singleton._proof_1⟩
     mean_conic_2 : ∀ (j : Fin (1 - 1)),
-      (mean_aux (Fin.castSucc j), x (Fin.succ j), mean_aux (Fin.succ j)) ∈ POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
-    mean_conic_3 : 0 ≤ mean_aux 0
-    mean_conic_4 : t ≤ mean_aux 0
+      (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
+    mean_conic_3 : 0 ≤ mean_aux ⟨1 - 1, singleton._proof_5⟩
+    mean_conic_4 : t ≤ mean_aux ⟨1 - 1, singleton._proof_5⟩
 -/
 #guard_msgs in
 #printp singleton
@@ -74,7 +76,7 @@ info: problem (x : Fin n → ℝ) (t : ℝ) (mean_aux : Fin n → ℝ)
     mean_conic_1 : mean_aux ⟨0, hn⟩ = x ⟨0, hn⟩
     mean_conic_2 : ∀ (j : Fin (n - 1)),
       (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
     mean_conic_3 : 0 ≤ mean_aux ⟨n - 1, ⋯⟩
     mean_conic_4 : t ≤ mean_aux ⟨n - 1, ⋯⟩
 -/
@@ -116,11 +118,11 @@ info: problem (x : Fin 3 → ℝ) (t : ℝ) (inverse_aux : Fin 3 → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
-    inverse_conic_1 : inverse_aux 0 = x 0
+    inverse_conic_1 : inverse_aux ⟨0, GeometricMean.triple._proof_1⟩ = x ⟨0, GeometricMean.triple._proof_1⟩
     inverse_conic_2 : ∀ (j : Fin (3 - 1)),
-      (inverse_aux (Fin.castSucc j), x (Fin.succ j), inverse_aux (Fin.succ j)) ∈
-        POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
-    inverse_conic_3 : (t, inverse_aux 2, 1) ∈ POW (1 / 4)
+      (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
+    inverse_conic_3 : (t, inverse_aux ⟨3 - 1, GeometricMean.triple._proof_5⟩, 1) ∈ POW (1 / 4)
 -/
 #guard_msgs in
 #printp triple
@@ -130,11 +132,11 @@ info: problem (x : Fin 1 → ℝ) (t : ℝ) (inverse_aux : Fin 1 → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
-    inverse_conic_1 : inverse_aux 0 = x 0
+    inverse_conic_1 : inverse_aux ⟨0, GeometricMean.singleton._proof_1⟩ = x ⟨0, GeometricMean.singleton._proof_1⟩
     inverse_conic_2 : ∀ (j : Fin (1 - 1)),
-      (inverse_aux (Fin.castSucc j), x (Fin.succ j), inverse_aux (Fin.succ j)) ∈
-        POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
-    inverse_conic_3 : (t, inverse_aux 0, 1) ∈ POW (1 / 2)
+      (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
+    inverse_conic_3 : (t, inverse_aux ⟨1 - 1, GeometricMean.singleton._proof_5⟩, 1) ∈ POW (1 / 2)
 -/
 #guard_msgs in
 #printp singleton
@@ -154,7 +156,7 @@ info: problem (x : Fin n → ℝ) (t : ℝ) (inverse_aux : Fin n → ℝ)
     inverse_conic_1 : inverse_aux ⟨0, hn⟩ = x ⟨0, hn⟩
     inverse_conic_2 : ∀ (j : Fin (n - 1)),
       (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
+        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
     inverse_conic_3 : (t, inverse_aux ⟨n - 1, ⋯⟩, 1) ∈ POW (1 / ((↑n : ℝ) + 1))
 -/
 #guard_msgs in
@@ -188,11 +190,11 @@ def Fin.succ {n : ℕ} (_ : _root_.Fin n) : _root_.Fin (n + 1) := 0
 
 variable (n : ℕ) (hn : 0 < n)
 
--- Captured references, original proofs, and the readable indices must survive
--- re-elaboration. Checking the declaration also rules out unresolved proofs.
+-- Captured references and original proofs must survive exact re-elaboration.
+-- Readable replay covers source views; lowered chain views omit Fin.mk proofs.
+-- Checking the declaration also rules out unresolved proofs.
 run_cmd do
-  let symbolic := #[``GeometricMean.targeted, ``GeometricMean.ready,
-    ``InverseProduct.targeted, ``InverseProduct.ready]
+  let readable := #[``GeometricMean.source, ``InverseProduct.source]
   for replay in [true, false] do
     for (original, stem) in #[(``GeometricMean.source, `geoSource),
         (``InverseProduct.source, `invSource),
@@ -200,8 +202,7 @@ run_cmd do
         (``InverseProduct.triple, `invTriple), (``InverseProduct.singleton, `invSingleton),
         (``GeometricMean.targeted, `geoTargeted), (``GeometricMean.ready, `geoReady),
         (``InverseProduct.targeted, `invTargeted), (``InverseProduct.ready, `invReady)] do
-      -- Symbolic readable views intentionally omit necessary Fin.mk proofs.
-      if !replay && symbolic.contains original then continue
+      if !replay && !readable.contains original then continue
       let environment ← Lean.getEnv
       let view? := if replay then Morew.Syntax.getProblemView? environment original
         else Morew.Syntax.getProblemDisplayView? environment original
@@ -220,13 +221,9 @@ example : geoSourceDisplay n = GeometricMean.source n := rfl
 example : invSourceExact n = InverseProduct.source n := rfl
 example : invSourceDisplay n = InverseProduct.source n := rfl
 example : geoTripleExact = GeometricMean.triple := rfl
-example : geoTripleDisplay = GeometricMean.triple := rfl
 example : geoSingletonExact = GeometricMean.singleton := rfl
-example : geoSingletonDisplay = GeometricMean.singleton := rfl
 example : invTripleExact = InverseProduct.triple := rfl
-example : invTripleDisplay = InverseProduct.triple := rfl
 example : invSingletonExact = InverseProduct.singleton := rfl
-example : invSingletonDisplay = InverseProduct.singleton := rfl
 example : geoTargetedExact n hn = GeometricMean.targeted n hn := rfl
 example : geoReadyExact n hn = GeometricMean.ready n hn := rfl
 example : invTargetedExact n hn = InverseProduct.targeted n hn := rfl
