@@ -290,6 +290,9 @@ private def checkExtendedPlan (parameter evidence expected : TSyntax `term)
       if let some name := retainedName? then
         unless (exponent.find? (·.isConstOf name)).isSome do
           throwError "power normalization unfolded a named parameter"
+      else
+        if (exponent.find? (·.isConstOf ``ENNReal.toReal)).isSome then
+          throwError "numeric exponent still contains visible toReal scaffolding"
 
 def namedExponent : ℝ≥0∞ := 2
 
@@ -298,6 +301,35 @@ run_cmd liftTermElabM do
   checkExtendedPlan (← `((3 / 2 : ℝ≥0∞))) (← `(by norm_num)) (← `((2 / 3 : ℝ)))
   checkExtendedPlan (← `(namedExponent)) (← `(by norm_num [namedExponent]))
     (← `((1 / namedExponent.toReal : ℝ))) (some ``namedExponent)
+
+def castFamilyLift (n : ℕ) (hn : 0 < n) : ExactConstraintLift (fun x : ℝ =>
+    ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / ((n : ℝ) + 1))) where
+  Auxiliary := Unit
+  target x _ := ∀ _i : Fin 2,
+    (x, 1, x) ∈ (Cone.power (1 / ((n : ℝ) + 1))
+      (inverseRange _ (by exact_mod_cast Nat.lt_add_one_iff.mpr hn))).carrier
+  source_iff_exists x := by simp only [exists_const]; rfl
+
+def namedDimension : ℕ := 3
+
+run_cmd liftTermElabM do
+  for (dimension, named) in #[(← `((3 : ℕ)), false), (← `(namedDimension), true)] do
+    let source ← elaborate (← `(fun x : ℝ =>
+      ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (($dimension : ℕ) + 1 : ℝ))))
+    let rule ← elaborate (← `(castFamilyLift $dimension (by decide)))
+    let .ok result ← Morew.Elab.Conic.Plan.plan source rule
+      | throwError "cast-parameter family was rejected"
+    result.toResult.check source #[]
+    lambdaTelescope result.rowPredicates[0]! fun _ body =>
+      forallTelescope body fun _ membership => do
+        let exponent := membership.getAppArgs[3]!.getAppArgs[0]!.getAppArgs[0]!
+        if named then
+          unless (exponent.find? (·.isConstOf ``namedDimension)).isSome do
+            throwError "normalization unfolded a named dimension"
+        else
+          unless (← isDefEq exponent (← elaborate (← `((1 / 4 : ℝ))))) &&
+              (exponent.find? (·.isConstOf ``Nat.cast)).isNone do
+            throwError "literal dimension cast was not normalized: {exponent}"
 
 end
 

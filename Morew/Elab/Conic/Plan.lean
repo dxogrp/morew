@@ -187,6 +187,13 @@ private partial def literalRational (expression : Expr) : MetaM Bool := do
   let args := expression.getAppArgs
   if expression.isAppOfArity ``ENNReal.toReal 1 then
     return ← literalENNReal args[0]!
+  if expression.isAppOfArity ``Nat.cast 3 then
+    let natural := args[2]!.consumeMData
+    let numeral := if natural.isAppOfArity ``OfNat.ofNat 3 then natural.getAppArgs[1]!
+      else natural
+    unless numeral.isRawNatLit && (← isDefEq natural numeral) do return false
+    let numeral : Q(ℕ) := numeral
+    return ← sameOperationPrefix expression q(($numeral : ℝ)) 1
   if expression.isAppOfArity ``OfNat.ofNat 3 then
     unless args[1]!.isRawNatLit do return false
     let numeral : Q(ℕ) := args[1]!
@@ -237,7 +244,9 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
         let normalizedExponent : Q(ℝ) := normalized.expr
         let evaluated ← Mathlib.Meta.NormNum.Result.toSimpResult (u := .zero)
           (← Mathlib.Meta.NormNum.derive (u := .zero) normalizedExponent)
-        if ← isDefEq exponent evaluated.expr then return .error ()
+        -- Definitional equality alone would leave visible scaffolding such as
+        -- `ENNReal.toReal 2` in an otherwise literal generated parameter.
+        if exponent == evaluated.expr then return .error ()
         let equality ← mkEqTrans (← normalized.getProof) (← evaluated.getProof)
         unless ← isDefEq (← inferType equality) (← mkEq exponent evaluated.expr) do
           return .error ()
