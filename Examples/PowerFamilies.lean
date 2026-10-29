@@ -12,8 +12,9 @@ Finite p-norms use mathlib's `PiLp` norm. Geometric means and inverse products
 use ordinary functions with nonnegative and strictly positive coordinate domains.
 Each finite cone family stays grouped, including at symbolic dimensions.
 
-Automatic selection reports ambiguity when multiple exact rules apply. The L2
-example shows how `using` chooses either the SOC or power-cone representation.
+Automatic L2 conversion uses its SOC representation. The L2 example also shows
+how `using` selects the alternative power-cone representation explicitly.
+Other competing registered rules still report ambiguity.
 -/
 
 namespace Examples.PowerFamilies
@@ -52,10 +53,8 @@ def source (n : ℕ) :=
 
 variable (n : ℕ)
 
--- Both rules apply at p = 2; omitting `using` reports their ambiguity.
--- SOC uses one cone constraint on (t, x), without an auxiliary vector.
+-- Default L2 conversion uses one SOC constraint on (t, x), without an auxiliary vector.
 reformulation soc : (source n) := by
-  conic at bound using Morew.Conic.SecondOrder.normEpigraph
   conic
 
 #printp soc

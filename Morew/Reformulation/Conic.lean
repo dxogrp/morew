@@ -14,8 +14,9 @@ The surface handler selects one current presentation label, preflights the
 generated name family, and materializes a checked in-place replacement.
 
 Automatic selection uses `@[morew_conic]` declarations, including the shipped
-rules. It requires one fully certified result; multiple successful declarations
-are reported by fully qualified name. Registration and import order do not
+rules. It requires one fully certified result after the built-in SOC/power norm
+preference described below; remaining ambiguity is reported by fully qualified
+declaration name. Registration and import order do not
 choose a winner. `using ruleName` selects that declaration alone and infers its
 parameters from the row, whether or not it is registered. Applied certificate
 terms retain ordinary Lean elaboration, and explicit failures never fall back
@@ -83,9 +84,11 @@ at each index, with independent pointwise range evidence; it remains one row.
 
 Finite p-norm upper bounds use `‖WithLp.toLp p v‖` and independent evidence
 `1 < p.toReal`. Native exponent one retains the L1 representation. At exponent
-two, both the SOC and power rules apply: automatic rewriting reports ambiguity,
-and `using Morew.Conic.SecondOrder.normEpigraph` or
-`using Morew.Conic.Power.normEpigraph` selects the intended formulation.
+two, both the SOC and power rules apply: automatic rewriting prefers the direct
+SOC representation when both fully certify the row. Explicit
+`using Morew.Conic.Power.normEpigraph` selects the power representation even at
+exponent two. This preference applies only to these two built-in declarations;
+other successful rules still require explicit selection to resolve ambiguity.
 An independent `1 < q` also discharges the range for `p = ENNReal.ofReal q`.
 
 `Fn.geoMean` lower bounds and `Fn.invProd` upper bounds use a deterministic

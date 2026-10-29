@@ -17,6 +17,10 @@ import Morew.Elab.Rewrite.Registry
 Built-in records use the same public attribute as downstream extensions. Import
 this module to make these rules available; ordinary local attribute removal can
 exclude an individual rule from automatic discovery.
+
+The conic consumer prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
+when both fully certify the selected constraint. Other successful rules retain
+their ambiguity, and explicit `using` selection bypasses this preference.
 -/
 
 attribute [morew_conic]

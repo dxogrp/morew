@@ -22,7 +22,7 @@ def p :=
       radius : ‖WithLp.toLp 2 x‖ ≤ 5
 
 reformulation coneBound : p := by
-  conic at radius using Morew.Conic.SecondOrder.normEpigraph
+  conic at radius
   epigraph t as objectiveBound
 
 #printp coneBound

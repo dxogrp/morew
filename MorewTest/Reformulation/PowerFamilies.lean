@@ -5,12 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation
 import MorewTest.Diagnostics
+import MorewTest.Environment
 
 /-!
 # Complete finite power-cone workflows
 
-The norm rules deliberately share automatic discovery. Explicit selection
-chooses the SOC or power representation when both certify the L2 source.
+Automatic L2 conversion uses the existing SOC representation. Explicit selection
+can request the power representation, while custom overlapping registrations
+continue to produce ambiguity diagnostics.
 -/
 
 namespace MorewTest.Reformulation.PowerFamilies
@@ -28,18 +30,11 @@ def normSource (n : ℕ) (p : ℝ≥0∞) :=
 namespace L2
 variable (n : ℕ)
 
-#guard_error_fragments ["ambiguous exact conic rules", "Morew.Conic.Power.normEpigraph",
-    "Morew.Conic.SecondOrder.normEpigraph", "using"] in
-reformulation ambiguousTargeted : (normSource n 2) := by
+reformulation defaultTargeted : (normSource n 2) := by
   conic at bound
 
-#guard_error_fragments ["ambiguous exact conic rules", "Morew.Conic.Power.normEpigraph",
-    "Morew.Conic.SecondOrder.normEpigraph", "using"] in
-reformulation ambiguousTerminal : (normSource n 2) := by
+reformulation defaultTerminal : (normSource n 2) := by
   conic
-
-assert_not_exists ambiguousTargeted ambiguousTargeted.equivalence ambiguousTerminal
-  ambiguousTerminal.equivalence ambiguousTerminal.conicForm
 
 reformulation soc : (normSource n 2) := by
   conic at bound using Conic.SecondOrder.normEpigraph
@@ -50,6 +45,19 @@ reformulation powerTargeted : (normSource n 2) := by
 
 reformulation power : (powerTargeted n) := by
   conic
+
+example : GlobalEquivalence (normSource n 2) (defaultTargeted n) := defaultTargeted.equivalence n
+example : GlobalEquivalence (normSource n 2) (defaultTerminal n) := defaultTerminal.equivalence n
+example : Conic.Form (defaultTerminal n) := defaultTerminal.conicForm n
+example : (defaultTerminal.conicForm n).data.toProblem = defaultTerminal n :=
+  (defaultTerminal.conicForm n).represents
+example : IsConic (defaultTerminal n) := defaultTerminal.isConic n
+example : (defaultTerminal.conicForm n).data.rowCount = 1 := rfl
+example (x : Fin n → ℝ) (t : ℝ) : (defaultTargeted n).objective (x, t) = t := rfl
+example (x : Fin n → ℝ) (t : ℝ) : (defaultTargeted n).feasible (x, t) ↔
+    (t, x) ∈ SOC n := Iff.rfl
+example : defaultTargeted n = soc n := rfl
+example : defaultTerminal n = soc n := rfl
 
 example : GlobalEquivalence (normSource n 2) (soc n) := soc.equivalence n
 example : GlobalEquivalence (normSource n 2) (power n) :=
@@ -91,6 +99,45 @@ info: problem (x : Fin n → ℝ) (t : ℝ) (bound_aux : Fin n → ℝ)
 -/
 #guard_msgs in
 #printp power
+
+def customNormEpigraph {n : ℕ} :
+    EpigraphRepresentation (fun z : EuclideanSpace ℝ (Fin n) => ‖z‖) :=
+  Conic.SecondOrder.normEpigraph
+
+elab "assert_l2_ambiguity_atomic% " nested:command : command => do
+  let before ← Lean.getEnv
+  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
+    Lean.throwError m!"failed L2 selection leaked declaration {name}"
+
+section CustomAmbiguity
+
+attribute [local morew_conic] customNormEpigraph
+
+/--
+error: constraint `bound`: ambiguous exact conic rules: Morew.Conic.SecondOrder.normEpigraph, MorewTest.Reformulation.PowerFamilies.L2.customNormEpigraph; select one with `using`
+-/
+#guard_msgs in
+assert_l2_ambiguity_atomic%
+reformulation customAmbiguousTargeted : (normSource n 2) certificate customTargetedAlias := by
+  conic at bound
+
+/--
+error: terminal conic validation is uncertified: constraint `bound`: ambiguous exact conic rules: Morew.Conic.SecondOrder.normEpigraph, MorewTest.Reformulation.PowerFamilies.L2.customNormEpigraph; select one with `using`
+unsupported expression: fun point => ‖WithLp.toLp 2 point.1‖ ≤ point.2
+use `conic at bound using rule` with an exact representation before `conic`
+-/
+#guard_msgs in
+assert_l2_ambiguity_atomic%
+reformulation customAmbiguousTerminal : (normSource n 2) certificate customTerminalAlias := by
+  conic
+
+assert_not_exists customAmbiguousTargeted customAmbiguousTargeted.equivalence
+  customAmbiguousTargeted.conicForm customTargetedAlias
+  customAmbiguousTerminal customAmbiguousTerminal.equivalence
+  customAmbiguousTerminal.conicForm customTerminalAlias
+
+end CustomAmbiguity
 
 end L2
 

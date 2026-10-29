@@ -15,7 +15,9 @@ import Morew.Elab.State
 
 Automatic discovery and explicit certificate selection share checked matching and
 conic target certification. Every automatic candidate comes from `@[morew_conic]`, including built-ins.
-Both targeted and terminal callers require one fully certified replacement.
+Both targeted and terminal callers require one fully certified replacement after
+preferring the direct SOC norm representation over the general power-norm lift.
+Other successful rules remain ambiguous; explicit selection bypasses this preference.
 Retained evidence can discharge rule premises before generated rows are certified.
 Conditional replacements preserve the retained constraints and may introduce auxiliaries.
 -/
@@ -190,7 +192,18 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
       attempt source retained
         (fun point body prove accept => Match.rule point body rule accept prove) provider
 
-/-- Certify all registered candidates and require a unique success. -/
+/-- Prefer the direct SOC norm representation only when it has fully certified.
+This relationship applies to these two built-in declarations, not their aliases
+or other custom rules. It neither restricts symbolic power exponents nor changes
+explicit selection, and it never removes a different successful candidate. -/
+private def preferSecondOrderNorm (successes : Array (Name × Plan.Result)) :
+    Array (Name × Plan.Result) :=
+  if successes.any (·.1 == ``Morew.Conic.SecondOrder.normEpigraph) then
+    successes.filter (·.1 != ``Morew.Conic.Power.normEpigraph)
+  else successes
+
+/-- Certify all registered candidates, apply the SOC/power norm preference, and
+require a unique remaining success. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
@@ -207,6 +220,7 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
         match ← planDeclaration predicate name retained provider with
         | .ok result => successes := successes.push (name, result)
         | .error error => failures := failures.push m!"{name}: {error.reason}"
+      successes := preferSecondOrderNorm successes
       if let [(_, result)] := successes.toList then return .ok result
       if successes.size > 1 then
         let names := successes.toList.map fun (name, _) => name.toString

@@ -78,7 +78,7 @@ def source :=
       infinity : ‖v‖ ≤ t
 
 reformulation target : source := by
-  conic at euclidean using Morew.Conic.SecondOrder.normEpigraph
+  conic at euclidean
   conic at squares
   conic at squaredNorm
   conic at infinity
@@ -144,7 +144,7 @@ def source :=
         (fun i => (∑ j, Parameter.matrix i j * x j) - Parameter.offset i)‖ ≤ t
 
 reformulation target : source := by
-  conic at residual using Morew.Conic.SecondOrder.normEpigraph
+  conic at residual
 
 example : GlobalEquivalence source target := target.equivalence
 
@@ -262,7 +262,7 @@ def emptySource :=
       margin : 1 ≤ y
 
 reformulation emptyTarget : emptySource := by
-  conic at norm using Morew.Conic.SecondOrder.normEpigraph
+  conic at norm
   conic at square
   conic at quotient
 
@@ -294,7 +294,7 @@ def singleSource :=
       square : (∑ i, v i ^ 2) ≤ 9
 
 reformulation singleTarget : singleSource := by
-  conic at norm using Morew.Conic.SecondOrder.normEpigraph
+  conic at norm
   conic at square
 
 example : GlobalEquivalence singleSource singleTarget := singleTarget.equivalence
@@ -323,7 +323,7 @@ def source :=
       other : v ∈ (Cone.nonnegative 1).carrier
 
 reformulation target : source := by
-  conic at norm using Morew.Conic.SecondOrder.normEpigraph
+  conic at norm
 
 run_cmd do
   let some view := Morew.Syntax.getProblemView? (← Lean.getEnv) ``target
@@ -363,10 +363,10 @@ def source :=
 -- Either order preserves the same rows when the one-norm adds its auxiliary.
 reformulation oneFirst : source := by
   conic at one
-  conic at two using Morew.Conic.SecondOrder.normEpigraph
+  conic at two
 
 reformulation twoFirst : source := by
-  conic at two using Morew.Conic.SecondOrder.normEpigraph
+  conic at two
   conic at one
 
 example : GlobalEquivalence source oneFirst := oneFirst.equivalence

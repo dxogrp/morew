@@ -33,7 +33,7 @@ def source :=
       remaining : |x| ≤ 5
 
 reformulation lowered : source := by
-  conic at norm using Morew.Conic.SecondOrder.normEpigraph
+  conic at norm
   conic at quotient
 
 example : GlobalEquivalence source lowered := lowered.equivalence

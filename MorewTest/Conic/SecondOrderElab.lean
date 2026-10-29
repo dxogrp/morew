@@ -118,8 +118,8 @@ or empty dimensions preserve the original decision space. -/
 run_cmd liftTermElabM do
   expectPlan (← `(fun x : ℝ => (x + 1)^2 ≤ 3))
   expectPlan (← `(fun x : ℝ => 3 ≥ (x + 1)^2))
-  expectRejected (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖ ≤ 3))
-    "ambiguous exact conic rules" 1
+  -- Automatic selection and explicit selection preserve the same SOC shape.
+  expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖ ≤ 3)) 1
   expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖ ≤ 3)) 1
     (some ``Morew.Conic.SecondOrder.normEpigraph)
   expectPlan (← `(fun n : ℕ => fun x : EuclideanSpace ℝ (Fin n) => ‖x‖ ≤ 3)) 1
@@ -128,7 +128,6 @@ run_cmd liftTermElabM do
   expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => (∑ i, (x i + 1)^2) ≤ 3)) 1
   expectPlan (← `(fun (n m : ℕ) (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) =>
     fun x : (Fin n → ℝ) × ℝ => ‖WithLp.toLp 2 (A.mulVec x.1 + b)‖ ≤ x.2)) 4
-    (some ``Morew.Conic.SecondOrder.normEpigraph)
   expectPlan (← `(fun x : EuclideanSpace ℝ (Fin 0) => ‖x‖ ≤ -1))
   expectPlan (← `(fun x : EuclideanSpace ℝ (Fin 1) => ‖x‖^2 ≤ -1))
   expectPlan (← `(fun x : Fin 0 → ℝ => (∑ i, (x i)^2) ≤ -1))
