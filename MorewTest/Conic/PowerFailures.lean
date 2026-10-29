@@ -137,8 +137,8 @@ run_cmd liftTermElabM do
     "required"
   rejectRow (← elaborate (← `(fun x : ℝ => (x, 1, x) ∈ POW x))) "decision"
   rejectRow (← elaborate (← `(fun x : ℝ => (x ^ (2 : ℕ), 1, x) ∈ POW (1 / 2 : ℝ))))
-  rejectRow (← elaborate (← `(fun x : ℝ =>
-    ∀ _i : Fin 0, (x, 1, x) ∈ POW (1 / 2 : ℝ))))
+  assertRow (← `(fun x : ℝ =>
+    ∀ _i : Fin 0, (x, 1, x) ∈ POW (1 / 2 : ℝ)))
   let altered ← elaborate (← `(fun [Membership (ℝ × ℝ × ℝ) (Set (ℝ × ℝ × ℝ))] =>
     fun x : ℝ => (x, 1, x) ∈ POW (1 / 2 : ℝ)))
   lambdaBoundedTelescope altered 1 fun _ source => rejectRow source "membership"

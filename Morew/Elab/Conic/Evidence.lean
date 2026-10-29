@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Expr
 import Morew.Elab.State
+import Mathlib.Data.ENNReal.Inv
 import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 
@@ -12,8 +13,10 @@ import Lean.Meta.Check
 # Independent conic parameter evidence
 
 Exponent ranges use independent local hypotheses, their conjunction projections,
-and bounded exact numeral/rational evaluation. This does not combine symbolic
-inequalities or obtain decision-dependent premises from selected/generated rows.
+one supplied finite-index specialization, and bounded exact numeral/rational
+evaluation. The `ofReal` bridge transports a checked real exponent greater than
+one. This does not combine symbolic inequalities or obtain decision-dependent
+premises from selected/generated rows.
 The same policy serves registered rules and direct parameterized-cone membership.
 -/
 
@@ -36,16 +39,39 @@ partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM
         if ← hasPlaceholders value seen then return true
   return false
 
-private partial def projection? (proof goal : Expr) : MetaM (Option Expr) := do
+private partial def projection? (proof goal : Expr) (index? : Option Expr) :
+    MetaM (Option Expr) := do
   let type ← Expr.reduceStructure (← inferType proof)
   if ← isDefEq type goal then return some proof
   if type.isAppOfArity ``And 2 then
-    if let some result ← projection? (← mkAppM ``And.left #[proof]) goal then
+    if let some result ← projection? (← mkAppM ``And.left #[proof]) goal index? then
       return some result
-    return ← projection? (← mkAppM ``And.right #[proof]) goal
+    return ← projection? (← mkAppM ``And.right #[proof]) goal index?
+  if let some index := index? then
+    if let .forallE _ domain _ _ := type then
+      if ← isDefEq domain (← inferType index) then
+        return ← projection? (mkApp proof index) goal none
   return none
 
-private partial def proveCore? (point goal : Expr) : MetaM (Option Expr) := do
+private theorem one_lt_toReal_ofReal {q : ℝ} (h : 1 < q) :
+    1 < (ENNReal.ofReal q).toReal := by
+  rw [ENNReal.toReal_ofReal (le_trans zero_le_one h.le)]
+  exact h
+
+/-- Normalize `ENNReal.toReal` of native numerals, inverses and divisions with
+checked equalities. No contextual simp set or unfolding of named operands is used. -/
+def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
+  let mut theorems : SimpTheorems := {}
+  for declaration in #[``ENNReal.toReal_zero, ``ENNReal.toReal_one,
+      ``ENNReal.toReal_ofNat, ``ENNReal.toReal_natCast, ``ENNReal.toReal_inv,
+      ``ENNReal.toReal_div] do
+    theorems ← theorems.addConst declaration
+  let context ← Simp.mkContext (config := { zeta := false })
+    (simpTheorems := #[theorems]) (congrTheorems := ← getSimpCongrTheorems)
+  return (← simp expression context).1
+
+private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
+    MetaM (Option Expr) := do
   if (← Expr.depends point goal) || (← Expr.hasUnresolved goal) ||
       (← hasPlaceholders goal) then return none
   for declaration in ← getLCtx do
@@ -54,12 +80,12 @@ private partial def proveCore? (point goal : Expr) : MetaM (Option Expr) := do
     if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
         (← hasPlaceholders proof) then continue
     unless ← isProp declaration.type do continue
-    if let some proof ← projection? proof goal then return some proof
+    if let some proof ← projection? proof goal index? then return some proof
   let goal ← Expr.reduceStructure goal
   if goal.isAppOfArity ``And 2 then
     let args := goal.getAppArgs
-    let some left ← proveCore? point args[0]! | return none
-    let some right ← proveCore? point args[1]! | return none
+    let some left ← proveCore? point args[0]! index? | return none
+    let some right ← proveCore? point args[1]! index? | return none
     return some (← mkAppM ``And.intro #[left, right])
   unless goal.isAppOfArity ``LT.lt 4 || goal.isAppOfArity ``LE.le 4 do return none
   let args := goal.getAppArgs
@@ -69,6 +95,13 @@ private partial def proveCore? (point goal : Expr) : MetaM (Option Expr) := do
   let canonical : Q(Prop) := if goal.isAppOfArity ``LT.lt 4 then q($left < $right)
     else q($left ≤ $right)
   unless ← isDefEq goal canonical do return none
+  if goal.isAppOfArity ``LT.lt 4 && (← isDefEq left q((1 : ℝ))) &&
+      right.isAppOfArity ``ENNReal.toReal 1 then
+    let extended := right.getAppArgs[0]!
+    if extended.isAppOfArity ``ENNReal.ofReal 1 then
+      let real : Q(ℝ) := extended.getAppArgs[0]!
+      if let some proof ← proveCore? point q(1 < $real) index? then
+        return some (← mkAppM ``one_lt_toReal_ofReal #[proof])
   let context ← readThe Core.Context
   let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
   let limit := if context.maxHeartbeats == 0 then localLimit else min context.maxHeartbeats localLimit
@@ -80,19 +113,29 @@ private partial def proveCore? (point goal : Expr) : MetaM (Option Expr) := do
         q(inferInstance : PartialOrder ℝ) fun _ => do
       let result ← withTheReader Core.Context
         (fun context => { context with maxHeartbeats := limit }) <|
-        Mathlib.Meta.NormNum.deriveBool goal
+        do
+          let normalized ← normalizeToReal goal
+          match ← Mathlib.Meta.NormNum.deriveBool normalized.expr with
+          | ⟨true, proof⟩ => pure (some (← normalized.mkEqMPR proof))
+          | _ => pure none
       match result with
-      | ⟨true, proof⟩ => pure proof
+      | some proof => pure proof
       | _ => throwError "independent parameter inequality was not established"
     return some proof
   catch _ => return none
 
 /-- Produce checked parameter evidence without modifying caller metavariables.
-Only exact hypotheses/conjunction projections and bounded numerical inequalities
-are available. Decision-dependent and unresolved goals return `none`. -/
-def proveIndependent? (point goal : Expr) : MetaM (Option Expr) := do
+Only exact hypotheses/conjunction projections, one supplied `Fin` index,
+the checked `ofReal` bridge, and bounded numerical inequalities are available.
+Decision-dependent and unresolved goals or indices return `none`. -/
+def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
+    MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
-    let some proof ← proveCore? point goal | return .error ()
+    if let some index := index? then
+      if (← Expr.depends point index) || (← Expr.hasUnresolved index) ||
+          (← hasPlaceholders index) then return .error ()
+      unless (← whnf (← inferType index)).isAppOfArity ``Fin 1 do return .error ()
+    let some proof ← proveCore? point goal index? | return .error ()
     if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
         (← hasPlaceholders proof) then
       return .error ()

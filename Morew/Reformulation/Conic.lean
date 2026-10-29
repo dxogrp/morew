@@ -14,8 +14,9 @@ The surface handler selects one current presentation label, preflights the
 generated name family, and materializes a checked in-place replacement.
 
 Automatic selection uses `@[morew_conic]` declarations, including the shipped
-rules. It requires one fully certified result; multiple successful declarations
-are reported by fully qualified name. Registration and import order do not
+rules. It requires one fully certified result after the built-in SOC/power norm
+preference described below; remaining ambiguity is reported by fully qualified
+declaration name. Registration and import order do not
 choose a winner. `using ruleName` selects that declaration alone and infers its
 parameters from the row, whether or not it is registered. Applied certificate
 terms retain ordinary Lean elaboration, and explicit failures never fall back
@@ -37,8 +38,8 @@ hypograph representation of the entire predicate. Its inspectable target may
 contain `True`, conjunctions, and affine scalar/vector equalities or non-strict
 inequalities. Every generated row is certified independently of the objective
 or other constraints. Supported SOC and rotated-SOC memberships are also valid
-custom target rows, as are exponential memberships and grouped finite
-families of exponential memberships.
+custom target rows, as are exponential and power memberships and grouped finite
+families of those memberships.
 
 Native Euclidean norms, scalar squares, and finite sums of squares become one
 SOC or rotated-SOC membership row. Quotients of squares require a positive
@@ -78,8 +79,25 @@ requires a checked independent proof of `0 < α ∧ α < 1` during conic
 certification. Generated numeric parameters simplify to exact rationals, for
 example `1 / (1 - -1 / 2)` becomes `2 / 3`; symbolic parameters and named helper
 constants retain their expressions. Stored presentation retains the actual range
-proof for imported replay. The supported power rules are scalar; grouped power-cone families and
-general vector power atoms are not recognized by these rules.
+proof for imported replay. A finite family may have a different exact exponent
+at each index, with independent pointwise range evidence; it remains one row.
+
+Finite p-norm upper bounds use `‖WithLp.toLp p v‖` and independent evidence
+`1 < p.toReal`. Native exponent one retains the L1 representation. At exponent
+two, both the SOC and power rules apply: automatic rewriting prefers the direct
+SOC representation when both fully certify the row. Explicit
+`using Morew.Conic.Power.normEpigraph` selects the power representation even at
+exponent two. This preference applies only to these two built-in declarations;
+other successful rules still require explicit selection to resolve ambiguity.
+An independent `1 < q` also discharges the range for `p = ENNReal.ofReal q`.
+
+`Fn.geoMean` lower bounds and `Fn.invProd` upper bounds use a deterministic
+prefix-mean chain on nonempty finite vectors. Geometric means require
+coordinatewise nonnegativity. Inverse products require an independent positive
+margin at every coordinate, obtained from retained vector lower bounds or
+nonnegative-cone memberships. Strict vector order alone is not coordinatewise
+strict positivity. Targeted rewrites can also use retained finite quantified
+margins, but terminal certification still checks those retained rows separately.
 -/
 
 namespace Morew.Reformulation.Internal

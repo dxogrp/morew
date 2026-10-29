@@ -190,8 +190,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  -- The unified planner accepts the L2 bound through its SOC rule. Explicitly
-  -- selecting the L1 rule must still reject the incompatible norm carrier.
+  -- L2 prefers the direct one-row SOC representation. Selecting L1 still
+  -- rejects the incompatible norm carrier.
   expectPlan (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) 1 false
   expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "instance"
     (some (← `(Morew.Rewrite.norm1Epigraph (n := 2))))

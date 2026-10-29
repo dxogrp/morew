@@ -15,7 +15,9 @@ import Morew.Elab.State
 
 Automatic discovery and explicit certificate selection share checked matching and
 conic target certification. Every automatic candidate comes from `@[morew_conic]`, including built-ins.
-Both targeted and terminal callers require one fully certified replacement.
+Both targeted and terminal callers require one fully certified replacement after
+preferring the direct SOC norm representation over the general power-norm lift.
+Other successful rules remain ambiguous; explicit selection bypasses this preference.
 Retained evidence can discharge rule premises before generated rows are certified.
 Conditional replacements preserve the retained constraints and may introduce auxiliaries.
 -/
@@ -77,6 +79,25 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
+  if let .forallE name indexType body _ := reduced then
+    let indexType ← whnf indexType
+    unless indexType.isAppOfArity ``Fin 1 do return none
+    if ← Expr.depends point indexType then return none
+    return ← withLocalDeclD name indexType fun index => do
+      let body ← Expr.reduceStructure (body.instantiate1 index)
+      unless body.isAppOfArity ``LT.lt 4 || body.isAppOfArity ``LE.le 4 do return none
+      let args := body.getAppArgs
+      unless ← isDefEq args[0]! q(ℝ) do return none
+      let strict := body.isAppOfArity ``LT.lt 4
+      let value : Q(ℝ) := args[3]!
+      let canonical : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
+      unless ← isDefEq body canonical do return none
+      let some proof ← Domain.signFromRetained? point value retained evidence strict (some index)
+        | throwError "registered conic rewrite was not certified: missing coordinatewise {if strict then "positive" else "nonnegative"} constant margin at {index}; required an independent ε with {if strict then "0 < ε" else "0 ≤ ε"} and a retained constraint ε ≤ {value}"
+      let proof ← mkLambdaFVars #[index] proof
+      unless ← isDefEq (← inferType proof) goal do return none
+      checkWithKernel proof
+      return some proof
   if reduced.isAppOfArity ``LT.lt 4 || reduced.isAppOfArity ``LE.le 4 then
     let args := reduced.getAppArgs
     let strict := reduced.isAppOfArity ``LT.lt 4
@@ -171,7 +192,24 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
       attempt source retained
         (fun point body prove accept => Match.rule point body rule accept prove) provider
 
-/-- Certify all registered candidates and require a unique success. -/
+private structure CertifiedCandidate where
+  name : Name
+  result : Plan.Result
+  environment : Environment
+
+/-- Prefer the direct SOC norm representation only when it has fully certified.
+This relationship applies to these two built-in declarations, not their aliases
+or other custom rules. It neither restricts symbolic power exponents nor changes
+explicit selection, and it never removes a different successful candidate. -/
+private def preferSecondOrderNorm (successes : Array CertifiedCandidate) :
+    Array CertifiedCandidate :=
+  if successes.any (·.name == ``Morew.Conic.SecondOrder.normEpigraph) then
+    successes.filter (·.name != ``Morew.Conic.Power.normEpigraph)
+  else successes
+
+/-- Certify all registered candidates from the same environment, apply the
+SOC/power norm preference, and require a unique remaining success. Only the
+selected candidate's auxiliary declarations survive selection. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
@@ -182,15 +220,20 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
       let lookup ← withLocalDeclD `point domain fun point => do
         mkLambdaFVars #[point] (← matchingBody (mkApp predicate point))
       let candidates ← Registry.candidates .conic lookup
-      let mut successes : Array (Name × Plan.Result) := #[]
+      let environment ← getEnv
+      let mut successes : Array CertifiedCandidate := #[]
       let mut failures : Array MessageData := #[]
       for name in candidates do
         match ← planDeclaration predicate name retained provider with
-        | .ok result => successes := successes.push (name, result)
+        | .ok result => successes := successes.push ⟨name, result, ← getEnv⟩
         | .error error => failures := failures.push m!"{name}: {error.reason}"
-      if let [(_, result)] := successes.toList then return .ok result
+        setEnv environment
+      successes := preferSecondOrderNorm successes
+      if let [selected] := successes.toList then
+        setEnv selected.environment
+        return .ok selected.result
       if successes.size > 1 then
-        let names := successes.toList.map fun (name, _) => name.toString
+        let names := successes.toList.map (·.name.toString)
         throwError "ambiguous exact conic rules: {String.intercalate ", " names}; select one with `using`"
       if failures.isEmpty then
         throwError "no supported registered conic rule matches the entire selected predicate and bound polarity"

@@ -136,6 +136,31 @@ theorem isClosed_power (α : ℝ) (hα : 0 < α ∧ α < 1) :
     IsClosed (↑(power α hα).carrier : Set (power α hα).Space) :=
   isClosed_powerSet α hα
 
+/-- A finite product of power cones with possibly different parameters. The
+empty product contains its unique coordinate vector. -/
+noncomputable def powerProduct (n : Nat) (α : Fin n → ℝ)
+    (hα : ∀ i, 0 < α i ∧ α i < 1) : Cone where
+  Space := Fin n → (ℝ × ℝ × ℝ)
+  carrier := {
+    carrier := {v | ∀ i, v i ∈ powerSet (α i)}
+    smul_mem' := fun _ hc _ h i => (power (α i) (hα i)).carrier.smul_mem hc (h i)
+    add_mem' := fun _ hp _ hq i => (power (α i) (hα i)).carrier.add_mem (hp i) (hq i) }
+
+/-- Product membership is exactly the grouped family of power memberships. -/
+@[simp]
+theorem mem_powerProduct {n : Nat} (α : Fin n → ℝ)
+    (hα : ∀ i, 0 < α i ∧ α i < 1) (v : Fin n → (ℝ × ℝ × ℝ)) :
+    v ∈ (powerProduct n α hα).carrier ↔ ∀ i, v i ∈ powerSet (α i) :=
+  Iff.rfl
+
+/-- Finite products of power cones are closed, including the empty product. -/
+theorem isClosed_powerProduct (n : Nat) (α : Fin n → ℝ)
+    (hα : ∀ i, 0 < α i ∧ α i < 1) :
+    IsClosed (↑(powerProduct n α hα).carrier : Set (powerProduct n α hα).Space) := by
+  change IsClosed {v : Fin n → (ℝ × ℝ × ℝ) | ∀ i, v i ∈ powerSet (α i)}
+  rw [Set.ofPred_forall]
+  exact isClosed_iInter fun i => (isClosed_powerSet (α i) (hα i)).preimage (continuous_apply i)
+
 end Morew.Conic.Cone
 
 namespace Morew.Conic

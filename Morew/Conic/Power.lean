@@ -22,4 +22,10 @@ boundaries explicitly.
 This narrow import provides the cone and its mathematical equivalences without
 installing rewrite registrations or the modeling language. Representation records
 are available from `Morew.Conic.Power.Representations`.
+
+`Morew.Conic.Power.Norm` provides the native finite p-norm representation for
+`1 < p.toReal`, including empty coordinate spaces. The nonempty geometric-mean
+and inverse-product representations are in `Morew.Conic.Power.GeometricMean`;
+their ordinary modeling functions are in `Morew.Fn.Power`. These finite lifts
+use exact power parameters and deterministic auxiliary coordinate order.
 -/

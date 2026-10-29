@@ -120,7 +120,7 @@ def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
     unless body.isLet || body.isConstOf ``True || body.isAppOfArity ``And 2 ||
         body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
         body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
-      throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential membership family"
+      throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential or power membership family"
     return body
 
 /-- Certify each replacement row without changing its presentation predicate. -/
@@ -158,12 +158,42 @@ private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
     unless ← isDefEq sourceArgs[index]! canonicalArgs[index]! do return false
   return true
 
+-- Only native extended-real numeral, inverse and quotient syntax can be
+-- reduced inside `toReal`. Symbolic parameters and named operands stay intact.
+private partial def literalENNReal (expression : Expr) : MetaM Bool := do
+  let expression := expression.consumeMData
+  let args := expression.getAppArgs
+  if expression.isAppOfArity ``OfNat.ofNat 3 then
+    unless args[1]!.isRawNatLit do return false
+    let numeral : Q(ℕ) := args[1]!
+    let ⟨canonical, _⟩ ← Mathlib.Meta.NormNum.mkOfNat (u := .zero)
+      q(ENNReal) q(inferInstance) numeral
+    return ← sameOperationPrefix expression canonical 0
+  if expression.isAppOfArity ``Inv.inv 3 then
+    let operand : Q(ENNReal) := args[2]!
+    return (← sameOperationPrefix expression q($operand⁻¹) 1) &&
+      (← literalENNReal operand)
+  unless expression.isAppOfArity ``HDiv.hDiv 6 do return false
+  let left : Q(ENNReal) := args[4]!
+  let right : Q(ENNReal) := args[5]!
+  return (← sameOperationPrefix expression q($left / $right) 2) &&
+    (← literalENNReal left) && (← literalENNReal right)
+
 -- Deliberately inspect syntax before invoking numerical evaluation. Named
 -- constants, model-local definitions, and symbolic parameters retain their
 -- identities even when their values happen to be rational.
 private partial def literalRational (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
+  if expression.isAppOfArity ``ENNReal.toReal 1 then
+    return ← literalENNReal args[0]!
+  if expression.isAppOfArity ``Nat.cast 3 then
+    let natural := args[2]!.consumeMData
+    let numeral := if natural.isAppOfArity ``OfNat.ofNat 3 then natural.getAppArgs[1]!
+      else natural
+    unless numeral.isRawNatLit && (← isDefEq natural numeral) do return false
+    let numeral : Q(ℕ) := numeral
+    return ← sameOperationPrefix expression q(($numeral : ℝ)) 1
   if expression.isAppOfArity ``OfNat.ofNat 3 then
     unless args[1]!.isRawNatLit do return false
     let numeral : Q(ℕ) := args[1]!
@@ -210,10 +240,14 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
           #[exponent, evidence, args[4]!]).headBeta
         unless (← isDefEq args[2]! canonical.getAppArgs[2]!) &&
             (← isDefEq body canonical) do return .error ()
+        let normalized ← Evidence.normalizeToReal exponent
+        let normalizedExponent : Q(ℝ) := normalized.expr
         let evaluated ← Mathlib.Meta.NormNum.Result.toSimpResult (u := .zero)
-          (← Mathlib.Meta.NormNum.derive (u := .zero) exponent)
-        if ← isDefEq exponent evaluated.expr then return .error ()
-        let some equality := evaluated.proof? | return .error ()
+          (← Mathlib.Meta.NormNum.derive (u := .zero) normalizedExponent)
+        -- Definitional equality alone would leave visible scaffolding such as
+        -- `ENNReal.toReal 2` in an otherwise literal generated parameter.
+        if exponent == evaluated.expr then return .error ()
+        let equality ← mkEqTrans (← normalized.getProof) (← evaluated.getProof)
         unless ← isDefEq (← inferType equality) (← mkEq exponent evaluated.expr) do
           return .error ()
         checkWithKernel equality
@@ -239,6 +273,17 @@ private partial def normalizeGeneratedPower? (body : Expr) :
         (usedLetOnly := false) (generalizeNondepLet := false),
         ← mkLetFVars #[binding] proof
         (usedLetOnly := false) (generalizeNondepLet := false))
+  if let .forallE name type rest info := body.consumeMData then
+    unless (← whnf type).isAppOfArity ``Fin 1 do return none
+    return ← withLocalDecl name info type fun index => do
+      let some (normalized, proof) ← normalizeGeneratedPower? (rest.instantiate1 index)
+        | return none
+      let normalized ← mkForallFVars #[index] normalized
+      let proof ← mkAppM ``forall_congr' #[← mkLambdaFVars #[index] proof]
+      unless ← isDefEq (← inferType proof) (mkApp2 (mkConst ``Iff) body normalized) do
+        throwError "quantified power normalization changed its predicate"
+      checkWithKernel proof
+      return some (normalized, proof)
   normalizePowerMembership? body
 
 private partial def conjunctionCongr (proofs : List Expr) : MetaM Expr := do

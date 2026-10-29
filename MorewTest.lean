@@ -24,12 +24,16 @@ import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
+import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power
 import MorewTest.Conic.PowerEvidence
 import MorewTest.Conic.PowerFailures
+import MorewTest.Conic.PowerFamilies
+import MorewTest.Conic.PowerGeometricMean
+import MorewTest.Conic.PowerNorm
 import MorewTest.Conic.PowerRules
 import MorewTest.Conic.Registry
 import MorewTest.Conic.Rewrite
@@ -53,6 +57,8 @@ import MorewTest.ImportCompatibility.LocalDefinitions.Defined
 import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
+import MorewTest.ImportCompatibility.PowerFamilies
+import MorewTest.ImportCompatibility.PowerFamilies.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
 import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation.Registered
@@ -124,8 +130,12 @@ import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.Power
+import MorewTest.Reformulation.PowerFamilies
+import MorewTest.Reformulation.PowerFamilyFailures
+import MorewTest.Reformulation.PowerPrinting
 import MorewTest.Reformulation.PowerSource
 import MorewTest.Reformulation.PowerWorkflow
+import MorewTest.Reformulation.PresentationIndices
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
@@ -148,6 +158,7 @@ import MorewTest.Reformulation.TerminalNLPEvidence
 import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
+import MorewTest.Reformulation.VectorDomains
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
 import MorewTest.Rewrite.Registry

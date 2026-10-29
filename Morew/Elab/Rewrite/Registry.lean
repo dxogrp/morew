@@ -16,7 +16,8 @@ morew_nlp] rule`, `attribute [scoped morew_nlp] rule`, and `attribute
 [-morew_nlp] rule` have their ordinary activation and restoration behavior.
 
 The registry stores lookup information, never trusted certificates. Consumers
-instantiate and check every candidate, then require one fully certified result.
+instantiate and check every candidate, then select a fully certified result
+according to their documented ambiguity policy.
 An explicit `using` certificate does not need registration.
 
 Representation records live in `Type`, so rule authors normally use `def` or
@@ -49,10 +50,12 @@ registry module alone defines the attributes without registering built-ins.
 The semantic `Morew.Rewrite`, `Morew.Conic`, and `Morew.NLP` entry points remain
 independent of registration and command elaboration.
 
-Automatic rewriting tries every matching registration and accepts exactly one
-fully certified result. Ambiguity lists fully qualified declaration names in
-sorted order. `conic at bound using shiftedAbsEpigraph` and the corresponding
-`nlp` command infer `center` from the entire selected row. Applied certificate
+Automatic rewriting tries every matching registration. NLP requires exactly one
+fully certified result. Conic first prefers the built-in SOC norm rule over the
+built-in power-norm rule when both succeed, then requires one remaining result.
+Other successful rules retain their ambiguity. Ambiguity lists fully qualified
+declaration names in sorted order. `conic at bound using shiftedAbsEpigraph` and
+the corresponding `nlp` command infer `center` from the entire selected row. Applied certificate
 expressions use ordinary Lean elaboration. Explicit selection never falls back
 to another rule, and a namespace by itself gives a declaration no priority.
 
