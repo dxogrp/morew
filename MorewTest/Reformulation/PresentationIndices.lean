@@ -245,6 +245,54 @@ run_cmd liftTermElabM do
   check (← `((⟨0, by decide⟩ : Fin 3))) #["⟨0"]
 end AlteredFinNumeral
 
+namespace AlteredNormalizedFinNumeral
+
+open Morew
+noncomputable section
+
+local instance alteredFinZero : OfNat (Fin 2) 0 := ⟨⟨1, by decide⟩⟩
+
+run_cmd liftTermElabM do
+  -- Instance lookup on the original `Fin (3 - 1)` does not necessarily find
+  -- an instance keyed by the cleaned-up `Fin 2` type. Check the numeral at
+  -- the displayed type too, before replacing a native constructor by it.
+  withOptions (·.setBool `pp.proofs true |>.setBool `pp.structureInstanceTypes true) do
+    checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (3 - 1))))
+    checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (1 + 1))))
+    checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (Nat.succ 1))))
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      retained : (⟨0, by decide⟩ : Fin (3 - 1)).val = 0
+      bound : |x| ≤ 1
+
+-- Keep the original constructor proof replayable if a custom numeral prevents
+-- cleanup. The new numeric spelling must not turn the retained row into 1 = 0.
+set_option pp.proofs true in
+set_option pp.structureInstanceTypes true in
+reformulation targeted : source := by conic at bound
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``targeted
+    | throwError "missing normalized finite numeral display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``targeted
+    | throwError "missing normalized finite numeral exact presentation"
+  for (view, name) in #[(display, `displayReplay), (exact, `exactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+example : displayReplay = targeted := rfl
+example : exactReplay = targeted := rfl
+example : targeted.feasible 0 := by norm_num [targeted]
+example : displayReplay.feasible 0 := by
+  change (0 : Nat) = 0 ∧ (0 : ℝ) ≤ 1 ∧ -(0 : ℝ) ≤ 1
+  norm_num
+
+end
+end AlteredNormalizedFinNumeral
+
 section AlteredNatCast
 noncomputable local instance : NatCast ℝ := ⟨fun n => @Nat.cast ℝ Real.instNatCast n + 1⟩
 

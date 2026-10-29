@@ -493,10 +493,14 @@ private def presentationFinNumeral? (expression : Expr) : MetaM (Option Nat) :=
       let some value ← presentationNatLiteral? args[1]! | return none
       -- Fin numerals use modulo; a constructor's value must already be in range.
       unless value < dimension do return none
-      let numeral ← mkNumeral (← inferType expression) value
-      let native ← mkAppOptM ``Fin.instOfNat #[some args[0]!, none, some (mkNatLit value)]
-      unless (← isDefEq numeral.getAppArgs[2]! native) &&
-          (← isDefEq expression numeral) do return none
+      -- Dimension cleanup can expose a different instance-search pattern, e.g.
+      -- Fin (3 - 1) becomes Fin 2. Check both the original and displayed types.
+      for indexDimension in #[args[0]!, mkNatLit dimension] do
+        let numeral ← mkNumeral (mkApp (mkConst ``Fin) indexDimension) value
+        let native ← mkAppOptM ``Fin.instOfNat
+          #[some indexDimension, none, some (mkNatLit value)]
+        unless (← isDefEq numeral.getAppArgs[2]! native) &&
+            (← isDefEq expression numeral) do return none
       return some value
     catch _ => return none
 
