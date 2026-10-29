@@ -30,6 +30,7 @@ import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power
 import MorewTest.Conic.PowerEvidence
 import MorewTest.Conic.PowerFailures
+import MorewTest.Conic.PowerNorm
 import MorewTest.Conic.PowerRules
 import MorewTest.Conic.Registry
 import MorewTest.Conic.Rewrite

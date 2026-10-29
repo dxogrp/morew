@@ -10,6 +10,7 @@ import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
 import Morew.Conic.Power.Cone
+import Morew.Conic.Power.Norm
 import Morew.Conic.Power.Representations
 import Morew.Conic.SecondOrder
 import Morew.Conic.SecondOrder.Representations
