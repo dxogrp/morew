@@ -151,6 +151,7 @@ import MorewTest.Reformulation.TerminalNLPEvidence
 import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
+import MorewTest.Reformulation.VectorDomains
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Plan
 import MorewTest.Rewrite.Registry

@@ -77,6 +77,25 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
+  if let .forallE name indexType body _ := reduced then
+    let indexType ← whnf indexType
+    unless indexType.isAppOfArity ``Fin 1 do return none
+    if ← Expr.depends point indexType then return none
+    return ← withLocalDeclD name indexType fun index => do
+      let body ← Expr.reduceStructure (body.instantiate1 index)
+      unless body.isAppOfArity ``LT.lt 4 || body.isAppOfArity ``LE.le 4 do return none
+      let args := body.getAppArgs
+      unless ← isDefEq args[0]! q(ℝ) do return none
+      let strict := body.isAppOfArity ``LT.lt 4
+      let value : Q(ℝ) := args[3]!
+      let canonical : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
+      unless ← isDefEq body canonical do return none
+      let some proof ← Domain.signFromRetained? point value retained evidence strict (some index)
+        | throwError "registered conic rewrite was not certified: missing coordinatewise {if strict then "positive" else "nonnegative"} constant margin at {index}; required an independent ε with {if strict then "0 < ε" else "0 ≤ ε"} and a retained constraint ε ≤ {value}"
+      let proof ← mkLambdaFVars #[index] proof
+      unless ← isDefEq (← inferType proof) goal do return none
+      checkWithKernel proof
+      return some proof
   if reduced.isAppOfArity ``LT.lt 4 || reduced.isAppOfArity ``LE.le 4 then
     let args := reduced.getAppArgs
     let strict := reduced.isAppOfArity ``LT.lt 4
