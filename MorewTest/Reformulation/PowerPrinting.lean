@@ -185,8 +185,6 @@ namespace Shadow
 def Fn.geoMean {n : ℕ} (_ : Fin n → ℝ) : ℝ := 100
 def Fn.invProd {n : ℕ} (_ : Fin n → ℝ) : ℝ := 200
 def Cone.powerSet (_ : ℝ) : Set (ℝ × ℝ × ℝ) := Set.univ
-def Fin.castSucc {n : ℕ} (_ : _root_.Fin n) : _root_.Fin (n + 1) := 0
-def Fin.succ {n : ℕ} (_ : _root_.Fin n) : _root_.Fin (n + 1) := 0
 
 variable (n : ℕ) (hn : 0 < n)
 
