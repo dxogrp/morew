@@ -262,7 +262,58 @@ run_cmd liftTermElabM do
   -- Agreement at zero cannot justify replacing the original cast by a fresh
   -- coercion. The implementation must compare them on a fresh natural.
   check (← `(@Nat.cast ℝ Real.instNatCast (Fin.val (⟨0, by decide⟩ : Fin 2))))
-    #["↑"] #[".val : ℝ"]
+    #["@Nat.cast", "Real.instNatCast"] #[".val : ℝ"] true
 end AlteredCoercion
+
+section AlteredDependentCoercionNumeral
+noncomputable local instance (priority := high) : CoeDep Nat (0 : Fin 2).val ℝ := ⟨7⟩
+
+run_cmd liftTermElabM do
+  -- This instance matches the displayed numeral, but neither a fresh natural
+  -- nor the original constructor operand. The native cast must still mean zero.
+  check (← `(@Nat.cast ℝ Real.instNatCast (Fin.val (⟨0, by decide⟩ : Fin 2))))
+    #[] #[] true
+end AlteredDependentCoercionNumeral
+
+namespace AlteredDependentCoercionIndex
+
+open Morew
+noncomputable section
+
+local instance (priority := high) (j : Fin 2) : CoeDep Nat j.val ℝ := ⟨7⟩
+
+run_cmd liftTermElabM do
+  -- A coercion depending on a finite index also escapes the fresh-Nat check
+  -- when the index is bound inside the displayed lambda.
+  check (← `(fun j : Fin 2 => @Nat.cast ℝ Real.instNatCast j.val)) #[] #[] true
+
+def source (i : Fin 2) :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      retained : @Nat.cast ℝ Real.instNatCast i.val ≤ x
+      bound : |x| ≤ 10
+
+variable (i : Fin 2)
+
+reformulation targeted : (source i) := by conic at bound
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``targeted
+    | throwError "missing dependent-coercion display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``targeted
+    | throwError "missing dependent-coercion exact presentation"
+  for (view, name) in #[(display, `displayReplay), (exact, `exactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+-- Replacing the native cast by the dependent coercion changes the retained row
+-- to `7 ≤ x` and removes the replayed declaration's dependence on `i`.
+example : displayReplay i = targeted i := rfl
+example : exactReplay i = targeted i := rfl
+example : (displayReplay 0).feasible 0 := by norm_num [displayReplay]
+
+end
+end AlteredDependentCoercionIndex
 
 end MorewTest.Reformulation.PresentationIndices

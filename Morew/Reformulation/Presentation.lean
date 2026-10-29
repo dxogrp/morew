@@ -550,10 +550,15 @@ private def delabPresentationFinIndex : Delab := do
       guard <| (← getExpr).isAppOfArity ``Fin.val 2
       withNaryArg 1 <| showEmbedding ``Fin.succ
 
--- Check the coercion on a fresh natural, not at the displayed operand: a custom
--- coercion can happen to agree with the native cast at one particular value.
+-- Check the coercion on a fresh natural: a custom coercion can agree with the
+-- native cast at one value. Dependent coercions need a separate conservative
+-- check, because index cleanup can change which operand-specific instance
+-- matches even when the original and displayed operands are definitionally equal.
 private def presentationNatRealCoercionIsCanonical : MetaM Bool :=
   withoutModifyingState do
+    let value ← mkFreshExprMVar (mkConst ``Nat)
+    let dependent ← mkAppM ``CoeDep #[mkConst ``Nat, value, mkConst ``Real]
+    unless (← SynthInstance.getInstances dependent).isEmpty do return false
     withLocalDeclD `value (mkConst ``Nat) fun value => do
       let .some coerced ← coerce? value (mkConst ``Real) | return false
       let native := mkApp3 (mkConst ``Nat.cast [.zero])
@@ -572,8 +577,11 @@ private def delabPresentationFinRealCast : Delab := do
   guard (← (withoutModifyingState <|
     isDefEq args[1]! (mkConst ``Real.instNatCast) : MetaM Bool))
   guard (← presentationInstanceResynthesizes args[1]!)
-  guard (← presentationNatRealCoercionIsCanonical)
   let value ← withNaryArg 2 <| withOptions (fun options => options.setBool `pp.coercions false) delab
+  unless ← presentationNatRealCoercionIsCanonical do
+    -- Falling back to ordinary coercion notation would still select a dependent
+    -- instance after printing the cleaned-up operand. Keep the native cast itself.
+    return ← `(@$(mkCIdent ``Nat.cast) ℝ $(mkCIdent ``Real.instNatCast) $value)
   `(($value : ℝ))
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
