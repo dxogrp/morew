@@ -66,6 +66,7 @@ import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
+import Morew.Reformulation.PowerChainPrinting
 import Morew.Reformulation.Presentation
 import Morew.Reformulation.Replace
 import Morew.Reformulation.State
@@ -82,6 +83,7 @@ import Morew.Rewrite.Polyhedral.Lemmas
 import Morew.Syntax
 import Morew.Syntax.Elab
 import Morew.Syntax.Grammar
+import Morew.Syntax.PowerChainView
 import Morew.Syntax.Presentation
 import Morew.Syntax.Printer
 import Morew.Transform

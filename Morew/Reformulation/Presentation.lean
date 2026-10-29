@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.State
+import Morew.Reformulation.PowerChainPrinting
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Power.Cone
@@ -788,16 +789,16 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
 
 /-- Read the paired definition spines using the same opaque local for each
 binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
-private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
+private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.ProblemView)
     (objective feasible : Expr) (names : Array (FVarId × Name))
     (replay : Bool) (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
-      Array (FVarId × Name) → TermElabM Morew.Syntax.ProblemView) :
-    TermElabM Morew.Syntax.ProblemView := do
+      Array (FVarId × Name) → TermElabM α) :
+    TermElabM α := do
   let rec visit (remaining : List Morew.Syntax.DefinitionView)
       (definitions : Array Morew.Syntax.DefinitionView)
       (objective feasible : Expr) (names : Array (FVarId × Name)) :
-      TermElabM Morew.Syntax.ProblemView := do
+      TermElabM α := do
     let definition :: remaining := remaining
       | return ← action definitions objective feasible names
     let .letE _ type value body _ := objective.consumeMData
@@ -817,14 +818,14 @@ private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
         (names.push (binding.fvarId!, definition.name))
   visit template.definitions.toList #[] objective feasible names
 
-/-- Recover printable bodies from a checked problem while retaining the supplied
-ordered names. Applied sources also instantiate binder types; existing bare-name
-sources retain their original spelling, including type aliases. -/
-def problemViewFromExpression (target : Expr)
+-- Inspect rows while their typed decision variables and local definitions are
+-- still in scope. Callers may persist only frozen syntax, never these expressions.
+private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
+    (inspectRows : Array Expr → Array (FVarId × Name) → TermElabM α) (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
     (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
-    TermElabM Morew.Syntax.ProblemView := do
+    TermElabM (Morew.Syntax.ProblemView × α) := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
@@ -865,7 +866,7 @@ def problemViewFromExpression (target : Expr)
         (!forRegistration) parameterInstances
       let constraintSyntax ← constraints.mapM fun proposition =>
         delabPresentationTerm proposition binderNames (!forRegistration) parameterInstances
-      pure {
+      let view := {
         template with
         binders := displayedBinders
         definitions
@@ -873,6 +874,7 @@ def problemViewFromExpression (target : Expr)
         constraints := template.constraints.mapIdx fun index constraint =>
           { constraint with proposition := constraintSyntax[index]! }
       }
+      return (view, ← inspectRows constraints binderNames)
     if recoverDefinitions then
       let objectiveBody ← openPresentationBody objective domain binders
       let feasibleBody ← openPresentationBody feasible domain binders
@@ -880,6 +882,17 @@ def problemViewFromExpression (target : Expr)
         binderNames (!forRegistration) parameterInstances render
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
+
+/-- Recover printable bodies from a checked problem while retaining the supplied
+ordered names. Applied sources also instantiate binder types; existing bare-name
+sources retain their original spelling, including type aliases. -/
+def problemViewFromExpression (target : Expr)
+    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
+    (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
+    TermElabM Morew.Syntax.ProblemView := do
+  return (← problemViewWithRowsFromExpression (fun _ _ => pure ()) target template
+    instantiateBinderTypes recoverDefinitions forRegistration parameterInstances).1
 
 /-- Recover a typed presentation from a checked problem expression. -/
 def typedPresentationFromExpression (target : Expr)
@@ -1009,16 +1022,19 @@ def refreshProblemView (targetName : Name)
             (parameterInstances := parameterInstances)
           let display ← problemViewFromExpression target template instantiateBinderTypes
             (forRegistration := true)
-          let compact ← withOptions (fun options =>
+          let (compact, mathematicalRows) ← withOptions (fun options =>
               options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
                 |>.setBool compactIndexProofsOption true) do
-            problemViewFromExpression target template instantiateBinderTypes
+            problemViewWithRowsFromExpression (fun rows names =>
+              powerChainPrintRows rows (fun expression =>
+                delabPresentationTerm expression names false)) target template instantiateBinderTypes
               (forRegistration := true)
           let detailed ← if getPPProofs (← getOptions) then pure display else
             withOptions (·.setBool `pp.proofs true) do
               problemViewFromExpression target template instantiateBinderTypes
                 (forRegistration := true)
-          pure (replay, display, { compact, detailed : Morew.Syntax.ProblemPrintPresentation }))
+          pure (replay, display,
+            { compact, detailed, mathematicalRows : Morew.Syntax.ProblemPrintPresentation }))
   Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)
 
 /-- Rebase a retained presentation into the current section-variable context. -/

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Core
 import Morew.Syntax.Grammar
+import Morew.Syntax.PowerChainView
 import Lean.Elab.Term
 
 /-!
@@ -91,6 +92,9 @@ structure ProblemPrintPresentation where
   compact : ProblemView
   /-- Ordinary output with proof details available for later inspection. -/
   detailed : ProblemView
+  /-- Optional mathematical rows, aligned with the compact view's constraints.
+  These recipes are informational and never enter either replay view. -/
+  mathematicalRows : Array (Option PowerChainRow) := #[]
   deriving Inhabited
 
 -- Keep display syntax outside the replay view. A transformation can edit an

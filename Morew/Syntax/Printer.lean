@@ -12,6 +12,11 @@ import Lean.PrettyPrinter
 
 Validate registered problem declarations and format their stored presentations
 for `#printp`, preserving user names, objective sense, and constraint order.
+
+Refreshed reformulations also carry print-only compact and detailed views.
+Recognized power chains use an explicitly marked mathematical display by default;
+`pp.proofs true` selects ordinary Lean syntax with proof details at print time.
+Neither choice changes the separate syntax views consumed by reconstruction.
 -/
 
 namespace Morew
@@ -67,9 +72,12 @@ private def ensureViewNamesDistinct (what : String) (names : Array Name) : CoreM
         throwError
           "problem presentation metadata contains duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
-private def formatProblemView (view : Morew.Syntax.ProblemView) : CoreM Format := do
+private def formatProblemView (view : Morew.Syntax.ProblemView)
+    (mathematicalRows : Array (Option Morew.Syntax.PowerChainRow) := #[]) : CoreM Format := do
   if view.binders.isEmpty then
     throwError "problem presentation metadata contains no decision-variable binders"
+  unless mathematicalRows.isEmpty || mathematicalRows.size == view.constraints.size do
+    throwError "problem presentation metadata contains misaligned mathematical rows"
   ensureViewNamesDistinct "decision variable" (view.binders.map (·.name))
   ensureViewNamesDistinct "constraint" (view.constraints.map (·.name))
   ensureViewNamesDistinct "model-local definition" (view.definitions.map (·.name))
@@ -115,15 +123,18 @@ private def formatProblemView (view : Morew.Syntax.ProblemView) : CoreM Format :
   unless view.constraints.isEmpty do
     body := body ++ Format.line ++ "subject to"
     let mut constraintFormats : Array Format := #[]
-    for constraint in view.constraints do
-      let proposition ← syntaxFormat
-        s!"proposition for constraint `{constraint.name.eraseMacroScopes}`"
-        constraint.proposition
+    for constraint in view.constraints, index in [:view.constraints.size] do
+      let description := s!"proposition for constraint `{constraint.name.eraseMacroScopes}`"
+      let proposition ← match mathematicalRows[index]?.getD none with
+        | some row => row.format (syntaxFormat description)
+        | none => syntaxFormat description constraint.proposition
       let name ← nameFormat "constraint" constraint.name
       constraintFormats := constraintFormats.push f!"{name} : {proposition}"
     body := body ++ Format.nest 2
       (Format.line ++ Format.joinSep constraintFormats.toList Format.line)
-  pure <| f!"problem {Format.joinSep binderFormats.toList (Format.text " ")}" ++
+  let marker := if mathematicalRows.any Option.isSome then
+      Format.text "-- Mathematical view" ++ Format.line else Format.nil
+  pure <| marker ++ f!"problem {Format.joinSep binderFormats.toList (Format.text " ")}" ++
     Format.nest 2 (Format.line ++ body)
 
 /-- Elaborate `#printp` by retrieving and formatting stored presentation metadata. -/
@@ -135,10 +146,11 @@ def elabPrintProblem : CommandElab := fun stx => do
   let some view := Morew.Syntax.getProblemDisplayView? env declName
     | throwErrorAt name "declaration `{declName}` has no registered problem presentation"
   let detailed := getPPProofs (← getOptions)
-  let view := match Morew.Syntax.getProblemPrintPresentation? env declName with
-    | none => view
+  let (view, mathematicalRows) := match Morew.Syntax.getProblemPrintPresentation? env declName with
+    | none => (view, #[])
     | some presentation =>
-      if detailed then presentation.detailed else presentation.compact
+      if detailed then (presentation.detailed, #[])
+      else (presentation.compact, presentation.mathematicalRows)
   -- A `problem` term can occur as a proper subterm of another declaration.
   -- During elaboration it still sees the enclosing declaration name, so such
   -- a term may leave presentation metadata behind.  Metadata is deliberately
@@ -153,6 +165,6 @@ def elabPrintProblem : CommandElab := fun stx => do
   unless isProblem do
     throwErrorAt name
       "declaration `{declName}` has problem presentation metadata but is not a `Morew.Problem`"
-  logInfoAt stx (← liftCoreM <| formatProblemView view)
+  logInfoAt stx (← liftCoreM <| formatProblemView view mathematicalRows)
 
 end Morew
