@@ -132,8 +132,10 @@ import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.Power
 import MorewTest.Reformulation.PowerFamilies
 import MorewTest.Reformulation.PowerFamilyFailures
+import MorewTest.Reformulation.PowerPrinting
 import MorewTest.Reformulation.PowerSource
 import MorewTest.Reformulation.PowerWorkflow
+import MorewTest.Reformulation.PresentationIndices
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
