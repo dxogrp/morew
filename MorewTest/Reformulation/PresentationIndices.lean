@@ -86,8 +86,30 @@ run_cmd liftTermElabM do
   checkUntypedReplay (← `((⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3)))
   checkUntypedReplay (← `((⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3) =
     (⟨1, by decide⟩ : Fin 3)))
+  checkUntypedReplay (← `(((⟨2, by decide⟩ : Fin 3), (⟨2, by decide⟩ : Fin 3))))
+  checkUntypedReplay (← `((fun p : Fin 3 => p + p = 1)
+    (⟨2, by decide⟩ : Fin 3)))
+  checkUntypedReplay (← `((fun p : Fin 3 × Fin 3 => p.1 + p.2 = 1)
+    ((⟨2, by decide⟩ : Fin 3), (⟨2, by decide⟩ : Fin 3))))
+  check (← `((fun p : Fin 3 => p + p = 1) (⟨2, by decide⟩ : Fin 3)))
+    #["(2 : Fin 3)"] #[] true
+  check (← `((fun p : Fin 3 × Fin 3 => p.1 + p.2 = 1)
+    ((⟨2, by decide⟩ : Fin 3), (⟨2, by decide⟩ : Fin 3))))
+    #["((2 : Fin 3), (2 : Fin 3))"] #[] true
+  -- A surrounding lambda's binder annotation may disappear during printing.
+  -- Its argument still needs a Fin ascription when replay has no expected type.
   check (← `(fun u : Fin 3 → ℝ => u (⟨0, by decide⟩ : Fin 3)))
-    #["u 0"] #["(0 : Fin 3)"] true
+    #["(0 : Fin 3)"] #["u 0"] true
+  -- An external function's fixed explicit domain supplies the index type,
+  -- both in a direct application and under a polymorphic equality.
+  withLocalDeclD `u (← elaborate (← `(Fin 3 → ℝ))) fun u => do
+    let application := mkApp u (← elaborate (← `((⟨0, by decide⟩ : Fin 3))))
+    for expression in #[application, ← mkEq application application] do
+      let (stx, text) ← render expression
+      unless text.contains "u 0" && !text.contains "(0 : Fin 3)" do
+        throwError "fixed-domain finite application lost compact printing: {text}"
+      checkReplay expression stx
+      checkReplay expression (← render expression true).1
   withOptions (·.setBool `pp.analyze true |>.setBool `pp.analyze.knowsType false) do
     -- The Fin cleanup must also preserve analyzer annotations on other terms.
     check (← `(fun x : ℝ => ((⟨0, by decide⟩ : Fin 3), x))) #["x : ℝ"] #[] true
@@ -114,7 +136,7 @@ reformulation targeted : source := by
 info: problem (x : ℝ)
   minimize x
   subject to
-    retained : (2 : Fin 3) + (2 : Fin 3) = 1
+    retained : (2 : Fin 3) + (2 : Fin 3) = (1 : Fin 3)
     bound_conic_1 : x ≤ 1
     bound_conic_2 : -x ≤ 1
 -/
@@ -139,6 +161,53 @@ example : exactReplay.feasible 0 := by norm_num [exactReplay]; decide
 end
 
 end RetainedFiniteArithmetic
+
+namespace RetainedFiniteTuple
+
+open Morew
+
+noncomputable section
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      retained : (fun p : Fin 3 × Fin 3 => p.1 + p.2 = 1)
+        ((⟨2, by decide⟩ : Fin 3), (⟨2, by decide⟩ : Fin 3))
+      bound : |x| ≤ 1
+
+reformulation targeted : source := by
+  conic at bound
+
+/--
+info: problem (x : ℝ)
+  minimize x
+  subject to
+    retained : (fun p => p.1 + p.2 = 1) ((2 : Fin 3), (2 : Fin 3))
+    bound_conic_1 : x ≤ 1
+    bound_conic_2 : -x ≤ 1
+-/
+#guard_msgs in
+#printp targeted
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``targeted
+    | throwError "missing finite tuple display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``targeted
+    | throwError "missing finite tuple exact presentation"
+  for (view, name) in #[(display, `displayReplay), (exact, `exactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+example : displayReplay = targeted := rfl
+example : exactReplay = targeted := rfl
+example : targeted.feasible 0 := by norm_num [targeted]; decide
+example : displayReplay.feasible 0 := by norm_num [displayReplay]; decide
+example : exactReplay.feasible 0 := by norm_num [exactReplay]; decide
+
+end
+
+end RetainedFiniteTuple
 
 def namedDimension : Nat := 3
 def namedIndex : Nat := 1

@@ -422,7 +422,7 @@ def packPoint (components : Array Expr) : MetaM Expr := do
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `Morew.Reformulation.Internal.coneNotation
 
-private def finIndexTypeOption : Name := `Morew.Reformulation.Internal.finIndexType
+private def finIndexKnownTypeOption : Name := `Morew.Reformulation.Internal.finIndexKnownType
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
@@ -524,9 +524,9 @@ private def delabPresentationFinIndex : Delab := do
     -- Preserve the constructor's type when its surrounding context cannot
     -- infer it; otherwise overloaded arithmetic may default to Nat on replay.
     return ← withTypeAscription
-      (cond := (← getPPOption (·.getBool finIndexTypeOption)) ||
-        (← withType <| getPPOption fun options =>
-          getPPStructureInstanceType options || options.getBool finIndexTypeOption)) do
+      (cond := !(← getPPOption (·.getBool finIndexKnownTypeOption)) ||
+        (← getPPOption getPPNumericTypes) ||
+        (← withType <| getPPOption getPPStructureInstanceType)) do
         pure (quote value)
   withNaryArg 1 do
     let value ← getExpr
@@ -733,35 +733,43 @@ private def delabZeroConeMembership : Delab := do
   let type ← withNaryArg 1 delab
   `($value ∈ ($set : $type))
 
--- Ask Lean which constructor types cannot be inferred, but expose those flags
--- only to our Fin-numeral hook. Enabling the whole analyzer would also change
--- unrelated binders, instances, and notation in readable presentations.
+-- A direct application of a free decision function supplies its explicit Fin
+-- parameter type. Mark only those arguments as safe to display without types;
+-- all other Fin numerals retain their types, including under tuples and lambdas.
+private partial def markKnownFinArguments (expression : Expr) (position : Lean.SubExpr.Pos)
+    (options : PrettyPrinter.Delaborator.OptionsPerPos) :
+    MetaM PrettyPrinter.Delaborator.OptionsPerPos := do
+  match expression with
+  | .app function argument =>
+    let mut options := options
+    if function.isFVar && argument.consumeMData.isAppOfArity ``Fin.mk 3 then
+      if let .forallE _ domain _ .default ← whnf (← inferType function) then
+        if domain.isAppOfArity ``Fin 1 && !domain.hasMVar && !domain.hasLooseBVars then
+          let position := position.pushAppArg
+          let flags := (options.get? position).getD {}
+          options := options.insert position (flags.setBool finIndexKnownTypeOption true)
+    let nextOptions ← markKnownFinArguments function position.pushAppFn options
+    markKnownFinArguments argument position.pushAppArg nextOptions
+  | .lam _ type body _ | .forallE _ type body _ =>
+    let options ← markKnownFinArguments type position.pushBindingDomain options
+    markKnownFinArguments body position.pushBindingBody options
+  | .letE _ type value body _ =>
+    let options ← markKnownFinArguments type position.pushLetVarType options
+    let options ← markKnownFinArguments value position.pushLetValue options
+    markKnownFinArguments body position.pushLetBody options
+  | .proj _ _ value => markKnownFinArguments value position.pushProj options
+  | .mdata _ value => markKnownFinArguments value position options
+  | _ => return options
+
 private def presentationFinIndexOptions (expression : Expr) :
     MetaM PrettyPrinter.Delaborator.OptionsPerPos := do
   if (expression.find? (·.isAppOfArity ``Fin.mk 3)).isNone then return {}
   let options ← getOptions
-  let mut result ← if getPPAnalyze options && !getPPAll options then
+  -- Supplying positional options disables delabCore's automatic analysis, so
+  -- preserve the full analysis only when the caller already requested it.
+  let result ← if getPPAnalyze options && !getPPAll options then
     PrettyPrinter.Delaborator.topDownAnalyze expression else pure {}
-  let analysis ← withOptions (·.setBool `pp.analyze.knowsType false) <|
-    PrettyPrinter.Delaborator.topDownAnalyze expression
-  for (position, flags) in analysis.toList do
-    if flags.getBool `pp.structureInstanceTypes || flags.getBool `pp.analysis.needsType then
-      -- The analyzer is conservative inside equality and tuple operands. A
-      -- free decision function already supplies its explicit Fin argument's
-      -- type, so keep applications such as `aux 0` compact there as well.
-      let indexPosition := if position.head == Lean.SubExpr.Pos.typeCoord then
-        position.tail else position
-      if !indexPosition.isRoot && indexPosition.head == 1 &&
-          indexPosition.tail.all (· != Lean.SubExpr.Pos.typeCoord) then
-        let parent ← Lean.Core.viewSubexpr indexPosition.tail expression
-        if let .app (.fvar id) argument := parent.consumeMData then
-          if argument.consumeMData.isAppOfArity ``Fin.mk 3 then
-            if let .forallE _ domain _ .default ← whnf (← inferType (mkFVar id)) then
-              if domain.isAppOfArity ``Fin 1 && !domain.hasMVar && !domain.hasLooseBVars then
-                continue
-      let flags := (result.get? position).getD {}
-      result := result.insert position (flags.setBool finIndexTypeOption true)
-  return result
+  markKnownFinArguments expression .root result
 
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
