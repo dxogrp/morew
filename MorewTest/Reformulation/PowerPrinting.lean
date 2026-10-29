@@ -37,7 +37,7 @@ info: problem (x : Fin 3 → ℝ) (t : ℝ) (mean_aux : Fin 3 → ℝ)
   subject to
     domain : 0 ≤ x
     mean_conic_1 : mean_aux 0 = x 0
-    mean_conic_2 : ∀ (j : Fin 2),
+    mean_conic_2 : ∀ (j : Fin (3 - 1)),
       (mean_aux (Fin.castSucc j), x (Fin.succ j), mean_aux (Fin.succ j)) ∈ POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
     mean_conic_3 : 0 ≤ mean_aux 2
     mean_conic_4 : t ≤ mean_aux 2
@@ -51,7 +51,7 @@ info: problem (x : Fin 1 → ℝ) (t : ℝ) (mean_aux : Fin 1 → ℝ)
   subject to
     domain : 0 ≤ x
     mean_conic_1 : mean_aux 0 = x 0
-    mean_conic_2 : ∀ (j : Fin 0),
+    mean_conic_2 : ∀ (j : Fin (1 - 1)),
       (mean_aux (Fin.castSucc j), x (Fin.succ j), mean_aux (Fin.succ j)) ∈ POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
     mean_conic_3 : 0 ≤ mean_aux 0
     mean_conic_4 : t ≤ mean_aux 0
@@ -117,7 +117,7 @@ info: problem (x : Fin 3 → ℝ) (t : ℝ) (inverse_aux : Fin 3 → ℝ)
   subject to
     domain : (fun x => 1) ≤ x
     inverse_conic_1 : inverse_aux 0 = x 0
-    inverse_conic_2 : ∀ (j : Fin 2),
+    inverse_conic_2 : ∀ (j : Fin (3 - 1)),
       (inverse_aux (Fin.castSucc j), x (Fin.succ j), inverse_aux (Fin.succ j)) ∈
         POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
     inverse_conic_3 : (t, inverse_aux 2, 1) ∈ POW (1 / 4)
@@ -131,7 +131,7 @@ info: problem (x : Fin 1 → ℝ) (t : ℝ) (inverse_aux : Fin 1 → ℝ)
   subject to
     domain : (fun x => 1) ≤ x
     inverse_conic_1 : inverse_aux 0 = x 0
-    inverse_conic_2 : ∀ (j : Fin 0),
+    inverse_conic_2 : ∀ (j : Fin (1 - 1)),
       (inverse_aux (Fin.castSucc j), x (Fin.succ j), inverse_aux (Fin.succ j)) ∈
         POW (((j.val : ℝ) + 1) / ((j.val : ℝ) + 2))
     inverse_conic_3 : (t, inverse_aux 0, 1) ∈ POW (1 / 2)

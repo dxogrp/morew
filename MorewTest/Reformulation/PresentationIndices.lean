@@ -68,7 +68,7 @@ private def check (term : TSyntax `term) (required : Array String)
   checkReplay expression (← render expression true).1
 
 run_cmd liftTermElabM do
-  check (← `(Fin (3 - 1))) #["Fin 2"] #[] true
+  check (← `(Fin (3 - 1))) #["Fin (3 - 1)"] #["Fin 2"] true
   check (← `((⟨0, by decide⟩ : Fin 3))) #["0"] #["⟨"] true
   check (← `(fun j : Fin 2 => ((j.val : ℝ)))) #["j.val : ℝ"] #[] true
   -- None of the new presentation hooks may affect ordinary delaboration.
@@ -254,12 +254,14 @@ local instance alteredFinZero : OfNat (Fin 2) 0 := ⟨⟨1, by decide⟩⟩
 
 run_cmd liftTermElabM do
   -- Instance lookup on the original `Fin (3 - 1)` does not necessarily find
-  -- an instance keyed by the cleaned-up `Fin 2` type. Check the numeral at
-  -- the displayed type too, before replacing a native constructor by it.
+  -- an instance keyed by `Fin 2`. Retaining the original dimension in the
+  -- displayed type keeps native constructors and existing numerals unchanged.
   withOptions (·.setBool `pp.proofs true |>.setBool `pp.structureInstanceTypes true) do
     checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (3 - 1))))
     checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (1 + 1))))
     checkUntypedReplay (← `((⟨0, by decide⟩ : Fin (Nat.succ 1))))
+  withOptions (·.setBool `pp.numericTypes true) do
+    checkUntypedReplay (← `((0 : Fin (3 - 1))))
 
 def source :=
   problem (x : ℝ)
@@ -290,8 +292,70 @@ example : displayReplay.feasible 0 := by
   change (0 : Nat) = 0 ∧ (0 : ℝ) ≤ 1 ∧ -(0 : ℝ) ≤ 1
   norm_num
 
+def numeralSource :=
+  problem (x : ℝ)
+    let i : Fin (3 - 1) := 0
+    minimize x
+    subject to
+      retained : i.val = 0
+      bound : |x| ≤ 1
+
+reformulation numeralTargeted : numeralSource := by conic at bound
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``numeralTargeted
+    | throwError "missing finite numeral definition display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``numeralTargeted
+    | throwError "missing finite numeral definition exact presentation"
+  for (view, name) in #[(display, `numeralDisplayReplay), (exact, `numeralExactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+example : numeralDisplayReplay = numeralTargeted := rfl
+example : numeralExactReplay = numeralTargeted := rfl
+example : numeralTargeted.feasible 0 := by norm_num [numeralTargeted]
+example : numeralDisplayReplay.feasible 0 := by
+  change (0 : Nat) = 0 ∧ (0 : ℝ) ≤ 1 ∧ -(0 : ℝ) ≤ 1
+  norm_num
+
 end
 end AlteredNormalizedFinNumeral
+
+namespace AlteredNormalizedFinAddition
+
+open Morew
+noncomputable section
+
+local instance : Add (Fin 2) := ⟨fun _ _ => ⟨1, by decide⟩⟩
+
+def source :=
+  problem (x : ℝ)
+    let f : Fin (3 - 1) → Fin (3 - 1) := fun i => i + i
+    minimize x
+    subject to
+      retained : (f 0).val = 0
+      bound : |x| ≤ 1
+
+reformulation targeted : source := by conic at bound
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``targeted
+    | throwError "missing finite addition definition display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``targeted
+    | throwError "missing finite addition definition exact presentation"
+  for (view, name) in #[(display, `displayReplay), (exact, `exactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+example : displayReplay = targeted := rfl
+example : exactReplay = targeted := rfl
+example : targeted.feasible 0 := by norm_num [targeted]
+example : displayReplay.feasible 0 := by
+  change (0 : Nat) = 0 ∧ (0 : ℝ) ≤ 1 ∧ -(0 : ℝ) ≤ 1
+  norm_num
+
+end
+end AlteredNormalizedFinAddition
 
 section AlteredNatCast
 noncomputable local instance : NatCast ℝ := ⟨fun n => @Nat.cast ℝ Real.instNatCast n + 1⟩

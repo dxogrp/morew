@@ -493,29 +493,16 @@ private def presentationFinNumeral? (expression : Expr) : MetaM (Option Nat) :=
       let some value ← presentationNatLiteral? args[1]! | return none
       -- Fin numerals use modulo; a constructor's value must already be in range.
       unless value < dimension do return none
-      -- Dimension cleanup can expose a different instance-search pattern, e.g.
-      -- Fin (3 - 1) becomes Fin 2. Check both the original and displayed types.
-      for indexDimension in #[args[0]!, mkNatLit dimension] do
-        let numeral ← mkNumeral (mkApp (mkConst ``Fin) indexDimension) value
-        let native ← mkAppOptM ``Fin.instOfNat
-          #[some indexDimension, none, some (mkNatLit value)]
-        unless (← isDefEq numeral.getAppArgs[2]! native) &&
-            (← isDefEq expression numeral) do return none
+      let numeral ← mkNumeral (← inferType expression) value
+      let native ← mkAppOptM ``Fin.instOfNat #[some args[0]!, none, some (mkNatLit value)]
+      unless (← isDefEq numeral.getAppArgs[2]! native) &&
+          (← isDefEq expression numeral) do return none
       return some value
     catch _ => return none
 
-open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
-@[delab app.Fin]
-private def delabPresentationFin : Delab := do
-  unless (← getOptions).getBool coneNotationOption &&
-      !(← getOptions).getBool `pp.explicit do failure
-  guard <| (← getExpr).isAppOfArity ``Fin 1
-  let expression ← getExpr
-  let some dimension ← (withoutModifyingState <|
-    presentationNatLiteral? expression.getAppArgs[0]! : MetaM (Option Nat)) | failure
-  let native ← mkAppM ``instOfNatNat #[mkNatLit dimension]
-  guard (← presentationInstanceResynthesizes native)
-  `($(mkCIdent ``Fin) $(quote dimension))
+-- Keep Fin dimensions as written, including literal arithmetic. Normalizing
+-- Fin (3 - 1) to Fin 2 can select different numeral or arithmetic instances
+-- when a displayed local definition is elaborated again.
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Fin.mk]
