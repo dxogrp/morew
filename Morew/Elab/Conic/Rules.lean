@@ -7,6 +7,8 @@ import Morew.Rewrite.Polyhedral
 import Morew.Conic.SecondOrder.Representations
 import Morew.Conic.Exponential.Representations
 import Morew.Conic.Power.Representations
+import Morew.Conic.Power.Norm
+import Morew.Conic.Power.GeometricMean
 import Morew.Elab.Rewrite.Registry
 
 /-!
@@ -42,6 +44,9 @@ attribute [morew_conic]
   Morew.Conic.Exponential.softplusNativeEpigraph
   Morew.Conic.Exponential.relativeEntropyEpigraph
   Morew.Conic.Exponential.relativeEntropyNativeEpigraph
+  Morew.Conic.Power.normEpigraph
+  Morew.Conic.Power.geoMeanHypograph
+  Morew.Conic.Power.invProdEpigraph
   Morew.Conic.Power.rpowEpigraph
   Morew.Conic.Power.rpowNotationEpigraph
   Morew.Conic.Power.rpowNegativeEpigraph

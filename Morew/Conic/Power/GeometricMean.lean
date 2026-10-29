@@ -10,9 +10,9 @@ import Morew.Rewrite.Basic
 /-!
 # Finite geometric-mean and inverse-product representations
 
-A deterministic left-to-right chain stores the mean of the first `i + 1`
-coordinates in auxiliary coordinate `i`. The first auxiliary equals the first
-input; each remaining coordinate is connected by a power cone. This uniform
+A deterministic left-to-right chain bounds each auxiliary by the corresponding
+prefix mean. The forward witnesses attain those bounds. The first auxiliary
+equals the first input; each remaining coordinate is connected by a power cone. This uniform
 layout works for symbolic nonempty dimensions without conditional coordinates.
 Hypographs retain negative lower bounds, and all geometric-mean zero boundaries
 are included. Inverse products require strictly positive input coordinates.
@@ -191,8 +191,8 @@ theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     exact (Real.rpow_le_rpow_of_nonpos hu (chain_bound xs u hn hx₀ hfirst hchain)
       hnegative.le).trans hpow
 
-/-- The unweighted finite geometric mean on nonnegative coordinates. Auxiliary
-coordinate `i` stores the mean of the first `i + 1` original coordinates. -/
+/-- The unweighted finite geometric mean on nonnegative coordinates. The forward
+witness sets auxiliary `i` to the mean of the first `i + 1` coordinates. -/
 noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun xs : {xs : Fin n → ℝ // ∀ i, 0 ≤ xs i} =>
       Fn.geoMean xs.1) where

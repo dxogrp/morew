@@ -196,7 +196,7 @@ def uninspectableSource :=
     subject to
       bad : 0 ≤ x
 
-/-- error: constraint `bad`: generated row: constraint: expected one exponential membership under the finite quantifier -/
+/-- error: constraint `bad`: generated row: constraint: expected one exponential membership or power membership under the finite quantifier -/
 #guard_msgs (substring := true) in
 reformulation uninspectableTarget : uninspectableSource := by
   conic at bad using uninspectableRule

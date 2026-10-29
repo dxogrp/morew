@@ -56,6 +56,8 @@ import MorewTest.ImportCompatibility.LocalDefinitions.Defined
 import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
+import MorewTest.ImportCompatibility.PowerFamilies
+import MorewTest.ImportCompatibility.PowerFamilies.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
 import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation.Registered
@@ -127,6 +129,8 @@ import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.Power
+import MorewTest.Reformulation.PowerFamilies
+import MorewTest.Reformulation.PowerFamilyFailures
 import MorewTest.Reformulation.PowerSource
 import MorewTest.Reformulation.PowerWorkflow
 import MorewTest.Reformulation.PresentationUpdates

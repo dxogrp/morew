@@ -30,9 +30,12 @@ private def conjunction (rows : Array Expr) : Expr :=
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
 
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
-    (contextual : Bool := false) : MetaM Unit := do
+    (contextual : Bool := false) (rule? : Option Name := none) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-  let result ← match ← Rewrite.planUnique source retained with
+  let outcome ← match rule? with
+    | some rule => Rewrite.planDeclaration source rule retained
+    | none => Rewrite.planUnique source retained
+  let result ← match outcome with
     | .error error => throwError "expected a second-order plan for {source}: {error.reason}"
     | .ok result => pure result
   result.toResult.check source retained
@@ -84,10 +87,11 @@ private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : Strin
   unless message.contains fragment do
     throwError "expected diagnostic containing {fragment}, got {message}"
 
-private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Unit := do
+private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
+    (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => do
-    checkPlan source
+    checkPlan source (rule? := rule?)
 
 private def expectRejected (stx : TSyntax `term) (fragment : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
@@ -114,13 +118,17 @@ or empty dimensions preserve the original decision space. -/
 run_cmd liftTermElabM do
   expectPlan (← `(fun x : ℝ => (x + 1)^2 ≤ 3))
   expectPlan (← `(fun x : ℝ => 3 ≥ (x + 1)^2))
+  expectRejected (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖ ≤ 3))
+    "ambiguous exact conic rules" 1
   expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖ ≤ 3)) 1
+    (some ``Morew.Conic.SecondOrder.normEpigraph)
   expectPlan (← `(fun n : ℕ => fun x : EuclideanSpace ℝ (Fin n) => ‖x‖ ≤ 3)) 1
   expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => ‖WithLp.toLp 2 x‖^2 ≤ 3)) 1
   expectPlan (← `(fun n : ℕ => fun x : EuclideanSpace ℝ (Fin n) => ‖x‖^2 ≤ 3)) 1
   expectPlan (← `(fun n : ℕ => fun x : Fin n → ℝ => (∑ i, (x i + 1)^2) ≤ 3)) 1
   expectPlan (← `(fun (n m : ℕ) (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) =>
     fun x : (Fin n → ℝ) × ℝ => ‖WithLp.toLp 2 (A.mulVec x.1 + b)‖ ≤ x.2)) 4
+    (some ``Morew.Conic.SecondOrder.normEpigraph)
   expectPlan (← `(fun x : EuclideanSpace ℝ (Fin 0) => ‖x‖ ≤ -1))
   expectPlan (← `(fun x : EuclideanSpace ℝ (Fin 1) => ‖x‖^2 ≤ -1))
   expectPlan (← `(fun x : Fin 0 → ℝ => (∑ i, (x i)^2) ≤ -1))

@@ -190,9 +190,12 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  -- The unified planner accepts the L2 bound through its SOC rule. Explicitly
-  -- selecting the L1 rule must still reject the incompatible norm carrier.
+  -- L2 now has two exact representations. Selecting SOC preserves its one-row
+  -- shape, while selecting L1 still rejects the incompatible norm carrier.
+  expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1))
+    "ambiguous exact conic rules"
   expectPlan (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) 1 false
+    (some (← `(Morew.Conic.SecondOrder.normEpigraph (n := 2))))
   expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "instance"
     (some (← `(Morew.Rewrite.norm1Epigraph (n := 2))))
   expectRejected (← `(fun x : ℝ => @LE.le ℝ ⟨fun a b => a + 1 ≤ b⟩ |x| 1)) "order instance"
