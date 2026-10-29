@@ -26,6 +26,11 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 private def powerMembershipReplayOption : Name :=
   `Morew.Reformulation.Internal.powerMembershipReplay
 
+-- Enabled only while constructing the compact print payload. Replay and the
+-- ordinary readable syntax remain independent of this presentation choice.
+private def compactIndexProofsOption : Name :=
+  `Morew.Reformulation.Internal.compactIndexProofs
+
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
     (stx : Lean.Syntax) : Option Name := do
   let .ident (.synthetic start _ _) _ _ _ := stx | none
@@ -630,6 +635,18 @@ def delabPresentationTerm (expression : Expr)
         if !body.hasLooseBVar 0 && (← isProp type) then
           return .visit (body.instantiate1 value)
       return .continue)
+  -- Lean normally prints atomic proof names even with `pp.proofs = false`.
+  -- Annotating just the bound-proof slots makes its ordinary proof-omission
+  -- machinery hide them, without changing constructors, indices, or types.
+  -- This copy is used only for print payloads, never for either replay view.
+  let expression ← if !replay && (← getOptions).getBool compactIndexProofsOption then
+      Meta.transform expression (post := fun value => do
+        if value.isAppOfArity ``Fin.mk 3 then
+          let args := value.getAppArgs
+          return .done (mkAppN value.getAppFn #[args[0]!, args[1]!,
+            mkAnnotation `Morew.Reformulation.Internal.compactFiniteIndexProof args[2]!])
+        return .continue)
+    else pure expression
   -- Reserve the displayed names before choosing names for inner binders.
   -- Generated decisions carry hygiene scopes, which must not make an inner
   -- lambda appear free to reuse the same visible spelling.
@@ -901,7 +918,7 @@ same emitted declaration and parameter telescope. -/
 def refreshProblemView (targetName : Name)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
     CommandElabM Unit := do
-  let (refreshed, displayed) ← runTermElabM fun _ => do
+  let (refreshed, displayed, printed) ← runTermElabM fun _ => do
     -- Inspect the declaration's own parameters, independently of the section
     -- that emitted it. Fresh universe metavariables or ambient local names
     -- must not leak into persistent presentation metadata.
@@ -992,8 +1009,17 @@ def refreshProblemView (targetName : Name)
             (parameterInstances := parameterInstances)
           let display ← problemViewFromExpression target template instantiateBinderTypes
             (forRegistration := true)
-          pure (replay, display))
-  Morew.Syntax.registerProblemView targetName refreshed (some displayed)
+          let compact ← withOptions (fun options =>
+              options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
+                |>.setBool compactIndexProofsOption true) do
+            problemViewFromExpression target template instantiateBinderTypes
+              (forRegistration := true)
+          let detailed ← if getPPProofs (← getOptions) then pure display else
+            withOptions (·.setBool `pp.proofs true) do
+              problemViewFromExpression target template instantiateBinderTypes
+                (forRegistration := true)
+          pure (replay, display, { compact, detailed : Morew.Syntax.ProblemPrintPresentation }))
+  Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)
 
 /-- Rebase a retained presentation into the current section-variable context. -/
 def withTypedPresentation (state : ReformState)

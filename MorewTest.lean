@@ -59,6 +59,8 @@ import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
 import MorewTest.ImportCompatibility.PowerFamilies
 import MorewTest.ImportCompatibility.PowerFamilies.Defined
+import MorewTest.ImportCompatibility.PrintDetails
+import MorewTest.ImportCompatibility.PrintDetails.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
 import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation.Registered
@@ -137,6 +139,7 @@ import MorewTest.Reformulation.PowerSource
 import MorewTest.Reformulation.PowerWorkflow
 import MorewTest.Reformulation.PresentationIndices
 import MorewTest.Reformulation.PresentationUpdates
+import MorewTest.Reformulation.PrintDetails
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Replace

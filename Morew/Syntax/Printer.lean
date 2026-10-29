@@ -134,6 +134,11 @@ def elabPrintProblem : CommandElab := fun stx => do
   let env ← getEnv
   let some view := Morew.Syntax.getProblemDisplayView? env declName
     | throwErrorAt name "declaration `{declName}` has no registered problem presentation"
+  let detailed := getPPProofs (← getOptions)
+  let view := match Morew.Syntax.getProblemPrintPresentation? env declName with
+    | none => view
+    | some presentation =>
+      if detailed then presentation.detailed else presentation.compact
   -- A `problem` term can occur as a proper subterm of another declaration.
   -- During elaboration it still sees the enclosing declaration name, so such
   -- a term may leave presentation metadata behind.  Metadata is deliberately

@@ -83,11 +83,22 @@ structure ProblemView where
   constraints : Array ConstraintView := #[]
   deriving Inhabited
 
+/-- Print-only views of a reformulation. Neither view is used to reconstruct a
+problem: compact output may omit index proofs, while detailed output retains
+them independently of the options in effect when the declaration was created. -/
+structure ProblemPrintPresentation where
+  /-- Ordinary compact output, with finite-index bounds proofs omitted. -/
+  compact : ProblemView
+  /-- Ordinary output with proof details available for later inspection. -/
+  detailed : ProblemView
+  deriving Inhabited
+
 -- Keep display syntax outside the replay view. A transformation can edit an
 -- ordinary ProblemView without retaining a stale cached reconstruction term.
 private structure RegisteredProblemView where
   view : ProblemView
   displayView : ProblemView
+  printPresentation? : Option ProblemPrintPresentation := none
   deriving Inhabited
 
 private initialize problemViewExtension :
@@ -102,22 +113,30 @@ private initialize problemViewExtension :
 supply a separate readable display while retaining exact syntax for replay.
 Without a display override, the supplied view serves both purposes. -/
 def addProblemView (env : Environment) (declName : Name)
-    (view : ProblemView) (displayView? : Option ProblemView := none) : Environment :=
-  problemViewExtension.addEntry env (declName, ⟨view, displayView?.getD view⟩)
+    (view : ProblemView) (displayView? : Option ProblemView := none)
+    (printPresentation? : Option ProblemPrintPresentation := none) : Environment :=
+  problemViewExtension.addEntry env (declName, ⟨view, displayView?.getD view, printPresentation?⟩)
 
 /-- Look up the syntax view registered for reconstructing a problem.
 Refreshed reformulation targets retain explicit instances in this view. -/
 def getProblemView? (env : Environment) (declName : Name) : Option ProblemView :=
   ((problemViewExtension.getState env).find? declName).map (·.view)
 
-/-- Look up the readable presentation used by `#printp`. -/
+/-- Look up the ordinary readable syntax. Existing reconstruction consumers
+retain this view; print-only overrides are stored separately. -/
 def getProblemDisplayView? (env : Environment) (declName : Name) : Option ProblemView :=
   ((problemViewExtension.getState env).find? declName).map (·.displayView)
 
+/-- Look up optional print-only views. Original source declarations have none. -/
+def getProblemPrintPresentation? (env : Environment) (declName : Name) :
+    Option ProblemPrintPresentation :=
+  ((problemViewExtension.getState env).find? declName).bind (·.printPresentation?)
+
 /-- Register presentation metadata in any elaborator with environment access. -/
 def registerProblemView [MonadEnv m] (declName : Name)
-    (view : ProblemView) (displayView? : Option ProblemView := none) : m Unit :=
-  modifyEnv fun env => addProblemView env declName view displayView?
+    (view : ProblemView) (displayView? : Option ProblemView := none)
+    (printPresentation? : Option ProblemPrintPresentation := none) : m Unit :=
+  modifyEnv fun env => addProblemView env declName view displayView? printPresentation?
 
 /-- Structurally replace occurrences of a source identifier in a syntax tree.
 This low-level helper does not interpret nested binders; transformation
