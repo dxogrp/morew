@@ -42,6 +42,18 @@ private def checkReplay (expression : Expr) (stx : Syntax) : TermElabM Unit := d
   unless ← isDefEq expression rebuilt do
     throwError "presentation replay changed its original expression"
 
+private def checkUntypedReplay (term : TSyntax `term) : TermElabM Unit := do
+  let expression ← elaborate term
+  for replay in #[false, true] do
+    let (stx, _) ← render expression replay
+    -- Supplying the original type would hide a missing Fin ascription on an
+    -- arithmetic expression by preventing numeral defaulting to Nat.
+    let rebuilt ← elaborate ⟨stx⟩
+    unless ← isDefEq (← inferType expression) (← inferType rebuilt) do
+      throwError "untyped presentation replay changed its original type"
+    unless ← isDefEq expression rebuilt do
+      throwError "untyped presentation replay changed its original expression"
+
 private def check (term : TSyntax `term) (required : Array String)
     (forbidden : Array String := #[]) (readableReplay : Bool := false) : TermElabM Unit := do
   let expression ← elaborate term
@@ -68,6 +80,65 @@ run_cmd liftTermElabM do
     let text := (← PrettyPrinter.ppTerm stx).pretty
     unless text.contains marker do
       throwError "ordinary pretty-printing unexpectedly used presentation cleanup: {text}"
+
+run_cmd liftTermElabM do
+  checkUntypedReplay (← `((⟨0, by decide⟩ : Fin 3) = (⟨1, by decide⟩ : Fin 3)))
+  checkUntypedReplay (← `((⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3)))
+  checkUntypedReplay (← `((⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3) =
+    (⟨1, by decide⟩ : Fin 3)))
+  check (← `(fun u : Fin 3 → ℝ => u (⟨0, by decide⟩ : Fin 3)))
+    #["u 0"] #["(0 : Fin 3)"] true
+  withOptions (·.setBool `pp.analyze true |>.setBool `pp.analyze.knowsType false) do
+    -- The Fin cleanup must also preserve analyzer annotations on other terms.
+    check (← `(fun x : ℝ => ((⟨0, by decide⟩ : Fin 3), x))) #["x : ℝ"] #[] true
+    checkUntypedReplay (← `((⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3)))
+
+namespace RetainedFiniteArithmetic
+
+open Morew
+
+noncomputable section
+
+def source :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      retained : (⟨2, by decide⟩ : Fin 3) + (⟨2, by decide⟩ : Fin 3) =
+        (⟨1, by decide⟩ : Fin 3)
+      bound : |x| ≤ 1
+
+reformulation targeted : source := by
+  conic at bound
+
+/--
+info: problem (x : ℝ)
+  minimize x
+  subject to
+    retained : (2 : Fin 3) + (2 : Fin 3) = 1
+    bound_conic_1 : x ≤ 1
+    bound_conic_2 : -x ≤ 1
+-/
+#guard_msgs in
+#printp targeted
+
+run_cmd do
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) ``targeted
+    | throwError "missing finite arithmetic display presentation"
+  let some exact := Morew.Syntax.getProblemView? (← getEnv) ``targeted
+    | throwError "missing finite arithmetic exact presentation"
+  for (view, name) in #[(display, `displayReplay), (exact, `exactReplay)] do
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(def $(mkIdent name) := $term))
+
+example : displayReplay = targeted := rfl
+example : exactReplay = targeted := rfl
+example : targeted.feasible 0 := by norm_num [targeted]; decide
+example : displayReplay.feasible 0 := by norm_num [displayReplay]; decide
+example : exactReplay.feasible 0 := by norm_num [exactReplay]; decide
+
+end
+
+end RetainedFiniteArithmetic
 
 def namedDimension : Nat := 3
 def namedIndex : Nat := 1

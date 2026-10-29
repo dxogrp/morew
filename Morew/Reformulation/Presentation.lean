@@ -422,6 +422,8 @@ def packPoint (components : Array Expr) : MetaM Expr := do
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `Morew.Reformulation.Internal.coneNotation
 
+private def finIndexTypeOption : Name := `Morew.Reformulation.Internal.finIndexType
+
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
 private def delabConeCarrier : Delab := do
@@ -518,7 +520,14 @@ private def delabPresentationFinIndex : Delab := do
       !(← getOptions).getBool `pp.explicit do failure
   let expression ← getExpr
   guard <| expression.isAppOfArity ``Fin.mk 3
-  if let some value ← presentationFinNumeral? expression then return quote value
+  if let some value ← presentationFinNumeral? expression then
+    -- Preserve the constructor's type when its surrounding context cannot
+    -- infer it; otherwise overloaded arithmetic may default to Nat on replay.
+    return ← withTypeAscription
+      (cond := (← getPPOption (·.getBool finIndexTypeOption)) ||
+        (← withType <| getPPOption fun options =>
+          getPPStructureInstanceType options || options.getBool finIndexTypeOption)) do
+        pure (quote value)
   withNaryArg 1 do
     let value ← getExpr
     let showEmbedding (name : Name) : Delab := do
@@ -724,6 +733,36 @@ private def delabZeroConeMembership : Delab := do
   let type ← withNaryArg 1 delab
   `($value ∈ ($set : $type))
 
+-- Ask Lean which constructor types cannot be inferred, but expose those flags
+-- only to our Fin-numeral hook. Enabling the whole analyzer would also change
+-- unrelated binders, instances, and notation in readable presentations.
+private def presentationFinIndexOptions (expression : Expr) :
+    MetaM PrettyPrinter.Delaborator.OptionsPerPos := do
+  if (expression.find? (·.isAppOfArity ``Fin.mk 3)).isNone then return {}
+  let options ← getOptions
+  let mut result ← if getPPAnalyze options && !getPPAll options then
+    PrettyPrinter.Delaborator.topDownAnalyze expression else pure {}
+  let analysis ← withOptions (·.setBool `pp.analyze.knowsType false) <|
+    PrettyPrinter.Delaborator.topDownAnalyze expression
+  for (position, flags) in analysis.toList do
+    if flags.getBool `pp.structureInstanceTypes || flags.getBool `pp.analysis.needsType then
+      -- The analyzer is conservative inside equality and tuple operands. A
+      -- free decision function already supplies its explicit Fin argument's
+      -- type, so keep applications such as `aux 0` compact there as well.
+      let indexPosition := if position.head == Lean.SubExpr.Pos.typeCoord then
+        position.tail else position
+      if !indexPosition.isRoot && indexPosition.head == 1 &&
+          indexPosition.tail.all (· != Lean.SubExpr.Pos.typeCoord) then
+        let parent ← Lean.Core.viewSubexpr indexPosition.tail expression
+        if let .app (.fvar id) argument := parent.consumeMData then
+          if argument.consumeMData.isAppOfArity ``Fin.mk 3 then
+            if let .forallE _ domain _ .default ← whnf (← inferType (mkFVar id)) then
+              if domain.isAppOfArity ``Fin 1 && !domain.hasMVar && !domain.hasLooseBVars then
+                continue
+      let flags := (result.get? position).getD {}
+      result := result.insert position (flags.setBool finIndexTypeOption true)
+  return result
+
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
@@ -761,7 +800,13 @@ def delabPresentationTerm (expression : Expr)
         -- Cast notation would resynthesize coercions in the replaying context.
         |>.setBool `pp.coercions false
       else options) do
-    let (stx, infos) ← PrettyPrinter.delabCore expression {}
+    -- Match delabCore's preprocessing so the selective flags refer to the
+    -- same subexpression positions, including under pattern metadata.
+    let expression ← Meta.erasePatternRefAnnotations expression
+    let expression ← if getPPInstantiateMVars (← getOptions) then instantiateMVars expression
+      else pure expression
+    let optionsPerPos ← if replay then pure {} else presentationFinIndexOptions expression
+    let (stx, infos) ← PrettyPrinter.delabCore expression optionsPerPos
       PrettyPrinter.Delaborator.delab
     let sectionReferences ← if replay then sectionReferenceNames else pure {}
     pure <| freezePresentationReferences infos binders
