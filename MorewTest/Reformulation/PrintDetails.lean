@@ -129,5 +129,69 @@ example : nativeCastReplay = target := rfl
 
 end AlteredCast
 
+namespace BinderTypes
+
+-- The alias remains visible; only its finite-index proof becomes compact.
+abbrev Indexed (_ : Fin 2) := ℝ
+
+def source (offset : ℝ) :=
+  problem (entry : Indexed ⟨0, Nat.zero_lt_two⟩) (x : ℝ)
+    minimize (entry : ℝ) + x + offset
+    subject to
+      bound : |x| ≤ 1
+      remaining : |(entry : ℝ)| ≤ 2
+
+def bareSource :=
+  problem (entry : Indexed ⟨0, Nat.zero_lt_two⟩) (x : ℝ)
+    minimize (entry : ℝ) + x
+    subject to
+      bound : |x| ≤ 1
+
+reformulation applied : (source 0) := by conic at bound
+reformulation bare : bareSource := by conic at bound
+
+set_option pp.proofs true in
+reformulation registeredDetailed : (source 0) := by conic at bound
+
+run_cmd do
+  -- The ordinary refresh API retains template binder spelling for bare names.
+  -- Its compact payload must still inspect the checked binder types.
+  let some template := Syntax.getProblemDisplayView? (← getEnv) ``bare
+    | throwError "missing bare-name binder presentation"
+  Morew.Reformulation.Internal.refreshProblemView ``bare template
+  let some presentation := Syntax.getProblemPrintPresentation? (← getEnv) ``bare
+    | throwError "missing compact bare-name binder presentation"
+  unless presentation.compact.binders[1]!.typeSyntax == template.binders[1]!.typeSyntax do
+    throwError "compact proof hiding changed an unrelated template binder type"
+  for declaration in #[``applied, ``registeredDetailed] do
+    checkDetails declaration "Nat.zero_lt_two" #["entry : Indexed ⟨0,", "x : ℝ"]
+  -- Re-elaboration may share the bound through a generated proof declaration.
+  checkDetails ``bare "_proof_" #["entry : Indexed ⟨0,", "x : ℝ"]
+  for declaration in #[``applied, ``bare, ``registeredDetailed] do
+    for getter in #[Syntax.getProblemView?, Syntax.getProblemDisplayView?] do
+      let some view := getter (← getEnv) declaration
+        | throwError "binder proof printing lost a stored view"
+      let binderType := (← liftCoreM <| PrettyPrinter.ppTerm ⟨view.binders[0]!.typeSyntax⟩).pretty
+      unless !binderType.contains "⋯" &&
+          (binderType.contains "Nat.zero_lt_two" || binderType.contains "_proof_") do
+        throwError "compact binder proofs changed a reconstruction view: {binderType}"
+  unless (← printed ``applied false) == (← printed ``registeredDetailed false) do
+    throwError "creation-time proof options changed compact binder types"
+  for declaration in #[``source, ``bareSource] do
+    unless (← printed declaration false).contains "Nat.zero_lt_two" do
+      throwError "compact binder proofs changed original source syntax"
+  for (getter, name) in #[(Syntax.getProblemView?, `exactReplay),
+      (Syntax.getProblemDisplayView?, `displayReplay)] do
+    let some view := getter (← getEnv) ``applied
+      | throwError "missing applied binder presentation"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
+
+example : exactReplay = applied := rfl
+example : displayReplay = applied := rfl
+example : GlobalEquivalence (source 0) applied := applied.equivalence
+
+end BinderTypes
+
 end
 end MorewTest.Reformulation.PrintDetails

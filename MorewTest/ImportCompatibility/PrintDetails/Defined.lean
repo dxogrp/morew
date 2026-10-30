@@ -32,5 +32,23 @@ set_option pp.coercions false in
 set_option pp.proofs true in
 reformulation registeredDetailed : source := by conic at bound
 
+namespace BinderTypes
+
+abbrev Indexed (_ : Fin 2) := ℝ
+
+def source (offset : ℝ) :=
+  problem (entry : Indexed ⟨0, Nat.zero_lt_two⟩) (x : ℝ)
+    minimize (entry : ℝ) + x + offset
+    subject to
+      bound : |x| ≤ 1
+      remaining : |(entry : ℝ)| ≤ 2
+
+reformulation lowered : (source 0) := by conic at bound
+
+set_option pp.proofs true in
+reformulation registeredDetailed : (source 0) := by conic at bound
+
+end BinderTypes
+
 end
 end MorewTest.ImportCompatibility.PrintDetails.Defined

@@ -32,6 +32,22 @@ private def powerMembershipReplayOption : Name :=
 private def compactIndexProofsOption : Name :=
   `Morew.Reformulation.Internal.compactIndexProofs
 
+-- Lean normally prints atomic proof names even with `pp.proofs = false`.
+-- Annotating just the bound-proof slots makes its ordinary proof-omission
+-- machinery hide them, without changing constructors, indices, or types.
+-- Both term and type rendering use this copy only for compact print payloads.
+private def compactFiniteIndexProofs (expression : Expr) (replay : Bool) : MetaM Expr := do
+  if replay || !(← getOptions).getBool compactIndexProofsOption then return expression
+  -- The delaborator also discards these replay annotations. Remove them before
+  -- finding constructors so annotated application heads cannot bypass hiding.
+  let expression ← erasePatternRefAnnotations expression
+  Meta.transform expression (post := fun value => do
+    if value.isAppOfArity ``Fin.mk 3 then
+      let args := value.getAppArgs
+      return .done (mkAppN value.getAppFn #[args[0]!, args[1]!,
+        mkAnnotation `Morew.Reformulation.Internal.compactFiniteIndexProof args[2]!])
+    return .continue)
+
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
     (stx : Lean.Syntax) : Option Name := do
   let .ident (.synthetic start _ _) _ _ _ := stx | none
@@ -142,7 +158,8 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
 def presentationTypeSyntax (type : Expr) (replay : Bool := true)
-    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax :=
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
+  let type ← compactFiniteIndexProofs type replay
   -- Generated auxiliary types need the same fixed class projections as row
   -- bodies, while retaining their readable spelling in imported metadata.
   withOptions (fun options =>
@@ -636,18 +653,7 @@ def delabPresentationTerm (expression : Expr)
         if !body.hasLooseBVar 0 && (← isProp type) then
           return .visit (body.instantiate1 value)
       return .continue)
-  -- Lean normally prints atomic proof names even with `pp.proofs = false`.
-  -- Annotating just the bound-proof slots makes its ordinary proof-omission
-  -- machinery hide them, without changing constructors, indices, or types.
-  -- This copy is used only for print payloads, never for either replay view.
-  let expression ← if !replay && (← getOptions).getBool compactIndexProofsOption then
-      Meta.transform expression (post := fun value => do
-        if value.isAppOfArity ``Fin.mk 3 then
-          let args := value.getAppArgs
-          return .done (mkAppN value.getAppFn #[args[0]!, args[1]!,
-            mkAnnotation `Morew.Reformulation.Internal.compactFiniteIndexProof args[2]!])
-        return .continue)
-    else pure expression
+  let expression ← compactFiniteIndexProofs expression replay
   -- Reserve the displayed names before choosing names for inner binders.
   -- Generated decisions carry hygiene scopes, which must not make an inner
   -- lambda appear free to reuse the same visible spelling.
@@ -839,10 +845,17 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     else pure target
   let domain := targetType.getArg! 0
   let binderTypes ← splitProductDomain domain template.binders.size
+  let compactTypes := forRegistration && (← getOptions).getBool compactIndexProofsOption
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
-    if instantiateBinderTypes then
+    -- A bare-name refresh normally keeps the template's spelling. Inspect a
+    -- type containing finite constructors only for its compact proof slots.
+    let binderType ← if compactTypes then erasePatternRefAnnotations binderTypes[index]!
+      else pure binderTypes[index]!
+    let hasFiniteConstructor := (binderType.find?
+      (·.isAppOfArity ``Fin.mk 3)).isSome
+    if instantiateBinderTypes || (compactTypes && hasFiniteConstructor) then
       pure { binder with
-        typeSyntax := ← presentationTypeSyntax binderTypes[index]!
+        typeSyntax := ← presentationTypeSyntax binderType
           (!forRegistration) parameterInstances }
     else
       pure binder

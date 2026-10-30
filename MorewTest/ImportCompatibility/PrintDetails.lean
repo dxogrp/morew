@@ -59,5 +59,39 @@ example : Shadow.continuedReplay = continued := rfl
 example : GlobalEquivalence Defined.source continued :=
   Defined.lowered.equivalence.trans continued.equivalence
 
+namespace BinderTypes
+
+reformulation continued : Defined.BinderTypes.lowered := by conic at remaining
+
+run_cmd do
+  for declaration in #[``Defined.BinderTypes.lowered, ``Defined.BinderTypes.registeredDetailed] do
+    checkDetails declaration "Nat.zero_lt_two" #["Indexed ⟨0,", "entry", "x : ℝ"]
+  checkDetails ``continued "_proof_" #["Indexed ⟨0,", "entry", "x : ℝ"]
+  for declaration in #[``Defined.BinderTypes.lowered,
+      ``Defined.BinderTypes.registeredDetailed, ``continued] do
+    for getter in #[Syntax.getProblemView?, Syntax.getProblemDisplayView?] do
+      let some view := getter (← getEnv) declaration
+        | throwError "imported binder proof printing lost a stored view"
+      let binderType := (← liftCoreM <| PrettyPrinter.ppTerm ⟨view.binders[0]!.typeSyntax⟩).pretty
+      unless !binderType.contains "⋯" &&
+          (binderType.contains "Nat.zero_lt_two" || binderType.contains "_proof_") do
+        throwError "compact printing changed an imported reconstruction type: {binderType}"
+  unless (← printed ``Defined.BinderTypes.lowered false) ==
+      (← printed ``Defined.BinderTypes.registeredDetailed false) do
+    throwError "producer proof options changed compact imported binder types"
+  for (getter, name) in #[(Syntax.getProblemView?, `exactReplay),
+      (Syntax.getProblemDisplayView?, `displayReplay)] do
+    let some view := getter (← getEnv) ``continued
+      | throwError "missing continued binder presentation"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
+
+example : exactReplay = continued := rfl
+example : displayReplay = continued := rfl
+example : GlobalEquivalence (Defined.BinderTypes.source 0) continued :=
+  Defined.BinderTypes.lowered.equivalence.trans continued.equivalence
+
+end BinderTypes
+
 end
 end MorewTest.ImportCompatibility.PrintDetails
