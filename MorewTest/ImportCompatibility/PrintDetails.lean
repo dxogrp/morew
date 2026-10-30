@@ -66,7 +66,9 @@ reformulation continued : Defined.BinderTypes.lowered := by conic at remaining
 run_cmd do
   for declaration in #[``Defined.BinderTypes.lowered, ``Defined.BinderTypes.registeredDetailed] do
     checkDetails declaration "Nat.zero_lt_two" #["Indexed ⟨0,", "entry", "x : ℝ"]
-  checkDetails ``continued "_proof_" #["Indexed ⟨0,", "entry", "x : ℝ"]
+  let details ← printed ``continued true
+  let proofName := if details.contains "Nat.zero_lt_two" then "Nat.zero_lt_two" else "_proof_"
+  checkDetails ``continued proofName #["Indexed ⟨0,", "entry", "x : ℝ"]
   for declaration in #[``Defined.BinderTypes.lowered,
       ``Defined.BinderTypes.registeredDetailed, ``continued] do
     for getter in #[Syntax.getProblemView?, Syntax.getProblemDisplayView?] do

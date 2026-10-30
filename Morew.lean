@@ -9,6 +9,13 @@ import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Exponential.Representations
 import Morew.Conic.PSD
+import Morew.Conic.PSD.LambdaMax
+import Morew.Conic.PSD.MatrixFraction
+import Morew.Conic.PSD.NuclearNorm
+import Morew.Conic.PSD.PositiveDefinite
+import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.SingularVectors
+import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
@@ -27,6 +34,7 @@ import Morew.Elab.Conic
 import Morew.Elab.Conic.Domain
 import Morew.Elab.Conic.Evidence
 import Morew.Elab.Conic.Form
+import Morew.Elab.Conic.MatrixDomain
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite
@@ -58,6 +66,7 @@ import Morew.Elab.Rewrite.Registry
 import Morew.Elab.State
 import Morew.Fn
 import Morew.Fn.Exponential
+import Morew.Fn.Matrix
 import Morew.Fn.Power
 import Morew.NLP
 import Morew.NLP.Basic

@@ -74,10 +74,13 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else if ([``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul].contains name) then some 5
     else if name == ``Matrix.transpose then some 3
     else if name == ``Matrix.diagonal then some 4
+    else if name == `Matrix.trace then some 4
     else if name == ``Matrix.submatrix then some 5
     else if name == ``Matrix.fromBlocks then some 5
     else if name == `Morew.Conic.fromBlocksFin then some 2
     else if name == `Morew.Conic.SymmetricMatrix.toMatrix then some 1
+    else if ([`Morew.Fn.lambdaMax, `Morew.Fn.matrixFrac].contains name) then some 1
+    else if name == `Morew.Fn.nuclearNorm then some 2
     else if ([``WithLp.toLp, ``WithLp.ofLp].contains name) then some 2
     else if ([``LE.le, ``GE.ge, ``LT.lt].contains name) then some 2
     else if name == ``Eq then some 1

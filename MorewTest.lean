@@ -25,9 +25,14 @@ import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
+import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
+import MorewTest.Conic.PSD.LambdaMax
+import MorewTest.Conic.PSD.MatrixFraction
+import MorewTest.Conic.PSD.NuclearNorm
+import MorewTest.Conic.PSD.SpectralNorm
 import MorewTest.Conic.PSDElab
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
@@ -74,6 +79,7 @@ import MorewTest.ImportCompatibility.Reformulation
 import MorewTest.ImportCompatibility.Runner
 import MorewTest.ImportCompatibility.SecondOrder
 import MorewTest.ImportCompatibility.SecondOrder.Defined
+import MorewTest.ImportCompatibility.Spectral
 import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
@@ -118,6 +124,8 @@ import MorewTest.Reformulation.IndexNames
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
+import MorewTest.Reformulation.MatrixFraction
+import MorewTest.Reformulation.MatrixFractionFailures
 import MorewTest.Reformulation.NLP
 import MorewTest.Reformulation.NLPCustom
 import MorewTest.Reformulation.NLPFailures
@@ -158,6 +166,9 @@ import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
 import MorewTest.Reformulation.SecondOrderFailures
 import MorewTest.Reformulation.SmoothHelpers
+import MorewTest.Reformulation.Spectral
+import MorewTest.Reformulation.SpectralFailures
+import MorewTest.Reformulation.SpectralPrinting
 import MorewTest.Reformulation.SubstitutionBindingIdentity
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures

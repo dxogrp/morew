@@ -57,6 +57,27 @@ the symmetric-matrix conversions and their proofs. The public
 registered exact certificates with a positive-definite pivot; they install no
 automatic Schur rewrite.
 
+`Fn.lambdaMax A` upper bounds use `t • 1 - A` with global symmetry and a
+positive dimension. The value is the largest real eigenvalue, including when
+it is negative. Native rectangular matrix norms under
+`Matrix.Norms.L2Operator` use the symmetric block `[tI A; Aᵀ tI]` together
+with `0 ≤ t`; other matrix norm instances do not select this rule.
+`Fn.nuclearNorm A` uses two symmetric auxiliary matrices, a PSD block, and
+half their summed traces. Native `Matrix.trace` is certified as affine.
+Both norm representations include empty dimensions.
+
+`Fn.matrixFrac x P` and the native expression `x ⬝ᵥ (P⁻¹ *ᵥ x)` use a
+Schur block with a checked positive-definite pivot. Evidence may come from an
+independent fixed or universal hypothesis, retained `P.PosDef`, a retained
+positive scalar PSD margin, or a retained block `[P I; I W]` in the PSD cone.
+Conjunctions and local lets preserve this evidence. The selected fraction
+bound never supplies its own domain. A direct `P.PosDef` row lowers exactly
+to an existential symmetric `W` and that identity-cross-block PSD witness,
+so domain-first and fraction-first rewriting both preserve the original
+feasible set. Generated matrices still require global symmetry, independently
+of these retained domain facts. Matrix fractions and domain lifts allow
+dimension zero.
+
 Native Euclidean norms, scalar squares, and finite sums of squares become one
 SOC or rotated-SOC membership row. Quotients of squares require a positive
 constant lower margin on the denominator, obtained from an unchanged constraint

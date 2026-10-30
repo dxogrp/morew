@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Affine
 import Mathlib.Data.Matrix.Block
+import Mathlib.LinearAlgebra.Matrix.Trace
 
 /-! Certified affine constructions for ordinary real matrices. -/
 
@@ -30,6 +31,12 @@ noncomputable def diagonal [DecidableEq n] {f : X → n → ℝ} (a : Certified 
     Certified (fun x => Matrix.diagonal (f x)) where
   map := (Matrix.diagonalLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.diagonal (a.correct x)
+
+/-- The trace of an affine square matrix is affine, with its original finite sum. -/
+noncomputable def trace [Fintype n] {f : X → Matrix n n ℝ} (a : Certified f) :
+    Certified (fun x => Matrix.trace (f x)) where
+  map := (Matrix.traceLinearMap n ℝ ℝ).toAffineMap.comp a.map
+  correct x := congrArg Matrix.trace (a.correct x)
 
 /-- Reindex an affine matrix by fixed row and column functions. -/
 noncomputable def submatrix {f : X → Matrix m n ℝ} (a : Certified f)

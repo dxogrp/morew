@@ -98,6 +98,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSymmetry (← `(fun (n : Nat) (F : ℝ → Matrix (Fin n) (Fin n) ℝ)
       (_h : ∀ x, (F x).IsSymm) => fun x : ℝ => F x)) 3
   assertSymmetry (← `(fun (n : Nat) (F : ℝ → Matrix (Fin n) (Fin n) ℝ)
+      (_h : True ∧ (∀ x, True ∧ (F x).IsSymm)) => fun x : ℝ => F x)) 3
+  assertSymmetry (← `(fun (n : Nat) (F : ℝ → Matrix (Fin n) (Fin n) ℝ)
       (_h : ∀ x i j, F x j i = F x i j) => fun x : ℝ => F x)) 3
   assertRow (← `(fun (n : Nat) (A B : Matrix (Fin n) (Fin n) ℝ)
       (_h : ∀ x : ℝ, (A + x • B).IsSymm) =>
@@ -195,6 +197,12 @@ run_cmd Lean.Elab.Command.liftTermElabM do
         let before ← getMCtx
         if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
           throwError "feasibility-local symmetry was accepted globally"
+        checkUnchanged before
+      let conjoined ← mkAppM ``And #[mkConst ``True, proposition]
+      withLocalDeclD `feasibleConjoinedSymmetry conjoined fun _ => do
+        let before ← getMCtx
+        if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
+          throwError "conjoined feasibility-local symmetry was accepted globally"
         checkUnchanged before
       let universal ← mkForallFVars points proposition
       let hole ← mkFreshExprMVar universal
