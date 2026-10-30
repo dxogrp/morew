@@ -10,8 +10,7 @@ import Morew.Reformulation
 
 Largest eigenvalues, Euclidean operator norms, nuclear norms, and positive-
 definite matrix fractions have exact semidefinite representations. Nonlinear
-objectives first receive an epigraph bound. Positive definiteness is retained
-as a mathematical domain constraint and then lowered exactly to a PSD lift.
+objectives first receive an epigraph bound.
 -/
 
 namespace Morew.Examples.Spectral
