@@ -166,6 +166,62 @@ reformulation schurMaximum : (schurMaximumSource A) := by
 
 example : (schurMaximum.conicForm A).data.sense = ObjectiveSense.maximize := rfl
 
+/-- This target retains symmetric block constructors instead of a native matrix. -/
+def blockSchurRule (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef) :
+    ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
+      (Matrix.diagonal ![p.2] - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
+  .ofIff (fun p => A.fromBlocks p.1
+    (SymmetricMatrix.ofMatrix (Matrix.diagonal ![p.2]) (Matrix.isSymm_diagonal _)) ∈ PSD (1 + 1))
+    (fun p => schurComplement_mem_iff A p.1
+      (SymmetricMatrix.ofMatrix (Matrix.diagonal ![p.2]) (Matrix.isSymm_diagonal _)) hA)
+
+reformulation blockSchur : (schurMaximumSource A) := by
+  conic at schur using blockSchurRule
+  conic
+
+/--
+info: problem (B : Matrix (Fin 1) (Fin 1) ℝ) (t : ℝ)
+  maximize t
+  subject to
+    schur_conic_1 : A.fromBlocks B (Matrix.diagonal ![t]) ∈ PSD (1 + 1)
+-/
+#guard_msgs in
+#printp blockSchur
+
+-- Both diagonal positions contain conversions, including inside another block.
+def nestedBlockSource :=
+  problem (x y z : ℝ)
+    minimize x
+    subject to
+      semidefinite : (SymmetricMatrix.fromBlocks
+        (SymmetricMatrix.fromBlocks
+          (SymmetricMatrix.ofMatrix (Matrix.diagonal ![x]) (Matrix.isSymm_diagonal _))
+          (0 : Matrix (Fin 1) (Fin 1) ℝ)
+          (SymmetricMatrix.ofMatrix (Matrix.diagonal ![y]) (Matrix.isSymm_diagonal _)))
+        (0 : Matrix (Fin (1 + 1)) (Fin 1) ℝ)
+        (SymmetricMatrix.ofMatrix (Matrix.diagonal ![z]) (Matrix.isSymm_diagonal _)))
+          ∈ PSD ((1 + 1) + 1)
+
+reformulation nestedBlocks : nestedBlockSource := by conic
+
+-- Conversions outside a PSD coordinate keep their ordinary constructor syntax.
+def ordinaryConversionSource :=
+  problem (x : ℝ)
+    let coordinate := SymmetricMatrix.ofMatrix (Matrix.diagonal ![x]) (Matrix.isSymm_diagonal _)
+    minimize coordinate.toMatrix 0 0
+    subject to
+      upper : x ≤ 3
+
+reformulation ordinaryConversion : ordinaryConversionSource := by conic
+
+run_cmd do
+  checkPSDDetails ``blockSchur "_proof_" #["A.fromBlocks B", "PSD (1 + 1)"]
+  checkPSDDetails ``nestedBlocks "_proof_"
+    #["Matrix.diagonal ![x]", "Matrix.diagonal ![y]", "Matrix.diagonal ![z]", "fromBlocks"]
+  let ordinary ← PrintDetails.printed ``ordinaryConversion false
+  unless ordinary.contains "let coordinate := SymmetricMatrix.ofMatrix" do
+    Lean.throwError m!"compact PSD formatting changed an unrelated local definition: {ordinary}"
+
 def rightSchurRule (D : SymmetricMatrix 1) (hD : D.toMatrix.PosDef) :
     ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
       (Matrix.diagonal ![p.2] - p.1 * D.toMatrix⁻¹ * p.1.transpose).PosSemidef) :=
@@ -223,7 +279,8 @@ run_cmd do
   unless printed.contains "semidefinite : matrix ∈ PSD 2" do
     Lean.throwError m!"terminal PSD printing lost its compact membership or retained name: {printed}"
   for (original, copied) in #[(``diagonalTarget, `diagonalReplay),
-      (``diagonalRegisteredDetailed, `detailedReplay)] do
+      (``diagonalRegisteredDetailed, `detailedReplay), (``blockSchur, `blockSchurReplay),
+      (``nestedBlocks, `nestedBlocksReplay)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "missing PSD presentation"
     let term ← Lean.Elab.liftMacroM view.toTermSyntax
@@ -231,6 +288,8 @@ run_cmd do
 
 example : diagonalReplay = diagonalTarget := rfl
 example : detailedReplay = diagonalRegisteredDetailed := rfl
+example : blockSchurReplay A = blockSchur A := rfl
+example : nestedBlocksReplay = nestedBlocks := rfl
 
 namespace GlobalEvidence
 def source (C D : Matrix (Fin 2) (Fin 2) ℝ) :=

@@ -38,6 +38,11 @@ private def compactIndexProofsOption : Name :=
 private def compactPSDOption : Name :=
   `Morew.Reformulation.Internal.compactPSD
 
+-- Enabled only inside the coordinates of a checked PSD membership. Nested
+-- block matrices may omit conversions without affecting unrelated terms.
+private def compactPSDCoordinatesOption : Name :=
+  `Morew.Reformulation.Internal.compactPSDCoordinates
+
 -- Lean normally prints atomic proof names even with `pp.proofs = false`.
 -- Annotating just the bound-proof slots makes its ordinary proof-omission
 -- machinery hide them, without changing constructors, indices, or types.
@@ -661,8 +666,19 @@ private def presentationPSDMembership (n : Nat)
     (value : Morew.Conic.SymmetricMatrix n) : Prop :=
   value ∈ (Morew.Conic.Cone.positiveSemidefinite n).carrier
 
--- This mathematical display deliberately omits the symmetric-subtype conversion.
--- Ordinary display syntax, detailed printing, and exact replay retain it.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Morew.Conic.SymmetricMatrix.ofMatrix]
+private def delabCompactPSDCoordinate : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDCoordinatesOption && options.getBool compactPSDOption &&
+      options.getBool coneNotationOption && !options.getBool `pp.explicit &&
+      !getPPProofs options do failure
+  guard <| (← getExpr).isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
+  withNaryArg 1 delab
+
+-- This mathematical display deliberately omits symmetric-subtype conversions,
+-- including those nested inside block matrices in the PSD coordinates.
+-- Ordinary display syntax, detailed printing, and exact replay retain them.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabCompactPSDMembership : Delab := do
@@ -676,13 +692,11 @@ private def delabCompactPSDMembership : Delab := do
   guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
   let cone := carrier.getAppArgs[0]!.consumeMData
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
-  let value := args[4]!.consumeMData
-  guard <| value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
   let canonical := (mkAppN (← getConstInfo ``presentationPSDMembership).value!
     #[cone.getAppArgs[0]!, args[4]!]).headBeta
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
   guard (← isDefEq expression canonical)
-  let matrix ← withNaryArg 4 <| withNaryArg 1 delab
+  let matrix ← withOptions (·.setBool compactPSDCoordinatesOption true) <| withNaryArg 4 delab
   let cone ← withNaryArg 3 delab
   `($matrix ∈ $cone)
 
