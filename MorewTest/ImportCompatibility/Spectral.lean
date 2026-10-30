@@ -114,6 +114,18 @@ def macroNormSource :=
     subject to
       bound : heldNorm% A ≤ t
 
+-- Whole-problem macros scope the decision binders and model-local definitions,
+-- as well as the references in norm-containing fields.
+macro "wholeNormProblem%" : term =>
+  `(problem (A : Matrix (Fin 2) (Fin 3) ℝ) (t : ℝ)
+      let original := A
+      let magnitude := ‖original‖
+      minimize magnitude + ‖A‖
+      subject to bound : ‖original‖ ≤ t)
+
+open scoped Matrix.Norms.L2Operator in
+def wholeMacroNormSource := wholeNormProblem%
+
 open scoped Matrix.Norms.L2Operator in
 noncomputable def normSized (A : Matrix (Fin 2) (Fin 3) ℝ) : Fin (Nat.floor ‖A‖ + 1) :=
   ⟨0, Nat.zero_lt_succ _⟩
@@ -159,6 +171,7 @@ run_cmd do
       (``MorewTest.Reformulation.Spectral.normObjective, `objectiveCopy),
       (``nestedNormSource, `nestedCopy), (``selectedNormSource, `selectedCopy),
       (``macroNormSource, `macroCopy), (``splicedNormSource, `splicedCopy),
+      (``wholeMacroNormSource, `wholeMacroCopy),
       (``normDependentTypeSource, `dependentTypeCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported spectral source lost its norm metadata"
@@ -171,6 +184,7 @@ example : nestedCopy = nestedNormSource := rfl
 example (selected : Norm (Matrix (Fin 2) (Fin 3) ℝ)) :
     selectedCopy selected = selectedNormSource selected := rfl
 example : macroCopy = macroNormSource := rfl
+example : wholeMacroCopy = wholeMacroNormSource := rfl
 example : splicedCopy = splicedNormSource := rfl
 example : splicedCopy.objective (0, 0) = 3 := by norm_num [splicedCopy]
 example : dependentTypeCopy = normDependentTypeSource := rfl

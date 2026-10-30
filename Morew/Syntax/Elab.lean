@@ -117,7 +117,9 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
               let (value, valueInfos) ← PrettyPrinter.delabCore value {}
                 PrettyPrinter.Delaborator.delab
               return ← freezeNormReplayReferences valueInfos value.raw
-          let name := mkIdentFrom stx declaration.userName.eraseMacroScopes
+          -- Replay retains the source binder's macro scopes. References must
+          -- keep the same identity, including in whole-problem macros.
+          let name := mkIdentFrom stx declaration.userName
           if declaration.binderInfo.isInstImplicit then
             let (type, typeInfos) ← PrettyPrinter.delabCore declaration.type {}
               PrettyPrinter.Delaborator.delab
