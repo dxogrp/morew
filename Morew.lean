@@ -32,6 +32,7 @@ import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
+import Morew.Elab.Conic.Symmetry
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.Expansion
 import Morew.Elab.Expr
