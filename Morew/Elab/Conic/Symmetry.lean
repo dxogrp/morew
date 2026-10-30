@@ -105,6 +105,12 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
     let (_, next) ← goal.intro1
     solve next hypotheses (fuel - 1)
     return
+  if target.isAppOfArity ``Eq 3 then
+    try
+      let goals ← goal.apply (← mkConstWithFreshMVarLevels ``Matrix.transpose_one)
+      for subgoal in goals do solve subgoal hypotheses (fuel - 1)
+      return
+    catch _ => saved.restore
   if target.isAppOf ``Matrix.IsSymm then
     let matrix ← Expr.reduceStructure target.getAppArgs.back!
     for name in structuralRules matrix do

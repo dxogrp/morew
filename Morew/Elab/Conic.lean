@@ -293,6 +293,40 @@ def nonnegativeValue? (point body : Expr) : MetaM (Option Expr) := do
     | .error _ => return .error ()
   return result.toOption
 
+/-- Recover ordinary matrix coordinates of a native PSD predicate or canonical
+PSD membership. This validates the scalar and membership instances without
+inferring symmetry, affinity, or any domain consequence. -/
+def positiveSemidefiniteValue? (point body : Expr) : MetaM (Option Expr) := do
+  let result : Except Unit Expr ← State.withIsolatedMVars do
+    if (← hasUnresolved body) || (← Evidence.hasPlaceholders body) then return .error ()
+    if body.isAppOfArity ``Membership.mem 5 then
+      let .ok (cone, value) ← membershipData point body none | return .error ()
+      unless cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 do return .error ()
+      let value ← Expr.reduceStructure value
+      if value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3 then
+        return .ok value.getAppArgs[1]!
+      return .ok (← mkAppM ``Morew.Conic.SymmetricMatrix.toMatrix #[value])
+    unless body.isAppOf ``Matrix.PosSemidef do return .error ()
+    let value := body.getAppArgs.back!
+    let .forallE _ row columnType _ ← whnf (← inferType value) | return .error ()
+    let .forallE _ column scalar _ ← whnf columnType | return .error ()
+    let row ← whnf row
+    let column ← whnf column
+    unless row.isAppOfArity ``Fin 1 && column.isAppOfArity ``Fin 1 &&
+        (← isDefEq row column) && (← whnf scalar).isConstOf ``Real do return .error ()
+    let n := row.getAppArgs[0]!
+    if ← Expr.depends point n then return .error ()
+    let canonical := (mkAppN (← getConstInfo ``canonicalPositiveSemidefinite).value!
+      #[n, value]).headBeta
+    let arguments := body.getAppArgs
+    let expected := canonical.getAppArgs
+    unless arguments.size == expected.size do return .error ()
+    for index in [:arguments.size - 1] do
+      unless ← isDefEq arguments[index]! expected[index]! do return .error ()
+    unless ← isDefEq body canonical do return .error ()
+    return .ok value
+  return result.toOption
+
 private def singletonZeroData (point body : Expr) (label? : Option Name) :
     MetaM (Except Expr.Error Expr) := do
   let args := body.getAppArgs

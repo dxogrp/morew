@@ -34,6 +34,7 @@ import Morew.Elab.Conic
 import Morew.Elab.Conic.Domain
 import Morew.Elab.Conic.Evidence
 import Morew.Elab.Conic.Form
+import Morew.Elab.Conic.MatrixDomain
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite

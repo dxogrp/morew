@@ -9,6 +9,7 @@ import Morew.Conic.Exponential.Representations
 import Morew.Conic.Power.Representations
 import Morew.Conic.Power.Norm
 import Morew.Conic.Power.GeometricMean
+import Morew.Conic.PSD.Representations
 import Morew.Elab.Rewrite.Registry
 
 /-!
@@ -24,6 +25,12 @@ their ambiguity, and explicit `using` selection bypasses this preference.
 -/
 
 attribute [morew_conic]
+  Morew.Conic.positiveDefiniteLift
+  Morew.Conic.MatrixFraction.epigraph
+  Morew.Conic.MatrixFraction.nativeEpigraph
+  Morew.Conic.Spectral.lambdaMaxEpigraph
+  Morew.Conic.Spectral.spectralNormEpigraph
+  Morew.Conic.Spectral.nuclearNormEpigraph
   Morew.Rewrite.absEpigraph
   Morew.Rewrite.posEpigraph
   Morew.Rewrite.maxEpigraph

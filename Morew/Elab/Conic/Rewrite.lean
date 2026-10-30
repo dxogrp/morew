@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Domain
+import Morew.Elab.Conic.MatrixDomain
 import Morew.Elab.Conic.Evidence
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Expr
@@ -79,8 +80,16 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
+  if reduced.isAppOf ``Matrix.IsSymm then
+    if let some proof ← Symmetry.prove? point reduced.getAppArgs.back! then
+      let proof := mkApp proof point
+      unless ← isDefEq (← inferType proof) goal do return none
+      checkWithKernel proof
+      return some proof
+    throwError "registered conic rewrite was not certified: missing global matrix symmetry; required {goal} at every decision point"
   if reduced.isAppOf ``Matrix.PosDef then
-    throwError "registered conic rewrite was not certified: missing positive-definiteness evidence for the Schur pivot; required {goal}"
+    if let some proof ← MatrixDomain.prove? point reduced retained evidence then return some proof
+    throwError "registered conic rewrite was not certified: missing positive-definiteness evidence for the Schur pivot; required {goal}; supply a positive-definite domain constraint, independent proof, positive PSD margin, or retained identity-block PSD witness"
   if let .forallE name indexType body _ := reduced then
     let indexType ← whnf indexType
     unless indexType.isAppOfArity ``Fin 1 do return none

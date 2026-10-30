@@ -25,6 +25,7 @@ import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
+import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
