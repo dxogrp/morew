@@ -49,8 +49,9 @@ square `Fin n` indices; `Conic.fromBlocksFin` concatenates blocks in their
 canonical finite order. Symmetry is proved structurally or from an explicit
 all-point hypothesis, independently of feasibility constraints. Terminal
 conversion retains the matrix entries in `SymmetricMatrix.ofMatrix` and prints
-membership in `PSD n`. Compact printing hides the symmetry proof, while exact
-replay retains it. The public `Conic.schurComplement_mem_iff` and
+membership in `PSD n`. Compact printing shows `M ∈ PSD n`; detailed printing and
+exact replay retain the symmetric-matrix conversion and its proof. The public
+`Conic.schurComplement_mem_iff` and
 `Conic.schurComplement_mem_iff_right` theorems support explicit or custom
 registered exact certificates with a positive-definite pivot; they install no
 automatic Schur rewrite.

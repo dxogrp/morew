@@ -18,6 +18,24 @@ use the ordinary explicit and locally registered exact-rule interfaces.
 namespace MorewTest.Reformulation.PositiveSemidefinite
 
 open Morew Morew.Conic
+
+/-- PSD compact output hides the carrier conversion; detailed output recovers it. -/
+def checkPSDDetails (declaration : Lean.Name) (proofName : String)
+    (required : Array String := #[]) : Lean.Elab.Command.CommandElabM Unit := do
+  let compact ← PrintDetails.printed declaration false
+  let detailed ← PrintDetails.printed declaration true
+  let compactAgain ← PrintDetails.printed declaration false
+  unless compact == compactAgain do
+    Lean.throwError "detailed PSD printing changed the next compact presentation"
+  unless !compact.contains "SymmetricMatrix.ofMatrix" && !compact.contains proofName do
+    Lean.throwError m!"compact PSD printing retained its carrier conversion or proof: {compact}"
+  unless detailed.contains "SymmetricMatrix.ofMatrix" && detailed.contains proofName &&
+      !detailed.contains "⋯" && compact != detailed do
+    Lean.throwError m!"detailed PSD printing did not restore its carrier conversion and proof: {detailed}"
+  for fragment in required do
+    unless compact.contains fragment && detailed.contains fragment do
+      Lean.throwError m!"PSD proof-detail selection changed mathematical syntax {fragment}:\n{compact}\n{detailed}"
+
 noncomputable section
 
 def diagonalSource :=
@@ -29,6 +47,9 @@ def diagonalSource :=
       upper : x ≤ 3
 
 reformulation diagonalTarget : diagonalSource := by conic
+
+set_option pp.proofs true in
+reformulation diagonalRegisteredDetailed : diagonalSource := by conic
 
 example : GlobalEquivalence diagonalSource diagonalTarget := diagonalTarget.equivalence
 example : IsConic diagonalTarget := diagonalTarget.isConic
@@ -55,11 +76,19 @@ info: problem (x : ℝ)
   let matrix := Matrix.diagonal ![x, 1]
   minimize x
   subject to
-    semidefinite : SymmetricMatrix.ofMatrix matrix ⋯ ∈ PSD 2
+    semidefinite : matrix ∈ PSD 2
     upper : 3 - x ∈ ℝ₊
 -/
 #guard_msgs in
 #printp diagonalTarget
+
+run_cmd do
+  checkPSDDetails ``diagonalTarget "diagonalTarget._proof_1" #["semidefinite", "matrix", "PSD 2"]
+  checkPSDDetails ``diagonalRegisteredDetailed "_proof_1"
+    #["semidefinite", "matrix", "PSD 2"]
+  unless (← PrintDetails.printed ``diagonalTarget false) ==
+      (← PrintDetails.printed ``diagonalRegisteredDetailed false) do
+    Lean.throwError "registration-time pp.proofs changed compact PSD printing"
 
 /--
 info: problem (x : ℝ)
@@ -191,15 +220,17 @@ example : auxiliaryTarget.conicForm.data.toProblem = auxiliaryTarget :=
 
 run_cmd do
   let printed ← PrintDetails.printed ``diagonalTarget false
-  unless printed.contains "semidefinite" && printed.contains "matrix" &&
-      printed.contains "SymmetricMatrix.ofMatrix" && printed.contains "PSD 2" do
-    Lean.throwError m!"terminal PSD printing lost its matrix conversion or retained name: {printed}"
-  let some view := Syntax.getProblemView? (← Lean.getEnv) ``diagonalTarget
-    | Lean.throwError "missing PSD presentation"
-  let term ← Lean.Elab.liftMacroM view.toTermSyntax
-  Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent `diagonalReplay) := $term))
+  unless printed.contains "semidefinite : matrix ∈ PSD 2" do
+    Lean.throwError m!"terminal PSD printing lost its compact membership or retained name: {printed}"
+  for (original, copied) in #[(``diagonalTarget, `diagonalReplay),
+      (``diagonalRegisteredDetailed, `detailedReplay)] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) original
+      | Lean.throwError "missing PSD presentation"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
 
 example : diagonalReplay = diagonalTarget := rfl
+example : detailedReplay = diagonalRegisteredDetailed := rfl
 
 namespace GlobalEvidence
 def source (C D : Matrix (Fin 2) (Fin 2) ℝ) :=
@@ -218,7 +249,7 @@ example : (target.conicForm C D hSym).data.toProblem = target C D hSym :=
   (target.conicForm C D hSym).represents
 
 run_cmd do
-  PrintDetails.checkDetails ``target "hSym" #["semidefinite", "PSD 2"]
+  checkPSDDetails ``target "hSym" #["semidefinite", "PSD 2"]
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
     | Lean.throwError "missing global-symmetry PSD presentation"
   let term ← Lean.Elab.liftMacroM view.toTermSyntax

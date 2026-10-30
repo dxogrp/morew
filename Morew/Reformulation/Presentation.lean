@@ -33,6 +33,11 @@ private def powerMembershipReplayOption : Name :=
 private def compactIndexProofsOption : Name :=
   `Morew.Reformulation.Internal.compactIndexProofs
 
+-- PSD coordinates use a proof-bearing symmetric subtype internally. Only the
+-- compact print payload may abbreviate its conversion to the ordinary matrix.
+private def compactPSDOption : Name :=
+  `Morew.Reformulation.Internal.compactPSD
+
 -- Lean normally prints atomic proof names even with `pp.proofs = false`.
 -- Annotating just the bound-proof slots makes its ordinary proof-omission
 -- machinery hide them, without changing constructors, indices, or types.
@@ -652,6 +657,35 @@ private def delabZeroConeMembership : Delab := do
   let type ← withNaryArg 1 delab
   `($value ∈ ($set : $type))
 
+private def presentationPSDMembership (n : Nat)
+    (value : Morew.Conic.SymmetricMatrix n) : Prop :=
+  value ∈ (Morew.Conic.Cone.positiveSemidefinite n).carrier
+
+-- This mathematical display deliberately omits the symmetric-subtype conversion.
+-- Ordinary display syntax, detailed printing, and exact replay retain it.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Membership.mem]
+private def delabCompactPSDMembership : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDOption && options.getBool coneNotationOption &&
+      !options.getBool `pp.explicit && !getPPProofs options do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Membership.mem 5
+  let args := expression.getAppArgs
+  let carrier := args[3]!.consumeMData
+  guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
+  let cone := carrier.getAppArgs[0]!.consumeMData
+  guard <| cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
+  let value := args[4]!.consumeMData
+  guard <| value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
+  let canonical := (mkAppN (← getConstInfo ``presentationPSDMembership).value!
+    #[cone.getAppArgs[0]!, args[4]!]).headBeta
+  guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
+  guard (← isDefEq expression canonical)
+  let matrix ← withNaryArg 4 <| withNaryArg 1 delab
+  let cone ← withNaryArg 3 delab
+  `($matrix ∈ $cone)
+
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
 def delabPresentationTerm (expression : Expr)
@@ -1054,7 +1088,7 @@ def refreshProblemView (targetName : Name)
             (forRegistration := true)
           let (compact, mathematicalRows) ← withOptions (fun options =>
               options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
-                |>.setBool compactIndexProofsOption true) do
+                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true) do
             problemViewWithRowsFromExpression (fun rows names =>
               powerChainPrintRows rows (fun expression =>
                 delabPresentationTerm expression names false)) target template instantiateBinderTypes

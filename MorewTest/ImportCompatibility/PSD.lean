@@ -35,6 +35,7 @@ def SymmetricMatrix.ofMatrix (x : ℝ) : ℝ := x + 200
 
 run_cmd do
   for (original, copied) in #[(``diagonalTarget, `diagonalCopy),
+      (``diagonalRegisteredDetailed, `registeredDetailedCopy),
       (``auxiliaryTarget, `auxiliaryCopy), (``continued, `continuedCopy),
       (``substituted, `substitutedCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
@@ -47,12 +48,17 @@ run_cmd do
       Lean.throwError "imported PSD replay contains incomplete evidence"
 
 example : diagonalCopy = diagonalTarget := rfl
+example : registeredDetailedCopy = diagonalRegisteredDetailed := rfl
 example : auxiliaryCopy = auxiliaryTarget := rfl
 example : continuedCopy = continued := rfl
 example : substitutedCopy = substituted := rfl
 end Shadow
 
 run_cmd do
+  checkPSDDetails ``diagonalTarget "diagonalTarget._proof_1"
+    #["semidefinite", "matrix", "PSD 2"]
+  checkPSDDetails ``diagonalRegisteredDetailed "_proof_1"
+    #["semidefinite", "matrix", "PSD 2"]
   let original ← MorewTest.Reformulation.PrintDetails.printed ``diagonalTarget false
   let imported ← MorewTest.Reformulation.PrintDetails.printed ``continued false
   unless original == imported do
