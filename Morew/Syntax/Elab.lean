@@ -95,6 +95,28 @@ private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr
 -- Original source views normally retain their spelling. Norm notation is
 -- instance-sensitive, so its replay copy must retain the instance selected by
 -- the source elaboration. The readable view continues to use the original term.
+private def explicitReplayHelperUniverses (value : Expr) : MetaM (Array Bool) :=
+  withoutModifyingState do
+    let .const name originalLevels := value.getAppFn | return #[]
+    let helper ← getConstInfo name
+    let levels ← originalLevels.mapM fun _ => mkFreshLevelMVar
+    let mut type := helper.type.instantiateLevelParams helper.levelParams levels
+    -- A parameter merely occurring in the helper's type need not be inferable:
+    -- an argument of type Type (max u v), for example, does not determine u or v.
+    -- Replay inference with fresh levels to retain precisely the missing ones.
+    for argument in value.getAppArgs do
+      let .forallE _ domain body _ ← whnf type
+        | return originalLevels.toArray.map fun _ => true
+      unless ← isDefEq domain (← inferType argument) do
+        return originalLevels.toArray.map fun _ => true
+      type := body.instantiate1 argument
+    unless ← isDefEq type (← inferType value) do
+      return originalLevels.toArray.map fun _ => true
+    (levels.zip originalLevels).toArray.mapM fun (level, original) => do
+      let level ← instantiateLevelMVars level
+      if level.hasMVar then return true
+      return !(← isLevelDefEq level original)
+
 private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info)
     (explicitUniverses : Array (Expr × Lean.Syntax))
     (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
@@ -116,8 +138,22 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
           let some declaration := (← getLCtx).find? id | return stx
           if let some value := declaration.value? (allowNondep := true) then
             if (← isClass? declaration.type).isSome then
-              -- Anonymous `letI` names are recreated at replay. Preserve the
-              -- selected instance's value rather than a transient binder name.
+              -- Enclosing instance initializers are outside the field's info
+              -- tree. Close their values over source parameters so universes
+              -- tied to a parameter type can be inferred in the replay context.
+              -- Expanding ordinary let dependencies also avoids stale local names.
+              let name ← mkAuxDeclName `_normReplay
+              let value ← mkAuxDefinitionFor name value (zetaDelta := true) (compile := false)
+              modifyEnv (addNoncomputable · name)
+              let explicitLevels ← explicitReplayHelperUniverses value
+              let mut explicitUniverses := explicitUniverses
+              if explicitLevels.contains true then
+                let levels ← (explicitLevels.zip value.getAppFn.constLevels!.toArray).mapM
+                  fun (explicit, level) => do
+                    if explicit then PrettyPrinter.delabLevel level 0
+                    else `(level| _)
+                let reference ← `($(mkCIdent name).{$levels,*})
+                explicitUniverses := explicitUniverses.push (value.getAppFn, reference.raw)
               let (value, valueInfos) ← PrettyPrinter.delabCore value {}
                 PrettyPrinter.Delaborator.delab
               return ← freezeNormReplayReferences valueInfos explicitUniverses value.raw
@@ -137,6 +173,8 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
 private def normReplaySyntax (expression : Expr)
     (explicitUniverses : Array (Expr × Lean.Syntax) := #[]) :
     TermElabM (Option Lean.Syntax) := do
+  -- Expressions checked outside declarations do not register replay metadata.
+  if (← getDeclName?).isNone then return none
   let expression ← instantiateMVars expression
   -- Keep this low-level syntax module independent of the normed-space library.
   unless (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome do return none

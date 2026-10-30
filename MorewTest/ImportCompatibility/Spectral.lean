@@ -305,5 +305,96 @@ example : inferredCopy.{u} = ExplicitUniverseSource.inferred.{u} := rfl
 
 end ExplicitUniverseReplay
 
+namespace OuterInstanceSource
+
+universe u w
+
+def real :=
+  letI : Norm ℝ := ⟨fun _ => ExplicitUniverseSource.levelValue.{w}⟩
+  problem (x : ℝ) minimize ‖x‖
+
+-- The instance's value refers to the universe of E even though the reference
+-- itself has type ℝ. Replaying under another universe name must preserve that link.
+def anchored (E : Type u) :=
+  letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{u}⟩
+  problem (x : E) minimize ‖x‖
+
+def independent (E : Type u) :=
+  letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{w}⟩
+  problem (x : E) minimize ‖x‖
+
+def transitive (E : Type u) :=
+  let original := ExplicitUniverseSource.levelValue.{u}
+  let shifted := original + ExplicitUniverseSource.levelValue.{w}
+  letI : Norm E := ⟨fun _ => shifted⟩
+  problem (x : E) minimize ‖x‖
+
+def inherited (E : Type u) [Norm E] :=
+  let original := (inferInstance : Norm E)
+  letI : Norm E := original
+  problem (x : E) minimize ‖x‖
+
+end OuterInstanceSource
+
+namespace OuterInstanceReplay
+
+universe v w
+
+variable (E : Type v) [Norm E]
+
+run_cmd do
+  for (original, copied) in #[(``OuterInstanceSource.real, `realCopy),
+      (``OuterInstanceSource.anchored, `anchoredCopy),
+      (``OuterInstanceSource.independent, `independentCopy),
+      (``OuterInstanceSource.transitive, `transitiveCopy),
+      (``OuterInstanceSource.inherited, `inheritedCopy)] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) original
+      | Lean.throwError "missing enclosing-instance norm source"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
+
+example : realCopy.{w} = OuterInstanceSource.real.{w} := rfl
+example : anchoredCopy E = OuterInstanceSource.anchored E := rfl
+example : independentCopy.{v, w} E = OuterInstanceSource.independent.{v, w} E := rfl
+example : transitiveCopy.{v, w} E = OuterInstanceSource.transitive.{v, w} E := rfl
+example : inheritedCopy E = OuterInstanceSource.inherited E := rfl
+
+end OuterInstanceReplay
+
+namespace AmbiguousInstanceUniverses
+
+universe u v
+
+-- The argument's universe does not determine the two source levels separately.
+set_option linter.checkUnivs false in
+def source (E : Type (max u v)) :=
+  letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{u}⟩
+  problem (x : E) minimize ‖x‖
+
+variable (E : Type (max u v))
+
+set_option linter.checkUnivs false in
+run_cmd do
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``source
+    | Lean.throwError "missing enclosing-instance source with ambiguous universes"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent `copied) := $term))
+
+example : copied.{u, v} E = source.{u, v} E := rfl
+
+end AmbiguousInstanceUniverses
+
+-- Checking a term without registering a declaration must not create replay helpers.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let before ← Lean.getEnv
+  let term ← `(letI : Norm ℝ := ⟨fun _ => 1⟩
+    problem (x : ℝ)
+      let witness := (⟨x, rfl⟩ : { y : ℝ // ‖y‖ = ‖y‖ })
+      minimize witness.val)
+  discard <| Lean.Elab.Term.elabTerm term none
+  for (name, _) in (← Lean.getEnv).constants.toList do
+    if !before.contains name && name.toString.contains "_normReplay" then
+      Lean.throwError "checking an unregistered problem created a replay helper"
+
 end
 end MorewTest.ImportCompatibility.Spectral
