@@ -29,8 +29,9 @@ reformulation diagonalConic : diagonalModel := by conic
 #printp diagonalConic
 example : IsConic diagonalConic := diagonalConic.isConic
 
--- The positive-definite pivot is an explicit hypothesis of the exact rule.
--- The Schur theorem proves both directions; no automatic matrix atom is added.
+-- Package the Schur complement theorem `schurComplement_mem_iff` from
+-- `Morew.Conic.PSD` as an exact reformulation rule for PSD constraints.
+-- The pivot `A` is assumed positive definite.
 def schurCertificate {m n : Nat} (A : SymmetricMatrix m) (hA : A.toMatrix.PosDef) :
     ExactConstraintLift (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
       (Matrix.diagonal (fun _ : Fin n => p.2) - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
