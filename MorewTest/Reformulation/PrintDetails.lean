@@ -165,8 +165,11 @@ run_cmd do
     throwError "compact proof hiding changed an unrelated template binder type"
   for declaration in #[``applied, ``registeredDetailed] do
     checkDetails declaration "Nat.zero_lt_two" #["entry : Indexed ⟨0,", "x : ℝ"]
-  -- Re-elaboration may share the bound through a generated proof declaration.
-  checkDetails ``bare "_proof_" #["entry : Indexed ⟨0,", "x : ℝ"]
+  -- Re-elaboration may retain the original theorem or share the bound through
+  -- a generated proof declaration; both must survive detailed printing.
+  let bareDetails ← printed ``bare true
+  let bareProof := if bareDetails.contains "Nat.zero_lt_two" then "Nat.zero_lt_two" else "_proof_"
+  checkDetails ``bare bareProof #["entry : Indexed ⟨0,", "x : ℝ"]
   for declaration in #[``applied, ``bare, ``registeredDetailed] do
     for getter in #[Syntax.getProblemView?, Syntax.getProblemDisplayView?] do
       let some view := getter (← getEnv) declaration

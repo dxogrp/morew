@@ -92,6 +92,56 @@ private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr
         throwError "internal error: model-local body is not an objective/feasibility pair"
       pure (expression.getArg! 2, expression.getArg! 3)
 
+-- Original source views normally retain their spelling. Norm notation is
+-- instance-sensitive, so its replay copy must retain the instance selected by
+-- the source elaboration. The readable view continues to use the original term.
+private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info)
+    (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
+  if let .ident (.synthetic start _ _) _ _ _ := stx then
+    let termInfo? := match infos.get? start.byteIdx with
+      | some (.ofTermInfo info) => some info
+      | some (.ofDelabTermInfo info) => some info.toTermInfo
+      | _ => none
+    if let some info := termInfo? then
+      match info.expr with
+      | .const name _ => return mkCIdentFrom stx name
+      | .fvar id =>
+          -- Delaboration introduces fresh locals beneath lambda operands. Their
+          -- printed names already respect shadowing and belong to that syntax,
+          -- not to the original source local context.
+          let some declaration := (← getLCtx).find? id | return stx
+          if let some value := declaration.value? (allowNondep := true) then
+            if (← isClass? declaration.type).isSome then
+              -- Anonymous `letI` names are recreated at replay. Preserve the
+              -- selected instance's value rather than a transient binder name.
+              let (value, valueInfos) ← PrettyPrinter.delabCore value {}
+                PrettyPrinter.Delaborator.delab
+              return ← freezeNormReplayReferences valueInfos value.raw
+          let name := mkIdentFrom stx declaration.userName.eraseMacroScopes
+          if declaration.binderInfo.isInstImplicit then
+            let (type, typeInfos) ← PrettyPrinter.delabCore declaration.type {}
+              PrettyPrinter.Delaborator.delab
+            let type : TSyntax `term := ⟨← freezeNormReplayReferences typeInfos type.raw⟩
+            return (← `(morew_replay_instance% $name : $type)).raw
+          return name
+      | _ => pure ()
+  return stx.setArgs (← stx.getArgs.mapM (freezeNormReplayReferences infos))
+
+private def normReplaySyntax (expression : Expr) : TermElabM (Option Lean.Syntax) := do
+  let expression ← instantiateMVars expression
+  -- Keep this low-level syntax module independent of the normed-space library.
+  unless (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome do return none
+  if expression.hasMVar then return none
+  withOptions (fun options => options.set `pp.all true
+      |>.set `pp.universes false
+      |>.set `pp.explicit true |>.set `pp.instances true
+      |>.set `pp.proofs true |>.set `pp.deepTerms true
+      |>.set `pp.structureInstances false |>.set `pp.beta true
+      |>.set `pp.coercions false |>.set `pp.maxSteps (1000000 : Nat)) do
+    let (term, infos) ← PrettyPrinter.delabCore expression {}
+      PrettyPrinter.Delaborator.delab
+    return some (← freezeNormReplayReferences infos term.raw)
+
 private def inferredDefinitionTypes (definitions : List Morew.Syntax.DefinitionView)
     (body : Expr) : TermElabM (Array Morew.Syntax.DefinitionView) := do
   match definitions with
@@ -99,12 +149,40 @@ private def inferredDefinitionTypes (definitions : List Morew.Syntax.DefinitionV
   | definition :: remaining =>
       let .letE _ type value body _ := body.consumeMData
         | throwError "internal error: model-local definition spine was erased during elaboration"
-      let typeSyntax ← PrettyPrinter.delab type
+      -- Inferred types have no original source node in the information tree.
+      -- Preserve any instance-sensitive norm while the checked type is available.
+      let typeSyntax ← match ← normReplaySyntax type with
+        | some replay => pure replay
+        | none => pure (← PrettyPrinter.delab type).raw
       let definition := { definition with
-        inferredTypeSyntax? := some (← Morew.Syntax.preResolveTerm typeSyntax.raw) }
+        inferredTypeSyntax? := some (← Morew.Syntax.preResolveTerm typeSyntax) }
       withLetDecl definition.name type value fun binding => do
         return #[definition] ++
           (← inferredDefinitionTypes remaining (body.instantiate1 binding))
+
+private partial def collectNormReplays (fields : Array Lean.Syntax) (tree : InfoTree)
+    (replays : Array (Lean.Syntax × Lean.Syntax)) :
+    TermElabM (Array (Lean.Syntax × Lean.Syntax)) := do
+  match tree with
+  | .context _ child => collectNormReplays fields child replays
+  | .node info children =>
+      let mut replays := replays
+      if let .ofTermInfo info := info then
+        -- Serialize the whole source field. A macro can insert norms beneath
+        -- lets, or splice one norm syntax into different instance contexts.
+        -- Replacing individual syntax occurrences would lose those contexts.
+        if fields.contains info.stx then
+          if let some term ← withLCtx' info.lctx (normReplaySyntax info.expr) then
+            replays := replays.push (info.stx, term)
+      for child in children do replays ← collectNormReplays fields child replays
+      return replays
+  | .hole _ => return replays
+
+private def replaceNormReplay (replays : Array (Lean.Syntax × Lean.Syntax))
+    (stx : Lean.Syntax) : Lean.Syntax :=
+  match replays.find? (fun entry => entry.1 == stx) with
+  | some (_, replay) => replay
+  | none => stx
 
 /-- Infer one shared local-definition environment before copying the checked
 let spine into the objective and feasibility functions. -/
@@ -191,18 +269,45 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
   let feasibleBody ← liftMacroM <| view.wrapDefinitions feasible
   let resultSyntax ← match sense with
     | .minimize =>
-        `(Morew.Problem.mk
+        `(Morew.Problem.mk (X := $productType)
           (fun ($productPattern : $productType) => $objectiveBody)
           (fun ($productPattern : $productType) => $feasibleBody))
     | .maximize =>
-        `(Morew.Problem.mk (V := OrderDual _)
+        `(Morew.Problem.mk (X := $productType) (V := OrderDual _)
           (fun ($productPattern : $productType) => $objectiveBody)
           (fun ($productPattern : $productType) => $feasibleBody))
-  let (result, definitions) ← if definitions.isEmpty then
-      pure (← elabTerm resultSyntax expectedType?, definitions)
-    else
-      elaborateModelBody view productType objective feasible expectedType?
+  let infoStart := (← getInfoTrees).size
+  let (result, definitions) ← withEnableInfoTree true do
+    let result ← if definitions.isEmpty then
+        pure (← elabTerm resultSyntax expectedType?, definitions)
+      else
+        elaborateModelBody view productType objective feasible expectedType?
+    synthesizeSyntheticMVars
+    pure result
   if let some declName ← getDeclName? then
+    let infoState ← getInfoState
+    let fields := #[objective.raw] ++ binders.map (·.typeSyntax) ++
+      constraints.map (·.proposition) ++ definitions.flatMap (fun definition =>
+        #[definition.value] ++ definition.typeSyntax?.toArray ++
+          definition.inferredTypeSyntax?.toArray)
+    let mut normReplays := #[]
+    for tree in infoState.trees.toArray[infoStart:] do
+      normReplays ← collectNormReplays fields (tree.substitute infoState.assignment) normReplays
+    let replayTerm (stx : Lean.Syntax) :=
+      Morew.Syntax.preResolveTerm (replaceNormReplay normReplays stx)
+    let replay : Morew.Syntax.ProblemView := {
+      view with
+      binders := ← binders.mapM fun binder => do
+        pure { binder with typeSyntax := ← replayTerm binder.typeSyntax }
+      definitions := ← definitions.mapM fun definition => do
+        pure { definition with
+          typeSyntax? := ← definition.typeSyntax?.mapM replayTerm
+          inferredTypeSyntax? := ← definition.inferredTypeSyntax?.mapM replayTerm
+          value := ← replayTerm definition.value }
+      objective := ← replayTerm objective.raw
+      constraints := ← constraints.mapM fun constraint => do
+        pure { constraint with proposition := ← replayTerm constraint.proposition }
+    }
     let binders ← binders.mapM fun binder => do
       pure { binder with typeSyntax := ← Morew.Syntax.preResolveTerm binder.typeSyntax }
     let objective ← Morew.Syntax.preResolveTerm objective.raw
@@ -216,13 +321,13 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
         constraint with
         proposition := ← Morew.Syntax.preResolveTerm constraint.proposition
       }
-    Morew.Syntax.registerProblemView declName {
+    Morew.Syntax.registerProblemView declName replay (some {
       sense
       binders
       definitions
       objective
       constraints
-    }
+    })
   pure result
 
 /-- Elaborate an unconstrained minimization problem term. -/
