@@ -59,6 +59,39 @@ private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
       unless (← instantiateMVars assigned) == mkNatLit 7 do
         throwError "discarded unrelated caller assignment"
 
+private def diagonalHelper {n : Nat} (x : Fin n → ℝ) := Matrix.diagonal x
+
+private def constantMatrix (n : Nat) : Matrix (Fin n) (Fin n) ℝ := 0
+
+/-! Symbolic matrices expose the same bounded value helpers as affine
+certification, including helpers below native operations. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSymmetry (← `(fun n : Nat => fun x : Fin n → ℝ =>
+    Matrix.diagonal x + (Matrix.diagonal (-x)).transpose)) 1
+  assertRow (← `(fun n : Nat => fun x : Fin n → ℝ =>
+    (Matrix.diagonal x + (Matrix.diagonal (-x)).transpose).PosSemidef)) 1
+  assertSymmetry (← `(fun n : Nat => fun x : Fin n → ℝ => diagonalHelper x)) 1
+  assertRow (← `(fun n : Nat => fun x : Fin n → ℝ => (diagonalHelper x).PosSemidef)) 1
+  assertSymmetry (← `(fun n : Nat => fun x : Fin n → ℝ =>
+    diagonalHelper x + (diagonalHelper (-x)).transpose)) 1
+  assertRow (← `(fun n : Nat => fun x : Fin n → ℝ =>
+    (diagonalHelper x + (diagonalHelper (-x)).transpose).PosSemidef)) 1
+
+set_option morew.affine.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSymmetry (← `(fun n : Nat => fun x : Fin n → ℝ => diagonalHelper x)) 1 false
+  assertSymmetry (← `(fun (n : Nat)
+      (_h : ∀ x : Fin n → ℝ, (diagonalHelper x).IsSymm) =>
+    fun x : Fin n → ℝ => diagonalHelper x)) 2
+
+set_option morew.affine.maxExpansionSteps 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSymmetry (← `(fun n : Nat => fun x : Fin n → ℝ =>
+    diagonalHelper x + (diagonalHelper (-x)).transpose)) 1 false
+  assertSymmetry (← `(fun n : Nat => fun _ : ℝ =>
+    constantMatrix n + (constantMatrix n).transpose)) 1
+
 /-! Universal hypotheses do not need separately symmetric affine coefficients. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do

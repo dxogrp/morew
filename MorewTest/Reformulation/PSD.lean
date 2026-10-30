@@ -122,6 +122,35 @@ reformulation symmetricDecisionTarget : symmetricDecisionSource := by conic
 example : symmetricDecisionTarget.conicForm.data.toProblem = symmetricDecisionTarget :=
   symmetricDecisionTarget.conicForm.represents
 
+namespace MatrixHelpers
+def diagonalHelper {n : Nat} (x : Fin n → ℝ) := Matrix.diagonal x
+
+def source (n : Nat) :=
+  problem (x : Fin n → ℝ)
+    let matrix := diagonalHelper x + (diagonalHelper (-x)).transpose
+    minimize ∑ i, x i
+    subject to
+      semidefinite : matrix.PosSemidef
+
+variable (n : Nat)
+
+reformulation target : (source n) := by conic
+
+example : GlobalEquivalence (source n) (target n) := target.equivalence n
+example : (target.conicForm n).data.toProblem = target n := (target.conicForm n).represents
+
+run_cmd do
+  let compact ← PrintDetails.printed ``target false
+  unless compact.contains "diagonalHelper x" && compact.contains "matrix ∈ PSD n" do
+    Lean.throwError m!"helper symmetry expansion changed the retained PSD spelling: {compact}"
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
+    | Lean.throwError "missing helper PSD presentation"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent `replayed) := $term))
+
+example : replayed n = target n := rfl
+end MatrixHelpers
+
 /-- A reusable exact certificate, with no global automatic registration. -/
 def schurRule (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef) :
     ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>

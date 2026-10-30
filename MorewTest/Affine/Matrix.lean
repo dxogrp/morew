@@ -18,6 +18,9 @@ open scoped Matrix BigOperators
 private abbrev SymmetricAlias (n : Nat) := SymmetricMatrix n
 private def matrixHelper (x : ℝ) : Matrix (Fin 2) (Fin 2) ℝ := !![x, x + 1; x + 1, 2 * x]
 private def scalarHelper (x : ℝ) : ℝ := 2 * x + 1
+private def matrixOfHelper := Matrix.of (m := Fin 2) (n := Fin 2) (α := ℝ)
+private def matrixReindexHelper :=
+  Matrix.reindex (Equiv.refl (Fin 2)) (Equiv.refl (Fin 2)) (α := ℝ)
 
 /-! Native matrix operations remain available without helper expansion. -/
 
@@ -99,6 +102,37 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : Fin 2 → ℝ =>
     SymmetricMatrix.ofMatrix (Matrix.diagonal (fun i => scalarHelper (x i)))
       (Matrix.isSymm_diagonal _)))
+
+/-! Equivalence-valued helpers and local aliases preserve operand expansion. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixOfHelper A))
+  assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixReindexHelper A))
+  assertAffine (← `(fun x : ℝ => matrixOfHelper (matrixHelper x)))
+  assertAffine (← `(fun x : ℝ => matrixReindexHelper (matrixHelper x)))
+  assertAffine (← `(fun x : ℝ =>
+    let op := Matrix.of (m := Fin 2) (n := Fin 2) (α := ℝ)
+    op (matrixHelper x)))
+  assertAffine (← `(fun x : ℝ =>
+    let op := Matrix.reindex (Equiv.refl (Fin 2)) (Equiv.refl (Fin 2)) (α := ℝ)
+    op (matrixHelper x)))
+
+set_option morew.affine.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertUnsupported (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixOfHelper A))
+  assertUnsupported (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixReindexHelper A))
+
+set_option morew.affine.maxExpansionDepth 1 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixOfHelper A))
+  assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ => matrixReindexHelper A))
+  for term in [← `(fun x : ℝ => matrixOfHelper (matrixHelper x)),
+      ← `(fun x : ℝ => matrixReindexHelper (matrixHelper x))] do
+    match ← Morew.Elab.Affine.reifyAffine (← elaborate term) with
+    | .ok _ => throwError "matrix equivalence helper exceeded the expansion depth budget"
+    | .error error =>
+      unless (← error.reason.toString).contains "morew.affine.maxExpansionDepth" do
+        throwError "matrix equivalence helper lost the expansion depth diagnostic: {error.reason}"
 
 /-! The restriction certificate proves equality for every entry, including n=0. -/
 

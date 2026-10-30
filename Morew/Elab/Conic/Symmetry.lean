@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.PSD
+import Morew.Elab.Affine.Expansion
 import Morew.Elab.Conic.Evidence
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Ring
@@ -47,8 +48,8 @@ private theorem positiveSemidefiniteSymmetric {n : Type*} (M : Matrix n n ℝ)
 private def structuralRules (matrix : Expr) : Array Name := Id.run do
   let head := matrix.getAppFn.constName?
   if head == some ``HAdd.hAdd then
-    return #[``Matrix.isSymm_add_transpose_self, ``Matrix.isSymm_transpose_add_self,
-      ``Matrix.IsSymm.add]
+    return #[``Matrix.IsSymm.add, ``Matrix.isSymm_add_transpose_self,
+      ``Matrix.isSymm_transpose_add_self]
   if head == some ``HSub.hSub then return #[``Matrix.IsSymm.sub]
   if head == some ``Neg.neg then return #[``Matrix.IsSymm.neg]
   if head == some ``HSMul.hSMul then return #[``Matrix.IsSymm.smul]
@@ -108,7 +109,13 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
     let matrix ← Expr.reduceStructure target.getAppArgs.back!
     for name in structuralRules matrix do
       try
-        let goals ← goal.apply (← mkConstWithFreshMVarLevels name)
+        let rule ← mkConstWithFreshMVarLevels name
+        -- Matching the repeated matrix in A + Aᵀ must not unfold unrelated
+        -- diagonals entry by entry before trying the next structural rule.
+        let goals ← if name == ``Matrix.isSymm_add_transpose_self ||
+            name == ``Matrix.isSymm_transpose_add_self then
+            withTransparency .reducible (goal.apply rule)
+          else goal.apply rule
         for subgoal in goals do solve subgoal hypotheses (fuel - 1)
         return
       catch _ => saved.restore
@@ -151,9 +158,34 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
       withTheReader Core.Context
           (fun ctx => { ctx with maxHeartbeats :=
             if ctx.maxHeartbeats == 0 then limit else min ctx.maxHeartbeats limit }) do
-        solve proof.mvarId! hypotheses 32
+        let saved ← saveState
+        let mut direct := false
+        for hypothesis in hypotheses do
+          try
+            let goals ← proof.mvarId!.apply hypothesis
+            unless goals.isEmpty do failure
+            direct := true
+            break
+          catch _ => saved.restore
+        unless direct do
+          -- Affine certification already accepts transparent value helpers.
+          -- Expose the same bounded helper tree when the original expression
+          -- has no direct symmetry proof, including helpers below operations.
+          let expanded ← try
+              Affine.Expansion.expand matrix fun expression preserveLets =>
+                Expr.reduceStructure expression (preserveLets := preserveLets)
+            catch _ =>
+              -- Native identities and independent witnesses can establish
+              -- symmetry without expanding an opaque or over-budget helper.
+              saved.restore
+              pure matrix
+          let expandedProof ← mkFreshExprMVar (← mkAppM ``Matrix.IsSymm #[expanded])
+          solve expandedProof.mvarId! hypotheses 32
+          proof.mvarId!.assign (← instantiateMVars expandedProof)
       let proof ← instantiateMVars proof
       if proof.hasMVar || (← Evidence.hasPlaceholders proof) then return .error ()
+      unless ← isDefEq (← inferType proof) proposition do return .error ()
+      let proof ← mkAppOptM ``id #[some proposition, some proof]
       let proof ← mkLambdaFVars #[point] proof
       checkWithKernel proof
       return .ok proof

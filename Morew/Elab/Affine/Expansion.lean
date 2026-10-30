@@ -163,14 +163,17 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   let arguments := expression.getAppArgs
   -- Matrix.of and Matrix.reindex are equivalences applied through a canonical
   -- coercion. Preserve that coercion and its fixed parameters, visiting only
-  -- the matrix operand; recognition checks the complete typed prefix.
+  -- the matrix operand; recognition checks the complete typed prefix. Expose
+  -- local aliases structurally and named aliases with the same helper budget.
   if head.isConstOf ``DFunLike.coe && arguments.size >= 6 then
-    let operation := arguments[4]!
+    let operation ← reduceChecked arguments[4]! reduce bounds
     if operation.isAppOf ``Matrix.of || operation.isAppOf ``Matrix.reindex then
-      let mut expanded := arguments
+      let mut expanded := arguments.set! 4 operation
       for i in [5:arguments.size] do
         expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
       return mkAppN head expanded
+    if let some expanded ← unfoldContainer? operation bounds depth then
+      return ← visit (mkAppN head (arguments.set! 4 expanded)) reduce bounds (depth + 1)
   if let some name := head.constName? then
     if name == `Morew.Conic.SymmetricMatrix.ofMatrix && arguments.size >= 3 then
       let mut expanded := arguments
