@@ -11,7 +11,9 @@ import Morew.Conic.Exponential.Representations
 import Morew.Conic.PSD
 import Morew.Conic.PSD.LambdaMax
 import Morew.Conic.PSD.MatrixFraction
+import Morew.Conic.PSD.NuclearNorm
 import Morew.Conic.PSD.PositiveDefinite
+import Morew.Conic.PSD.SingularVectors
 import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.Polyhedral
 import Morew.Conic.Power
