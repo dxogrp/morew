@@ -74,15 +74,19 @@ private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) :
   else
     (name, index + 1)
 
-private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvider) :
-    MetaM (Option (Array RowResult)) := do
+private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.EvidenceProvider) :
+    MetaM (Except Expr.Error (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate
   let mut rows := #[]
   for leaf in leaves do
     match ← normalizeRow leaf provider with
-    | .error _ => return none
+    | .error error => return .error error
     | .ok row => rows := rows.push row
-  return some rows
+  return .ok rows
+
+private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvider) :
+    MetaM (Option (Array RowResult)) := do
+  return (← certifyPredicateDetailed predicate provider).toOption
 
 private noncomputable def pullbackConstraint {X A : Type*}
     [NormedAddCommGroup X] [NormedSpace ℝ X]
@@ -100,9 +104,15 @@ private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowR
         #[some domain, some auxiliary, none, none, none, none, some row.constraint])
   let pointwiseIff ← withLocalDeclD `point nextDomain fun point => do
     mkLambdaFVars #[point] (mkApp row.pointwiseIff (← mkAppM ``Prod.fst #[point]))
+  let normalization? ← row.normalization?.mapM fun normalization => do
+    withLocalDeclD `point nextDomain fun point => do
+      let original ← mkAppM ``Prod.fst #[point]
+      return { normalization with
+        predicate := ← mkLambdaFVars #[point] (mkApp normalization.predicate original)
+        pointwiseIff := ← mkLambdaFVars #[point] (mkApp normalization.pointwiseIff original) }
   checkWithKernel constraint
   checkWithKernel pointwiseIff
-  return { constraint, pointwiseIff }
+  return { constraint, pointwiseIff, normalization? }
 
 /-- Apply the same domain pullback as the checked rewrite and retain original
 entry provenance independently of the temporary presentation names. -/
@@ -211,7 +221,8 @@ private partial def lower (original : PresentationState) (work : Work)
   for index in [:work.presentation.constraints.size] do
     let predicate := work.presentation.constraints[index]!.predicate
     if work.certifiedRows[index]!.isSome then continue
-    if let some rows ← certifyPredicate predicate provider then
+    let direct ← certifyPredicateDetailed predicate provider
+    if let .ok rows := direct then
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       continue
     let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
@@ -223,6 +234,21 @@ private partial def lower (original : PresentationState) (work : Work)
       return ← lower original next provider
     | .error error =>
       if firstError?.isNone then
+        let error ← match direct with
+          | .error directError => do
+            let nativePSD ← lambdaTelescope predicate fun _ source => do
+              let source ← Expr.reduceStructure source
+              if source.isAppOf ``Matrix.PosSemidef then return true
+              unless source.isAppOfArity ``Membership.mem 5 do return false
+              let carrier ← Expr.reduceStructure source.getAppArgs[3]!
+              unless carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 do return false
+              return (← Expr.reduceStructure carrier.getAppArgs[0]!).isAppOfArity
+                ``Morew.Conic.Cone.positiveSemidefinite 1
+            if nativePSD &&
+                (← Registry.candidates .conic predicate).isEmpty then
+              pure directError
+            else pure error
+          | .ok _ => pure error
         firstError? := some (← originalError original work.rowOrigins[index]! error)
   match firstError? with
   | some error => return .error error
@@ -230,21 +256,40 @@ private partial def lower (original : PresentationState) (work : Work)
 
 -- Retain the accepted affine maps and their local evidence. Only their
 -- equivalence endpoints change from the original leaves to membership leaves.
-private def transportRows (domain source target : Expr) (rows : Array RowResult) :
+private def prepareNormalizations (domain source : Expr) (rows : Array RowResult) :
+    MetaM (Array PredicateNormalization) := do
+  let (leaves, _) ← decomposePredicate source
+  unless leaves.size == rows.size do
+    throwError "membership normalization does not match the certified row count"
+  (rows.zip leaves).mapM fun (row, original) => do
+    let conversion ← match row.normalization? with
+      | some conversion => pure conversion
+      | none => normalizePredicate original
+    let expected ← withLocalDeclD `point domain fun point =>
+      mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
+        (mkApp original point) (mkApp conversion.predicate point))
+    if (← Morew.Elab.Rewrite.Plan.unresolved conversion.predicate) ||
+        (← Morew.Elab.Rewrite.Plan.unresolved conversion.pointwiseIff) then
+      throwError "cached membership normalization contains unresolved metavariables"
+    unless ← isDefEq (← inferType conversion.pointwiseIff) expected do
+      throwError "cached membership normalization does not match its source predicate"
+    checkWithKernel conversion.pointwiseIff
+    return conversion
+
+private def transportRows (domain target : Expr) (rows : Array RowResult)
+    (conversions : Array PredicateNormalization) :
     MetaM (Array RowResult) := do
-  let (oldLeaves, _) ← decomposePredicate source
   let (newLeaves, _) ← decomposePredicate target
-  unless oldLeaves.size == rows.size && newLeaves.size == rows.size do
+  unless conversions.size == rows.size && newLeaves.size == rows.size do
     throwError "membership normalization changed the number of conic leaves"
-  (rows.zip (oldLeaves.zip newLeaves)).mapM fun (row, original, normalized) => do
-    let conversion ← normalizePredicate original
+  (rows.zip (conversions.zip newLeaves)).mapM fun (row, conversion, normalized) => do
     unless ← isDefEq conversion.predicate normalized do
       throwError "membership normalization changed the order of conic leaves"
     let pointwiseIff ← withLocalDeclD `point domain fun point => do
       mkLambdaFVars #[point] (← mkAppM ``Iff.trans
         #[mkApp row.pointwiseIff point, mkApp conversion.pointwiseIff point])
     checkWithKernel pointwiseIff
-    return { row with pointwiseIff }
+    return { row with pointwiseIff, normalization? := none }
 
 /-- Normalize the actual final target and transport the already accepted row
 certificates. Presentation-entry boundaries and provenance remain unchanged. -/
@@ -252,7 +297,10 @@ private def normalizeFinal (work : Work) : MetaM Work := do
   let mut work := work
   for index in [:work.presentation.constraints.size] do
     let source := work.presentation.constraints[index]!.predicate
-    let normalized ← normalizePredicate source
+    let some rows := work.certifiedRows[index]!
+      | throwError "final membership normalization requires accepted conic rows"
+    let conversions ← prepareNormalizations work.presentation.domainType source rows
+    let normalized ← normalizePredicate source conversions
     unless normalized.changed do continue
     let presentation := work.presentation
     let retained := splice (presentation.constraints.map (·.predicate)) index #[]
@@ -262,9 +310,7 @@ private def normalizeFinal (work : Work) : MetaM Work := do
         mkLambdaFVars #[point, hypothesis] (mkApp normalized.pointwiseIff point)
     let rewrite ← rewriteConstraintContextual presentation index
       #[normalized.predicate] conditional
-    let some rows := work.certifiedRows[index]!
-      | throwError "final membership normalization requires accepted conic rows"
-    let rows ← transportRows presentation.domainType source normalized.predicate rows
+    let rows ← transportRows presentation.domainType normalized.predicate rows conversions
     let constraints := presentation.constraints.modify index fun entry =>
       { entry with predicate := normalized.predicate }
     let presentation := { presentation with constraints }

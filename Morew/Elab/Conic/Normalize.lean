@@ -168,11 +168,13 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
     throwError "comparison uses an unsupported order or arithmetic instance"
   return { body := normalized, iff := proof, changed := true }
 
-private partial def normalizeBodyCore (original : Expr) : MetaM BodyNormalization := do
+private partial def normalizeBodyCore (original : Expr)
+    (certified : Expr → MetaM (Option BodyNormalization) := fun _ => pure none) :
+    MetaM BodyNormalization := do
   let body ← Expr.reduceStructure original (preserveLets := true)
   if let .letE name type value rest nondep := body then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← normalizeBodyCore (rest.instantiate1 binding)
+      let result ← normalizeBodyCore (rest.instantiate1 binding) certified
       return {
         body := ← mkLetFVars #[binding] result.body
           (usedLetOnly := false) (generalizeNondepLet := false)
@@ -182,13 +184,14 @@ private partial def normalizeBodyCore (original : Expr) : MetaM BodyNormalizatio
       }
   if body.isAppOfArity ``And 2 then
     let args := body.getAppArgs
-    let left ← normalizeBodyCore args[0]!
-    let right ← normalizeBodyCore args[1]!
+    let left ← normalizeBodyCore args[0]! certified
+    let right ← normalizeBodyCore args[1]! certified
     return {
       body := mkApp2 (mkConst ``And) left.body right.body
       iff := ← mkAppM ``and_congr #[left.iff, right.iff]
       changed := left.changed || right.changed
     }
+  if let some result ← certified body then return result
   if body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
       body.isAppOfArity ``GE.ge 4 then
     return ← normalizeComparison body
@@ -235,8 +238,12 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   return result
 
 /-- Normalize a whole constraint predicate and check its pointwise equivalence.
-The decision space and all operand expressions remain unchanged. -/
-def normalizePredicate (predicate : Expr) : MetaM PredicateNormalization := isolated do
+The decision space and all operand expressions remain unchanged. A nonempty
+certificate array follows the exact leaf order of `decomposePredicate`, excluding
+`True` leaves. Definitionally equal leaves still have distinct occurrences. -/
+def normalizePredicate (predicate : Expr)
+    (certificates : Array PredicateNormalization := #[]) :
+    MetaM PredicateNormalization := isolated do
   if ← unresolved predicate then
     throwError "membership normalization requires fully elaborated expressions"
   let type ← whnf (← inferType predicate)
@@ -245,7 +252,26 @@ def normalizePredicate (predicate : Expr) : MetaM PredicateNormalization := isol
   unless codomain == mkSort .zero do
     throwError "expected a predicate on the decision space"
   withLocalDeclD `point domain fun point => do
-    let result ← normalizeBodyCore (mkApp predicate point)
+    let nextCertificate ← IO.mkRef 0
+    let certified := fun body => do
+      if certificates.isEmpty || body.isConstOf ``True then return none
+      let index ← nextCertificate.get
+      let some certificate := certificates[index]?
+        | throwError "cached membership normalization does not match the leaf count"
+      let proof := mkApp certificate.pointwiseIff point
+      let proofType ← whnf (← inferType proof)
+      unless proofType.isAppOfArity ``Iff 2 do
+        throwError "cached membership normalization is not a pointwise equivalence"
+      unless ← isDefEq proofType.getAppArgs[0]! body do
+        throwError "cached membership normalization does not match its source leaf"
+      let target := mkApp certificate.predicate point
+      unless ← isDefEq proofType.getAppArgs[1]! target do
+        throwError "cached membership normalization does not match its target"
+      nextCertificate.set (index + 1)
+      return some { body := target, iff := proof, changed := certificate.changed }
+    let result ← normalizeBodyCore (mkApp predicate point) certified
+    unless (← nextCertificate.get) == certificates.size do
+      throwError "cached membership normalization does not match the leaf count"
     let normalized ← instantiateMVars (← mkLambdaFVars #[point] result.body)
     let pointwiseIff ← instantiateMVars (← mkLambdaFVars #[point] result.iff)
     let expected ← mkForallFVars #[point] (mkApp2 (mkConst ``Iff)

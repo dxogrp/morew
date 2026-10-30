@@ -28,18 +28,64 @@ private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM Str
     | throwError "cannot derive a generated-name family from constraint `{name}`"
   return stem
 
+private def positiveSemidefiniteMembership {n : ℕ}
+    (matrix : Matrix (Fin n) (Fin n) ℝ) (symmetric : matrix.IsSymm) : Prop :=
+  Morew.Conic.SymmetricMatrix.ofMatrix matrix symmetric ∈
+    (Morew.Conic.Cone.positiveSemidefinite n).carrier
+
+private theorem retainedMatrixIsSymm {n : ℕ}
+    {retained checked : Matrix (Fin n) (Fin n) ℝ}
+    (equality : retained = checked) (symmetry : checked.IsSymm) : retained.IsSymm :=
+  equality.symm ▸ symmetry
+
+-- Recover the already checked global symmetry proof from the semantic target.
+-- The original matrix spelling can retain model-local names absent from that
+-- target. Earlier substitutions can also require proved normalization identities;
+-- transport symmetry along the checked matrix equality in that case.
+private def normalizeRetainedPositiveSemidefinite (normalizationProof : Term)
+    (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
+  unless original.isAppOf ``Matrix.PosSemidef &&
+      target.isAppOfArity ``Membership.mem 5 do
+    throwError "retained PSD predicate does not match the checked membership target"
+  let value := target.getAppArgs[4]!
+  unless value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3 do
+    throwError "checked PSD membership is missing its symmetric matrix conversion"
+  let matrix := original.getAppArgs.back!
+  let checkedMatrix := value.getAppArgs[1]!
+  let mut symmetry := value.getAppArgs[2]!
+  unless ← isDefEq matrix checkedMatrix do
+    let equalityType ← zetaReduce (← mkEq matrix checkedMatrix)
+    let equality ← elabTerm normalizationProof (some equalityType)
+    synthesizeSyntheticMVarsNoPostponing
+    let equality ← instantiateMVars equality
+    checkWithKernel equality
+    symmetry ← mkAppM ``retainedMatrixIsSymm #[equality, symmetry]
+  let converted ← mkAppM ``Morew.Conic.SymmetricMatrix.ofMatrix #[matrix, symmetry]
+  let some body ← unfoldDefinition? (← mkAppM ``positiveSemidefiniteMembership
+    #[matrix, symmetry])
+    | throwError "could not reconstruct retained PSD membership"
+  let iff ← mkAppM ``Iff.symm
+    #[← mkAppM ``Morew.Conic.Cone.mem_positiveSemidefinite #[converted]]
+  unless ← isDefEq (← inferType iff) (mkApp2 (mkConst ``Iff) original body) do
+    throwError "retained PSD membership does not match its original predicate"
+  checkWithKernel iff
+  return { body, iff, changed := true }
+
 -- The semantic checkpoint can expose a custom relation, constant match, or
 -- structure field while retained syntax still contains its original head.
 -- After planning accepts the row, follow those reductions against its target.
 -- Operand expressions and model-local bindings stay untouched; a leaf with no
 -- comparisons to convert retains its original spelling.
-private partial def normalizeRetainedBody (original target : Expr) :
-    MetaM Morew.Elab.Conic.BodyNormalization := do
+private partial def normalizeRetainedBody (normalizationProof : Term)
+    (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
   let body ← Morew.Elab.Expr.reduceStructure original (preserveLets := true)
   let target ← Morew.Elab.Expr.reduceStructure target
-  if let .letE name type value rest nondep := body then
-    return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← normalizeRetainedBody (rest.instantiate1 binding) target
+  if let .letE name type value rest _ := body then
+    -- PSD conversion introduces a symmetry proof whose type mentions this
+    -- binding. A source nondependent let must therefore become a reducible let:
+    -- keeping it opaque would hide its value from the checked symmetry proof.
+    return ← withLetDecl name type value fun binding => do
+      let result ← normalizeRetainedBody normalizationProof (rest.instantiate1 binding) target
       return {
         body := ← mkLetFVars #[binding] result.body
           (usedLetOnly := false) (generalizeNondepLet := false)
@@ -52,8 +98,8 @@ private partial def normalizeRetainedBody (original target : Expr) :
       throwError "retained conjunction does not match the checked conic target"
     let args := body.getAppArgs
     let targets := target.getAppArgs
-    let left ← normalizeRetainedBody args[0]! targets[0]!
-    let right ← normalizeRetainedBody args[1]! targets[1]!
+    let left ← normalizeRetainedBody normalizationProof args[0]! targets[0]!
+    let right ← normalizeRetainedBody normalizationProof args[1]! targets[1]!
     return {
       body := mkApp2 (mkConst ``And) left.body right.body
       iff := ← mkAppM ``and_congr #[left.iff, right.iff]
@@ -61,6 +107,8 @@ private partial def normalizeRetainedBody (original target : Expr) :
     }
   if ← isDefEq body (mkConst ``True) then
     return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
+  if body.isAppOf ``Matrix.PosSemidef then
+    return ← normalizeRetainedPositiveSemidefinite normalizationProof body target
   let normalized : Except Exception Morew.Elab.Conic.BodyNormalization ← try
       pure (.ok (← Morew.Elab.Conic.normalizeBody original))
     catch error => pure (.error error)
@@ -90,7 +138,7 @@ private partial def normalizeRetainedBody (original target : Expr) :
   let exposed ← whnfCore exposed
   if exposed == body then
     throwError "retained relation did not reduce to the checked conic target"
-  let result ← normalizeRetainedBody exposed target
+  let result ← normalizeRetainedBody normalizationProof exposed target
   unless result.changed do
     return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
   let expected := mkApp2 (mkConst ``Iff) original result.body
@@ -103,8 +151,11 @@ private partial def normalizeRetainedBody (original target : Expr) :
 -- scope; generated entries instead use the checked planner's actual expressions.
 -- Target emission subsequently checks this complete view against the canonical
 -- problem, including any identities established by preceding substitutions.
-private def normalizeRetainedView (prepared : Morew.Elab.Conic.Terminal.Result)
+private def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Array Term)
+    (prepared : Morew.Elab.Conic.Terminal.Result)
     (template rendered : Morew.Syntax.ProblemView) : TermElabM Morew.Syntax.ProblemView := do
+  let simpLemmas ← liftMacroM <| normalizationSimpLemmas sourceName normalizationLemmas
+  let normalizationProof ← liftMacroM `(by simp only [$[$simpLemmas],*] <;> rfl)
   let declarations := template.binders.mapIdx fun i binder =>
     (binder.name, prepared.presentation.binders[i]!.type)
   withLocalDeclsDND declarations fun decisions =>
@@ -122,7 +173,7 @@ private def normalizeRetainedView (prepared : Morew.Elab.Conic.Terminal.Result)
         let body ← elabPresentationTerm ⟨row.proposition⟩ bindings (some (mkSort .zero))
         synthesizeSyntheticMVarsNoPostponing
         let body ← instantiateMVars body
-        let normalized ← normalizeRetainedBody body
+        let normalized ← normalizeRetainedBody normalizationProof body
           (mkApp prepared.presentation.constraints[i]!.predicate point)
         checkWithKernel normalized.iff
         return { row with proposition := ← delabPresentationTerm normalized.body names }
@@ -164,17 +215,17 @@ private def materializeTerminalConic (state : ReformState)
         rows := rows.push state.view.constraints[origin]!
     let template := { state.view with binders, constraints := rows }
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    let view ← normalizeRetainedView prepared template rendered
-    let semantic ← exactExpressionSyntax targetProblem
-    let formName ← mkAuxDeclName (kind := `_terminalConicForm)
-    let form ← mkAuxDefinitionFor formName prepared.form (zetaDelta := true) (compile := false)
-    modifyEnv (addNoncomputable · formName)
     -- Canonical predicates may have reduced a zero or negated model definition,
     -- while the retained view deliberately still refers to its binding. These
     -- equalities check their agreement without rewriting the displayed body.
     let normalizationLemmas := state.normalizationLemmas ++
       #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩,
         ⟨mkCIdent ``sub_neg_eq_add⟩, ⟨mkCIdent ``zero_add⟩, ⟨mkCIdent ``neg_neg⟩]
+    let view ← normalizeRetainedView state.sourceName normalizationLemmas prepared template rendered
+    let semantic ← exactExpressionSyntax targetProblem
+    let formName ← mkAuxDeclName (kind := `_terminalConicForm)
+    let form ← mkAuxDefinitionFor formName prepared.form (zetaDelta := true) (compile := false)
+    modifyEnv (addNoncomputable · formName)
     return {
       view
       semantic

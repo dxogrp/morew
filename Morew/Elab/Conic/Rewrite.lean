@@ -79,6 +79,8 @@ private def proveObligation (point : Expr) (retained : Array Expr)
   if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
+  if reduced.isAppOf ``Matrix.PosDef then
+    throwError "registered conic rewrite was not certified: missing positive-definiteness evidence for the Schur pivot; required {goal}"
   if let .forallE name indexType body _ := reduced then
     let indexType ← whnf indexType
     unless indexType.isAppOfArity ``Fin 1 do return none

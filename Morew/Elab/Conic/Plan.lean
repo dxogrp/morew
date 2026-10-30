@@ -27,11 +27,8 @@ structure Result extends Morew.Elab.Rewrite.Plan.Result where
 
 /-- Rebase all expressions of a checked replacement. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
-  let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
   { toResult := result.toResult.replaceFVars oldVars newVars
-    certifiedRows := result.certifiedRows.map fun row => {
-      constraint := replace row.constraint
-      pointwiseIff := replace row.pointwiseIff } }
+    certifiedRows := result.certifiedRows.map fun row => row.replaceFVars oldVars newVars }
 
 /-- Retry a failed certificate with safe finite evidence exposed by helpers.
 Direct recognition keeps its original fast path; speculative declarations and
@@ -119,7 +116,8 @@ def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
     -- Keep exact-lift diagnostics stable while sharing conjunction proof assembly.
     unless body.isLet || body.isConstOf ``True || body.isAppOfArity ``And 2 ||
         body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
-        body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 do
+        body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 ||
+        body.isAppOf ``Matrix.PosSemidef do
       throwError "unsupported exact target predicate {body}; expected True, conjunctions, affine equalities and non-strict inequalities, supported cone memberships, or a finite exponential or power membership family"
     return body
 

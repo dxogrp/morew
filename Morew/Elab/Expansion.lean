@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Data.Matrix.Block
 import Morew.Core
 import Lean.Meta.Match.MatcherInfo
 import Lean.Meta.RecExt
@@ -140,6 +141,10 @@ private def nativeBoundary (name : Name) : Bool :=
     ``HPow.hPow, ``Neg.neg, ``Prod.mk, ``Matrix.vecCons, ``Matrix.vecEmpty, ``Fin.elim0,
     ``Finset.sum, `Finset.sup', `Finset.inf',
     ``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul, ``WithLp.toLp, ``WithLp.ofLp,
+    ``Matrix.of, ``Matrix.transpose, ``Matrix.diagonal, ``Matrix.submatrix,
+    ``Matrix.reindex, ``Matrix.fromBlocks,
+    `Morew.Conic.fromBlocksFin, `Morew.Conic.SymmetricMatrix.toMatrix,
+    `Morew.Conic.SymmetricMatrix.ofMatrix,
     ``LE.le, ``GE.ge, ``LT.lt, ``Eq, ``And, ``Membership.mem,
     `ite, `dite, `cond, `Decidable.decide, `abs, ``Norm.norm, ``NNNorm.nnnorm, ``ENorm.enorm,
     `Inv.inv, `Min.min, `Max.max, `PosPart.posPart, `min, `max, `Finset.prod, `tsum,

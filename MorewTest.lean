@@ -5,6 +5,7 @@ import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.HelperLimits
 import MorewTest.Affine.Helpers
 import MorewTest.Affine.LocalContext
+import MorewTest.Affine.Matrix
 import MorewTest.Affine.RealPower
 import MorewTest.Affine.Reification
 import MorewTest.Affine.StateIsolation
@@ -26,6 +27,8 @@ import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
+import MorewTest.Conic.PSD
+import MorewTest.Conic.PSDElab
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power
@@ -55,6 +58,7 @@ import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
 import MorewTest.ImportCompatibility.OccurrenceBounds
+import MorewTest.ImportCompatibility.PSD
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
 import MorewTest.ImportCompatibility.PowerChainPrinting
@@ -131,6 +135,8 @@ import MorewTest.Reformulation.OccurrenceStructure.Defined
 import MorewTest.Reformulation.OccurrenceStructureDefaults
 import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
+import MorewTest.Reformulation.PSD
+import MorewTest.Reformulation.PSDFailures
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.Power

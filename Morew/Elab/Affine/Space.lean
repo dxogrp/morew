@@ -41,6 +41,11 @@ noncomputable def euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) w
   group := inferInstance
   module := inferInstance
 
+/-- Canonical structures on the named symmetric-matrix submodule. -/
+noncomputable def symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) where
+  group := inferInstance
+  module := inferInstance
+
 /-- The standard product structures on two explicitly supplied spaces. -/
 noncomputable def prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
     Structure (X × Y) where
@@ -72,6 +77,8 @@ private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
   pure { data, instances := instances ++ #[group, module] }
 
 private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
+  if let some n ← Expr.symmetricMatrixDimension? type then
+    return ← finishSpace type (← mkAppM ``Structure.symmetricMatrix #[n])
   -- This reduction concerns types only, so aliases such as `Matrix` can expose
   -- their product/function structure. It never unfolds a modeled expression.
   let shape ← whnf type

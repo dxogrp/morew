@@ -8,6 +8,7 @@ import Morew.Reformulation.PowerChainPrinting
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Power.Cone
+import Morew.Conic.PSD
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
@@ -31,6 +32,16 @@ private def powerMembershipReplayOption : Name :=
 -- ordinary readable syntax remain independent of this presentation choice.
 private def compactIndexProofsOption : Name :=
   `Morew.Reformulation.Internal.compactIndexProofs
+
+-- PSD coordinates use a proof-bearing symmetric subtype internally. Only the
+-- compact print payload may abbreviate its conversion to the ordinary matrix.
+private def compactPSDOption : Name :=
+  `Morew.Reformulation.Internal.compactPSD
+
+-- Enabled only inside the coordinates of a checked PSD membership. Nested
+-- block matrices may omit conversions without affecting unrelated terms.
+private def compactPSDCoordinatesOption : Name :=
+  `Morew.Reformulation.Internal.compactPSDCoordinates
 
 -- Lean normally prints atomic proof names even with `pp.proofs = false`.
 -- Annotating just the bound-proof slots makes its ordinary proof-omission
@@ -445,6 +456,31 @@ def packPoint (components : Array Expr) : MetaM Expr := do
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `Morew.Reformulation.Internal.coneNotation
 
+-- Matrix literals infer dimensions as successor constructors. Render just
+-- these literal constructors as numerals, retaining symbolic dimensions.
+private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat) := do
+  let dimension := dimension.consumeMData
+  if dimension.isConstOf ``Nat.zero then return some 0
+  if dimension.isAppOfArity ``Nat.succ 1 then
+    return (← psdDimensionLiteral? dimension.getAppArgs[0]!).map (· + 1)
+  let some n ← getNatValue? dimension | return none
+  -- `getNatValue?` reads the numeral index without checking its `OfNat`
+  -- instance. A custom instance can give that same index a different value.
+  if ← isDefEq dimension (mkNatLit n) then return some n
+  return none
+
+-- Ordinary display syntax can be reconstructed. A freshly written numeral
+-- must therefore select an instance with the same value in its current context.
+private def psdDimensionNumeralResynthesizes (dimension : Expr) (n : Nat) : MetaM Bool :=
+  withoutModifyingState do
+    let type ← mkAppM ``OfNat #[mkConst ``Nat, mkNatLit n]
+    match ← trySynthInstance type with
+    | .some inferred =>
+      let numeral ← mkAppOptM ``OfNat.ofNat
+        #[some (mkConst ``Nat), some (mkNatLit n), some inferred]
+      isDefEq dimension numeral
+    | _ => pure false
+
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
 private def delabConeCarrier : Delab := do
@@ -458,14 +494,25 @@ private def delabConeCarrier : Delab := do
     return ← `(ℝ₊)
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
-    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1
+    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
+    cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
   -- Keep the original subexpression position, so dimension references are
   -- frozen by the same pass as the rest of the generated presentation.
-  let dimension ← withAppArg <| withAppArg delab
+  let dimension ← withAppArg <| withAppArg do
+    -- Exact replay retains the original numeral instances and constructors.
+    if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
+        !(← getOptions).getBool `pp.explicit then
+      if let some n ← psdDimensionLiteral? (← getExpr) then
+        if (← getOptions).getBool compactPSDOption ||
+            (← psdDimensionNumeralResynthesizes (← getExpr) n) then
+          return ⟨Syntax.mkNumLit (toString n)⟩
+    delab
   if cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 then
     `(SOC $dimension)
   else if cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 then
     `(RSOC $dimension)
+  else if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 then
+    `(PSD $dimension)
   else
     `(ℝ₊^$dimension)
 
@@ -634,6 +681,59 @@ private def delabZeroConeMembership : Delab := do
   let set ← withNaryArg 3 delab
   let type ← withNaryArg 1 delab
   `($value ∈ ($set : $type))
+
+private def presentationPSDMembership (n : Nat)
+    (value : Morew.Conic.SymmetricMatrix n) : Prop :=
+  value ∈ (Morew.Conic.Cone.positiveSemidefinite n).carrier
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Morew.Conic.SymmetricMatrix.ofMatrix]
+private def delabCompactPSDCoordinate : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDCoordinatesOption && options.getBool compactPSDOption &&
+      options.getBool coneNotationOption && !options.getBool `pp.explicit &&
+      !getPPProofs options do failure
+  guard <| (← getExpr).isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
+  withNaryArg 1 delab
+
+-- Constant diagonals have no meaningful index name. Rename only the unused
+-- binder in this display copy, retaining the normal application delaborator.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Matrix.diagonal]
+private def delabCompactConstantDiagonal : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDOption && options.getBool coneNotationOption &&
+      !options.getBool `pp.explicit && !getPPProofs options do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Matrix.diagonal 5
+  let .lam _ domain body binderInfo := expression.getAppArgs[4]! | failure
+  guard <| !body.hasLooseBVar 0
+  let expression := mkApp expression.appFn! (.lam `_ domain body binderInfo)
+  withTheReader SubExpr (fun context => { context with expr := expression }) delabApp
+
+-- This mathematical display deliberately omits symmetric-subtype conversions,
+-- including those nested inside block matrices in the PSD coordinates.
+-- Ordinary display syntax, detailed printing, and exact replay retain them.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Membership.mem]
+private def delabCompactPSDMembership : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDOption && options.getBool coneNotationOption &&
+      !options.getBool `pp.explicit && !getPPProofs options do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Membership.mem 5
+  let args := expression.getAppArgs
+  let carrier := args[3]!.consumeMData
+  guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
+  let cone := carrier.getAppArgs[0]!.consumeMData
+  guard <| cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
+  let canonical := (mkAppN (← getConstInfo ``presentationPSDMembership).value!
+    #[cone.getAppArgs[0]!, args[4]!]).headBeta
+  guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
+  guard (← isDefEq expression canonical)
+  let matrix ← withOptions (·.setBool compactPSDCoordinatesOption true) <| withNaryArg 4 delab
+  let cone ← withNaryArg 3 delab
+  `($matrix ∈ $cone)
 
 /-- Render a presentation body while freezing global references and retaining
 the supplied decision-variable and model-definition binding names. -/
@@ -1037,7 +1137,7 @@ def refreshProblemView (targetName : Name)
             (forRegistration := true)
           let (compact, mathematicalRows) ← withOptions (fun options =>
               options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
-                |>.setBool compactIndexProofsOption true) do
+                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true) do
             problemViewWithRowsFromExpression (fun rows names =>
               powerChainPrintRows rows (fun expression =>
                 delabPresentationTerm expression names false)) target template instantiateBinderTypes

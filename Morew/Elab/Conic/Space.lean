@@ -41,6 +41,10 @@ noncomputable abbrev real : Structure ℝ := ⟨inferInstance, inferInstance, in
 noncomputable abbrev euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) :=
   ⟨inferInstance, inferInstance, inferInstance⟩
 
+/-- The symmetric submodule inherits the fixed nested-function matrix norm. -/
+noncomputable abbrev symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) :=
+  ⟨inferInstance, inferInstance, inferInstance⟩
+
 /-- Product normed structures from two explicitly supplied factors. -/
 noncomputable abbrev prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
     Structure (X × Y) := by
@@ -69,6 +73,8 @@ private def finishSpace (type data : Expr) : MetaM Expr := do
   mkAppOptM ``id #[some dataType, some data]
 
 private partial def buildSpace (type : Expr) : MetaM Expr := do
+  if let some n ← Expr.symmetricMatrixDimension? type then
+    return ← finishSpace type (← mkAppM ``Structure.symmetricMatrix #[n])
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
@@ -98,6 +104,8 @@ For example, instance synthesis recognizes `Fin m → Fin n → ℝ`, whereas it
 need not unfold the semireducible `Matrix` alias. This changes neither the
 represented problem nor its presentation's decision-domain spelling. -/
 partial def structuralDomain (type : Expr) : MetaM Expr := do
+  if let some n ← Expr.symmetricMatrixDimension? type then
+    return ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
   let shape ← whnf type
   if shape.isConstOf ``Real then
     return shape

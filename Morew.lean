@@ -1,4 +1,6 @@
 import Morew.Affine
+import Morew.Affine.Matrix
+import Morew.Affine.SymmetricMatrix
 import Morew.Conic
 import Morew.Conic.Basic
 import Morew.Conic.Cone
@@ -6,6 +8,7 @@ import Morew.Conic.Exponential
 import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Exponential.Representations
+import Morew.Conic.PSD
 import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
@@ -29,6 +32,7 @@ import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
+import Morew.Elab.Conic.Symmetry
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.Expansion
 import Morew.Elab.Expr

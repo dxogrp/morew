@@ -39,7 +39,23 @@ contain `True`, conjunctions, and affine scalar/vector equalities or non-strict
 inequalities. Every generated row is certified independently of the objective
 or other constraints. Supported SOC and rotated-SOC memberships are also valid
 custom target rows, as are exponential and power memberships and grouped finite
-families of those memberships.
+families of those memberships. Native `Matrix.PosSemidef` predicates and PSD
+memberships are also supported when their matrix coordinates are affine and
+globally symmetric.
+
+Ordinary real matrices can use literals, diagonal construction, transpose,
+blocks, and multiplication by fixed coefficient matrices. PSD rows require
+square `Fin n` indices; `Conic.fromBlocksFin` concatenates blocks in their
+canonical finite order. Symmetry is proved structurally or from an explicit
+all-point hypothesis, independently of feasibility constraints. Terminal
+conversion retains the matrix entries in `SymmetricMatrix.ofMatrix` and prints
+membership in `PSD n`. Compact printing shows `M ∈ PSD n` and hides conversions
+inside symmetric block matrices; detailed printing and exact replay retain
+the symmetric-matrix conversions and their proofs. The public
+`Conic.schurComplement_mem_iff` and
+`Conic.schurComplement_mem_iff_right` theorems support explicit or custom
+registered exact certificates with a positive-definite pivot; they install no
+automatic Schur rewrite.
 
 Native Euclidean norms, scalar squares, and finite sums of squares become one
 SOC or rotated-SOC membership row. Quotients of squares require a positive

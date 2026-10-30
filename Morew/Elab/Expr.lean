@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Core
+import Morew.Conic.PSD
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Lean.Meta.Basic
 import Lean.Meta.Transform
@@ -162,8 +163,23 @@ def euclideanDimension? (type : Expr) : MetaM (Option Expr) := do
   unless index.isAppOfArity ``Fin 1 do return none
   return some index.getAppArgs[0]!
 
+/-- Recognize the canonical symmetric-matrix subtype, including aliases.
+The final definitional-equality check excludes all other subtype predicates. -/
+def symmetricMatrixDimension? (type : Expr) : MetaM (Option Expr) := do
+  let shape ← whnf type
+  unless shape.isAppOfArity ``Subtype 2 do return none
+  let coordinates ← whnf shape.getAppArgs[0]!
+  let .forallE _ row _ _ := coordinates | return none
+  let row ← whnf row
+  unless row.isAppOfArity ``Fin 1 do return none
+  let n := row.getAppArgs[0]!
+  let expected ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
+  unless ← isDefEq type expected do return none
+  return some n
+
 /-- Whether a type has the supported real/Euclidean/product/finite-function shape. -/
 partial def isSupportedSpace (type : Expr) : MetaM Bool := do
+  if (← symmetricMatrixDimension? type).isSome then return true
   let type ← whnf type
   if type.isConstOf ``Real then return true
   if (← euclideanDimension? type).isSome then return true
