@@ -163,6 +163,8 @@ import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
 import MorewTest.Reformulation.SecondOrderFailures
 import MorewTest.Reformulation.SmoothHelpers
+import MorewTest.Reformulation.Spectral
+import MorewTest.Reformulation.SpectralFailures
 import MorewTest.Reformulation.SubstitutionBindingIdentity
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures
