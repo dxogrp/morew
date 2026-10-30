@@ -26,6 +26,7 @@ import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
+import MorewTest.Conic.PSD
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power

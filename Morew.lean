@@ -6,6 +6,7 @@ import Morew.Conic.Exponential
 import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Exponential.Representations
+import Morew.Conic.PSD
 import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
