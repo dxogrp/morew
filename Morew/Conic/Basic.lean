@@ -12,6 +12,8 @@ import Morew.Core
 Conic data records an affine objective and finitely many affine cone-membership
 rows. A `Conic.Form p` retains this data and an equality with the represented
 `Problem`, independently of any source-to-target global-equivalence certificate.
+Decision spaces require only real vector-space structure; no ambient norm is
+part of a conic certificate. Cone spaces retain their bundled normed structures.
 
 Objective sense is explicit data. Equality of `Problem` values cannot recover
 it, since `OrderDual ℝ` is a reducible synonym for `ℝ`. Maximizing problems must
@@ -24,7 +26,7 @@ universe u
 
 namespace Conic
 
-variable (X : Type u) [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable (X : Type u) [AddCommGroup X] [Module ℝ X]
 
 /-- An affine membership constraint in a bundled convex cone. -/
 structure Constraint where
@@ -139,7 +141,7 @@ structure Form (p : Problem X ℝ) where
 
 end Conic
 
-variable {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable {X : Type u} [AddCommGroup X] [Module ℝ X]
   [FiniteDimensional ℝ X]
 
 /-- A proposition asserting the existence of a certified conic representation.

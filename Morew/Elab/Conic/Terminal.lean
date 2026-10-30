@@ -89,8 +89,8 @@ private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvi
   return (← certifyPredicateDetailed predicate provider).toOption
 
 private noncomputable def pullbackConstraint {X A : Type*}
-    [NormedAddCommGroup X] [NormedSpace ℝ X]
-    [NormedAddCommGroup A] [NormedSpace ℝ A]
+    [AddCommGroup X] [Module ℝ X]
+    [AddCommGroup A] [Module ℝ A]
     (row : Morew.Conic.Constraint X) : Morew.Conic.Constraint (X × A) :=
   ⟨row.cone, row.map.comp AffineMap.fst⟩
 

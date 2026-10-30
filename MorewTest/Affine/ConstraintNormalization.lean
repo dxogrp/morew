@@ -24,7 +24,7 @@ open Morew
 noncomputable section
 
 /-- Test witnesses retain the generated equivalence for kernel checking. -/
-structure CertifiedRow {X : Type} [NormedAddCommGroup X] [NormedSpace ℝ X]
+structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
     (predicate : X → Prop) where
   row : Conic.Constraint X
   equivalent : ∀ x, row.Holds x ↔ predicate x

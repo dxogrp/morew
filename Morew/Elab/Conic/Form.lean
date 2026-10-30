@@ -14,9 +14,8 @@ Build affine cone data for the complete current typed problem. The stored
 representation proves equality of objective and feasibility, independently of
 the reformulation runner's source-to-target optimization certificate.
 
-For abstract function indices, certification accepts `Finite` evidence. Ordinary
-norm-dependent field notation follows mathlib's `Fintype` prerequisites; callers
-with only `Finite ι` can install `letI := Fintype.ofFinite ι` when using the data.
+For abstract function indices, certification and ordinary field notation require
+only `Finite` evidence. Decision-space norms and enumerations are unnecessary.
 -/
 
 namespace Morew.Elab.Conic
@@ -35,17 +34,17 @@ private theorem problemEq {X : Type u} {V : Type v} (p q : Morew.Problem X V)
       exact congrArg₂ Morew.Problem.mk (funext objective)
         (funext fun x => propext (feasible x))
 
-private theorem emptyRows {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+private theorem emptyRows {X : Type u} [AddCommGroup X] [Module ℝ X]
     (x : X) :
     (∀ i : Fin 0, (Fin.elim0 i : Morew.Conic.Constraint X).Holds x) ↔ True :=
   Fin.forall_fin_zero
 
-private def prependRow {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+private def prependRow {X : Type u} [AddCommGroup X] [Module ℝ X]
     {n : Nat} (row : Morew.Conic.Constraint X)
     (rest : Fin n → Morew.Conic.Constraint X) : Fin (n + 1) → Morew.Conic.Constraint X :=
   Fin.cons row rest
 
-private theorem consRows {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+private theorem consRows {X : Type u} [AddCommGroup X] [Module ℝ X]
     {n : Nat} (row : Morew.Conic.Constraint X)
     (rest : Fin n → Morew.Conic.Constraint X) (x : X) :
     (∀ i, (prependRow row rest i).Holds x) ↔ row.Holds x ∧ ∀ i, (rest i).Holds x :=
@@ -192,7 +191,7 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
   -- A declaration inferred directly from this expression must support ordinary
   -- `.data` projections. Expose aliases in the domain and in every canonical
   -- instance type: retaining Matrix aliases inside a product's group would
-  -- prevent later NormedSpace synthesis even after exposing the outer domain.
+  -- prevent later Module synthesis even after exposing the outer domain.
   let domain ← Space.structuralDomain presentation.domainType
   let publicType ← Space.withCanonicalDomain domain do
     mkAppOptM ``Morew.Conic.Form #[some domain, none, none, none, some canonical]

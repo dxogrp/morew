@@ -116,6 +116,33 @@ def inferredMatrixForm := form_for% (show Problem (Matrix (Fin 2) (Fin 3) ℝ) �
 example : inferredMatrixForm.data.rowCount = 1 := rfl
 example (x : Matrix (Fin 2) (Fin 3) ℝ) : inferredMatrixForm.data.objective x = x 0 1 := rfl
 
+-- Certification does not install a global matrix norm as a side effect.
+example : True := by
+  fail_if_success
+    have : Norm (Matrix (Fin 2) (Fin 3) ℝ) := inferInstance
+  trivial
+
+def symmetricSource : Problem (Conic.SymmetricMatrix 2) ℝ :=
+  ⟨fun A => A.toMatrix 0 1, fun A => A.toMatrix 0 1 ≤ 1⟩
+
+def inferredSymmetricForm := form_for% symmetricSource
+
+example : inferredSymmetricForm.data.rowCount = 1 := rfl
+example : inferredSymmetricForm.data.toProblem = symmetricSource :=
+  inferredSymmetricForm.represents
+example : IsConic symmetricSource := inferredSymmetricForm.isConic
+
+def nestedMatrixSource :
+    Problem ((Matrix (Fin 2) (Fin 3) ℝ × ℝ) × Matrix (Fin 3) (Fin 2) ℝ) ℝ :=
+  ⟨fun x => x.1.2, fun x => x.1.1 0 1 ≤ x.2 2 0⟩
+
+def inferredNestedMatrixForm := form_for% nestedMatrixSource
+
+example : inferredNestedMatrixForm.data.rowCount = 1 := rfl
+example : inferredNestedMatrixForm.data.toProblem = nestedMatrixSource :=
+  inferredNestedMatrixForm.represents
+example : IsConic nestedMatrixSource := inferredNestedMatrixForm.isConic
+
 def inferredEuclideanForm (n : Nat) := form_for%
   (show Problem (EuclideanSpace ℝ (Fin n) × ℝ) ℝ from
     ⟨fun x => x.2, fun x => (x.2, WithLp.ofLp x.1) ∈
@@ -128,14 +155,21 @@ def inferredIndexForm (ι : Type) [Fintype ι] (i : ι) :=
 
 example (ι : Type) [Fintype ι] (i : ι) : (inferredIndexForm ι i).data.rowCount = 1 := rfl
 
-def inferredFiniteForm (ι : Type) [Finite ι] (i : ι) :=
-  form_for% (show Problem (ι → ℝ) ℝ from ⟨fun x => x i, fun x => x i ≤ 1⟩)
+def finiteSource (ι : Type) (i : ι) : Problem (ι → ℝ) ℝ :=
+  ⟨fun x => x i, fun x => x i ≤ 1⟩
 
--- Mathlib's ordinary finite-function norm instances require an enumeration at
--- the point of use; the form itself needs only a finiteness proof.
+def inferredFiniteForm (ι : Type) [Finite ι] (i : ι) :=
+  form_for% (finiteSource ι i)
+
+-- Algebraic form projections need only finiteness; callers need no enumeration
+-- or norm instance for the function space.
 example (ι : Type) [Finite ι] (i : ι) :
-    letI := Fintype.ofFinite ι
     (inferredFiniteForm ι i).data.rowCount = 1 := rfl
+example (ι : Type) [Finite ι] (i : ι) :
+    (inferredFiniteForm ι i).data.toProblem = finiteSource ι i :=
+  (inferredFiniteForm ι i).represents
+example (ι : Type) [Finite ι] (i : ι) : IsConic (finiteSource ι i) :=
+  (inferredFiniteForm ι i).isConic
 
 namespace AliasedFiniteIndex
 
@@ -145,15 +179,13 @@ def VectorAlias := IndexAlias → ℝ
 local instance : Finite IndexAlias := by
   change Finite (Fin 2)
   infer_instance
-local instance : Fintype IndexAlias := Fintype.ofFinite IndexAlias
-
 def first : IndexAlias := (0 : Fin 2)
 
 def source : Problem VectorAlias ℝ where
   objective x := x first
   feasible x := x first ≤ 1
 
--- Expose the vector alias while retaining the index alias and its enumeration.
+-- Expose the vector alias while retaining the index alias and its finiteness.
 -- Both ordinary projections must work directly on the inferred declaration.
 def inferredForm := form_for% source
 
@@ -178,7 +210,7 @@ private def assertForm (termSyntax : TSyntax `term) (count : Nat)
       throwError "form represents a different problem"
     for parameter in parameters do
       let type ← whnf (← inferType parameter)
-      if type.isAppOf ``NormedAddCommGroup || type.isAppOf ``NormedSpace ||
+      if type.isAppOf ``Norm || type.isAppOf ``NormedAddCommGroup || type.isAppOf ``NormedSpace ||
           type.isAppOf ``AddCommGroup || type.isAppOf ``_root_.Module then
         if form.containsFVar parameter.fvarId! then
           throwError "conic form captured an unrelated ambient vector-space instance"
@@ -202,6 +234,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     show Problem (ℝ × ℝ) ℝ from ⟨fun x => x.1 + x.2, fun x => x.1 ≤ x.2⟩)) 1 2
   assertForm (← `(fun [AddCommGroup (Matrix (Fin 2) (Fin 3) ℝ)]
       [Module ℝ (Matrix (Fin 2) (Fin 3) ℝ)] =>
+    show Problem (Matrix (Fin 2) (Fin 3) ℝ) ℝ from
+    ⟨fun x => x 0 1, fun x => x 0 1 ≥ 0⟩)) 1 2
+  assertForm (← `(fun [Norm (Matrix (Fin 2) (Fin 3) ℝ)] =>
+    show Problem (Matrix (Fin 2) (Fin 3) ℝ) ℝ from
+    ⟨fun x => x 0 1, fun x => x 0 1 ≥ 0⟩)) 1 1
+  assertForm (← `(fun [NormedAddCommGroup (Matrix (Fin 2) (Fin 3) ℝ)]
+      [NormedSpace ℝ (Matrix (Fin 2) (Fin 3) ℝ)] =>
     show Problem (Matrix (Fin 2) (Fin 3) ℝ) ℝ from
     ⟨fun x => x 0 1, fun x => x 0 1 ≥ 0⟩)) 1 2
 

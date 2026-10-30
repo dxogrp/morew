@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Reformulation.MatrixFraction
 import MorewTest.Reformulation.Spectral
+import MorewTest.Conic.Form
 
 /-!
 # Imported spectral and matrix-fraction certificates
@@ -48,6 +49,36 @@ example : (continuedNuclear.conicForm (m := m) (n := n)).data.rowCount = 2 := rf
 example : (continuedNuclear.conicForm (m := m) (n := n)).data.toProblem =
     continuedNuclear (m := m) (n := n) :=
   (continuedNuclear.conicForm (m := m) (n := n)).represents
+example : IsConic (continuedNuclear (m := m) (n := n)) :=
+  continuedNuclear.isConic (m := m) (n := n)
+
+-- Imported public forms work without opening any matrix norm scope.
+def importedOperatorForm :
+    Conic.Form (MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n)) :=
+  MorewTest.Reformulation.Spectral.normTarget.conicForm (m := m) (n := n)
+
+example : (importedOperatorForm m n).data.rowCount = 2 := rfl
+example : (importedOperatorForm m n).data.toProblem =
+    MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n) :=
+  (importedOperatorForm m n).represents
+example : IsConic (MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n)) :=
+  (importedOperatorForm m n).isConic
+
+namespace FiniteOnly
+
+open MorewTest.Conic.Form
+
+-- In particular, compiled form types do not require Fintype at the use site.
+def importedForm (ι : Type) [Finite ι] (i : ι) : Conic.Form (finiteSource ι i) :=
+  inferredFiniteForm ι i
+
+example (ι : Type) [Finite ι] (i : ι) : (importedForm ι i).data.rowCount = 1 := rfl
+example (ι : Type) [Finite ι] (i : ι) :
+    (importedForm ι i).data.toProblem = finiteSource ι i := (importedForm ι i).represents
+example (ι : Type) [Finite ι] (i : ι) : IsConic (finiteSource ι i) :=
+  (importedForm ι i).isConic
+
+end FiniteOnly
 
 namespace Shadow
 
@@ -163,6 +194,24 @@ namespace ChangedNorm
 -- Replaying an imported source must keep its original L2 operator norm even
 -- when a different matrix norm is in scope at the replay site.
 local instance (m n : Nat) : Norm (Matrix (Fin m) (Fin n) ℝ) := ⟨fun _ => 37⟩
+
+-- The unrelated norm also cannot obstruct imported certificates or subsequent
+-- conic rewriting of a source whose operator norm was already fixed.
+example : IsConic (MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n)) :=
+  MorewTest.Reformulation.Spectral.normTarget.isConic (m := m) (n := n)
+example : IsConic (MorewTest.Reformulation.Spectral.nuclearTarget (m := m) (n := n)) :=
+  MorewTest.Reformulation.Spectral.nuclearTarget.isConic (m := m) (n := n)
+example : (importedOperatorForm m n).data.toProblem =
+    MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n) :=
+  (importedOperatorForm m n).represents
+
+reformulation continuedOperator : (MorewTest.Reformulation.Spectral.normSource m n) := by conic
+
+example : GlobalEquivalence (MorewTest.Reformulation.Spectral.normSource m n)
+    (continuedOperator (m := m) (n := n)) :=
+  continuedOperator.equivalence (m := m) (n := n)
+example : IsConic (continuedOperator (m := m) (n := n)) :=
+  continuedOperator.isConic (m := m) (n := n)
 
 variable (selected : Norm (Matrix (Fin 2) (Fin 3) ℝ))
 

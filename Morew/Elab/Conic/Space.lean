@@ -4,14 +4,16 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.Basic
+import Morew.Elab.Affine.Space
 import Morew.Elab.Expr
 import Lean.Meta.Basic
 import Qq
 
 /-!
-# Canonical normed and ordered spaces for affine rows
+# Canonical decision and cone-coordinate spaces for affine rows
 
-Row constructors fix their normed structures and coordinatewise real order
+Decision spaces use the affine reifier's algebraic structures. Cone coordinates
+retain their normed structures and coordinatewise real order. Both are fixed
 explicitly, independently of unrelated instances in the caller's context.
 -/
 
@@ -19,7 +21,77 @@ namespace Morew.Elab.Conic.Space
 
 open Lean Lean.Meta Qq
 
-/-- The canonical normed structures chosen for a row's decision domain. -/
+/-- Canonical finite-dimensional algebra for a form's decision domain. -/
+structure Domain (X : Type*) where
+  /-- Exactly the algebra used by certified affine maps. -/
+  algebra : Affine.Space.Structure X
+  /-- Finite dimension for this additive group and scalar multiplication. -/
+  finite : @FiniteDimensional ℝ X inferInstance algebra.group algebra.module
+
+namespace Domain
+
+/-- Standard real algebra and its finite dimension. -/
+noncomputable abbrev real : Domain ℝ := ⟨Affine.Space.Structure.real, inferInstance⟩
+
+/-- Standard finite Euclidean algebra. -/
+noncomputable abbrev euclidean (n : ℕ) : Domain (EuclideanSpace ℝ (Fin n)) :=
+  ⟨Affine.Space.Structure.euclidean n, inferInstance⟩
+
+/-- Algebra on the named symmetric-matrix submodule. -/
+noncomputable abbrev symmetricMatrix (n : ℕ) : Domain (Morew.Conic.SymmetricMatrix n) :=
+  ⟨Affine.Space.Structure.symmetricMatrix n, inferInstance⟩
+
+/-- Product algebra with finiteness proved for the supplied component structures. -/
+noncomputable abbrev prod {X Y : Type*} (a : Domain X) (b : Domain Y) :
+    Domain (X × Y) where
+  algebra := Affine.Space.Structure.prod a.algebra b.algebra
+  finite := by
+    let := a.algebra.group
+    let := a.algebra.module
+    let := a.finite
+    let := b.algebra.group
+    let := b.algebra.module
+    let := b.finite
+    exact inferInstance
+
+/-- Finite function-space algebra requires no enumeration or ambient norm. -/
+noncomputable abbrev pi (ι : Type*) [Finite ι] {Y : Type*} (a : Domain Y) :
+    Domain (ι → Y) where
+  algebra := Affine.Space.Structure.pi ι a.algebra
+  finite := by
+    let := a.algebra.group
+    let := a.algebra.module
+    let := a.finite
+    exact inferInstance
+
+end Domain
+
+private def finishDomain (type data : Expr) : MetaM Expr := do
+  let dataType ← mkAppM ``Domain #[type]
+  mkAppOptM ``id #[some dataType, some data]
+
+private partial def buildDomain (type : Expr) : MetaM Expr := do
+  if let some n ← Expr.symmetricMatrixDimension? type then
+    return ← finishDomain type (← mkAppM ``Domain.symmetricMatrix #[n])
+  let shape ← whnf type
+  if shape.isConstOf ``Real then
+    finishDomain type (mkConst ``Domain.real)
+  else if let some n ← Expr.euclideanDimension? shape then
+    finishDomain type (← mkAppM ``Domain.euclidean #[n])
+  else if shape.isAppOfArity ``Prod 2 then
+    let left ← buildDomain shape.getAppArgs[0]!
+    let right ← buildDomain shape.getAppArgs[1]!
+    finishDomain type (← mkAppM ``Domain.prod #[left, right])
+  else if let .forallE _ index body _ := shape then
+    let body ← Core.betaReduce (← whnf body)
+    if body.hasLooseBVars || (← isProp index) then
+      throwError "affine rows require a nondependent function space, got {type}"
+    let target ← buildDomain body
+    finishDomain type (← mkAppM ``Domain.pi #[index, target])
+  else
+    throwError "unsupported affine row domain {type}"
+
+/-- The canonical normed structures chosen for cone coordinates. -/
 structure Structure (X : Type*) where
   /-- The chosen normed additive group. -/
   group : NormedAddCommGroup X
@@ -30,9 +102,7 @@ structure Structure (X : Type*) where
 
 namespace Structure
 
--- These constructors are reducible because their projections occur in the
--- types of persisted forms. Later field notation must recognize the same
--- canonical instances using typeclass search's restricted transparency.
+-- Coordinate instances must remain recognizable by instance search.
 
 /-- Standard real normed structures, resolved in this fixed context. -/
 noncomputable abbrev real : Structure ℝ := ⟨inferInstance, inferInstance, inferInstance⟩
@@ -119,8 +189,7 @@ partial def structuralDomain (type : Expr) : MetaM Expr := do
     let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then
       throwError "affine rows require a nondependent function space, got {type}"
-    -- Index aliases can carry their own Fintype instance. Preserve that spelling
-    -- so projections synthesize the same enumeration as the stored norm.
+    -- Index aliases can carry their own finiteness evidence. Preserve that spelling.
     return ← mkArrow index (← structuralDomain body)
   throwError "unsupported affine row domain {type}"
 
@@ -162,26 +231,22 @@ private def installInstances (remaining : List Expr)
         return (← row.replaceFVarsM #[binding] #[inst],
           ← proof.replaceFVarsM #[binding] #[inst])
 
-/-- Construct a row and its equivalence proof with canonical normed and ordered
-structures. Substitute the temporary instances before either expression escapes.
-Only finite-index evidence is synthesized from the caller's context. -/
+/-- Construct a row with canonical decision algebra and normed, ordered targets.
+Substitute the temporary instances before either expression escapes. -/
 def withCanonicalSpaces (domain target : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
-  let data ← buildSpace domain
-  let group ← mkAppM ``Structure.group #[data]
-  let space ← mkAppM ``Structure.space #[data]
-  let instances := realInstances ++ #[group, space] ++ (← targetInstances target)
+  let (group, module) ← Affine.Space.canonicalSpace domain
+  let instances := realInstances ++ #[group, module] ++ (← targetInstances target)
   installInstances instances.toList action
 
 /-- Construct a cone-membership row using canonical normed structures on its
 coordinate space. Cone coordinates need no order structure. -/
 def withCanonicalConeSpaces (domain target : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
-  let domainData ← buildSpace domain
+  let (group, module) ← Affine.Space.canonicalSpace domain
   let targetData ← buildSpace target
   let instances := realInstances ++ #[
-    ← mkAppM ``Structure.group #[domainData],
-    ← mkAppM ``Structure.space #[domainData],
+    group, module,
     ← mkAppM ``Structure.group #[targetData],
     ← mkAppM ``Structure.space #[targetData],
     ← mkAppM ``Structure.finite #[targetData]]
@@ -191,11 +256,13 @@ def withCanonicalConeSpaces (domain target : Expr)
 The recursive finite-dimensional proof uses the same structures as the affine
 maps, even in the presence of unrelated ambient instances. -/
 def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
-  let data ← buildSpace domain
-  let instances := realInstances ++ #[
-    ← mkAppM ``Structure.group #[data],
-    ← mkAppM ``Structure.space #[data],
-    ← mkAppM ``Structure.finite #[data]]
+  let data ← buildDomain domain
+  let algebra ← mkAppM ``Domain.algebra #[data]
+  let instances := #[
+    q(inferInstance : AddCommGroup ℝ), q(inferInstance : Module ℝ ℝ),
+    ← mkAppM ``Affine.Space.Structure.group #[algebra],
+    ← mkAppM ``Affine.Space.Structure.module #[algebra],
+    ← mkAppM ``Domain.finite #[data]]
   let (result, _) ← installInstances instances.toList do
     let result ← action
     return (result, result)
