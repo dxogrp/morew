@@ -80,8 +80,11 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
     (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
   let body ← Morew.Elab.Expr.reduceStructure original (preserveLets := true)
   let target ← Morew.Elab.Expr.reduceStructure target
-  if let .letE name type value rest nondep := body then
-    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+  if let .letE name type value rest _ := body then
+    -- PSD conversion introduces a symmetry proof whose type mentions this
+    -- binding. A source nondependent let must therefore become a reducible let:
+    -- keeping it opaque would hide its value from the checked symmetry proof.
+    return ← withLetDecl name type value fun binding => do
       let result ← normalizeRetainedBody normalizationProof (rest.instantiate1 binding) target
       return {
         body := ← mkLetFVars #[binding] result.body

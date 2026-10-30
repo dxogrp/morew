@@ -58,6 +58,45 @@ example : nestedBlocksCopy = nestedBlocks := rfl
 example : lambdaDiagonalsCopy A = lambdaDiagonals A := rfl
 end Shadow
 
+namespace DimensionInstances
+
+section CustomNumeral
+local instance : OfNat Nat 2 := ⟨3⟩
+
+-- This source really has dimension three, although its local spelling is `2`.
+def source :=
+  problem (M : SymmetricMatrix 2)
+    minimize (0 : ℝ)
+    subject to
+      semidefinite : M ∈ PSD 2
+
+reformulation target : source := by conic
+
+example : Problem (SymmetricMatrix 3) ℝ := target
+
+-- Imported ordinary dimensions must also survive a different numeral instance.
+run_cmd do
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``diagonalTarget
+    | Lean.throwError "missing ordinary PSD replay metadata"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand
+    (← `(noncomputable def $(Lean.mkIdent `ordinaryReplay) := $term))
+
+example : ordinaryReplay = diagonalTarget := rfl
+end CustomNumeral
+
+-- Leaving the section must not replace the stored dimension-three instance.
+run_cmd do
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
+    | Lean.throwError "missing custom-dimension PSD replay metadata"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand
+    (← `(noncomputable def $(Lean.mkIdent `customReplay) := $term))
+
+example : customReplay = target := rfl
+
+end DimensionInstances
+
 run_cmd do
   checkPSDDetails ``diagonalTarget "diagonalTarget._proof_1"
     #["semidefinite", "matrix", "PSD 2"]

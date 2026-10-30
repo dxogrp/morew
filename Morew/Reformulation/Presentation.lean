@@ -463,7 +463,11 @@ private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat)
   if dimension.isConstOf ``Nat.zero then return some 0
   if dimension.isAppOfArity ``Nat.succ 1 then
     return (← psdDimensionLiteral? dimension.getAppArgs[0]!).map (· + 1)
-  getNatValue? dimension
+  let some n ← getNatValue? dimension | return none
+  -- `getNatValue?` reads the numeral index without checking its `OfNat`
+  -- instance. A custom instance can give that same index a different value.
+  if ← isDefEq dimension (mkNatLit n) then return some n
+  return none
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
@@ -483,7 +487,9 @@ private def delabConeCarrier : Delab := do
   -- Keep the original subexpression position, so dimension references are
   -- frozen by the same pass as the rest of the generated presentation.
   let dimension ← withAppArg <| withAppArg do
-    if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 then
+    -- Exact replay retains the original numeral instances and constructors.
+    if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
+        !(← getOptions).getBool `pp.explicit then
       if let some n ← psdDimensionLiteral? (← getExpr) then
         return ⟨Syntax.mkNumLit (toString n)⟩
     delab

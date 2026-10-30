@@ -392,5 +392,51 @@ reformulation substituted : substitutionSource := by
 example : GlobalEquivalence substitutionSource substituted := substituted.equivalence
 example : substituted.conicForm.data.toProblem = substituted := substituted.conicForm.represents
 
+-- A constraint-local matrix let becomes a dependency of the generated symmetry
+-- proof, even when its original native predicate used a nondependent binding.
+def localLetSource :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      semidefinite : let matrix := Matrix.diagonal ![x, 1]; matrix.PosSemidef
+
+reformulation localLetTarget : localLetSource := by conic
+
+def localLetGroupSource :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      group :
+        let scalar := x + 1
+        let matrix := Matrix.diagonal ![scalar, 1]
+        let _symmetric : matrix.IsSymm := Matrix.isSymm_diagonal _
+        matrix.PosSemidef ∧ scalar ≤ 3
+
+reformulation localLetGroupTarget : localLetGroupSource := by conic
+
+example : GlobalEquivalence localLetSource localLetTarget := localLetTarget.equivalence
+example : localLetTarget.conicForm.data.rowCount = 1 := rfl
+example : localLetGroupTarget.conicForm.data.rowCount = 2 := rfl
+example : localLetGroupTarget.conicForm.data.toProblem = localLetGroupTarget :=
+  localLetGroupTarget.conicForm.represents
+
+run_cmd do
+  for (original, copied) in #[(``localLetTarget, `localLetReplay),
+      (``localLetGroupTarget, `localLetGroupReplay)] do
+    let compact ← PrintDetails.printed original false
+    unless compact.contains "let matrix :=" && compact.contains "matrix ∈ PSD 2" do
+      Lean.throwError m!"PSD normalization lost its constraint-local matrix binding: {compact}"
+    let some view := Syntax.getProblemView? (← Lean.getEnv) original
+      | Lean.throwError "missing constraint-local PSD presentation"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
+  let detailed ← PrintDetails.printed ``localLetGroupTarget true
+  unless detailed.contains "symmetric" && detailed.contains "scalar" &&
+      detailed.contains "SymmetricMatrix.ofMatrix matrix" do
+    Lean.throwError m!"PSD normalization lost its nested let or proof bindings: {detailed}"
+
+example : localLetReplay = localLetTarget := rfl
+example : localLetGroupReplay = localLetGroupTarget := rfl
+
 end
 end MorewTest.Reformulation.PositiveSemidefinite
