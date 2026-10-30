@@ -7,9 +7,6 @@ import Morew.Reformulation
 
 /-!
 # Native matrix PSD constraints and explicit Schur reformulations
-
-The ordinary matrix entries remain visible. Certification checks affinity and
-global symmetry before constructing the symmetric PSD cone coordinates.
 -/
 
 namespace Morew.Examples.PositiveSemidefinite
