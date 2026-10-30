@@ -102,6 +102,37 @@ private def helper (x : ℝ) : ℝ := 2 * x + 1
 private def zeroHelper (_ : ℝ) : ℝ := 0
 private def negHelper (x : ℝ) : ℝ := -x
 
+private def firstMatrix (x : ℝ) := Matrix.diagonal ![x]
+private def secondMatrix (x : ℝ) := Matrix.diagonal ![x]
+
+-- A native membership is definitionally equal to its ordinary PSD predicate.
+-- Each occurrence keeps its own conversion, change status and operand spelling.
+run_cmd liftTermElabM do
+  let source ← elaborate (← `(fun x : ℝ =>
+    True ∧ (Morew.Conic.SymmetricMatrix.ofMatrix (firstMatrix x)
+      (Matrix.isSymm_diagonal _) ∈ (Morew.Conic.Cone.positiveSemidefinite 1).carrier) ∧
+      (secondMatrix x).PosSemidef))
+  let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate source
+  let certificates ← leaves.mapM fun leaf => do
+    let .ok row ← normalizeRow leaf | throwError "expected a certified PSD leaf"
+    match row.normalization? with
+    | some conversion => pure conversion
+    | none => normalizePredicate leaf
+  let result ← normalizePredicate source certificates
+  unless result.changed do
+    throwError "an unchanged native membership shadowed a later PSD conversion"
+  for name in #[``firstMatrix, ``secondMatrix] do
+    unless (result.predicate.find? (·.isConstOf name)).isSome do
+      throwError "cached normalization merged distinct matrix operand spellings"
+  let (normalizedLeaves, _) ← Morew.Elab.Rewrite.decomposePredicate result.predicate
+  unless normalizedLeaves.size == 2 do
+    throwError "cached normalization changed the number of nontrivial leaves"
+  for leaf in normalizedLeaves do
+    lambdaTelescope leaf fun _ body => do
+      unless (← Morew.Elab.Expr.reduceStructure body).isAppOfArity ``Membership.mem 5 do
+        throwError "cached normalization retained an ordinary PSD predicate"
+  checkWithKernel result.pointwiseIff
+
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun x : ℝ => zeroHelper x ≤ helper x))
   let result ← normalizePredicate source

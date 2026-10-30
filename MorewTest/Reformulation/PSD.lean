@@ -438,5 +438,40 @@ run_cmd do
 example : localLetReplay = localLetTarget := rfl
 example : localLetGroupReplay = localLetGroupTarget := rfl
 
+-- Native membership and an ordinary predicate can be definitionally equal.
+-- Their cached conversions must still follow each occurrence through True
+-- leaves, local lets and retained group boundaries.
+def mixedMembershipSource :=
+  problem (x : ℝ)
+    let matrix := Matrix.diagonal ![x]
+    minimize x
+    subject to
+      semidefinite : True ∧
+        (SymmetricMatrix.ofMatrix matrix (Matrix.isSymm_diagonal _) ∈ PSD 1 ∧
+          matrix.PosSemidef)
+      scalar : let value := x; (value ∈ (Cone.nonnegativeScalar).carrier ∧ True) ∧ 0 ≤ value
+
+reformulation mixedMembershipTarget : mixedMembershipSource := by conic
+
+example : GlobalEquivalence mixedMembershipSource mixedMembershipTarget :=
+  mixedMembershipTarget.equivalence
+example : mixedMembershipTarget.conicForm.data.rowCount = 4 := rfl
+example : mixedMembershipTarget.conicForm.data.toProblem = mixedMembershipTarget :=
+  mixedMembershipTarget.conicForm.represents
+
+run_cmd do
+  let compact ← PrintDetails.printed ``mixedMembershipTarget false
+  unless !compact.contains "PosSemidef" && !compact.contains "0 ≤ value" &&
+      compact.contains "matrix ∈ PSD 1" && compact.contains "value := x" do
+    Lean.throwError m!"mixed native and ordinary predicates were not normalized: {compact}"
+  let some view := Syntax.getProblemView? (← Lean.getEnv) ``mixedMembershipTarget
+    | Lean.throwError "missing mixed-membership presentation"
+  unless view.constraints.map (·.name.eraseMacroScopes) == #[`semidefinite, `scalar] do
+    Lean.throwError "mixed-membership normalization changed retained groups"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent `mixedMembershipReplay) := $term))
+
+example : mixedMembershipReplay = mixedMembershipTarget := rfl
+
 end
 end MorewTest.Reformulation.PositiveSemidefinite

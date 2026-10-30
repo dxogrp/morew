@@ -83,6 +83,20 @@ run_cmd do
     (← `(noncomputable def $(Lean.mkIdent `ordinaryReplay) := $term))
 
 example : ordinaryReplay = diagonalTarget := rfl
+
+-- Ordinary detailed display syntax also reconstructs the checked dimension.
+-- Its proof-bearing matrix still has dimension two in this numeral context.
+set_option pp.proofs true in
+reformulation ordinaryDetailed : diagonalTarget := by conic
+
+run_cmd do
+  let some view := Syntax.getProblemDisplayView? (← Lean.getEnv) ``ordinaryDetailed
+    | Lean.throwError "missing ordinary detailed PSD display metadata"
+  let term ← Lean.Elab.liftMacroM view.toTermSyntax
+  Lean.Elab.Command.elabCommand
+    (← `(noncomputable def $(Lean.mkIdent `ordinaryDetailedReplay) := $term))
+
+example : ordinaryDetailedReplay = ordinaryDetailed := rfl
 end CustomNumeral
 
 -- Leaving the section must not replace the stored dimension-three instance.

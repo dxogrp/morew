@@ -469,6 +469,18 @@ private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat)
   if ← isDefEq dimension (mkNatLit n) then return some n
   return none
 
+-- Ordinary display syntax can be reconstructed. A freshly written numeral
+-- must therefore select an instance with the same value in its current context.
+private def psdDimensionNumeralResynthesizes (dimension : Expr) (n : Nat) : MetaM Bool :=
+  withoutModifyingState do
+    let type ← mkAppM ``OfNat #[mkConst ``Nat, mkNatLit n]
+    match ← trySynthInstance type with
+    | .some inferred =>
+      let numeral ← mkAppOptM ``OfNat.ofNat
+        #[some (mkConst ``Nat), some (mkNatLit n), some inferred]
+      isDefEq dimension numeral
+    | _ => pure false
+
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
 private def delabConeCarrier : Delab := do
@@ -491,7 +503,9 @@ private def delabConeCarrier : Delab := do
     if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
         !(← getOptions).getBool `pp.explicit then
       if let some n ← psdDimensionLiteral? (← getExpr) then
-        return ⟨Syntax.mkNumLit (toString n)⟩
+        if (← getOptions).getBool compactPSDOption ||
+            (← psdDimensionNumeralResynthesizes (← getExpr) n) then
+          return ⟨Syntax.mkNumLit (toString n)⟩
     delab
   if cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 then
     `(SOC $dimension)

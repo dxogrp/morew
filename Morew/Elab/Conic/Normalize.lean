@@ -238,7 +238,9 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   return result
 
 /-- Normalize a whole constraint predicate and check its pointwise equivalence.
-The decision space and all operand expressions remain unchanged. -/
+The decision space and all operand expressions remain unchanged. A nonempty
+certificate array follows the exact leaf order of `decomposePredicate`, excluding
+`True` leaves. Definitionally equal leaves still have distinct occurrences. -/
 def normalizePredicate (predicate : Expr)
     (certificates : Array PredicateNormalization := #[]) :
     MetaM PredicateNormalization := isolated do
@@ -250,19 +252,26 @@ def normalizePredicate (predicate : Expr)
   unless codomain == mkSort .zero do
     throwError "expected a predicate on the decision space"
   withLocalDeclD `point domain fun point => do
+    let nextCertificate ← IO.mkRef 0
     let certified := fun body => do
-      for certificate in certificates do
-        let proof := mkApp certificate.pointwiseIff point
-        let proofType ← whnf (← inferType proof)
-        unless proofType.isAppOfArity ``Iff 2 do
-          throwError "cached membership normalization is not a pointwise equivalence"
-        if ← isDefEq proofType.getAppArgs[0]! body then
-          let target := mkApp certificate.predicate point
-          unless ← isDefEq proofType.getAppArgs[1]! target do
-            throwError "cached membership normalization does not match its target"
-          return some { body := target, iff := proof, changed := certificate.changed }
-      return none
+      if certificates.isEmpty || body.isConstOf ``True then return none
+      let index ← nextCertificate.get
+      let some certificate := certificates[index]?
+        | throwError "cached membership normalization does not match the leaf count"
+      let proof := mkApp certificate.pointwiseIff point
+      let proofType ← whnf (← inferType proof)
+      unless proofType.isAppOfArity ``Iff 2 do
+        throwError "cached membership normalization is not a pointwise equivalence"
+      unless ← isDefEq proofType.getAppArgs[0]! body do
+        throwError "cached membership normalization does not match its source leaf"
+      let target := mkApp certificate.predicate point
+      unless ← isDefEq proofType.getAppArgs[1]! target do
+        throwError "cached membership normalization does not match its target"
+      nextCertificate.set (index + 1)
+      return some { body := target, iff := proof, changed := certificate.changed }
     let result ← normalizeBodyCore (mkApp predicate point) certified
+    unless (← nextCertificate.get) == certificates.size do
+      throwError "cached membership normalization does not match the leaf count"
     let normalized ← instantiateMVars (← mkLambdaFVars #[point] result.body)
     let pointwiseIff ← instantiateMVars (← mkLambdaFVars #[point] result.iff)
     let expected ← mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
