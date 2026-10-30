@@ -123,6 +123,8 @@ import MorewTest.Reformulation.IndexNames
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
+import MorewTest.Reformulation.MatrixFraction
+import MorewTest.Reformulation.MatrixFractionFailures
 import MorewTest.Reformulation.NLP
 import MorewTest.Reformulation.NLPCustom
 import MorewTest.Reformulation.NLPFailures
