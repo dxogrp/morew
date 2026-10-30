@@ -188,6 +188,34 @@ info: problem (B : Matrix (Fin 1) (Fin 1) ℝ) (t : ℝ)
 #guard_msgs in
 #printp blockSchur
 
+-- Only an unused diagonal index becomes anonymous in compact PSD output.
+def lambdaDiagonalSource (A : SymmetricMatrix 1) :=
+  problem (B : Matrix (Fin 1) (Fin 2) ℝ) (d : Fin 2 → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      constant : A.fromBlocks B
+        (SymmetricMatrix.ofMatrix (Matrix.diagonal (fun _ : Fin 2 => t))
+          (Matrix.isSymm_diagonal _)) ∈ PSD (1 + 2)
+      indexed : (Matrix.diagonal (fun i : Fin 2 => d i + t)).PosSemidef
+
+reformulation lambdaDiagonals : (lambdaDiagonalSource A) := by conic
+
+/--
+info: problem (B : Matrix (Fin 1) (Fin 2) ℝ) (d : Fin 2 → ℝ) (t : ℝ)
+  minimize t
+  subject to
+    constant : A.fromBlocks B (Matrix.diagonal fun _ => t) ∈ PSD (1 + 2)
+    indexed : (Matrix.diagonal fun i => d i + t) ∈ PSD 2
+-/
+#guard_msgs in
+#printp lambdaDiagonals
+
+run_cmd do
+  checkPSDDetails ``lambdaDiagonals "_proof_" #["constant", "indexed", "fun i => d i + t"]
+  let detailed ← PrintDetails.printed ``lambdaDiagonals true
+  unless detailed.contains "fun x => t" && !detailed.contains "fun _ => t" do
+    Lean.throwError m!"compact diagonal formatting changed detailed lambda binders: {detailed}"
+
 -- Both diagonal positions contain conversions, including inside another block.
 def nestedBlockSource :=
   problem (x y z : ℝ)
@@ -280,7 +308,7 @@ run_cmd do
     Lean.throwError m!"terminal PSD printing lost its compact membership or retained name: {printed}"
   for (original, copied) in #[(``diagonalTarget, `diagonalReplay),
       (``diagonalRegisteredDetailed, `detailedReplay), (``blockSchur, `blockSchurReplay),
-      (``nestedBlocks, `nestedBlocksReplay)] do
+      (``nestedBlocks, `nestedBlocksReplay), (``lambdaDiagonals, `lambdaDiagonalsReplay)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "missing PSD presentation"
     let term ← Lean.Elab.liftMacroM view.toTermSyntax
@@ -290,6 +318,7 @@ example : diagonalReplay = diagonalTarget := rfl
 example : detailedReplay = diagonalRegisteredDetailed := rfl
 example : blockSchurReplay A = blockSchur A := rfl
 example : nestedBlocksReplay = nestedBlocks := rfl
+example : lambdaDiagonalsReplay A = lambdaDiagonals A := rfl
 
 namespace GlobalEvidence
 def source (C D : Matrix (Fin 2) (Fin 2) ℝ) :=

@@ -676,6 +676,21 @@ private def delabCompactPSDCoordinate : Delab := do
   guard <| (← getExpr).isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
   withNaryArg 1 delab
 
+-- Constant diagonals have no meaningful index name. Rename only the unused
+-- binder in this display copy, retaining the normal application delaborator.
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.Matrix.diagonal]
+private def delabCompactConstantDiagonal : Delab := do
+  let options ← getOptions
+  unless options.getBool compactPSDOption && options.getBool coneNotationOption &&
+      !options.getBool `pp.explicit && !getPPProofs options do failure
+  let expression ← getExpr
+  guard <| expression.isAppOfArity ``Matrix.diagonal 5
+  let .lam _ domain body binderInfo := expression.getAppArgs[4]! | failure
+  guard <| !body.hasLooseBVar 0
+  let expression := mkApp expression.appFn! (.lam `_ domain body binderInfo)
+  withTheReader SubExpr (fun context => { context with expr := expression }) delabApp
+
 -- This mathematical display deliberately omits symmetric-subtype conversions,
 -- including those nested inside block matrices in the PSD coordinates.
 -- Ordinary display syntax, detailed printing, and exact replay retain them.

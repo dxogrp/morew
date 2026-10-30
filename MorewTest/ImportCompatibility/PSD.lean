@@ -38,7 +38,7 @@ run_cmd do
       (``diagonalRegisteredDetailed, `registeredDetailedCopy),
       (``auxiliaryTarget, `auxiliaryCopy), (``continued, `continuedCopy),
       (``substituted, `substitutedCopy), (``blockSchur, `blockSchurCopy),
-      (``nestedBlocks, `nestedBlocksCopy)] do
+      (``nestedBlocks, `nestedBlocksCopy), (``lambdaDiagonals, `lambdaDiagonalsCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported PSD declaration lost its replay metadata"
     let term ← Lean.Elab.liftMacroM view.toTermSyntax
@@ -55,6 +55,7 @@ example : continuedCopy = continued := rfl
 example : substitutedCopy = substituted := rfl
 example : blockSchurCopy A = blockSchur A := rfl
 example : nestedBlocksCopy = nestedBlocks := rfl
+example : lambdaDiagonalsCopy A = lambdaDiagonals A := rfl
 end Shadow
 
 run_cmd do
@@ -65,6 +66,7 @@ run_cmd do
   checkPSDDetails ``blockSchur "_proof_" #["A.fromBlocks B", "PSD (1 + 1)"]
   checkPSDDetails ``nestedBlocks "_proof_"
     #["Matrix.diagonal ![x]", "Matrix.diagonal ![y]", "Matrix.diagonal ![z]", "fromBlocks"]
+  checkPSDDetails ``lambdaDiagonals "_proof_" #["constant", "indexed", "fun i => d i + t"]
   let original ← MorewTest.Reformulation.PrintDetails.printed ``diagonalTarget false
   let imported ← MorewTest.Reformulation.PrintDetails.printed ``continued false
   unless original == imported do
