@@ -81,6 +81,53 @@ def fixedSource (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :=
     minimize t
     subject to bound : Fn.matrixFrac x P ≤ t
 
+-- Independent domain evidence also certifies the global symmetry of the
+-- resulting Schur block, including conjunctions beneath universal binders.
+section ConjoinedDomains
+
+variable (Q : Matrix (Fin n) (Fin n) ℝ)
+
+section Left
+variable (hQ : True ∧ Q.PosDef)
+reformulation fixedConjoinedLeft : (fixedSource n Q) := by conic
+example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedLeft n Q hQ) :=
+  fixedConjoinedLeft.equivalence n Q hQ
+end Left
+
+section Right
+variable (hQ : Q.PosDef ∧ True)
+reformulation fixedConjoinedRight : (fixedSource n Q) := by conic
+example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedRight n Q hQ) :=
+  fixedConjoinedRight.equivalence n Q hQ
+end Right
+
+section Nested
+variable (hQ : True ∧ (Q.PosDef ∧ True))
+reformulation fixedConjoinedNested : (fixedSource n Q) := by conic
+example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedNested n Q hQ) :=
+  fixedConjoinedNested.equivalence n Q hQ
+end Nested
+
+section Universal
+variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
+  (hFamily : ∀ i, True ∧ ((family i).PosDef ∧ True))
+reformulation fixedConjoinedUniversal : (fixedSource n (family 0)) := by conic
+example : GlobalEquivalence (fixedSource n (family 0))
+    (fixedConjoinedUniversal n family hFamily) :=
+  fixedConjoinedUniversal.equivalence n family hFamily
+end Universal
+
+section OuterConjunction
+variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
+  (hFamily : True ∧ (∀ i, (family i).PosDef ∧ True))
+reformulation fixedConjoinedOuterUniversal : (fixedSource n (family 0)) := by conic
+example : GlobalEquivalence (fixedSource n (family 0))
+    (fixedConjoinedOuterUniversal n family hFamily) :=
+  fixedConjoinedOuterUniversal.equivalence n family hFamily
+end OuterConjunction
+
+end ConjoinedDomains
+
 variable (P : Matrix (Fin n) (Fin n) ℝ) (hP : P.PosDef)
 
 reformulation fixedTarget : (fixedSource n P) := by conic

@@ -86,6 +86,28 @@ private def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
        fin_cases i <;> fin_cases j <;> norm_num [Matrix.of_apply] <;> ring)))
   unless goals.isEmpty do failure
 
+-- Project independent conjunctions before proof search. Quantified variables
+-- stay bound in each projected theorem, so applying a consequence cannot leave
+-- scratch arguments in the returned certificate. The shared budget bounds the
+-- total number of inspected conjunction and quantifier nodes per hypothesis.
+private partial def conjunctionConsequences (proof : Expr) (fuel : Nat) :
+    MetaM (Array Expr × Nat) := do
+  if fuel == 0 then return (#[], 0)
+  let fuel := fuel - 1
+  let type ← Expr.reduceStructure (← inferType proof)
+  if type.isAppOfArity ``And 2 then
+    let left ← mkAppM ``And.left #[proof]
+    let right ← mkAppM ``And.right #[proof]
+    let (leftConsequences, fuel) ← conjunctionConsequences left fuel
+    let (rightConsequences, fuel) ← conjunctionConsequences right fuel
+    return (#[left, right] ++ leftConsequences ++ rightConsequences, fuel)
+  if let .forallE name domain _ binderInfo := type then
+    return ← withLocalDecl name binderInfo domain fun argument => do
+      let (consequences, fuel) ← conjunctionConsequences (mkApp proof argument) fuel
+      let consequences ← consequences.mapM (mkLambdaFVars #[argument] ·)
+      return (consequences, fuel)
+  return (#[], fuel)
+
 private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat) :
     MetaM Unit := goal.withContext do
   if fuel == 0 then failure
@@ -157,6 +179,8 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
         if (← isProp declaration.type) && !(← Expr.depends point hypothesis) &&
             !(← Expr.hasUnresolved hypothesis) && !(← Evidence.hasPlaceholders hypothesis) then
           hypotheses := hypotheses.push hypothesis
+          let (consequences, _) ← conjunctionConsequences hypothesis 128
+          hypotheses := hypotheses ++ consequences
       let proposition ← mkAppM ``Matrix.IsSymm #[matrix]
       let proof ← mkFreshExprMVar proposition
       let context ← readThe Core.Context

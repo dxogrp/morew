@@ -28,6 +28,41 @@ example : GlobalEquivalence (largestSource n) (largestTarget n) :=
   largestTarget.equivalence n hn
 example : (largestTarget.conicForm n).data.rowCount = 1 := rfl
 
+def conjoinedLargestSource (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :=
+  problem (a t : ℝ)
+    minimize t
+    subject to bound : Fn.lambdaMax (a • 1 + P) ≤ t
+
+section ConjoinedSymmetry
+
+variable (P : Matrix (Fin n) (Fin n) ℝ)
+
+section Symmetric
+variable (hP : True ∧ (P.IsSymm ∧ True))
+reformulation conjoinedLargest : (conjoinedLargestSource n P) := by conic
+example : GlobalEquivalence (conjoinedLargestSource n P) (conjoinedLargest n P hP) :=
+  conjoinedLargest.equivalence n hn P hP
+end Symmetric
+
+section PositiveDefinite
+variable (hP : P.PosDef ∧ True)
+reformulation conjoinedPositiveLargest : (conjoinedLargestSource n P) := by conic
+example : GlobalEquivalence (conjoinedLargestSource n P)
+    (conjoinedPositiveLargest n P hP) :=
+  conjoinedPositiveLargest.equivalence n hn P hP
+end PositiveDefinite
+
+section Universal
+variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
+  (hFamily : ∀ i, True ∧ (family i).IsSymm)
+reformulation conjoinedUniversalLargest : (conjoinedLargestSource n (family 0)) := by conic
+example : GlobalEquivalence (conjoinedLargestSource n (family 0))
+    (conjoinedUniversalLargest n family hFamily) :=
+  conjoinedUniversalLargest.equivalence n hn family hFamily
+end Universal
+
+end ConjoinedSymmetry
+
 def normSource (m n : Nat) :=
   problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
     minimize t
