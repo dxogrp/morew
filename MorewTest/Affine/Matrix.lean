@@ -35,6 +35,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun (m n : Nat) (C : Matrix (Fin m) (Fin n) ℝ) =>
     fun x : ℝ => (x + 1) • C)) 3
   assertAffine (← `(fun n : Nat => fun x : Fin n → ℝ => Matrix.diagonal x)) 1
+  assertAffine (← `(fun n : Nat => fun A : Matrix (Fin n) (Fin n) ℝ => Matrix.trace A)) 1
+  assertAffine (← `(fun A : Matrix (Fin 0) (Fin 0) ℝ => Matrix.trace A))
+  assertAffine (← `(fun (m n : Nat) => fun p : SymmetricMatrix m × SymmetricMatrix n =>
+    (Matrix.trace p.1.toMatrix + Matrix.trace p.2.toMatrix) / 2)) 2
   assertAffine (← `(fun (m n : Nat) => fun A : Matrix (Fin m) (Fin n) ℝ => Aᵀ)) 2
   assertAffine (← `(fun A : Matrix (Fin 0) (Fin 2) ℝ => Aᵀ))
   assertAffine (← `(fun (m n : Nat) (C : Matrix (Fin m) (Fin n) ℝ) =>
@@ -61,6 +65,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Source enumerations and fixed reindexing are retained exactly. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ =>
+    letI := Fintype.ofFinite (Fin 2)
+    Matrix.trace A))
+  assertUnsupported (← `(fun x : ℝ =>
+    Matrix.trace (!![x * x] : Matrix (Fin 1) (Fin 1) ℝ)))
   assertAffine (← `(fun C : Matrix (Fin 2) (Fin 3) ℝ =>
     fun A : Matrix (Fin 4) (Fin 2) ℝ =>
     letI := Fintype.ofFinite (Fin 2)
