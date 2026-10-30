@@ -79,6 +79,7 @@ import MorewTest.ImportCompatibility.Reformulation
 import MorewTest.ImportCompatibility.Runner
 import MorewTest.ImportCompatibility.SecondOrder
 import MorewTest.ImportCompatibility.SecondOrder.Defined
+import MorewTest.ImportCompatibility.Spectral
 import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
@@ -167,6 +168,7 @@ import MorewTest.Reformulation.SecondOrderFailures
 import MorewTest.Reformulation.SmoothHelpers
 import MorewTest.Reformulation.Spectral
 import MorewTest.Reformulation.SpectralFailures
+import MorewTest.Reformulation.SpectralPrinting
 import MorewTest.Reformulation.SubstitutionBindingIdentity
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures
