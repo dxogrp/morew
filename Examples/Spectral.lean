@@ -36,8 +36,9 @@ example : GlobalEquivalence largestEigenvalueModel largestEigenvalueConic :=
   largestEigenvalueConic.equivalence
 example : IsConic largestEigenvalueConic := largestEigenvalueConic.isConic
 
--- The scope selects the Euclidean operator norm when this source is elaborated.
--- Rectangular matrices need no symmetry assumption.
+-- The scope selects the Euclidean operator norm in the modeled objective.
+-- Conic certificates use the decision space's algebraic structure, so their
+-- declarations below require no matrix norm scope.
 open scoped Matrix.Norms.L2Operator in
 def operatorNormModel :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
@@ -55,7 +56,6 @@ reformulation operatorNormConic : operatorNormModel := by
 
 example : GlobalEquivalence operatorNormModel operatorNormConic :=
   operatorNormConic.equivalence
-open scoped Matrix.Norms.Elementwise in
 example : IsConic operatorNormConic := operatorNormConic.isConic
 
 -- A nuclear-norm matrix completion introduces two symmetric matrices and uses
@@ -74,7 +74,6 @@ reformulation nuclearNormConic : nuclearNormModel := by
 #printp nuclearNormConic
 
 example : GlobalEquivalence nuclearNormModel nuclearNormConic := nuclearNormConic.equivalence
-open scoped Matrix.Norms.Elementwise in
 example : IsConic nuclearNormConic := nuclearNormConic.isConic
 
 -- The matrix fraction requires the explicit positive-definite domain. Its

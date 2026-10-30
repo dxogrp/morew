@@ -11,7 +11,6 @@ import MorewTest.Reformulation.PrintDetails
 namespace MorewTest.Reformulation.Spectral
 
 open Morew Morew.Conic
-open scoped Matrix.Norms.L2Operator
 
 noncomputable section
 
@@ -63,6 +62,7 @@ end Universal
 
 end ConjoinedSymmetry
 
+open scoped Matrix.Norms.L2Operator in
 def normSource (m n : Nat) :=
   problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
     minimize t
@@ -75,7 +75,13 @@ reformulation normTarget : (normSource m n) := by conic
 example : GlobalEquivalence (normSource m n) (normTarget (m := m) (n := n)) :=
   normTarget.equivalence (m := m) (n := n)
 example : (normTarget.conicForm (m := m) (n := n)).data.rowCount = 2 := rfl
+example : IsConic (normTarget (m := m) (n := n)) :=
+  normTarget.isConic (m := m) (n := n)
+example : (normTarget.conicForm (m := m) (n := n)).data.toProblem =
+    normTarget (m := m) (n := n) :=
+  (normTarget.conicForm (m := m) (n := n)).represents
 
+open scoped Matrix.Norms.L2Operator in
 def normObjective :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
     minimize ‖A‖
@@ -87,6 +93,7 @@ reformulation normObjectiveTarget : normObjective := by
   conic
 
 example : GlobalEquivalence normObjective normObjectiveTarget := normObjectiveTarget.equivalence
+example : IsConic normObjectiveTarget := normObjectiveTarget.isConic
 
 def nuclearSource (m n : Nat) :=
   problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
@@ -98,6 +105,8 @@ reformulation nuclearTarget : (nuclearSource m n) := by conic
 example : GlobalEquivalence (nuclearSource m n) (nuclearTarget (m := m) (n := n)) :=
   nuclearTarget.equivalence (m := m) (n := n)
 example : (nuclearTarget.conicForm (m := m) (n := n)).data.rowCount = 2 := rfl
+example : IsConic (nuclearTarget (m := m) (n := n)) :=
+  nuclearTarget.isConic (m := m) (n := n)
 
 reformulation nuclearIntermediate : (nuclearSource m n) := by conic at bound
 reformulation nuclearChained : (nuclearIntermediate (m := m) (n := n)) := by conic
@@ -135,7 +144,10 @@ reformulation emptyNorm : (normSource 0 0) := by conic
 reformulation emptyNuclear : (nuclearSource 0 0) := by conic
 example : emptyNorm.conicForm.data.rowCount = 2 := rfl
 example : emptyNuclear.conicForm.data.rowCount = 2 := rfl
+example : IsConic emptyNorm := emptyNorm.isConic
+example : IsConic emptyNuclear := emptyNuclear.isConic
 
+open scoped Matrix.Norms.L2Operator in
 def affineSource (m n : Nat) (B : Matrix (Fin m) (Fin n) ℝ) :=
   problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
     minimize t
