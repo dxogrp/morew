@@ -58,6 +58,7 @@ import Morew.Elab.Rewrite.Registry
 import Morew.Elab.State
 import Morew.Fn
 import Morew.Fn.Exponential
+import Morew.Fn.Matrix
 import Morew.Fn.Power
 import Morew.NLP
 import Morew.NLP.Basic
