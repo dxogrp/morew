@@ -37,8 +37,6 @@ example : GlobalEquivalence largestEigenvalueModel largestEigenvalueConic :=
 example : IsConic largestEigenvalueConic := largestEigenvalueConic.isConic
 
 -- The scope selects the Euclidean operator norm in the modeled objective.
--- Conic certificates use the decision space's algebraic structure, so their
--- declarations below require no matrix norm scope.
 open scoped Matrix.Norms.L2Operator in
 def operatorNormModel :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
