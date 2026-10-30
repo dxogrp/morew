@@ -235,5 +235,75 @@ example : copied E = UniverseSource.source E := rfl
 
 end UniverseReplay
 
+namespace ExplicitUniverseSource
+
+universe u v
+
+open scoped Classical
+
+-- The universe occurs only in the value, so omitting it leaves an unsolved
+-- level metavariable even though the value's type is already known.
+def levelValue.{w} : ℝ := if Nonempty (Type w) then 1 else 0
+
+def mixedValue.{a, b} (_E : Type a) : ℝ := if Nonempty (Type b) then 1 else 0
+
+opaque levelType.{w} : Type w := PUnit
+
+def bodyOnly :=
+  problem (x : ℝ) minimize ‖x‖ + levelValue.{u} + levelValue.{u + 1}
+
+def mixed (E : Type v) [Norm E] :=
+  problem (x : E) minimize ‖x‖ + mixedValue.{_, u} E
+
+-- A universe appearing in a constant's type can still be unconstrained by
+-- the enclosing term: Nonempty discards the sort level from its result.
+def hidden :=
+  problem (x : ℝ) minimize ‖x‖ + if Nonempty levelType.{u} then 1 else 0
+
+macro "explicitLevelValue% " name:ident : term => do
+  let level : Lean.TSyntax `level := ⟨name.raw⟩
+  `(levelValue.{$level})
+
+def expanded := problem (x : ℝ) minimize ‖x‖ + explicitLevelValue% u
+
+noncomputable def universeSized (x : ℝ) : Fin (Nat.floor (‖x‖ + |levelValue.{u}|) + 1) :=
+  ⟨0, Nat.zero_lt_succ _⟩
+
+def finSize {n : Nat} (_ : Fin n) := n
+
+-- The inferred annotation contains a universe-sensitive norm expression;
+-- the explicitly specialized value must still constrain its omitted level.
+def inferred :=
+  problem (x : ℝ)
+    let index := universeSized.{u} x
+    minimize (finSize index : ℝ)
+
+end ExplicitUniverseSource
+
+namespace ExplicitUniverseReplay
+
+universe u w
+
+variable (E : Type w) [Norm E]
+
+run_cmd do
+  for (original, copied) in #[(``ExplicitUniverseSource.bodyOnly, `bodyOnlyCopy),
+      (``ExplicitUniverseSource.mixed, `mixedCopy),
+      (``ExplicitUniverseSource.hidden, `hiddenCopy),
+      (``ExplicitUniverseSource.expanded, `expandedCopy),
+      (``ExplicitUniverseSource.inferred, `inferredCopy)] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) original
+      | Lean.throwError "missing explicit-universe norm source"
+    let term ← Lean.Elab.liftMacroM view.toTermSyntax
+    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
+
+example : bodyOnlyCopy.{u} = ExplicitUniverseSource.bodyOnly.{u} := rfl
+example : mixedCopy.{u, w} E = ExplicitUniverseSource.mixed.{u, w} E := rfl
+example : hiddenCopy.{u} = ExplicitUniverseSource.hidden.{u} := rfl
+example : expandedCopy.{u} = ExplicitUniverseSource.expanded.{u} := rfl
+example : inferredCopy.{u} = ExplicitUniverseSource.inferred.{u} := rfl
+
+end ExplicitUniverseReplay
+
 end
 end MorewTest.ImportCompatibility.Spectral

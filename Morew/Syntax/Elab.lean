@@ -96,6 +96,7 @@ private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr
 -- instance-sensitive, so its replay copy must retain the instance selected by
 -- the source elaboration. The readable view continues to use the original term.
 private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info)
+    (explicitUniverses : Array (Expr × Lean.Syntax))
     (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
   if let .ident (.synthetic start _ _) _ _ _ := stx then
     let termInfo? := match infos.get? start.byteIdx with
@@ -104,7 +105,10 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
       | _ => none
     if let some info := termInfo? then
       match info.expr with
-      | .const name _ => return mkCIdentFrom stx name
+      | .const name _ =>
+          if let some (_, source) := explicitUniverses.find? (·.1 == info.expr) then
+            return source
+          return mkCIdentFrom stx name
       | .fvar id =>
           -- Delaboration introduces fresh locals beneath lambda operands. Their
           -- printed names already respect shadowing and belong to that syntax,
@@ -116,20 +120,23 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
               -- selected instance's value rather than a transient binder name.
               let (value, valueInfos) ← PrettyPrinter.delabCore value {}
                 PrettyPrinter.Delaborator.delab
-              return ← freezeNormReplayReferences valueInfos value.raw
+              return ← freezeNormReplayReferences valueInfos explicitUniverses value.raw
           -- Replay retains the source binder's macro scopes. References must
           -- keep the same identity, including in whole-problem macros.
           let name := mkIdentFrom stx declaration.userName
           if declaration.binderInfo.isInstImplicit then
             let (type, typeInfos) ← PrettyPrinter.delabCore declaration.type {}
               PrettyPrinter.Delaborator.delab
-            let type : TSyntax `term := ⟨← freezeNormReplayReferences typeInfos type.raw⟩
+            let type : TSyntax `term :=
+              ⟨← freezeNormReplayReferences typeInfos explicitUniverses type.raw⟩
             return (← `(morew_replay_instance% $name : $type)).raw
           return name
       | _ => pure ()
-  return stx.setArgs (← stx.getArgs.mapM (freezeNormReplayReferences infos))
+  return stx.setArgs (← stx.getArgs.mapM (freezeNormReplayReferences infos explicitUniverses))
 
-private def normReplaySyntax (expression : Expr) : TermElabM (Option Lean.Syntax) := do
+private def normReplaySyntax (expression : Expr)
+    (explicitUniverses : Array (Expr × Lean.Syntax) := #[]) :
+    TermElabM (Option Lean.Syntax) := do
   let expression ← instantiateMVars expression
   -- Keep this low-level syntax module independent of the normed-space library.
   unless (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome do return none
@@ -142,7 +149,58 @@ private def normReplaySyntax (expression : Expr) : TermElabM (Option Lean.Syntax
       |>.set `pp.coercions false |>.set `pp.maxSteps (1000000 : Nat)) do
     let (term, infos) ← PrettyPrinter.delabCore expression {}
       PrettyPrinter.Delaborator.delab
-    return some (← freezeNormReplayReferences infos term.raw)
+    return some (← freezeNormReplayReferences infos explicitUniverses term.raw)
+
+-- Explicit universe arguments are not always inferable from the surrounding term.
+-- Preserve explicit source arguments, including macro expansions, without
+-- fixing inferred universes to the names of the source declaration's context.
+private partial def explicitUniverseHead? (stx : Lean.Syntax) : Option Lean.Syntax :=
+  if stx.isOfKind ``Lean.Parser.Term.explicitUniv then some stx
+  else if stx.isOfKind ``Lean.Parser.Term.app then explicitUniverseHead? stx[0]
+  else if stx.isOfKind ``Lean.Parser.Term.explicit || stx.isOfKind ``Lean.Parser.Term.paren then
+    explicitUniverseHead? stx[1]
+  else none
+
+-- Applied constants have information on the head identifier but not always
+-- on its universe suffix. Match that identifier's own information so a
+-- coercion added around the application cannot receive the suffix instead.
+private partial def explicitUniverseConstant? (head : Lean.Syntax) (tree : InfoTree) :
+    TermElabM (Option Expr) := do
+  match tree with
+  | .context _ child => explicitUniverseConstant? head child
+  | .node info children =>
+      if let .ofTermInfo info := info then
+        -- Name resolution can remove a quoted identifier's macro scopes in
+        -- its own info node. Its source position and user spelling still
+        -- identify the same head within this application's subtree.
+        let sameHead := info.stx == head ||
+          (info.stx.isIdent && head.isIdent && info.stx.getPos? == head.getPos? &&
+            info.stx.getId.eraseMacroScopes == head.getId.eraseMacroScopes)
+        if sameHead then
+          let expression ← instantiateMVars info.expr
+          if expression.isConst then return some expression
+      for child in children do
+        if let some expression ← explicitUniverseConstant? head child then return some expression
+      return none
+  | .hole _ => return none
+
+private partial def collectExplicitNormUniverses (tree : InfoTree)
+    (references : Array (Expr × Lean.Syntax) := #[]) :
+    TermElabM (Array (Expr × Lean.Syntax)) := do
+  match tree with
+  | .context _ child => collectExplicitNormUniverses child references
+  | .node info children =>
+      let mut references := references
+      if let .ofTermInfo info := info then
+        if let some explicit := explicitUniverseHead? info.stx then
+          if let some expression ← explicitUniverseConstant? explicit[0] tree then
+            if let .const name _ := expression then
+              let source := explicit.setArg 0 (mkCIdentFrom explicit[0] name)
+              references := references.push (expression, source)
+      for child in children do
+        references ← collectExplicitNormUniverses child references
+      return references
+  | .hole _ => return references
 
 private def inferredDefinitionTypes (definitions : List Morew.Syntax.DefinitionView)
     (body : Expr) : TermElabM (Array Morew.Syntax.DefinitionView) := do
@@ -174,8 +232,11 @@ private partial def collectNormReplays (fields : Array Lean.Syntax) (tree : Info
         -- lets, or splice one norm syntax into different instance contexts.
         -- Replacing individual syntax occurrences would lose those contexts.
         if fields.contains info.stx then
-          if let some term ← withLCtx' info.lctx (normReplaySyntax info.expr) then
-            replays := replays.push (info.stx, term)
+          let expression ← instantiateMVars info.expr
+          if !expression.hasMVar && (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome then
+            let explicitUniverses ← collectExplicitNormUniverses tree
+            if let some term ← withLCtx' info.lctx (normReplaySyntax expression explicitUniverses) then
+              replays := replays.push (info.stx, term)
       for child in children do replays ← collectNormReplays fields child replays
       return replays
   | .hole _ => return replays
