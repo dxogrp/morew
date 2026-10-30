@@ -58,6 +58,7 @@ import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
 import MorewTest.ImportCompatibility.OccurrenceBounds
+import MorewTest.ImportCompatibility.PSD
 import MorewTest.ImportCompatibility.Polyhedral
 import MorewTest.ImportCompatibility.Polyhedral.Defined
 import MorewTest.ImportCompatibility.PowerChainPrinting
@@ -134,6 +135,8 @@ import MorewTest.Reformulation.OccurrenceStructure.Defined
 import MorewTest.Reformulation.OccurrenceStructureDefaults
 import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
+import MorewTest.Reformulation.PSD
+import MorewTest.Reformulation.PSDFailures
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
 import MorewTest.Reformulation.Power
