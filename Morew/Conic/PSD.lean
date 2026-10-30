@@ -17,6 +17,10 @@ symmetrized.
 
 The Schur-complement certificates use an explicitly positive-definite pivot.
 Block matrices use the first `m` and last `n` indices of `Fin (m + n)`.
+
+The `Morew.Conic.PSD.*` modules prove exact representations of spectral bounds,
+matrix fractions, and positive-definite domains using this cone. Their rewrite
+records are available from `Morew.Conic.PSD.Representations`.
 -/
 
 namespace Morew.Conic

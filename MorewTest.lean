@@ -28,6 +28,10 @@ import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
+import MorewTest.Conic.PSD.LambdaMax
+import MorewTest.Conic.PSD.MatrixFraction
+import MorewTest.Conic.PSD.NuclearNorm
+import MorewTest.Conic.PSD.SpectralNorm
 import MorewTest.Conic.PSDElab
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
