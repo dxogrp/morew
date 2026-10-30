@@ -9,9 +9,9 @@ import Morew.Reformulation
 # Finite power-cone chains and exact presentation replay
 
 Finite power-cone chains retain exact replay under conflicting consumer-side
-declarations. Their readable views retain the dimensions and necessary embeddings,
-with omitted index proofs even at concrete dimensions. Readable replay is checked
-for the original source views, which do not omit these proofs.
+declarations. Their mathematical print views preserve dimensions and arithmetic structure while
+omitting canonical casts and index proofs. Readable replay is checked for the
+original source views; mathematical rows never enter either stored replay view.
 -/
 
 namespace MorewTest.Reformulation.PowerPrinting
@@ -32,31 +32,29 @@ reformulation triple : (source 3) := by conic at mean
 reformulation singleton : (source 1) := by conic at mean
 
 /--
-info: problem (x : Fin 3 → ℝ) (t : ℝ) (mean_aux : Fin 3 → ℝ)
+info: -- Mathematical view
+problem (x : Fin 3 → ℝ) (t : ℝ) (mean_aux : Fin 3 → ℝ)
   maximize t
   subject to
     domain : 0 ≤ x
-    mean_conic_1 : mean_aux ⟨0, triple._proof_1⟩ = x ⟨0, triple._proof_1⟩
-    mean_conic_2 : ∀ (j : Fin (3 - 1)),
-      (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    mean_conic_3 : 0 ≤ mean_aux ⟨3 - 1, triple._proof_5⟩
-    mean_conic_4 : t ≤ mean_aux ⟨3 - 1, triple._proof_5⟩
+    mean_conic_1 : mean_aux[0] = x[0]
+    mean_conic_2 : ∀ j : ℕ, j < 3 - 1 ⇒ (mean_aux[j], x[j + 1], mean_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    mean_conic_3 : 0 ≤ mean_aux[3 - 1]
+    mean_conic_4 : t ≤ mean_aux[3 - 1]
 -/
 #guard_msgs in
 #printp triple
 
 /--
-info: problem (x : Fin 1 → ℝ) (t : ℝ) (mean_aux : Fin 1 → ℝ)
+info: -- Mathematical view
+problem (x : Fin 1 → ℝ) (t : ℝ) (mean_aux : Fin 1 → ℝ)
   maximize t
   subject to
     domain : 0 ≤ x
-    mean_conic_1 : mean_aux ⟨0, singleton._proof_1⟩ = x ⟨0, singleton._proof_1⟩
-    mean_conic_2 : ∀ (j : Fin (1 - 1)),
-      (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    mean_conic_3 : 0 ≤ mean_aux ⟨1 - 1, singleton._proof_5⟩
-    mean_conic_4 : t ≤ mean_aux ⟨1 - 1, singleton._proof_5⟩
+    mean_conic_1 : mean_aux[0] = x[0]
+    mean_conic_2 : ∀ j : ℕ, j < 1 - 1 ⇒ (mean_aux[j], x[j + 1], mean_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    mean_conic_3 : 0 ≤ mean_aux[1 - 1]
+    mean_conic_4 : t ≤ mean_aux[1 - 1]
 -/
 #guard_msgs in
 #printp singleton
@@ -69,16 +67,15 @@ reformulation targeted : (source n) := by conic at mean
 reformulation ready : (targeted n hn) := by conic
 
 /--
-info: problem (x : Fin n → ℝ) (t : ℝ) (mean_aux : Fin n → ℝ)
+info: -- Mathematical view
+problem (x : Fin n → ℝ) (t : ℝ) (mean_aux : Fin n → ℝ)
   maximize t
   subject to
     domain : 0 ≤ x
-    mean_conic_1 : mean_aux ⟨0, hn⟩ = x ⟨0, hn⟩
-    mean_conic_2 : ∀ (j : Fin (n - 1)),
-      (mean_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, mean_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    mean_conic_3 : 0 ≤ mean_aux ⟨n - 1, ⋯⟩
-    mean_conic_4 : t ≤ mean_aux ⟨n - 1, ⋯⟩
+    mean_conic_1 : mean_aux[0] = x[0]
+    mean_conic_2 : ∀ j : ℕ, j < n - 1 ⇒ (mean_aux[j], x[j + 1], mean_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    mean_conic_3 : 0 ≤ mean_aux[n - 1]
+    mean_conic_4 : t ≤ mean_aux[n - 1]
 -/
 #guard_msgs in
 #printp targeted
@@ -114,29 +111,27 @@ reformulation triple : (source 3) := by conic at inverse
 reformulation singleton : (source 1) := by conic at inverse
 
 /--
-info: problem (x : Fin 3 → ℝ) (t : ℝ) (inverse_aux : Fin 3 → ℝ)
+info: -- Mathematical view
+problem (x : Fin 3 → ℝ) (t : ℝ) (inverse_aux : Fin 3 → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
-    inverse_conic_1 : inverse_aux ⟨0, GeometricMean.triple._proof_1⟩ = x ⟨0, GeometricMean.triple._proof_1⟩
-    inverse_conic_2 : ∀ (j : Fin (3 - 1)),
-      (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    inverse_conic_3 : (t, inverse_aux ⟨3 - 1, GeometricMean.triple._proof_5⟩, 1) ∈ POW (1 / 4)
+    inverse_conic_1 : inverse_aux[0] = x[0]
+    inverse_conic_2 : ∀ j : ℕ, j < 3 - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    inverse_conic_3 : (t, inverse_aux[3 - 1], 1) ∈ POW (1 / 4)
 -/
 #guard_msgs in
 #printp triple
 
 /--
-info: problem (x : Fin 1 → ℝ) (t : ℝ) (inverse_aux : Fin 1 → ℝ)
+info: -- Mathematical view
+problem (x : Fin 1 → ℝ) (t : ℝ) (inverse_aux : Fin 1 → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
-    inverse_conic_1 : inverse_aux ⟨0, GeometricMean.singleton._proof_1⟩ = x ⟨0, GeometricMean.singleton._proof_1⟩
-    inverse_conic_2 : ∀ (j : Fin (1 - 1)),
-      (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    inverse_conic_3 : (t, inverse_aux ⟨1 - 1, GeometricMean.singleton._proof_5⟩, 1) ∈ POW (1 / 2)
+    inverse_conic_1 : inverse_aux[0] = x[0]
+    inverse_conic_2 : ∀ j : ℕ, j < 1 - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    inverse_conic_3 : (t, inverse_aux[1 - 1], 1) ∈ POW (1 / 2)
 -/
 #guard_msgs in
 #printp singleton
@@ -149,15 +144,14 @@ reformulation targeted : (source n) := by conic at inverse
 reformulation ready : (targeted n hn) := by conic
 
 /--
-info: problem (x : Fin n → ℝ) (t : ℝ) (inverse_aux : Fin n → ℝ)
+info: -- Mathematical view
+problem (x : Fin n → ℝ) (t : ℝ) (inverse_aux : Fin n → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
-    inverse_conic_1 : inverse_aux ⟨0, hn⟩ = x ⟨0, hn⟩
-    inverse_conic_2 : ∀ (j : Fin (n - 1)),
-      (inverse_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, inverse_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    inverse_conic_3 : (t, inverse_aux ⟨n - 1, ⋯⟩, 1) ∈ POW (1 / ((↑n : ℝ) + 1))
+    inverse_conic_1 : inverse_aux[0] = x[0]
+    inverse_conic_2 : ∀ j : ℕ, j < n - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    inverse_conic_3 : (t, inverse_aux[n - 1], 1) ∈ POW (1 / (n + 1))
 -/
 #guard_msgs in
 #printp targeted

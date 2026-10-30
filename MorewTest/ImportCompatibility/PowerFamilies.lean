@@ -22,16 +22,16 @@ reformulation imported : (Defined.lowered 3 (by decide)) := by
   conic at remaining
 
 /--
-info: problem (x : Fin 3 → ℝ) (t : ℝ) (reciprocal_aux : Fin 3 → ℝ)
+info: -- Mathematical view
+problem (x : Fin 3 → ℝ) (t : ℝ) (reciprocal_aux : Fin 3 → ℝ)
   minimize t
   subject to
     domain : (fun x => 1) ≤ x
     mean : 0 ≤ Fn.geoMean x
-    reciprocal_conic_1 : reciprocal_aux ⟨0, imported._proof_1⟩ = x ⟨0, imported._proof_1⟩
-    reciprocal_conic_2 : ∀ (j : Fin (3 - 1)),
-      (reciprocal_aux ⟨(↑j : ℕ), ⋯⟩, x ⟨(↑j : ℕ) + 1, ⋯⟩, reciprocal_aux ⟨(↑j : ℕ) + 1, ⋯⟩) ∈
-        POW (((↑(↑j : ℕ) : ℝ) + 1) / ((↑(↑j : ℕ) : ℝ) + 2))
-    reciprocal_conic_3 : (t, reciprocal_aux ⟨3 - 1, imported._proof_6⟩, 1) ∈ POW (1 / ((↑3 : ℝ) + 1))
+    reciprocal_conic_1 : reciprocal_aux[0] = x[0]
+    reciprocal_conic_2 : ∀ j : ℕ, j < 3 - 1 ⇒
+      (reciprocal_aux[j], x[j + 1], reciprocal_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
+    reciprocal_conic_3 : (t, reciprocal_aux[3 - 1], 1) ∈ POW (1 / (3 + 1))
     remaining_conic_1 : t ≤ 5
     remaining_conic_2 : -t ≤ 5
 -/

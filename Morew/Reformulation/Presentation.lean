@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.State
+import Morew.Reformulation.PowerChainPrinting
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Power.Cone
@@ -25,6 +26,27 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 -- notation. This internal flag is also kept separate from ordinary printing.
 private def powerMembershipReplayOption : Name :=
   `Morew.Reformulation.Internal.powerMembershipReplay
+
+-- Enabled only while constructing the compact print payload. Replay and the
+-- ordinary readable syntax remain independent of this presentation choice.
+private def compactIndexProofsOption : Name :=
+  `Morew.Reformulation.Internal.compactIndexProofs
+
+-- Lean normally prints atomic proof names even with `pp.proofs = false`.
+-- Annotating just the bound-proof slots makes its ordinary proof-omission
+-- machinery hide them, without changing constructors, indices, or types.
+-- Both term and type rendering use this copy only for compact print payloads.
+private def compactFiniteIndexProofs (expression : Expr) (replay : Bool) : MetaM Expr := do
+  if replay || !(← getOptions).getBool compactIndexProofsOption then return expression
+  -- The delaborator also discards these replay annotations. Remove them before
+  -- finding constructors so annotated application heads cannot bypass hiding.
+  let expression ← erasePatternRefAnnotations expression
+  Meta.transform expression (post := fun value => do
+    if value.isAppOfArity ``Fin.mk 3 then
+      let args := value.getAppArgs
+      return .done (mkAppN value.getAppFn #[args[0]!, args[1]!,
+        mkAnnotation `Morew.Reformulation.Internal.compactFiniteIndexProof args[2]!])
+    return .continue)
 
 private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
     (stx : Lean.Syntax) : Option Name := do
@@ -136,7 +158,8 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 /-- Readable binder type syntax with fixed global references and local names
 that can be retained in presentation metadata across sections. -/
 def presentationTypeSyntax (type : Expr) (replay : Bool := true)
-    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax :=
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
+  let type ← compactFiniteIndexProofs type replay
   -- Generated auxiliary types need the same fixed class projections as row
   -- bodies, while retaining their readable spelling in imported metadata.
   withOptions (fun options =>
@@ -630,6 +653,7 @@ def delabPresentationTerm (expression : Expr)
         if !body.hasLooseBVar 0 && (← isProp type) then
           return .visit (body.instantiate1 value)
       return .continue)
+  let expression ← compactFiniteIndexProofs expression replay
   -- Reserve the displayed names before choosing names for inner binders.
   -- Generated decisions carry hygiene scopes, which must not make an inner
   -- lambda appear free to reuse the same visible spelling.
@@ -771,16 +795,16 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
 
 /-- Read the paired definition spines using the same opaque local for each
 binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
-private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
+private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.ProblemView)
     (objective feasible : Expr) (names : Array (FVarId × Name))
     (replay : Bool) (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
-      Array (FVarId × Name) → TermElabM Morew.Syntax.ProblemView) :
-    TermElabM Morew.Syntax.ProblemView := do
+      Array (FVarId × Name) → TermElabM α) :
+    TermElabM α := do
   let rec visit (remaining : List Morew.Syntax.DefinitionView)
       (definitions : Array Morew.Syntax.DefinitionView)
       (objective feasible : Expr) (names : Array (FVarId × Name)) :
-      TermElabM Morew.Syntax.ProblemView := do
+      TermElabM α := do
     let definition :: remaining := remaining
       | return ← action definitions objective feasible names
     let .letE _ type value body _ := objective.consumeMData
@@ -800,14 +824,14 @@ private def withModelDefinitionBodies (template : Morew.Syntax.ProblemView)
         (names.push (binding.fvarId!, definition.name))
   visit template.definitions.toList #[] objective feasible names
 
-/-- Recover printable bodies from a checked problem while retaining the supplied
-ordered names. Applied sources also instantiate binder types; existing bare-name
-sources retain their original spelling, including type aliases. -/
-def problemViewFromExpression (target : Expr)
+-- Inspect rows while their typed decision variables and local definitions are
+-- still in scope. Callers may persist only frozen syntax, never these expressions.
+private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
+    (inspectRows : Array Expr → Array (FVarId × Name) → TermElabM α) (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
     (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
-    TermElabM Morew.Syntax.ProblemView := do
+    TermElabM (Morew.Syntax.ProblemView × α) := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
@@ -821,10 +845,17 @@ def problemViewFromExpression (target : Expr)
     else pure target
   let domain := targetType.getArg! 0
   let binderTypes ← splitProductDomain domain template.binders.size
+  let compactTypes := forRegistration && (← getOptions).getBool compactIndexProofsOption
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
-    if instantiateBinderTypes then
+    -- A bare-name refresh normally keeps the template's spelling. Inspect a
+    -- type containing finite constructors only for its compact proof slots.
+    let binderType ← if compactTypes then erasePatternRefAnnotations binderTypes[index]!
+      else pure binderTypes[index]!
+    let hasFiniteConstructor := (binderType.find?
+      (·.isAppOfArity ``Fin.mk 3)).isSome
+    if instantiateBinderTypes || (compactTypes && hasFiniteConstructor) then
       pure { binder with
-        typeSyntax := ← presentationTypeSyntax binderTypes[index]!
+        typeSyntax := ← presentationTypeSyntax binderType
           (!forRegistration) parameterInstances }
     else
       pure binder
@@ -848,7 +879,7 @@ def problemViewFromExpression (target : Expr)
         (!forRegistration) parameterInstances
       let constraintSyntax ← constraints.mapM fun proposition =>
         delabPresentationTerm proposition binderNames (!forRegistration) parameterInstances
-      pure {
+      let view := {
         template with
         binders := displayedBinders
         definitions
@@ -856,6 +887,7 @@ def problemViewFromExpression (target : Expr)
         constraints := template.constraints.mapIdx fun index constraint =>
           { constraint with proposition := constraintSyntax[index]! }
       }
+      return (view, ← inspectRows constraints binderNames)
     if recoverDefinitions then
       let objectiveBody ← openPresentationBody objective domain binders
       let feasibleBody ← openPresentationBody feasible domain binders
@@ -863,6 +895,17 @@ def problemViewFromExpression (target : Expr)
         binderNames (!forRegistration) parameterInstances render
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
+
+/-- Recover printable bodies from a checked problem while retaining the supplied
+ordered names. Applied sources also instantiate binder types; existing bare-name
+sources retain their original spelling, including type aliases. -/
+def problemViewFromExpression (target : Expr)
+    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
+    (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
+    TermElabM Morew.Syntax.ProblemView := do
+  return (← problemViewWithRowsFromExpression (fun _ _ => pure ()) target template
+    instantiateBinderTypes recoverDefinitions forRegistration parameterInstances).1
 
 /-- Recover a typed presentation from a checked problem expression. -/
 def typedPresentationFromExpression (target : Expr)
@@ -901,7 +944,7 @@ same emitted declaration and parameter telescope. -/
 def refreshProblemView (targetName : Name)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
     CommandElabM Unit := do
-  let (refreshed, displayed) ← runTermElabM fun _ => do
+  let (refreshed, displayed, printed) ← runTermElabM fun _ => do
     -- Inspect the declaration's own parameters, independently of the section
     -- that emitted it. Fresh universe metavariables or ambient local names
     -- must not leak into persistent presentation metadata.
@@ -992,8 +1035,20 @@ def refreshProblemView (targetName : Name)
             (parameterInstances := parameterInstances)
           let display ← problemViewFromExpression target template instantiateBinderTypes
             (forRegistration := true)
-          pure (replay, display))
-  Morew.Syntax.registerProblemView targetName refreshed (some displayed)
+          let (compact, mathematicalRows) ← withOptions (fun options =>
+              options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
+                |>.setBool compactIndexProofsOption true) do
+            problemViewWithRowsFromExpression (fun rows names =>
+              powerChainPrintRows rows (fun expression =>
+                delabPresentationTerm expression names false)) target template instantiateBinderTypes
+              (forRegistration := true)
+          let detailed ← if getPPProofs (← getOptions) then pure display else
+            withOptions (·.setBool `pp.proofs true) do
+              problemViewFromExpression target template instantiateBinderTypes
+                (forRegistration := true)
+          pure (replay, display,
+            { compact, detailed, mathematicalRows : Morew.Syntax.ProblemPrintPresentation }))
+  Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)
 
 /-- Rebase a retained presentation into the current section-variable context. -/
 def withTypedPresentation (state : ReformState)
