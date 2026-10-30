@@ -1,4 +1,6 @@
 import Morew.Affine
+import Morew.Affine.Matrix
+import Morew.Affine.SymmetricMatrix
 import Morew.Conic
 import Morew.Conic.Basic
 import Morew.Conic.Cone

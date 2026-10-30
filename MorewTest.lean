@@ -5,6 +5,7 @@ import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.HelperLimits
 import MorewTest.Affine.Helpers
 import MorewTest.Affine.LocalContext
+import MorewTest.Affine.Matrix
 import MorewTest.Affine.RealPower
 import MorewTest.Affine.Reification
 import MorewTest.Affine.StateIsolation

@@ -72,6 +72,12 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else if name == ``Finset.sum then some 3
     else if ([`Finset.sup', `Finset.inf'].contains name) then some 3
     else if ([``dotProduct, ``Matrix.mulVec, ``Matrix.vecMul].contains name) then some 5
+    else if name == ``Matrix.transpose then some 3
+    else if name == ``Matrix.diagonal then some 4
+    else if name == ``Matrix.submatrix then some 5
+    else if name == ``Matrix.fromBlocks then some 5
+    else if name == `Morew.Conic.fromBlocksFin then some 2
+    else if name == `Morew.Conic.SymmetricMatrix.toMatrix then some 1
     else if ([``WithLp.toLp, ``WithLp.ofLp].contains name) then some 2
     else if ([``LE.le, ``GE.ge, ``LT.lt].contains name) then some 2
     else if name == ``Eq then some 1
@@ -155,7 +161,23 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   | _ => pure ()
   let head := expression.getAppFn
   let arguments := expression.getAppArgs
+  -- Matrix.of and Matrix.reindex are equivalences applied through a canonical
+  -- coercion. Preserve that coercion and its fixed parameters, visiting only
+  -- the matrix operand; recognition checks the complete typed prefix.
+  if head.isConstOf ``DFunLike.coe && arguments.size >= 6 then
+    let operation := arguments[4]!
+    if operation.isAppOf ``Matrix.of || operation.isAppOf ``Matrix.reindex then
+      let mut expanded := arguments
+      for i in [5:arguments.size] do
+        expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
+      return mkAppN head expanded
   if let some name := head.constName? then
+    if name == `Morew.Conic.SymmetricMatrix.ofMatrix && arguments.size >= 3 then
+      let mut expanded := arguments
+      expanded := expanded.set! 1 (← visit arguments[1]! reduce bounds depth)
+      for i in [3:arguments.size] do
+        expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
+      return mkAppN head expanded
     if let some first := operandStart? name arguments.size then
       let mut expanded := arguments
       for i in [first:arguments.size] do

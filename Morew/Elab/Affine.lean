@@ -4,6 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Affine
+import Morew.Affine.Matrix
+import Morew.Affine.SymmetricMatrix
 import Morew.Elab.Expr
 import Morew.Elab.Affine.Space
 import Morew.Elab.State
@@ -101,6 +103,20 @@ private def withFiniteInstances (instances : List Expr) (action : ReifyM Expr) :
 private def functionOf (point body : Expr) : MetaM Expr :=
   mkLambdaFVars #[point] body
 
+private partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) :
+    MetaM Bool := do
+  let expression ← instantiateMVars expression
+  if expression.hasSorry then return true
+  let mut seen := seen
+  for id in (collectFVars {} expression).fvarIds do
+    unless seen.contains id do
+      seen := seen.insert id
+      let declaration ← id.getDecl
+      if ← hasPlaceholders declaration.type seen then return true
+      if let some value := declaration.value? (allowNondep := true) then
+        if ← hasPlaceholders value seen then return true
+  return false
+
 private def certifiedFunction (certificate : Expr) : MetaM Expr := do
   let type ← instantiateMVars (← inferType certificate)
   unless type.isAppOf ``Morew.Affine.Certified do
@@ -135,6 +151,24 @@ private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : Reify
   if ← Expr.depends point inst then
     reject inst "the finite indexing instance depends on a decision variable"
   mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
+
+-- Matrix multiplication stores its finite enumeration inside the HMul instance.
+-- Look through instance aliases only; the arithmetic prefix is checked again
+-- against the canonical constructor before a certificate can escape.
+private partial def matrixIndexInstance? (instanceExpr : Expr) (fuel : Nat := 32) :
+    MetaM (Option Expr) := do
+  if fuel == 0 then return none
+  let instanceExpr ← Expr.reduceStructure instanceExpr
+  if instanceExpr.isAppOfArity ``Matrix.instHMulOfFintypeOfMulOfAddCommMonoid 7 then
+    return some instanceExpr.getAppArgs[4]!
+  -- Square multiplication can arrive through the ordinary Mul-to-HMul bridge.
+  if instanceExpr.isAppOfArity ``instHMul 2 then
+    return ← matrixIndexInstance? instanceExpr.getAppArgs[1]! (fuel - 1)
+  if instanceExpr.isAppOfArity ``Matrix.instMulOfFintypeOfAddCommMonoid 5 then
+    return some instanceExpr.getAppArgs[2]!
+  if let some expanded ← unfoldDefinition? instanceExpr then
+    return ← matrixIndexInstance? expanded (fuel - 1)
+  return none
 
 private def construct (point source : Expr) (name : Name) (args : Array Expr)
     (operandCount? : Option Nat := none) : ReifyM Expr := do
@@ -210,6 +244,10 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← construct point expression ``Morew.Affine.Certified.const #[domain, expression]
   if expression == point then
     return ← construct point expression ``Morew.Affine.Certified.id #[domain]
+  if let .proj ``Subtype 0 value := expression then
+    if (← Expr.symmetricMatrixDimension? (← inferType value)).isSome then
+      let value ← reifyBody point value provider
+      return ← construct point expression ``Morew.Affine.Certified.fromSymmetricMatrix #[value]
   if let .proj ``WithLp 0 value := expression then
     if (← Expr.euclideanDimension? (← inferType value)).isSome then
       let value ← reifyBody point value provider
@@ -227,6 +265,56 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   let head := expression.getAppFn
   let args := expression.getAppArgs
   let name := head.constName?
+  if name == some ``Morew.Conic.SymmetricMatrix.toMatrix && args.size == 2 then
+    let value ← reifyBody point args[1]! provider
+    return ← construct point expression ``Morew.Affine.Certified.fromSymmetricMatrix #[value] (some 1)
+  if name == some ``Subtype.val && args.size == 3 then
+    if (← Expr.symmetricMatrixDimension? (← inferType args[2]!)).isSome then
+      let value ← reifyBody point args[2]! provider
+      return ← construct point expression ``Morew.Affine.Certified.fromSymmetricMatrix #[value]
+  if name == some ``Morew.Conic.SymmetricMatrix.ofMatrix && args.size == 3 then
+    let value ← reifyBody point args[1]! provider
+    let proof ← mkLambdaFVars #[point] args[2]!
+    if (← Expr.hasUnresolved proof) || (← hasPlaceholders proof) then
+      reject args[2]! "the symmetry proof contains unresolved metavariables or placeholders"
+    return ← construct point expression ``Morew.Affine.Certified.toSymmetricMatrix #[value, proof]
+  if name == some ``Morew.Conic.fromBlocksFin && args.size == 6 then
+    let mut blocks := #[]
+    for block in args[2:] do
+      blocks := blocks.push (← reifyBody point block provider)
+    return ← construct point expression ``Morew.Affine.Certified.fromBlocksFin blocks (some 4)
+  if name == some ``DFunLike.coe && args.size == 6 then
+    let operation ← Expr.reduceStructure args[4]!
+    if operation.isAppOfArity ``Matrix.of 3 then
+      let value ← reifyBody point args[5]! provider
+      return ← construct point expression ``Morew.Affine.Certified.matrixOf #[value] (some 1)
+    if operation.isAppOfArity ``Matrix.reindex 7 then
+      let opArgs := operation.getAppArgs
+      for index in #[opArgs[5]!, opArgs[6]!] do
+        if ← Expr.depends point index then
+          reject index "the matrix reindexing depends on a decision variable"
+      let value ← reifyBody point args[5]! provider
+      return ← construct point expression ``Morew.Affine.Certified.reindex
+        #[opArgs[5]!, opArgs[6]!, value] (some 1)
+  if name == some ``Matrix.transpose && args.size == 4 then
+    let value ← reifyBody point args[3]! provider
+    return ← construct point expression ``Morew.Affine.Certified.transpose #[value] (some 1)
+  if name == some ``Matrix.diagonal && args.size == 5 then
+    return ← withIndexInstance point args[2]! do
+      let value ← reifyBody point args[4]! provider
+      return ← construct point expression ``Morew.Affine.Certified.diagonal #[value] (some 1)
+  if name == some ``Matrix.submatrix && args.size == 8 then
+    for index in #[args[6]!, args[7]!] do
+      if ← Expr.depends point index then
+        reject index "the matrix index map depends on a decision variable"
+    let value ← reifyBody point args[5]! provider
+    return ← construct point expression ``Morew.Affine.Certified.submatrix
+      #[value, args[6]!, args[7]!] (some 3)
+  if name == some ``Matrix.fromBlocks && args.size == 9 then
+    let mut blocks := #[]
+    for block in args[5:] do
+      blocks := blocks.push (← reifyBody point block provider)
+    return ← construct point expression ``Morew.Affine.Certified.fromBlocks blocks (some 4)
   if name == some ``WithLp.toLp && args.size == 3 then
     if (← Expr.euclideanDimension? type).isSome then
       let value ← reifyBody point args[2]! provider
@@ -249,6 +337,19 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``HMul.hMul && args.size == 6 then
     let left := args[4]!
     let right := args[5]!
+    if let some index ← matrixIndexInstance? args[3]! then
+      return ← withIndexInstance point index do
+        if !(← Expr.depends point left) then
+          let rightMap ← reifyBody point right provider
+          return ← construct point expression ``Morew.Affine.Certified.matrixMulConstLeft
+            #[left, rightMap] (some 2)
+        if !(← Expr.depends point right) then
+          let leftMap ← reifyBody point left provider
+          return ← construct point expression ``Morew.Affine.Certified.matrixMulConstRight
+            #[leftMap, right] (some 2)
+        discard <| reifyBody point left provider
+        discard <| reifyBody point right provider
+        reject expression "both matrix factors of multiplication depend on decision variables"
     if !(← Expr.depends point left) then
       let rightMap ← reifyBody point right provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstLeft
@@ -263,7 +364,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``HSMul.hSMul && args.size == 6 then
     let coefficient := args[4]!
     if ← Expr.depends point coefficient then
-      if !(← Expr.depends point args[5]!) && (← isDefEq type (mkConst ``Real)) &&
+      if !(← Expr.depends point args[5]!) &&
           (← isDefEq (← inferType coefficient) (mkConst ``Real)) then
         let scalar ← reifyBody point coefficient provider
         return ← construct point expression ``Morew.Affine.Certified.smulConst
@@ -380,6 +481,8 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
   let source ← instantiateMVars source
   if (← Expr.inspectLocals source none).2 then
     reject source "unresolved metavariables are not supported"
+  if ← hasPlaceholders source then
+    reject source "proof placeholders are not supported"
   let type ← whnf (← inferType source)
   let .forallE _ domain codomain _ := type
     | reject source "expected a function from a decision space"
@@ -426,7 +529,7 @@ def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
     unless ← Expansion.enabled do return direct
     -- Do not expand an incompletely elaborated term or allow expansion to
     -- discard an unresolved argument before the original input is checked.
-    if (← Expr.inspectLocals source none).2 then return direct
+    if (← Expr.inspectLocals source none).2 || (← hasPlaceholders source) then return direct
     let prepared ← Expansion.prepare source
       (fun expression preserve => Expr.reduceStructure expression preserve)
     if prepared.expansions == 0 then return direct
