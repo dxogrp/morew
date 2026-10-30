@@ -8,6 +8,8 @@ import Morew.Elab.Affine
 import Morew.Elab.State
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Evidence
+import Morew.Elab.Conic.Normalize
+import Morew.Elab.Conic.Symmetry
 import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
@@ -16,7 +18,8 @@ import Morew.Elab.Expr
 # Checked affine row normalization
 
 This internal API recognizes elaborated scalar and finite-vector equality and
-inequality predicates, and native second-order, exponential and power cone membership.
+inequality predicates, native second-order, exponential, power and PSD cone membership,
+and ordinary real matrix positive semidefiniteness with global symmetry evidence.
 A finite family of exponential or power memberships remains one quantified presentation
 row and is certified against the finite product cone. The API returns a semantic
 cone row and a checked pointwise equivalence, without changing a problem or its
@@ -33,6 +36,29 @@ structure RowResult where
   constraint : Expr
   /-- Proof of `∀ x, constraint.Holds x ↔ predicate x`. -/
   pointwiseIff : Expr
+  /-- Checked source-to-membership conversion, retained for terminal normalization. -/
+  normalization? : Option PredicateNormalization := none
+
+/-- Transform every expression in a row, including its cached normalization evidence. -/
+def RowResult.mapExprM (row : RowResult) (f : Expr → MetaM Expr) : MetaM RowResult := do
+  return {
+    constraint := ← f row.constraint
+    pointwiseIff := ← f row.pointwiseIff
+    normalization? := ← row.normalization?.mapM fun normalized => do
+      return { normalized with
+        predicate := ← f normalized.predicate
+        pointwiseIff := ← f normalized.pointwiseIff }
+  }
+
+/-- Rebase a row and all its cached evidence onto a new variable context. -/
+def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : RowResult := {
+  constraint := row.constraint.replaceFVars oldVars newVars
+  pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars
+  normalization? := row.normalization?.map fun normalized => {
+    normalized with
+    predicate := normalized.predicate.replaceFVars oldVars newVars
+    pointwiseIff := normalized.pointwiseIff.replaceFVars oldVars newVars }
+}
 
 -- Fix the real normed-space instances before subtracting. The certified maps
 -- can use definitionally equal instance aliases that typeclass search alone
@@ -84,6 +110,14 @@ private theorem normalizeMembership
   intro x
   change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
   rw [h x]
+
+private def canonicalPositiveSemidefinite (n : Nat)
+    (value : Matrix (Fin n) (Fin n) ℝ) : Prop := value.PosSemidef
+
+private theorem positiveSemidefiniteMembership {n : Nat}
+    (value : Matrix (Fin n) (Fin n) ℝ) (symmetric : value.IsSymm) :
+    value.PosSemidef ↔ Morew.Conic.SymmetricMatrix.ofMatrix value symmetric ∈
+      (Morew.Conic.Cone.positiveSemidefinite n).carrier := Iff.rfl
 
 private def canonicalScalarZeroMembership (value : ℝ) : Prop :=
   value ∈ ({0} : Set ℝ)
@@ -182,10 +216,7 @@ private partial def withPredicateLets (point body : Expr)
       match ← withPredicateLets point (rest.instantiate1 binding) action with
       | .error error => return .error error
       | .ok result =>
-        return .ok {
-          constraint := ← result.constraint.replaceFVarsM #[binding] #[value]
-          pointwiseIff := ← result.pointwiseIff.replaceFVarsM #[binding] #[value]
-        }
+        return .ok (← result.mapExprM (·.replaceFVarsM #[binding] #[value]))
   else
     action body
 
@@ -227,7 +258,8 @@ private def membershipData (point body : Expr) (label? : Option Name)
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
       cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
       cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3 ||
-      cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 do
+      cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 ||
+      cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
   let power := cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
     cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3
@@ -339,6 +371,82 @@ private def normalizeZeroMembershipRow (predicate domain point body : Expr)
       throwError "row equivalence did not match the input predicate"
     return (constraint, pointwiseIff)
   return .ok { constraint, pointwiseIff }
+
+private def normalizePositiveSemidefiniteRow (predicate domain point body : Expr)
+    (provider : Affine.EvidenceProvider) (label? : Option Name) :
+    MetaM (Except Expr.Error RowResult) := do
+  let value := body.getAppArgs.back!
+  let .forallE _ row columnType _ ← whnf (← inferType value)
+    | return .error (← rowError body "PSD coordinates require a square real matrix indexed by Fin n" label?)
+  let .forallE _ column scalar _ ← whnf columnType
+    | return .error (← rowError body "PSD coordinates require a square real matrix indexed by Fin n" label?)
+  let row ← whnf row
+  let column ← whnf column
+  unless row.isAppOfArity ``Fin 1 && column.isAppOfArity ``Fin 1 &&
+      (← isDefEq row column) && (← whnf scalar).isConstOf ``Real do
+    return .error (← rowError body "PSD coordinates require a square real matrix indexed by Fin n; use fromBlocksFin for block indexing" label?)
+  let n := row.getAppArgs[0]!
+  if ← Expr.depends point n then
+    return .error (← rowError body "PSD matrix dimension depends on the decision point" label?)
+  let canonical := (mkAppN (← getConstInfo ``canonicalPositiveSemidefinite).value!
+    #[n, value]).headBeta
+  let arguments := body.getAppArgs
+  let canonicalArguments := canonical.getAppArgs
+  unless arguments.size == canonicalArguments.size do
+    return .error (← rowError body "PSD predicate has an unsupported instance signature" label?)
+  for index in [:arguments.size - 1] do
+    unless ← isDefEq arguments[index]! canonicalArguments[index]! do
+      return .error (← rowError body "PSD predicate uses unsupported scalar or matrix instances" label?)
+  unless ← isDefEq body canonical do
+    return .error (← rowError body "PSD predicate uses unsupported scalar or matrix instances" label?)
+  let source ← mkLambdaFVars #[point] value
+  let affine ← Affine.reifyAffine source provider
+  let .ok affine := affine
+    | let .error error := affine
+        | throwError "internal error: missing affine PSD coordinates"
+      return .error (← rowError error.expression m!"PSD matrix entry or block: {error.reason}" label?)
+  let some symmetric ← Symmetry.prove? point value
+    | return .error (← rowError value
+        m!"missing global matrix symmetry: required ∀ point, ({source} point).IsSymm; supply an all-point symmetry proof or a structurally symmetric expression" label?)
+  let cone ← mkAppM ``Morew.Conic.Cone.positiveSemidefinite #[n]
+  let target ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
+  let (constraint, membershipIff) ← Space.withCanonicalConeSpaces domain target do
+    let certificate ← Affine.Space.withCanonicalSpaces #[domain, ← inferType value, target] do
+      let ordinary ← mkAppM ``Morew.Affine.Certified.mk
+        #[affine.map, affine.pointwiseEquality]
+      instantiateMVars (← mkAppM ``Morew.Affine.Certified.toSymmetricMatrix
+        #[ordinary, symmetric])
+    let map ← mkProjection certificate `map
+    let correct ← mkProjection certificate `correct
+    let lifted ← mkLambdaFVars #[point]
+      (← mkAppM ``Morew.Conic.SymmetricMatrix.ofMatrix #[value, mkApp symmetric point])
+    return (← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.mk #[cone, map]),
+      ← instantiateMVars (← mkAppM ``normalizeMembership #[cone, map, lifted, correct]))
+  let conversion ← mkAppM ``positiveSemidefiniteMembership #[value, mkApp symmetric point]
+  let normalizedBody := (← inferType conversion).getAppArgs[1]!
+  let normalized ← mkLambdaFVars #[point] normalizedBody
+  let normalizationProof ← mkLambdaFVars #[point] conversion
+  let pointwiseIff ← mkLambdaFVars #[point]
+    (← mkAppM ``Iff.trans #[mkApp membershipIff point, ← mkAppM ``Iff.symm #[conversion]])
+  for proof in #[constraint, pointwiseIff, normalizationProof] do
+    if proof.hasMVar || (← Evidence.hasPlaceholders proof) then
+      throwError "PSD certification left incomplete proof evidence"
+    checkWithKernel proof
+  let constraintType ← inferType constraint
+  let holds := mkAppN
+    (mkConst ``Morew.Conic.Constraint.Holds constraintType.getAppFn.constLevels!)
+    (constraintType.getAppArgs ++ #[constraint, point])
+  let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+  unless ← isDefEq (← inferType pointwiseIff) expected do
+    throwError "PSD row equivalence did not match the input predicate"
+  return .ok {
+    constraint
+    pointwiseIff
+    normalization? := some {
+      predicate := normalized
+      pointwiseIff := normalizationProof
+      changed := true }
+  }
 
 private def normalizeMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
@@ -469,6 +577,8 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
     -- Preserve the typed relation head while eliminating language-level
     -- wrappers, including the product patterns used by the surface DSL.
     withPredicateLets point (mkApp predicate point) fun body => do
+      if body.isAppOf ``Matrix.PosSemidef then
+        return ← normalizePositiveSemidefiniteRow predicate domain point body provider label?
       if body.isAppOfArity ``Membership.mem 5 then
         if (← whnfUntil body.getAppArgs[1]! ``Set).isSome then
           unless (← Expr.reduceStructure body.getAppArgs[3]!).isAppOfArity
@@ -540,10 +650,7 @@ private def withFiniteInstances (instances : List Expr)
     withLetDecl `_sourceFinite (← inferType inst) inst fun binding => do
       match ← withFiniteInstances rest action with
       | .error error => return .error error
-      | .ok result => return .ok {
-          constraint := ← result.constraint.replaceFVarsM #[binding] #[inst]
-          pointwiseIff := ← result.pointwiseIff.replaceFVarsM #[binding] #[inst]
-        }
+      | .ok result => return .ok (← result.mapExprM (·.replaceFVarsM #[binding] #[inst]))
 
 private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvider)
     (label? : Option Name) : MetaM (Except Expr.Error RowResult) := do
@@ -554,8 +661,8 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
     normalizeRowWithInstances predicate provider label?
 
 /-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, a canonical
-zero singleton, native nonnegative, zero, second-order, exponential or power cone
-membership, or one finite quantified family of exponential or power memberships.
+zero singleton, native nonnegative, zero, second-order, exponential, power or PSD cone
+membership, ordinary matrix PSD, or one finite quantified family of exponential or power memberships.
 Every cone coordinate must be affine.
 The optional label supplies diagnostic context without depending on source
 syntax or presentation metadata. -/

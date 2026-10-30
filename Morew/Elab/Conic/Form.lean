@@ -103,9 +103,7 @@ private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
   for expression in #[row.constraint, row.pointwiseIff] do
     if ← Morew.Elab.Rewrite.Plan.unresolved expression then
       throwError "cached row contains unresolved metavariables"
-  let row := { row with
-    constraint := ← instantiateMVars row.constraint
-    pointwiseIff := ← instantiateMVars row.pointwiseIff }
+  let row ← row.mapExprM instantiateMVars
   checkWithKernel row.constraint
   checkWithKernel row.pointwiseIff
   let constraintType ← whnf (← inferType row.constraint)
@@ -192,11 +190,12 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
     checkWithKernel form
     return form
   -- A declaration inferred directly from this expression must support ordinary
-  -- `.data` projections. Keep its explicit instances, while exposing aliases in
-  -- the domain so later typeclass search can recognize the structural space.
-  let formType ← inferType form
+  -- `.data` projections. Expose aliases in the domain and in every canonical
+  -- instance type: retaining Matrix aliases inside a product's group would
+  -- prevent later NormedSpace synthesis even after exposing the outer domain.
   let domain ← Space.structuralDomain presentation.domainType
-  let publicType := mkAppN formType.getAppFn (formType.getAppArgs.set! 0 domain)
+  let publicType ← Space.withCanonicalDomain domain do
+    mkAppOptM ``Morew.Conic.Form #[some domain, none, none, none, some canonical]
   let form ← mkAppOptM ``id #[some publicType, some form]
   checkWithKernel form
   return .ok form

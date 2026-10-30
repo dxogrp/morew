@@ -8,6 +8,7 @@ import Morew.Reformulation.PowerChainPrinting
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Power.Cone
+import Morew.Conic.PSD
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
@@ -445,6 +446,15 @@ def packPoint (components : Array Expr) : MetaM Expr := do
 Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
 private def coneNotationOption : Name := `Morew.Reformulation.Internal.coneNotation
 
+-- Matrix literals infer dimensions as successor constructors. Render just
+-- these literal constructors as numerals, retaining symbolic dimensions.
+private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat) := do
+  let dimension := dimension.consumeMData
+  if dimension.isConstOf ``Nat.zero then return some 0
+  if dimension.isAppOfArity ``Nat.succ 1 then
+    return (← psdDimensionLiteral? dimension.getAppArgs[0]!).map (· + 1)
+  getNatValue? dimension
+
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.carrier]
 private def delabConeCarrier : Delab := do
@@ -458,14 +468,21 @@ private def delabConeCarrier : Delab := do
     return ← `(ℝ₊)
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
-    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1
+    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
+    cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
   -- Keep the original subexpression position, so dimension references are
   -- frozen by the same pass as the rest of the generated presentation.
-  let dimension ← withAppArg <| withAppArg delab
+  let dimension ← withAppArg <| withAppArg do
+    if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 then
+      if let some n ← psdDimensionLiteral? (← getExpr) then
+        return ⟨Syntax.mkNumLit (toString n)⟩
+    delab
   if cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 then
     `(SOC $dimension)
   else if cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 then
     `(RSOC $dimension)
+  else if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 then
+    `(PSD $dimension)
   else
     `(ℝ₊^$dimension)
 
