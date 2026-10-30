@@ -19,7 +19,7 @@ open Morew
 
 noncomputable section
 
-structure CertifiedRow {X : Type} [NormedAddCommGroup X] [NormedSpace ℝ X]
+structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
     (predicate : X → Prop) where
   row : Morew.Conic.Constraint X
   equivalent : ∀ x, row.Holds x ↔ predicate x

@@ -31,30 +31,33 @@ structure Structure (X : Type*) where
 
 namespace Structure
 
+-- Persisted conic forms expose these structures in their public types. Keep
+-- them reducible so ordinary instance search recognizes the canonical algebra.
+
 /-- Standard real structures, resolved in this declaration's fixed context. -/
-noncomputable def real : Structure ℝ where
+noncomputable abbrev real : Structure ℝ where
   group := inferInstance
   module := inferInstance
 
 /-- Standard finite Euclidean structures, fixed independently of local instances. -/
-noncomputable def euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) where
+noncomputable abbrev euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) where
   group := inferInstance
   module := inferInstance
 
 /-- Canonical structures on the named symmetric-matrix submodule. -/
-noncomputable def symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) where
+noncomputable abbrev symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) where
   group := inferInstance
   module := inferInstance
 
 /-- The standard product structures on two explicitly supplied spaces. -/
-noncomputable def prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
+noncomputable abbrev prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
     Structure (X × Y) where
   group := @Prod.instAddCommGroup X Y a.group b.group
   module := @Prod.instModule ℝ X Y inferInstance
     a.group.toAddCommMonoid b.group.toAddCommMonoid a.module b.module
 
 /-- The standard pointwise structures on a nondependent function space. -/
-noncomputable def pi (ι : Type*) {Y : Type*} (a : Structure Y) :
+noncomputable abbrev pi (ι : Type*) {Y : Type*} (a : Structure Y) :
     Structure (ι → Y) where
   group := @Pi.addCommGroup ι (fun _ => Y) (fun _ => a.group)
   module := @Pi.module ι (fun _ => Y) ℝ inferInstance

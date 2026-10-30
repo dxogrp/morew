@@ -60,16 +60,16 @@ def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : Ro
     pointwiseIff := normalized.pointwiseIff.replaceFVars oldVars newVars }
 }
 
--- Fix the real normed-space instances before subtracting. The certified maps
+-- Fix the real algebraic instances before subtracting. The certified maps
 -- can use definitionally equal instance aliases that typeclass search alone
 -- does not unfold when asked to infer a heterogeneous subtraction operation.
 private def subtractMaps
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (f g : X →ᵃ[ℝ] Y) : X →ᵃ[ℝ] Y := f - g
 
 private theorem normalizeEq
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (f g : X →ᵃ[ℝ] Y) (lhs rhs : X → Y)
     (hf : ∀ x, f x = lhs x) (hg : ∀ x, g x = rhs x) :
@@ -80,7 +80,7 @@ private theorem normalizeEq
   rw [hf, hg, sub_eq_zero]
 
 private theorem normalizeLE
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
     [PosSMulMono ℝ Y] (f g : X →ᵃ[ℝ] Y) (lhs rhs : X → Y)
@@ -103,7 +103,7 @@ private def canonicalPowerMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Pr
 private def powerExponentRange (α : ℝ) : Prop := 0 < α ∧ α < 1
 
 private theorem normalizeMembership
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     (cone : Morew.Conic.Cone) (map : X →ᵃ[ℝ] cone.Space)
     (source : X → cone.Space) (h : ∀ x, map x = source x) :
     ∀ x, (Morew.Conic.Constraint.mk cone map).Holds x ↔ source x ∈ cone.carrier := by
@@ -131,7 +131,7 @@ private def canonicalVectorZero (n : Nat) : Fin n → ℝ :=
   @Zero.zero (Fin n → ℝ) inferInstance
 
 private theorem normalizeZeroMembership
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (map : X →ᵃ[ℝ] Y)
     (source : X → Y) (h : ∀ x, map x = source x) :
@@ -140,7 +140,7 @@ private theorem normalizeZeroMembership
   rw [Morew.Conic.Constraint.holds_eqZero, h x, Set.mem_singleton_iff]
 
 private theorem normalizeExponentialFamily
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     (n : Nat) (map : X →ᵃ[ℝ] (Morew.Conic.Cone.exponentialProduct n).Space)
     (source : X → Fin n → ℝ × ℝ × ℝ) (h : ∀ x, map x = source x) :
     ∀ x, (Morew.Conic.Constraint.mk (Morew.Conic.Cone.exponentialProduct n) map).Holds x ↔
@@ -151,7 +151,7 @@ private theorem normalizeExponentialFamily
   exact Morew.Conic.Cone.mem_exponentialProduct (source x)
 
 private theorem normalizePowerFamily
-    {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    {X : Type u} [AddCommGroup X] [Module ℝ X]
     (n : Nat) (α : Fin n → ℝ) (hα : ∀ i, 0 < α i ∧ α i < 1)
     (map : X →ᵃ[ℝ] (Morew.Conic.Cone.powerProduct n α hα).Space)
     (source : X → Fin n → ℝ × ℝ × ℝ) (h : ∀ x, map x = source x) :

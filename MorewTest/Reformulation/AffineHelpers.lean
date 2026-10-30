@@ -309,12 +309,11 @@ reformulation nativeCoordinateTarget : nativeCoordinate := by
 example : GlobalEquivalence nativeCoordinate nativeCoordinateTarget :=
   nativeCoordinateTarget.equivalence
 
--- Form notation needs an ambient canonical enumeration after the commands
--- have demonstrated that they recover the helper's evidence themselves.
+-- Form notation needs only finiteness after the commands have demonstrated
+-- that they recover the helper's evidence themselves.
 local instance : Finite Parameter.Index := by
   let := Fintype.ofEquiv (Fin 2) Parameter.equivalence
   infer_instance
-local instance : Fintype Parameter.Index := Fintype.ofFinite Parameter.Index
 
 example : IsConic anotherRowTarget := anotherRowTarget.isConic
 example : IsConic selectedRowTarget := selectedRowTarget.isConic

@@ -281,12 +281,10 @@ example : GlobalEquivalence source automaticTarget := automaticTarget.equivalenc
 example : GlobalEquivalence source selectedTarget := selectedTarget.equivalence
 example : GlobalEquivalence auxiliarySource auxiliaryTarget := auxiliaryTarget.equivalence
 
--- Only finiteness is recovered from source expressions. For ordinary field
--- notation, install the same canonical enumeration used by the stored forms.
+-- Ordinary certificate use needs only finiteness, without an ambient enumeration.
 local instance : Finite Parameter.Index := by
   let := Fintype.ofEquiv (Fin 2) Parameter.equiv
   infer_instance
-local instance : Fintype Parameter.Index := Fintype.ofFinite Parameter.Index
 
 example : automaticTarget.conicForm.data.rowCount = 2 := rfl
 example : selectedTarget.conicForm.data.rowCount = 2 := rfl
@@ -318,7 +316,6 @@ def IndexAlias := Fin 2
 local instance : Finite IndexAlias := by
   change Finite (Fin 2)
   infer_instance
-local instance : Fintype IndexAlias := Fintype.ofFinite IndexAlias
 
 def first : IndexAlias := (0 : Fin 2)
 
@@ -331,7 +328,7 @@ def source :=
 reformulation target : source := by
   conic
 
--- The exported form retains the index spelling required by its stored norm.
+-- The exported form retains the index spelling and needs only its finiteness.
 example : target.conicForm.data.rowCount = 1 := rfl
 example : target.conicForm.data.toProblem = target := target.conicForm.represents
 example : Conic.Form target := target.conicForm
