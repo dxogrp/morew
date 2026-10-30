@@ -58,13 +58,76 @@ def emptyCone : Cone where
 example : (0 : ℝ) ∉ emptyCone.carrier := by
   exact Set.notMem_empty 0
 
-example {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+example {X : Type u} [AddCommGroup X] [Module ℝ X]
     (c : Constraint X) : Convex ℝ {x | c.Holds x} :=
   c.feasibleSetConvex
 
-example {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
+example {X : Type u} [AddCommGroup X] [Module ℝ X]
     [FiniteDimensional ℝ X] {p : Problem X ℝ} (form : Form p) : IsConic p :=
   form.isConic
+
+/-! ## Algebraic decision spaces need no ambient norm -/
+
+namespace Algebraic
+
+variable {X : Type u} [AddCommGroup X] [Module ℝ X]
+
+-- Individual rows do not require finite-dimensional decision spaces either.
+def row (f : X →ᵃ[ℝ] ℝ) : Constraint X where
+  cone := Cone.nonnegativeScalar
+  map := f
+
+example (f : X →ᵃ[ℝ] ℝ) (x : X) : (row f).Holds x ↔ 0 ≤ f x := Iff.rfl
+
+example (f : X →ᵃ[ℝ] ℝ) (x : X) :
+    (Constraint.eqZero f).Holds x ↔ f x = 0 := by simp
+
+example (f : X →ᵃ[ℝ] ℝ) (x : X) :
+    (Constraint.nonnegative f).Holds x ↔ 0 ≤ f x := by simp
+
+example (f : X →ᵃ[ℝ] ℝ) : Convex ℝ {x | (row f).Holds x} :=
+  (row f).feasibleSetConvex
+
+variable [FiniteDimensional ℝ X]
+
+def data (sense : ObjectiveSense) (f : X →ᵃ[ℝ] ℝ) (c : Constraint X) : Data X where
+  sense := sense
+  objective := f
+  rowCount := 1
+  constraints := fun _ => c
+
+def form (sense : ObjectiveSense) (f : X →ᵃ[ℝ] ℝ) (c : Constraint X) :
+    Form (data sense f c).toProblem where
+  data := data sense f c
+  represents := rfl
+
+example (f : X →ᵃ[ℝ] ℝ) (c : Constraint X) : IsConic (data .minimize f c).toProblem :=
+  (form .minimize f c).isConic
+
+example (f : X →ᵃ[ℝ] ℝ) (c : Constraint X) :
+    Convex ℝ {x | (data .maximize f c).toProblem.feasible x} :=
+  (data .maximize f c).feasibleSetConvex
+
+def unconstrainedData (f : X →ᵃ[ℝ] ℝ) : Data X where
+  sense := .minimize
+  objective := f
+  rowCount := 0
+  constraints := Fin.elim0
+
+def unconstrainedForm (f : X →ᵃ[ℝ] ℝ) : Form (unconstrainedData f).toProblem where
+  data := unconstrainedData f
+  represents := rfl
+
+example (f : X →ᵃ[ℝ] ℝ) : IsConic (unconstrainedData f).toProblem :=
+  (unconstrainedForm f).isConic
+
+example (f : X →ᵃ[ℝ] ℝ) (x : X) : (unconstrainedData f).toProblem.feasible x := by
+  simp [unconstrainedData]
+
+example (f : X →ᵃ[ℝ] ℝ) : Convex ℝ {x | (unconstrainedData f).toProblem.feasible x} :=
+  (unconstrainedData f).feasibleSetConvex
+
+end Algebraic
 
 /-! ## Scalar minimization and maximization -/
 
