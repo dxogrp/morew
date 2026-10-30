@@ -341,7 +341,13 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
     (step, .step auxiliary source indexName size)]
   if let [(final, (value, exponent, hasCast))] := inverses.toList then
     unless signs.isEmpty && bounds.isEmpty do return none
-    let exponent ← if hasCast then do
+    -- A dimension is a natural-number value. Removing its cast is harmless for
+    -- an atomic name or numeral, but moving a compound expression into real
+    -- arithmetic can change its meaning (notably truncated Nat subtraction).
+    let dimension := chain.dimension.consumeMData
+    let atomicDimension := dimension.isFVar || dimension.isConst ||
+      (← naturalLiteral? dimension).isSome
+    let exponent ← if hasCast && atomicDimension then do
         let dimension : TSyntax `term := ⟨← renderLeaf chain.dimension⟩
         pure (← `(1 / ($dimension + 1))).raw
       else renderLeaf exponent

@@ -198,5 +198,31 @@ run_cmd do
 
 example : GlobalEquivalence projectedSource projected := projected.equivalence
 
+-- A natural subtraction inside a dimension must be evaluated before its result
+-- enters the real-valued exponent. Retain that cast in the mathematical view.
+def compoundSource (n m : ℕ) :=
+  problem (x : Fin (n - m + 3) → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      domain : (fun _ => (1 : ℝ)) ≤ x
+      inverse : Fn.invProd x ≤ t
+
+variable (n m : ℕ)
+
+reformulation compound : (compoundSource n m) := by conic at inverse
+reformulation compoundReady : (compound n m) := by conic
+
+run_cmd do
+  for declaration in #[``compound, ``compoundReady] do
+    checkMathematical declaration #["Fin (n - m + 3)",
+      "POW (1 / ((↑(n - m + 3) : ℝ) + 1))"]
+
+example : (1 / ((((0 : ℕ) - 2 + 3 : ℕ) : ℝ) + 1) : ℝ) = 1 / 4 := by norm_num
+example : (1 / ((0 : ℝ) - 2 + 3 + 1) : ℝ) = 1 / 2 := by norm_num
+example : GlobalEquivalence (compoundSource n m) (compoundReady n m) :=
+  (compound.equivalence n m).trans (compoundReady.equivalence n m)
+example : (compoundReady.conicForm n m).data.toProblem = compoundReady n m :=
+  (compoundReady.conicForm n m).represents
+
 end
 end MorewTest.Reformulation.PowerChainPrinting
