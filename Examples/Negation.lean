@@ -10,8 +10,7 @@ import Morew
 
 Negating a represented function exchanges its epigraph and hypograph rules.
 Conic and smooth NLP rewrites share these identities, and graph records also
-support signed equations. The original function's domain and norm remain part
-of the model.
+support signed equations.
 -/
 
 namespace Examples.Negation
