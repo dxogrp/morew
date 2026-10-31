@@ -43,6 +43,11 @@ private def compactPSDOption : Name :=
 private def compactPSDCoordinatesOption : Name :=
   `Morew.Reformulation.Internal.compactPSDCoordinates
 
+-- Applied Lp coordinate projections are implicit in ordinary function notation.
+-- Enable this only for print payloads; reconstruction views retain the fields.
+private def coordinateNotationOption : Name :=
+  `Morew.Reformulation.Internal.coordinateNotation
+
 -- Lean normally prints atomic proof names even with `pp.proofs = false`.
 -- Annotating just the bound-proof slots makes its ordinary proof-omission
 -- machinery hide them, without changing constructors, indices, or types.
@@ -549,6 +554,25 @@ private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
     match ← trySynthInstance (← inferType stored) with
     | .some inferred => isDefEq stored inferred
     | _ => pure false
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.WithLp.ofLp]
+private def delabLpCoordinate : Delab := do
+  let options ← getOptions
+  unless options.getBool coordinateNotationOption && !options.getBool `pp.explicit do failure
+  withOverApp 4 do
+    let expression ← getExpr
+    guard <| expression.isAppOfArity ``WithLp.ofLp 4
+    let args := expression.getAppArgs
+    let domain ← inferType args[2]!
+    let functionType := Lean.mkLambda `_ .default domain args[1]!
+    let projection := mkAppN expression.getAppFn (args.extract 0 2)
+    let canonical ← mkAppOptM ``CoeFun.mk
+      #[some domain, some functionType, some projection]
+    guard (← presentationInstanceResynthesizes canonical)
+    let value ← withNaryArg 2 delab
+    let index ← withNaryArg 3 delab
+    `($value $index)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.powerSet]
@@ -1162,13 +1186,14 @@ def refreshProblemView (targetName : Name)
             (forRegistration := true)
           let (compact, mathematicalRows) ← withOptions (fun options =>
               options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
-                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true) do
+                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true
+                |>.setBool coordinateNotationOption true) do
             problemViewWithRowsFromExpression (fun rows names =>
               powerChainPrintRows rows (fun expression =>
                 delabPresentationTerm expression names false)) target template instantiateBinderTypes
               (forRegistration := true)
-          let detailed ← if getPPProofs (← getOptions) then pure display else
-            withOptions (·.setBool `pp.proofs true) do
+          let detailed ← withOptions (fun options =>
+              options.setBool `pp.proofs true |>.setBool coordinateNotationOption true) do
               problemViewFromExpression target template instantiateBinderTypes
                 (forRegistration := true)
           pure (replay, display,
