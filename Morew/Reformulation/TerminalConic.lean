@@ -242,11 +242,54 @@ private def materializeTerminalConic (state : ReformState)
       status := .terminal
     }
 
+-- Explicit class constructors historically reduced during surface
+-- canonicalization. Keep that behavior when the complete exposed predicate is
+-- directly conic. A failed check retains its original operations for registry
+-- matching, so reduction cannot authorize a rule for a different instance.
+private partial def normalizeDirectOperations (point body : Expr)
+    (bindings : Array Expr := #[]) : MetaM Expr := do
+  let body ← Morew.Elab.Expr.reduceStructure body (preserveLets := true)
+  if let .letE name type value rest nondep := body then
+    return ← withLetDecl name type value (nondep := nondep) fun binding => do
+      let result ← normalizeDirectOperations point (rest.instantiate1 binding)
+        (bindings.push binding)
+      mkLetFVars #[binding] result
+        (usedLetOnly := false) (generalizeNondepLet := false)
+  if body.isAppOfArity ``And 2 then
+    return mkApp2 (mkConst ``And)
+      (← normalizeDirectOperations point body.getAppArgs[0]! bindings)
+      (← normalizeDirectOperations point body.getAppArgs[1]! bindings)
+  let checked ← Morew.Elab.State.withIsolatedMVars do
+    try
+      let candidate ← dsimpPreservingProofLets body (preserveOperations := false)
+      if candidate == body then return .ok body
+      unless ← isDefEq candidate body do return .error ()
+      let scopedBody ← mkLetFVars bindings candidate
+        (usedLetOnly := false) (generalizeNondepLet := false)
+      let predicate ← mkLambdaFVars #[point] scopedBody
+      let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate predicate
+      for leaf in leaves do
+        if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return .error ()
+      return .ok candidate
+    catch _ => return .error ()
+  return checked.toOption.getD body
+
+private def normalizeDirectPresentation (presentation : PresentationState) : MetaM PresentationState := do
+  let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
+      (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
+    let constraints ← presentation.constraints.mapM fun row => do
+      let predicate ← withLocalDeclD `point presentation.domainType fun point => do
+        mkLambdaFVars #[point] (← normalizeDirectOperations point (mkApp row.predicate point))
+      return { row with predicate }
+    return .ok { presentation with constraints }
+  return result.toOption.getD presentation
+
 /-- Plan the complete exact conversion and request all generated local names. -/
 def prepareTerminalConic (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft := withRef step do
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
+    let presentation ← normalizeDirectPresentation presentation
     match ← Morew.Elab.Conic.Terminal.plan presentation with
     | .error error => throwError "terminal conic validation is uncertified: {error.reason}"
     | .ok result => pure (result, sectionFVars)

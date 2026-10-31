@@ -208,14 +208,33 @@ def problemTypeSyntaxFromExpression (expression : Expr) :
     value := ← exactExpressionSyntax value
   }
 
--- Disable automatic zeta reduction while explicitly reducing data lets. Proof
--- lets stay in their original scope so later analytic checks can use their
--- evidence without treating a decision- or index-dependent fact as global.
-private def proofPreservingSimpMethods : Simp.Methods :=
+-- Preserve class operation heads and their actual instances. Reducing a
+-- constructor-backed `Neg.neg`, `LE.le`, or `Norm.norm` here would erase the
+-- operations that typed rewrite matching must check. Operands still simplify,
+-- as do the ordinary structure projections used by problem scaffolding.
+private def classOperationPrefix? (expression : Expr) : MetaM (Option (Expr × Array Expr)) := do
+  let .const name _ := expression.getAppFn | return none
+  let some info ← getProjectionFnInfo? name | return none
+  unless info.fromClass do return none
+  let arguments := expression.getAppArgs
+  let prefixSize := min arguments.size (info.numParams + 1)
+  return some (mkAppN expression.getAppFn (arguments.extract 0 prefixSize),
+    arguments.extract prefixSize arguments.size)
+
+-- Disable automatic zeta reduction while explicitly reducing data lets when
+-- requested. Proof lets then stay in their original scope so later analytic
+-- checks can use their evidence without treating a decision-dependent fact as
+-- global.
+private def presentationSimpMethods (preserveProofLets : Bool)
+    (preserveOperations : Bool := true) : Simp.Methods :=
   let defaults := Simp.mkDefaultMethodsCore #[]
   { defaults with
     pre := fun expression => do
+      if preserveOperations then
+        if let some (function, arguments) ← classOperationPrefix? expression then
+          return .done (← Simp.congrArgs { expr := function } arguments)
       if let .letE name type value body nondep := expression then
+        unless preserveProofLets do return ← defaults.pre expression
         unless ← isProp type do
           return .visit { expr := body.instantiate1 value }
         -- The default have-telescope traversal also absorbs following data
@@ -231,7 +250,11 @@ private def proofPreservingSimpMethods : Simp.Methods :=
           return .done { result with expr, proof? }
       defaults.pre expression
     dpre := fun expression => do
+      if preserveOperations then
+        if let some (function, arguments) ← classOperationPrefix? expression then
+          return .done (mkAppN function (← arguments.mapM Simp.dsimp))
       if let .letE name type value body nondep := expression then
+        unless preserveProofLets do return ← defaults.dpre expression
         unless ← isProp type do
           return .visit (body.instantiate1 value)
         return ← withLetDecl name type value (nondep := nondep) fun binding => do
@@ -253,18 +276,20 @@ def simpOnly (expression : Expr) (lemmas : Array Name := #[])
     (config := if preserveProofLets then { zeta := false, zetaUnused := false } else {})
     (simpTheorems := #[theorems])
     (congrTheorems := ← getSimpCongrTheorems)
-  let (result, _) ← if preserveProofLets then
-      Simp.main expression context (methods := proofPreservingSimpMethods)
-    else simp expression context
+  let (result, _) ← Simp.main expression context
+    (methods := presentationSimpMethods preserveProofLets)
   instantiateMVars result.expr
 
-/-- Reduce generated scaffolding while retaining local proof evidence. -/
-def dsimpPreservingProofLets (expression : Expr) : MetaM Expr := do
+/-- Reduce generated scaffolding while retaining local proof evidence. Operation
+reduction is reserved for directly certifying a complete predicate, never for
+discovering a registered representation. -/
+def dsimpPreservingProofLets (expression : Expr)
+    (preserveOperations : Bool := true) : MetaM Expr := do
   let context ← Simp.mkContext
     (config := { zeta := false, zetaUnused := false })
     (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
   let (expression, _) ← Simp.dsimpMain expression context
-    (methods := proofPreservingSimpMethods)
+    (methods := presentationSimpMethods true preserveOperations)
   instantiateMVars expression
 
 private partial def splitConstraintBody (body : Expr) (count : Nat) : MetaM (Array Expr) := do
