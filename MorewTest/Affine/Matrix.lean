@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import MorewTest.Affine.Support
 import Morew.Affine.SymmetricMatrix
 import Morew.Elab.Affine.Space
+import Morew.Fn.Matrix
 
 /-! Ordinary matrix notation, affine matrix operations, and exact symmetric restriction. -/
 
@@ -21,6 +22,8 @@ private def scalarHelper (x : ℝ) : ℝ := 2 * x + 1
 private def matrixOfHelper := Matrix.of (m := Fin 2) (n := Fin 2) (α := ℝ)
 private def matrixReindexHelper :=
   Matrix.reindex (Equiv.refl (Fin 2)) (Equiv.refl (Fin 2)) (α := ℝ)
+private def triangularHelper {n : Nat} (z : LowerTriangularEntries n) :=
+  lowerTriangularMatrix (fun ij => 2 * z ij + 1)
 
 /-! Native matrix operations remain available without helper expansion. -/
 
@@ -37,6 +40,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun n : Nat => fun x : Fin n → ℝ => Matrix.diagonal x)) 1
   assertAffine (← `(fun n : Nat => fun A : Matrix (Fin n) (Fin n) ℝ => Matrix.trace A)) 1
   assertAffine (← `(fun A : Matrix (Fin 0) (Fin 0) ℝ => Matrix.trace A))
+  assertAffine (← `(fun n : Nat => fun z : LowerTriangularEntries n =>
+    lowerTriangularMatrix z)) 1
+  assertAffine (← `(fun z : LowerTriangularEntries 0 => lowerTriangularMatrix z))
+  assertAffine (← `(fun n : Nat => fun p : LowerTriangularEntries n × (Fin n → ℝ) =>
+    lowerTriangularMatrix p.1 + Matrix.diagonal p.2)) 1
+  assertAffine (← `(fun n : Nat => fun z : LowerTriangularEntries n =>
+    fun i : Fin n => lowerTriangularMatrix z i i)) 1
   assertAffine (← `(fun (m n : Nat) => fun p : SymmetricMatrix m × SymmetricMatrix n =>
     (Matrix.trace p.1.toMatrix + Matrix.trace p.2.toMatrix) / 2)) 2
   assertAffine (← `(fun (m n : Nat) => fun A : Matrix (Fin m) (Fin n) ℝ => Aᵀ)) 2
@@ -65,6 +75,14 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Source enumerations and fixed reindexing are retained exactly. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
+  assertAffine (← `(fun n : Nat => fun z : LowerTriangularEntries n =>
+    triangularHelper z)) 1
+  assertUnsupported (← `(fun z : LowerTriangularEntries 2 =>
+    lowerTriangularMatrix (fun ij => z ij ^ 2)))
+  assertUnsupported (← `(fun A : Matrix (Fin 1) (Fin 1) ℝ => A.det))
+    (expectedHead? := some ``Matrix.det)
+  assertUnsupported (← `(fun A : Matrix (Fin 1) (Fin 1) ℝ => Morew.Fn.logDet A))
+    (expectedHead? := some ``Morew.Fn.logDet)
   assertAffine (← `(fun A : Matrix (Fin 2) (Fin 2) ℝ =>
     letI := Fintype.ofFinite (Fin 2)
     Matrix.trace A))

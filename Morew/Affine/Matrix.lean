@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Affine
+import Morew.Conic.PSD.Triangular
 import Mathlib.Data.Matrix.Block
 import Mathlib.LinearAlgebra.Matrix.Trace
 
@@ -37,6 +38,13 @@ noncomputable def trace [Fintype n] {f : X → Matrix n n ℝ} (a : Certified f)
     Certified (fun x => Matrix.trace (f x)) where
   map := (Matrix.traceLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.trace (a.correct x)
+
+/-- Embed affine lower-triangular coordinates without exposing their conditional entries. -/
+noncomputable def lowerTriangularMatrix {n : Nat}
+    {f : X → Conic.LowerTriangularEntries n} (a : Certified f) :
+    Certified (fun x => Conic.lowerTriangularMatrix (f x)) where
+  map := (Conic.lowerTriangularMatrixLinearMap n).toAffineMap.comp a.map
+  correct x := congrArg Conic.lowerTriangularMatrix (a.correct x)
 
 /-- Reindex an affine matrix by fixed row and column functions. -/
 noncomputable def submatrix {f : X → Matrix m n ℝ} (a : Certified f)

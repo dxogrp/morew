@@ -32,11 +32,11 @@ def missingDomain :=
     subject to
       bound : Fn.matrixFrac x P.toMatrix ≤ t
 
-#guard_error_fragments ["bound", "positive-definiteness"] in
+#guard_error_fragments ["bound", "positive-definiteness", "matrix argument"] in
 assert_fraction_atomic%
 reformulation rejectedMissingTargeted : missingDomain := by conic at bound
 
-#guard_error_fragments ["bound", "positive-definiteness"] in
+#guard_error_fragments ["bound", "positive-definiteness", "matrix argument"] in
 assert_fraction_atomic%
 reformulation rejectedMissingTerminal : missingDomain := by conic
 
