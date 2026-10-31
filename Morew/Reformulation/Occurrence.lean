@@ -383,16 +383,15 @@ private def materializeOccurrenceBound (state : ReformState)
     }
 
 /-- Plan a checked bound lift at one objective or constraint occurrence. -/
-def prepareOccurrenceBound (state : ReformState) (step : Syntax)
+def prepareOccurrenceBound (state : ReformState) (_step : Syntax)
     (binder : TSyntax `ident) (selector : TSyntax `boundOccurrence)
     (constraint? explicitLabel? : Option (TSyntax `ident))
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection) :
     CommandElabM SurfaceStepDraft := do
   let row? ← constraint?.mapM (Replace.findConstraint state)
-  if row?.isNone then
-    let expected := if direction == .upper then .minimize else .maximize
-    unless state.view.sense == expected do
-      throwErrorAt step "the occurrence bound has the wrong objective sense"
+  -- The surrounding context, not the objective sense alone, determines which
+  -- bound direction is valid. Its checked certificate also handles antitone
+  -- contexts such as minimizing a negated reward or maximizing a negated loss.
   let stem := if direction == .upper then "epigraph" else "hypograph"
   let defaultName := Name.mkSimple s!"{stem}_{binder.getId.eraseMacroScopes}"
   let boundName := explicitLabel?.map (·.getId.eraseMacroScopes) |>.getD defaultName
