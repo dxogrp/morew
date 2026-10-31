@@ -8,13 +8,9 @@ import Morew.Reformulation
 /-!
 # Certified log-determinant optimization
 
-`Fn.logDet X` means the total real function `Real.log X.det`. Its exact conic
-rewrite requires a positive-definite matrix, rather than merely positive
-determinant. The lift uses existing PSD and exponential cones.
-
-Each separately supplied domain row is retained and receives its own PSD
-witness. Consequently these examples contain that domain block in addition to
-the block, exponential family, and scalar bound introduced for the log-det atom.
+`Fn.logDet X` means the total real function `Real.log X.det`.
+Its exact conic rewrite requires a positive-definite matrix.
+The lift uses existing PSD and exponential cones.
 -/
 
 namespace Morew.Examples.LogDet
@@ -39,26 +35,7 @@ reformulation maximumConic : maximum := by
 example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
 
--- Generic negation exchanges the log-det hypograph with this loss epigraph.
-def negativeMinimum :=
-  problem (X : SymmetricMatrix 2)
-    minimize -Fn.logDet X.toMatrix
-    subject to
-      domain : X.toMatrix.PosDef
-      normalization : X.toMatrix.trace = 2
-
-reformulation negativeMinimumConic : negativeMinimum := by
-  epigraph t as loss_bound
-  conic
-
-#printp negativeMinimumConic
-
-example : GlobalEquivalence negativeMinimum negativeMinimumConic :=
-  negativeMinimumConic.equivalence
-example : IsConic negativeMinimumConic := negativeMinimumConic.isConic
-
--- Lowering the domain first leaves an identity-cross-block witness that the
--- later native logarithm/determinant rewrite can use as checked domain evidence.
+-- The same objective can use native `Real.log` and `Matrix.det` directly.
 def nativeMaximum :=
   problem (X : SymmetricMatrix 2)
     maximize Real.log X.toMatrix.det
@@ -66,6 +43,12 @@ def nativeMaximum :=
       domain : X.toMatrix.PosDef
       normalization : X.toMatrix.trace = 2
 
+/-
+This example lowers the domain first to demonstrate that either rewrite order
+is supported. The explicit early `conic at domain` step is optional: the log-det
+rule can use the original `PosDef` constraint directly, or recover positive
+definiteness from its retained PSD witness after domain lowering.
+-/
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound
   conic at domain
