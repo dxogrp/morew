@@ -63,7 +63,9 @@ import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
+import MorewTest.ImportCompatibility.NegatedOccurrence
 import MorewTest.ImportCompatibility.Negation
+import MorewTest.ImportCompatibility.NegationNLP
 import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.PSD
 import MorewTest.ImportCompatibility.Polyhedral
@@ -134,7 +136,9 @@ import MorewTest.Reformulation.NLPFailures
 import MorewTest.Reformulation.NLPImported
 import MorewTest.Reformulation.NLPImportedSource
 import MorewTest.Reformulation.NameAllocation
+import MorewTest.Reformulation.NegatedOccurrence
 import MorewTest.Reformulation.Negation
+import MorewTest.Reformulation.NegationNLP
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
@@ -187,6 +191,7 @@ import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Reformulation.VectorDomains
 import MorewTest.Rewrite
+import MorewTest.Rewrite.Negation
 import MorewTest.Rewrite.Plan
 import MorewTest.Rewrite.Registry
 import MorewTest.Rewrite.Registry.First
