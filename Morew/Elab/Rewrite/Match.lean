@@ -71,9 +71,20 @@ private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
 private def normalizeComparison (expression : Expr) : MetaM Expr :=
   Comparison.normalize expression (fun e => Registry.structural e)
 
+-- Closed discrete parameters may compute to the same value (`1 + 1` and `2`
+-- are common exponents). This comparison is enabled only below an already
+-- matched operation, never at a comparison endpoint or for real operations.
+private def sameFixedDiscreteValue (expected actual type : Expr) : MetaM Bool := do
+  if expected.hasMVar || actual.hasMVar || expected.hasFVar || actual.hasFVar then
+    return false
+  let type ← whnf type
+  unless type.isConstOf ``Nat || type.isAppOfArity ``Fin 1 do return false
+  withNewMCtxDepth <| isDefEq expected actual
+
 -- Value syntax is matched before definitional equality. In particular, an
 -- opaque/named helper cannot accidentally match its unfolded implementation.
-private partial def matchValue (expected actual : Expr) : MetaM Unit := do
+private partial def matchValue (expected actual : Expr)
+    (operationArgument : Bool := false) : MetaM Unit := do
   let expected ← Registry.structural expected
   let actual ← Registry.structural actual
   if expected.isMVar then
@@ -86,6 +97,7 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
       throwError "representation input does not match {actual}"
     return
   let type ← inferType expected
+  if operationArgument && (← sameFixedDiscreteValue expected actual type) then return
   if (← isProp type) || ((← isType expected) && !(← isProp expected)) ||
       (← isClass? type).isSome then
     unless ← isDefEq expected actual do
@@ -139,7 +151,11 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
         throwError "representation operation {expected} does not match {actual}"
       let first := expected.getAppArgs
       let second := actual.getAppArgs
-      for index in [:first.size] do matchValue first[index]! second[index]!
+      let comparison := expectedFn.isConstOf ``Eq || expectedFn.isConstOf ``LE.le ||
+        expectedFn.isConstOf ``LT.lt || expectedFn.isConstOf ``GE.ge ||
+        expectedFn.isConstOf ``GT.gt
+      for index in [:first.size] do
+        matchValue first[index]! second[index]! (!comparison)
     else unless expected == actual do
       throwError "representation expression {expected} does not match {actual}"
 

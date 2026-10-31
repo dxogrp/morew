@@ -4,6 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Rewrite.Match
+import Morew.Elab.Conic.Rewrite
+import Morew.Elab.NLP.Rewrite
 import MorewTest.Affine.Support
 import MorewTest.Environment
 import Lean.Meta.Tactic.AuxLemma
@@ -49,6 +51,93 @@ run_cmd liftTermElabM do
     let views ← Morew.Elab.Rewrite.Comparison.signedViews body
       (fun e => Morew.Elab.Rewrite.Registry.structural e)
     unless views.size == 1 do throwError "adapted an altered graph negation"
+
+namespace FixedParameters
+
+noncomputable def squareEpigraph : EpigraphRepresentation (fun x : ℝ => x ^ 2) where
+  Auxiliary := Unit
+  target x t _ := x ^ 2 ≤ t
+  source_iff_exists _ _ := by simp only [exists_const]
+
+noncomputable def indexedAbs (n : Nat) (x : ℝ) : ℝ := |x - n|
+
+noncomputable def indexedAbsEpigraph (n : Nat) :
+    EpigraphRepresentation (indexedAbs n) where
+  Auxiliary := Unit
+  target x t _ := x - n ≤ t ∧ -(x - n) ≤ t
+  source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - n) t
+
+noncomputable def finAbs (i : Fin 3) (x : ℝ) : ℝ := indexedAbs i.val x
+
+noncomputable def finAbsEpigraph (i : Fin 3) : EpigraphRepresentation (finAbs i) :=
+  indexedAbsEpigraph i.val
+
+private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
+    TermElabM Unit := do
+  let source ← elaborate term
+  let conic ← Morew.Elab.Conic.Rewrite.planExplicit source (← elaborate conicRule)
+  let .ok conic := conic
+    | match conic with
+      | .error error => throwError "fixed conic parameter failed: {error.reason}"
+      | .ok _ => throwError "unreachable"
+  conic.toResult.check source #[]
+  unless conic.rowPredicates.size == rows do throwError "wrong fixed conic row count"
+  let nlp ← Morew.Elab.NLP.Rewrite.plan source #[] (some (← elaborate nlpRule))
+  let .ok nlp := nlp
+    | match nlp with
+      | .error error => throwError "fixed NLP parameter failed: {error.reason}"
+      | .ok _ => throwError "unreachable"
+  nlp.toResult.check source #[]
+  unless nlp.rowPredicates.size == rows do throwError "wrong fixed NLP row count"
+
+-- Applied records still accept definitionally equal discrete parameters. Both
+-- literal and signed comparisons retain the original source in their proofs.
+run_cmd liftTermElabM do
+  checkApplied (← `(fun p : ℝ × ℝ => p.1 ^ (1 + 1 : Nat) ≤ p.2))
+    (← `(Conic.SecondOrder.squareEpigraph)) (← `(squareEpigraph)) 1
+  checkApplied (← `(fun p : ℝ × ℝ => p.2 ≤ -(p.1 ^ (1 + 1 : Nat))))
+    (← `(Conic.SecondOrder.squareEpigraph)) (← `(squareEpigraph)) 1
+  checkApplied (← `(fun p : ℝ × ℝ => indexedAbs 2 p.1 ≤ p.2))
+    (← `(indexedAbsEpigraph (1 + 1))) (← `(indexedAbsEpigraph (1 + 1))) 2
+  checkApplied (← `(fun p : ℝ × ℝ => p.2 ≤ -indexedAbs 2 p.1))
+    (← `(indexedAbsEpigraph (1 + 1))) (← `(indexedAbsEpigraph (1 + 1))) 2
+  checkApplied (← `(fun p : ℝ × ℝ => finAbs ⟨2, by decide⟩ p.1 ≤ p.2))
+    (← `(finAbsEpigraph ⟨1 + 1, by decide⟩))
+    (← `(finAbsEpigraph ⟨1 + 1, by decide⟩)) 2
+
+-- Computing discrete parameters must neither change their values nor erase
+-- the actual real power instance, even when it agrees at the selected exponent.
+run_cmd liftTermElabM do
+  for term in #[
+      (← `(fun p : ℝ × ℝ => p.1 ^ (1 + 2 : Nat) ≤ p.2)),
+      (← `(fun p : ℝ × ℝ =>
+        @HPow.hPow ℝ Nat ℝ ⟨fun x _ => x ^ 2⟩ p.1 (1 + 1) ≤ p.2))] do
+    let source ← elaborate term
+    if let .ok _ ← Morew.Elab.Conic.Rewrite.planExplicit source
+        (← elaborate (← `(Conic.SecondOrder.squareEpigraph))) then
+      throwError "fixed parameter comparison accepted an altered conic power"
+    if let .ok _ ← Morew.Elab.NLP.Rewrite.plan source #[]
+        (some (← elaborate (← `(squareEpigraph)))) then
+      throwError "fixed parameter comparison accepted an altered NLP power"
+
+def natHelper (n : Nat) : Nat := n + 1
+
+def natHelperLift : ExactConstraintLift (fun n : Nat => n = natHelper 1) :=
+  .ofIff (fun n => n = 2) (fun _ => Iff.rfl)
+
+-- Even a closed, definitionally equal endpoint must preserve its represented
+-- mathematical head. Discrete-value comparison is confined to its arguments.
+run_cmd liftTermElabM do
+  let source ← elaborate (← `(fun n : Nat => n = 2))
+  withLocalDeclD `point (mkConst ``Nat) fun point => do
+    let succeeded ← try
+        discard <| Morew.Elab.Rewrite.Match.declaration point (mkApp source point)
+          ``natHelperLift pure
+        pure true
+      catch _ => pure false
+    if succeeded then throwError "discrete parameter comparison unfolded an endpoint"
+
+end FixedParameters
 
 noncomputable def negativeIdentity : GraphRepresentation (fun x : ℝ => -x) where
   Auxiliary := Unit
