@@ -234,11 +234,10 @@ assert_not_exists ambiguousReversed ambiguousReversed.equivalence
 
 end ReverseRegistration
 
--- The conic comparison views do not grant the NLP consumer new matches.
-#guard_error_fragments ["constraint `bound`", "no supported exact NLP rule"] in
-reformulation nlpUnchanged : (source center) := by nlp at bound
+-- The same checked sign view also exposes a smooth NLP representation.
+reformulation nlpSigned : (source center) := by nlp at bound
 
-assert_not_exists nlpUnchanged nlpUnchanged.equivalence
+example : nlpSigned center = target center := rfl
 
 -- Existing direct whole-predicate and graph rules still match directly.
 def exactRule (center : ℝ) :
@@ -276,10 +275,22 @@ def negativeGraphSource :=
 
 reformulation graphDirect : graphSource := by conic at bound using shiftedGraph
 
-#guard_error_fragments ["constraint `bound`"] in
-reformulation graphUnchanged : negativeGraphSource := by conic at bound using shiftedGraph
+reformulation graphSigned : negativeGraphSource := by conic at bound using shiftedGraph
 
-assert_not_exists graphUnchanged graphUnchanged.equivalence
+example : GlobalEquivalence negativeGraphSource graphSigned := graphSigned.equivalence
+example (x t : ℝ) : graphSigned.feasible (x, t) ↔ t = x + 1 := Iff.rfl
+
+section RegisteredGraph
+
+attribute [local morew_conic] shiftedGraph
+
+reformulation graphAutomatic : negativeGraphSource := by conic at bound
+reformulation graphApplied : negativeGraphSource := by conic at bound using (shiftedGraph)
+
+example : graphAutomatic = graphSigned := rfl
+example : graphApplied = graphSigned := rfl
+
+end RegisteredGraph
 
 end Custom
 

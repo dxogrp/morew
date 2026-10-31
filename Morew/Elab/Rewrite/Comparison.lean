@@ -10,7 +10,7 @@ import Qq
 /-!
 # Checked comparison views
 
-Conic discovery and matching may expose a real function beneath outer unary
+Representation discovery and matching may expose a real function beneath outer unary
 negations. Every alternative retains an exact proof from the original predicate.
 The caller supplies structural reduction, so this module does not unfold named
 mathematical functions or depend on the representation registry.
@@ -46,6 +46,40 @@ private theorem realDoubleNeg (a : ℝ) : - -a = a := neg_neg a
 private theorem realLeCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
     (a ≤ b) ↔ (a' ≤ b') := by
   rw [ha, hb]
+
+private theorem realEqNegLeft (a b : ℝ) : (-a = b) ↔ (-b = a) := by
+  constructor <;> intro h <;>
+    simpa only [neg_neg] using (congrArg (fun x : ℝ => -x) h).symm
+
+private theorem realEqNegRight (a b : ℝ) : (a = -b) ↔ (b = -a) := by
+  constructor <;> intro h <;>
+    simpa only [neg_neg] using (congrArg (fun x : ℝ => -x) h).symm
+
+private theorem realEqCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
+    (a = b) ↔ (a' = b') := by
+  rw [ha, hb]
+
+private inductive Relation where
+  | le | eq
+
+private def Relation.predicate (relation : Relation) (a b : Expr) : Expr :=
+  let a : Q(ℝ) := a
+  let b : Q(ℝ) := b
+  match relation with
+  | .le => q($a ≤ $b)
+  | .eq => q($a = $b)
+
+private def Relation.congr : Relation → Name
+  | .le => ``realLeCongr
+  | .eq => ``realEqCongr
+
+private def Relation.negLeft : Relation → Name
+  | .le => ``realNegLeft
+  | .eq => ``realEqNegLeft
+
+private def Relation.negRight : Relation → Name
+  | .le => ``realNegRight
+  | .eq => ``realEqNegRight
 
 -- Comparison checks must not assign a caller's unresolved instance metavariable.
 private def same (first second : Expr) : MetaM Bool :=
@@ -107,6 +141,12 @@ private partial def sameSpelling (first second : Expr) (reduce : Expr → MetaM 
   let first ← reduce first
   let second ← reduce second
   if first == second then return true
+  if first.isAppOfArity ``Eq 3 && second.isAppOfArity ``Eq 3 then
+    let firstArgs := first.getAppArgs
+    let secondArgs := second.getAppArgs
+    return (← same firstArgs[0]! secondArgs[0]!) &&
+      (← sameSpelling firstArgs[1]! secondArgs[1]! reduce) &&
+      (← sameSpelling firstArgs[2]! secondArgs[2]! reduce)
   let comparison := first.isAppOfArity ``LE.le 4 && second.isAppOfArity ``LE.le 4
   let negation := first.isAppOfArity ``Neg.neg 3 && second.isAppOfArity ``Neg.neg 3
   unless comparison || negation do return false
@@ -125,58 +165,61 @@ private def pushView (views : Array View) (source predicate proof : Expr)
     if ← sameSpelling view.predicate predicate reduce then return views
   return views.push (← checked source predicate proof)
 
-/-- Enumerate deterministic, checked sign views for canonical real comparisons.
+/-- Enumerate deterministic, checked sign views for real equalities and canonical inequalities.
 
 The direct view is always first, including for predicates that do not support
 sign adaptation. Alternatives consume only negations found on the original
 endpoints. This finite enumeration preserves intermediate negative heads for
 direct negative registrations and never repeatedly processes inserted signs.
 -/
-def conicViews (source : Expr) (reduce : Expr → MetaM Expr) : MetaM (Array View) := do
+def signedViews (source : Expr) (reduce : Expr → MetaM Expr) : MetaM (Array View) := do
   let body ← normalize source reduce
   let directProof ← mkAppM ``Iff.refl #[body]
   let mut views := #[← checked source body directProof]
-  unless body.isAppOfArity ``LE.le 4 do return views
+  let relation ← if body.isAppOfArity ``LE.le 4 then pure Relation.le
+    else if body.isAppOfArity ``Eq 3 then pure Relation.eq
+    else return views
   let args := body.getAppArgs
   unless ← same args[0]! q(ℝ) do return views
-  let left : Q(ℝ) := args[2]!
-  let right : Q(ℝ) := args[3]!
-  let canonical : Expr := q($left ≤ $right)
-  unless ← same args[1]! canonical.getAppArgs[1]! do return views
+  let left : Q(ℝ) := args[args.size - 2]!
+  let right : Q(ℝ) := args[args.size - 1]!
+  if let .le := relation then
+    let canonical : Expr := q($left ≤ $right)
+    unless ← same args[1]! canonical.getAppArgs[1]! do return views
   let lefts ← endpoints left reduce
   let rights ← endpoints right reduce
   for lhs in lefts do
     for rhs in rights do
       let a : Q(ℝ) := lhs.value
       let b : Q(ℝ) := rhs.value
-      let congr ← mkAppM ``realLeCongr
+      let congr ← mkAppM relation.congr
         #[left, a, right, b, lhs.equality, rhs.equality]
       let base ← mkAppM ``Iff.trans #[directProof, congr]
-      views ← pushView views source q($a ≤ $b) base reduce
+      views ← pushView views source (relation.predicate a b) base reduce
       if let some inner ← realNeg? a reduce then
-        let moved ← mkAppM ``realNegLeft #[inner, b]
+        let moved ← mkAppM relation.negLeft #[inner, b]
         let bound ← introducedNeg b reduce
         let originalBound : Q(ℝ) := q(-$b)
-        let adapted ← mkAppM ``realLeCongr
+        let adapted ← mkAppM relation.congr
           #[originalBound, bound.value, inner, inner,
             bound.equality, ← mkEqRefl inner]
         let proof ← mkAppM ``Iff.trans
           #[base, ← mkAppM ``Iff.trans #[moved, adapted]]
         let newLeft : Q(ℝ) := bound.value
         let newRight : Q(ℝ) := inner
-        views ← pushView views source q($newLeft ≤ $newRight) proof reduce
+        views ← pushView views source (relation.predicate newLeft newRight) proof reduce
       if let some inner ← realNeg? b reduce then
-        let moved ← mkAppM ``realNegRight #[a, inner]
+        let moved ← mkAppM relation.negRight #[a, inner]
         let bound ← introducedNeg a reduce
         let originalBound : Q(ℝ) := q(-$a)
-        let adapted ← mkAppM ``realLeCongr
+        let adapted ← mkAppM relation.congr
           #[inner, inner, originalBound, bound.value,
             ← mkEqRefl inner, bound.equality]
         let proof ← mkAppM ``Iff.trans
           #[base, ← mkAppM ``Iff.trans #[moved, adapted]]
         let newLeft : Q(ℝ) := inner
         let newRight : Q(ℝ) := bound.value
-        views ← pushView views source q($newLeft ≤ $newRight) proof reduce
+        views ← pushView views source (relation.predicate newLeft newRight) proof reduce
   return views
 
 end Morew.Elab.Rewrite.Comparison

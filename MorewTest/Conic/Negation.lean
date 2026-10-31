@@ -123,7 +123,6 @@ run_cmd liftTermElabM do
         if (← generated.get).size == 1 then
           throwError "reject this view during target certification"
         pure { matched with sourceIff := mkApp (mkConst name) point })
-      (conicNegation := true)
     let after ← getMCtx
     unless before.mvarCounter == after.mvarCounter &&
         before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do

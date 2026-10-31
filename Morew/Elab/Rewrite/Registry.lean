@@ -60,14 +60,15 @@ the corresponding `nlp` command infer `center` from the entire selected row. App
 expressions use ordinary Lean elaboration. Explicit selection never falls back
 to another rule, and a namespace by itself gives a declaration no priority.
 
-Conic also reuses real epigraph and hypograph rules through outer unary
+Both consumers reuse real epigraph and hypograph rules through outer unary
 negations: `-f x ≤ t` uses a hypograph rule at `-t`, and `t ≤ -f x` uses an
 epigraph rule at `-t`. Nested negations and either comparison spelling are
 checked through exact equivalences. Discovery combines direct and adapted
 declarations; two distinct successful rules remain ambiguous. Domains, the
-actual order/negation/norm instances, and affine targets are still checked.
-This adaptation does not apply to NLP, graph records, or whole-predicate lifts,
-and does not normalize subtraction or negative coefficients.
+actual order/negation/norm instances, and target admissibility are still checked.
+Real graph records similarly match signed equalities, such as `y = -f x`
+through `-y = f x`. Whole-predicate lifts retain literal matching. These
+adaptations do not normalize subtraction or negative coefficients.
 
 All four representation families may express rule premises through subtype
 inputs or declaration proof parameters, without changing the model's original
@@ -281,8 +282,7 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
     let args := body.getAppArgs
     let mut epigraphs := #[]
     let mut hypographs := #[]
-    let mut graphLeft := none
-    let mut graphRight := none
+    let mut graphs := #[]
     let mut outputHead? := none
     if body.isAppOfArity ``LE.le 4 then
       outputHead? ← fixedTypeHead? args[0]!
@@ -294,13 +294,16 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
       hypographs := hypographs.push (← operation? args[2]!)
     else if body.isAppOfArity ``Eq 3 then
       outputHead? ← fixedTypeHead? args[0]!
-      graphLeft ← operation? args[1]!
-      graphRight ← operation? args[2]!
-    if target == .conic then
-      for view in (← Comparison.conicViews body (fun e => structural e)).toList.drop 1 do
-        let args := view.predicate.getAppArgs
+      graphs := graphs.push (← operation? args[1]!)
+      graphs := graphs.push (← operation? args[2]!)
+    for view in (← Comparison.signedViews body (fun e => structural e)).toList.drop 1 do
+      let args := view.predicate.getAppArgs
+      if view.predicate.isAppOfArity ``LE.le 4 then
         epigraphs := epigraphs.push (← operation? args[2]!)
         hypographs := hypographs.push (← operation? args[3]!)
+      else if view.predicate.isAppOfArity ``Eq 3 then
+        graphs := graphs.push (← operation? args[1]!)
+        graphs := graphs.push (← operation? args[2]!)
     -- Filter the sorted declarations once: several views of the same rule are
     -- one candidate, while direct-negative and derived declarations both stay.
     return (← entries target).filterMap fun entry =>
@@ -308,7 +311,7 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
         | .exact => sourceHead == some entry.head
         | .epigraph => epigraphs.any (compatibleOperation entry)
         | .hypograph => hypographs.any (compatibleOperation entry)
-        | .graph => compatibleOperation entry graphLeft || compatibleOperation entry graphRight
+        | .graph => graphs.any (compatibleOperation entry)
       let compatibleType := match entry.outputHead?, outputHead? with
         | some expected, some actual => expected == actual
         | _, _ => true

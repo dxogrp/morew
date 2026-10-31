@@ -219,8 +219,8 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
-  if view?.isSome && family != .epigraph && family != .hypograph then
-    throwError "comparison adaptation requires an epigraph or hypograph representation"
+  if view?.isSome && family == .exact then
+    throwError "comparison adaptation requires a graph, epigraph, or hypograph representation"
   let (input, proofArguments) ← if family == .exact then
       match exactInput with
       | .whole => do
@@ -286,8 +286,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   catch error => return .error error
 
 private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
-    (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput)
-    (conicNegation : Bool) : MetaM α := do
+    (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
   -- Diagnose the furthest successful stage: operation matching, domain/proof
   -- validation, then target certification. An adapted domain failure should
   -- not be hidden behind the original negative head's shape mismatch.
@@ -306,14 +305,21 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
       let (family, inputType, _) ← Registry.representation type
-      if conicNegation && (family == .epigraph || family == .hypograph) then
+      if family == .graph || family == .epigraph || family == .hypograph then
         let mut failure := original
-        for view in (← Comparison.conicViews sourceBody
-            (fun e => Registry.structural e)).toList.drop 1 do
-          match ← tryAttempt false exactInput (some view) with
+        if family == .graph then
+          -- Preserve both direct graph orientations before adapting any signs.
+          match ← tryAttempt true exactInput none with
           | .ok value => return .ok value
           | .error next =>
             if failure.1 < next.1 then failure := next
+        for view in (← Comparison.signedViews sourceBody
+            (fun e => Registry.structural e)).toList.drop 1 do
+          for reverse in (if family == .graph then [false, true] else [false]) do
+            match ← tryAttempt reverse exactInput (some view) with
+            | .ok value => return .ok value
+            | .error next =>
+              if failure.1 < next.1 then failure := next
         return .error failure
       let subtypeWhole := family == .exact &&
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
@@ -322,15 +328,11 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
         -- Retry only subtype wrappers around the same complete decision point.
         -- Concrete records never acquire declaration-style input inference.
         return ← tryAttempt false .subtypeWhole none
-      if family == .graph || (family == .exact && exactInput == .infer) then
-        -- Retry the whole checked attempt: a matched graph orientation may
-        -- still fail the consumer's target certification. Exact records also
-        -- retain the whole-input fallback for unused inputs or coordinates,
-        -- including subtype guards around the complete decision point.
-        match ← tryAttempt (family == .graph)
-            (if family == .exact then
-              if subtypeWhole then .subtypeWhole else .whole
-            else exactInput) none with
+      if family == .exact && exactInput == .infer then
+        -- Exact records retain the whole-input fallback for unused inputs or
+        -- coordinates, including subtype guards around the complete point.
+        match ← tryAttempt false
+            (if subtypeWhole then .subtypeWhole else .whole) none with
         | .ok value => return .ok value
         | .error failure =>
           -- Prefer an actual target-certification failure to a mismatch.
@@ -344,18 +346,16 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
 `accept` in its isolated attempt, preserving only a successful result's proof
 dependencies. Concrete exact lifts retain their whole-decision interpretation;
 subtype wrappers may add checked guards around that same point. Graph
-orientations count as one candidate. The conic consumer may additionally enable
-checked real negation views for epigraph and hypograph records. -/
+orientations and checked real negation views count as one candidate per record.
+Whole-predicate lifts do not receive comparison adaptations. -/
 def rule {α : Type} (point sourceBody expression : Expr)
-    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none)
-    (conicNegation : Bool := false) : MetaM α :=
-  checked point sourceBody (pure expression) accept prove? .whole conicNegation
+    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
+  checked point sourceBody (pure expression) accept prove? .whole
 
 /-- Instantiate and certify a declaration, retrying graph orientation when its
 first matched target cannot be certified. Fresh universes belong to each attempt. -/
 def declaration {α : Type} (point sourceBody : Expr) (name : Name)
-    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none)
-    (conicNegation : Bool := false) : MetaM α :=
-  checked point sourceBody (mkConstWithFreshMVarLevels name) accept prove? .infer conicNegation
+    (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
+  checked point sourceBody (mkConstWithFreshMVarLevels name) accept prove? .infer
 
 end Morew.Elab.Rewrite.Match
