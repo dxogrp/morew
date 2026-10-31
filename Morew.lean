@@ -59,6 +59,7 @@ import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.Runner
+import Morew.Elab.Rewrite.Comparison
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Rewrite.Plan

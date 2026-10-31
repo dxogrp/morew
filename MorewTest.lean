@@ -26,6 +26,7 @@ import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.MatrixDomain
+import MorewTest.Conic.Negation
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
@@ -62,6 +63,7 @@ import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
+import MorewTest.ImportCompatibility.Negation
 import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.PSD
 import MorewTest.ImportCompatibility.Polyhedral
@@ -132,6 +134,7 @@ import MorewTest.Reformulation.NLPFailures
 import MorewTest.Reformulation.NLPImported
 import MorewTest.Reformulation.NLPImportedSource
 import MorewTest.Reformulation.NameAllocation
+import MorewTest.Reformulation.Negation
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures

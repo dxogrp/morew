@@ -40,6 +40,12 @@ problem (u t : ℝ)
     epigraph_t : u ^ 2 ≤ t
 ```
 
+Conic rewriting can reuse epigraph and hypograph rules through real negation.
+For example, minimizing `-Real.log x` with a retained positive lower bound uses
+`epigraph t` followed by `conic`; maximizing `-‖x‖` uses `hypograph t` followed
+by `conic`. The underlying rule's domain and norm instance are still checked.
+See [Examples/Negation.lean](Examples/Negation.lean) for both complete models.
+
 ## License
 
 Morew is licensed under the [Apache License, Version 2.0](LICENSE).

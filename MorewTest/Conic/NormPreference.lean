@@ -95,9 +95,13 @@ private def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `te
 -- Both built-in L2 candidates need an evidence-generated declaration. The
 -- preferred SOC certificate must retain its own declaration while discarding
 -- the power candidate's declaration; ambiguity must discard every candidate.
-private def checkCandidateEvidence (ambiguous : Bool := false) : TermElabM Unit := do
-  let expression ← elaborate (← `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>
-    fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 (fun i => z.1 i / c)‖ ≤ z.2))
+private def checkCandidateEvidence (ambiguous : Bool := false)
+    (negative : Bool := false) : TermElabM Unit := do
+  let expression ← elaborate (← if negative then
+    `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>
+      fun z : (Fin 2 → ℝ) × ℝ => z.2 ≤ -‖WithLp.toLp 2 (fun i => z.1 i / c)‖)
+    else `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>
+      fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 (fun i => z.1 i / c)‖ ≤ z.2))
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let sentinel ← mkFreshExprMVar (mkConst ``Nat)
     let assigned ← mkFreshExprMVar (mkConst ``Nat)
@@ -161,6 +165,7 @@ private def checkCandidateEvidence (ambiguous : Bool := false) : TermElabM Unit 
 
 run_cmd liftTermElabM do
   checkCandidateEvidence
+  checkCandidateEvidence (negative := true)
 
 run_cmd liftTermElabM do
   let source ← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2)
@@ -197,6 +202,7 @@ run_cmd liftTermElabM do
   check source (← powerRows (← `((1 / 2 : ℝ)))) true
     (some ``Morew.Conic.Power.normEpigraph)
   checkCandidateEvidence true
+  checkCandidateEvidence true (negative := true)
 end
 
 noncomputable def customPower {n : Nat} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
@@ -238,6 +244,8 @@ attribute [local morew_conic] nonlinearPower
 run_cmd liftTermElabM do
   let source ← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 3 z.1‖ ≤ z.2)
   reject source "generated row" (some ``nonlinearPower) false
+  let negative ← `(fun z : (Fin 2 → ℝ) × ℝ => z.2 ≤ -‖WithLp.toLp 3 z.1‖)
+  reject negative "generated row" (some ``nonlinearPower) false
   check source (← powerRows (← `((1 / 3 : ℝ)))) true
   check (← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2)) (← socRows)
 end
