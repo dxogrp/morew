@@ -237,7 +237,18 @@ private def presentationSimpMethods (preserveProofLets : Bool)
     pre := fun expression => do
       if preserveOperations then
         if let some (function, arguments) ← classOperationPrefix? expression then
-          return .done (← Simp.congrArgs { expr := function } arguments)
+          -- Keep the checked operation instance intact during reduction, but
+          -- still apply the explicitly supplied rewrite lemmas at this root.
+          -- In particular, exponential substitution uses `Real.exp_pos` here.
+          match ← Simp.rewritePre (rflOnly := false) expression with
+          | .visit result => return .visit result
+          | .done result => return .done result
+          | .continue _ => pure ()
+          let result ← Simp.congrArgs { expr := function } arguments
+          match ← Simp.rewritePost (rflOnly := false) result.expr with
+          | .visit rewritten => return .visit (← result.mkEqTrans rewritten)
+          | .done rewritten => return .done (← result.mkEqTrans rewritten)
+          | .continue _ => return .done result
       if let .letE name type value body nondep := expression then
         unless preserveProofLets do return ← defaults.pre expression
         unless ← isProp type do
