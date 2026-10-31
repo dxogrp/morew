@@ -118,7 +118,8 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft := withRef step do
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
-    match ← Morew.Elab.NLP.Terminal.plan presentation with
+    let reduce := fun expression => dsimpPreservingProofLets expression (preserveOperations := false)
+    match ← Morew.Elab.NLP.Terminal.plan presentation (some reduce) with
     | .error error => throwError error.reason
     | .ok result => pure (result, sectionFVars)
   let mut nameRequests := #[]

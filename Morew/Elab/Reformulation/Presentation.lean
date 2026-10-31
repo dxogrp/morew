@@ -97,7 +97,10 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
     let propositions := state.constraints.map fun constraint =>
       mkApp constraint.predicate point
     mkLambdaFVars #[point] <| rightAssociatedConjunction propositions.toList
-  mkAppM ``Morew.Problem.mk #[state.objective, feasible]
+  -- A reduced real expression can infer the plain codomain even when this
+  -- presentation maximizes through OrderDual. Retain the declared value type.
+  mkAppOptM ``Morew.Problem.mk
+    #[some state.domainType, some state.valueType, some state.objective, some feasible]
 
 /-- Build the active-name inventory for a typed presentation. -/
 def PresentationState.nameInventory (state : PresentationState) : NameInventory :=

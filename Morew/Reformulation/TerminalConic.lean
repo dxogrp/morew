@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Terminal
 import Morew.Reformulation.Replace
 import Morew.Elab.Expr
+import Morew.Elab.Rewrite.Direct
 
 /-!
 # Terminal cone-membership conversion
@@ -243,45 +244,23 @@ private def materializeTerminalConic (state : ReformState)
     }
 
 -- Explicit class constructors historically reduced during surface
--- canonicalization. Keep that behavior when the complete exposed predicate is
--- directly conic. A failed check retains its original operations for registry
+-- canonicalization. Keep that behavior for directly conic predicates and
+-- complete affine objectives. A failed check retains its operations for registry
 -- matching, so reduction cannot authorize a rule for a different instance.
-private partial def normalizeDirectOperations (point body : Expr)
-    (bindings : Array Expr := #[]) : MetaM Expr := do
-  let body ← Morew.Elab.Expr.reduceStructure body (preserveLets := true)
-  if let .letE name type value rest nondep := body then
-    return ← withLetDecl name type value (nondep := nondep) fun binding => do
-      let result ← normalizeDirectOperations point (rest.instantiate1 binding)
-        (bindings.push binding)
-      mkLetFVars #[binding] result
-        (usedLetOnly := false) (generalizeNondepLet := false)
-  if body.isAppOfArity ``And 2 then
-    return mkApp2 (mkConst ``And)
-      (← normalizeDirectOperations point body.getAppArgs[0]! bindings)
-      (← normalizeDirectOperations point body.getAppArgs[1]! bindings)
-  let checked ← Morew.Elab.State.withIsolatedMVars do
-    try
-      let candidate ← dsimpPreservingProofLets body (preserveOperations := false)
-      if candidate == body then return .ok body
-      unless ← isDefEq candidate body do return .error ()
-      let scopedBody ← mkLetFVars bindings candidate
-        (usedLetOnly := false) (generalizeNondepLet := false)
-      let predicate ← mkLambdaFVars #[point] scopedBody
-      let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate predicate
-      for leaf in leaves do
-        if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return .error ()
-      return .ok candidate
-    catch _ => return .error ()
-  return checked.toOption.getD body
-
 private def normalizeDirectPresentation (presentation : PresentationState) : MetaM PresentationState := do
   let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
       (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
+    let reduce := fun expression => dsimpPreservingProofLets expression (preserveOperations := false)
+    let objective ← Morew.Elab.Rewrite.Direct.normalize presentation.objective reduce fun candidate => do
+      return (← Morew.Elab.Conic.reifyObjective { presentation with objective := candidate }).isOk
     let constraints ← presentation.constraints.mapM fun row => do
-      let predicate ← withLocalDeclD `point presentation.domainType fun point => do
-        mkLambdaFVars #[point] (← normalizeDirectOperations point (mkApp row.predicate point))
+      let predicate ← Morew.Elab.Rewrite.Direct.normalizePredicate row.predicate reduce fun candidate => do
+        let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate candidate
+        for leaf in leaves do
+          if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return false
+        return true
       return { row with predicate }
-    return .ok { presentation with constraints }
+    return .ok { presentation with objective, constraints }
   return result.toOption.getD presentation
 
 /-- Plan the complete exact conversion and request all generated local names. -/
