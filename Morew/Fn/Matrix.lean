@@ -8,6 +8,7 @@ import Mathlib.Analysis.Matrix.Hermitian
 import Mathlib.Analysis.Matrix.Spectrum
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.Data.Real.Basic
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
 # Real matrix modeling functions
@@ -22,11 +23,21 @@ its domain to singular matrices.
 
 The nuclear norm is the sum of the singular values of the associated Euclidean
 linear map. The domain dimension bounds the support, including empty matrices.
+
+The log determinant uses the totalized real logarithm. Its exact conic
+representation separately requires positive definiteness.
 -/
 
 namespace Morew.Fn
 
 open Matrix
+
+/-- The logarithm of the determinant, with its usual domain requiring `X.PosDef`. -/
+noncomputable def logDet {n : Nat} (X : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
+  Real.log X.det
+
+@[simp] theorem logDet_empty (X : Matrix (Fin 0) (Fin 0) ℝ) : logDet X = 0 := by
+  simp [logDet]
 
 /-- The supremum of the real spectrum; on nonempty symmetric matrices this is
 the largest eigenvalue. -/

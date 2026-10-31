@@ -307,6 +307,10 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     return ← withIndexInstance point args[2]! do
       let value ← reifyBody point args[4]! provider
       return ← construct point expression ``Morew.Affine.Certified.trace #[value] (some 1)
+  if name == some ``Morew.Conic.lowerTriangularMatrix && args.size == 2 then
+    let value ← reifyBody point args[1]! provider
+    return ← construct point expression ``Morew.Affine.Certified.lowerTriangularMatrix
+      #[value] (some 1)
   if name == some ``Matrix.submatrix && args.size == 8 then
     for index in #[args[6]!, args[7]!] do
       if ← Expr.depends point index then
