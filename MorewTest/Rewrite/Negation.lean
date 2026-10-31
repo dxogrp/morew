@@ -72,6 +72,23 @@ noncomputable def finAbs (i : Fin 3) (x : ℝ) : ℝ := indexedAbs i.val x
 noncomputable def finAbsEpigraph (i : Fin 3) : EpigraphRepresentation (finAbs i) :=
   indexedAbsEpigraph i.val
 
+noncomputable def flaggedAbs (flag : Bool) (x : ℝ) : ℝ :=
+  indexedAbs (if flag then 0 else 1) x
+
+noncomputable def flaggedAbsEpigraph (flag : Bool) : EpigraphRepresentation (flaggedAbs flag) :=
+  indexedAbsEpigraph (if flag then 0 else 1)
+
+structure Parameters where
+  count : Nat
+  flag : Bool
+
+noncomputable def parameterAbs (parameters : Parameters) (x : ℝ) : ℝ :=
+  indexedAbs (parameters.count + if parameters.flag then 0 else 1) x
+
+noncomputable def parameterAbsEpigraph (parameters : Parameters) :
+    EpigraphRepresentation (parameterAbs parameters) :=
+  indexedAbsEpigraph (parameters.count + if parameters.flag then 0 else 1)
+
 private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
     TermElabM Unit := do
   let source ← elaborate term
@@ -104,6 +121,35 @@ run_cmd liftTermElabM do
   checkApplied (← `(fun p : ℝ × ℝ => finAbs ⟨2, by decide⟩ p.1 ≤ p.2))
     (← `(finAbsEpigraph ⟨1 + 1, by decide⟩))
     (← `(finAbsEpigraph ⟨1 + 1, by decide⟩)) 2
+  checkApplied (← `(fun p : ℝ × ℝ => p.2 ≤ -flaggedAbs true p.1))
+    (← `(flaggedAbsEpigraph (!false))) (← `(flaggedAbsEpigraph (!false))) 2
+  checkApplied (← `(fun p : ℝ × ℝ => parameterAbs ⟨2, true⟩ p.1 ≤ p.2))
+    (← `(parameterAbsEpigraph ⟨1 + 1, !false⟩))
+    (← `(parameterAbsEpigraph ⟨1 + 1, !false⟩)) 2
+
+-- Section-fixed parameters may compute, but may not change. Failed applied
+-- records leave the caller's metavariable state and declarations untouched.
+run_cmd liftTermElabM do
+  let expression ← elaborate (← `(fun (n : Nat) (p : ℝ × ℝ) =>
+    p.2 ≤ -indexedAbs (n + 1) p.1))
+  lambdaTelescope expression fun arguments body => do
+    let source ← mkLambdaFVars #[arguments[1]!] body
+    let rule ← mkAppM ``indexedAbsEpigraph #[arguments[0]!]
+    let sentinel ← mkFreshExprMVar (mkConst ``Nat)
+    let before ← getMCtx
+    let environment ← getEnv
+    if let .ok _ ← Morew.Elab.Conic.Rewrite.planExplicit source rule then
+      throwError "symbolic conic parameter changed its value"
+    if let .ok _ ← Morew.Elab.NLP.Rewrite.plan source #[] (some rule) then
+      throwError "symbolic NLP parameter changed its value"
+    let after ← getMCtx
+    unless before.mvarCounter == after.mvarCounter &&
+        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
+      throwError "failed symbolic parameter matching leaked scratch metavariables"
+    if ← sentinel.mvarId!.isAssigned then
+      throwError "failed symbolic parameter matching changed a caller metavariable"
+    unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
+      throwError "failed symbolic parameter matching changed caller declarations"
 
 -- Computing discrete parameters must neither change their values nor erase
 -- the actual real power instance, even when it agrees at the selected exponent.

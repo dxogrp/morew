@@ -294,6 +294,71 @@ end RegisteredGraph
 
 end Custom
 
+namespace FixedParameters
+
+def indexedAbs (n : Nat) (x : ℝ) : ℝ := |x - n|
+
+def indexedAbsEpigraph (n : Nat) : EpigraphRepresentation (indexedAbs n) where
+  Auxiliary := Unit
+  target x t _ := x - n ≤ t ∧ -(x - n) ≤ t
+  source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - n) t
+
+def source (n : Nat) :=
+  problem (x t : ℝ)
+    minimize t
+    subject to bound : indexedAbs (n + 0) x ≤ t
+
+def signedSource (n : Nat) :=
+  problem (x t : ℝ)
+    minimize t
+    subject to bound : t ≤ -indexedAbs (n + 0) x
+
+-- A supplied record may fix a symbolic discrete parameter before matching.
+-- Definitional equality still recognizes that parameter beneath the atom.
+reformulation target : (source n) := by
+  conic at bound using (indexedAbsEpigraph n)
+
+reformulation nlpTarget : (source n) := by
+  nlp at bound using (indexedAbsEpigraph n)
+
+reformulation signedTarget : (signedSource n) := by
+  conic at bound using (indexedAbsEpigraph n)
+
+reformulation signedNLP : (signedSource n) := by
+  nlp at bound using (indexedAbsEpigraph n)
+
+example : GlobalEquivalence (source n) (target n) := target.equivalence n
+example : nlpTarget n = target n := rfl
+example : signedNLP n = signedTarget n := rfl
+example (x t : ℝ) : (signedTarget n).feasible (x, t) ↔
+    x - n ≤ -t ∧ -(x - n) ≤ -t := Iff.rfl
+
+def finAbs {n : Nat} (i : Fin n) (x : ℝ) : ℝ := indexedAbs i.val x
+
+def finAbsEpigraph {n : Nat} (i : Fin n) : EpigraphRepresentation (finAbs i) :=
+  indexedAbsEpigraph i.val
+
+def finSource {n : Nat} (i : Fin n) :=
+  problem (x t : ℝ)
+    minimize t
+    subject to bound : t ≤ -(finAbs
+      (⟨i.val + 0, by simpa only [Nat.add_zero] using i.isLt⟩ : Fin n) x)
+
+variable (i : Fin n)
+
+reformulation finTarget : (finSource i) := by
+  conic at bound using (finAbsEpigraph i)
+
+reformulation finNLP : (finSource i) := by
+  nlp at bound using (finAbsEpigraph i)
+
+example : GlobalEquivalence (finSource i) (finTarget n i) := finTarget.equivalence n i
+example : finNLP n i = finTarget n i := rfl
+example (x t : ℝ) : (finTarget n i).feasible (x, t) ↔
+    x - i.val ≤ -t ∧ -(x - i.val) ≤ -t := Iff.rfl
+
+end FixedParameters
+
 namespace Failures
 
 def missingDomain :=

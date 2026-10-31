@@ -71,19 +71,24 @@ private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
 private def normalizeComparison (expression : Expr) : MetaM Expr :=
   Comparison.normalize expression (fun e => Registry.structural e)
 
--- Closed discrete parameters may compute to the same value (`1 + 1` and `2`
--- are common exponents). This comparison is enabled only below an already
--- matched operation, never at a comparison endpoint or for real operations.
-private def sameFixedDiscreteValue (expected actual type : Expr) : MetaM Bool := do
-  if expected.hasMVar || actual.hasMVar || expected.hasFVar || actual.hasFVar then
-    return false
+-- Fixed data parameters may compute to the same value, including section
+-- parameters such as `n + 0` and `n`. Mathematical coordinates, functions,
+-- types, proofs, and instances keep their separate typed syntax checks.
+-- Data-value comparison occurs only below an already matched operation,
+-- never at a comparison endpoint.
+private def sameFixedDataValue (point expected actual type : Expr) : MetaM Bool := do
+  if (← Expr.hasUnresolved expected) || (← Expr.hasUnresolved actual) then return false
   let type ← whnf type
-  unless type.isConstOf ``Nat || type.isAppOfArity ``Fin 1 do return false
+  if type.isSort || type.isForall || (← isProp type) ||
+      (← isClass? type).isSome || (← Expr.isSupportedSpace type) then return false
+  let some name := type.getAppFn.constName? | return false
+  let some (.inductInfo _) := (← getEnv).find? name | return false
+  if (← Expr.depends point expected) || (← Expr.depends point actual) then return false
   withNewMCtxDepth <| isDefEq expected actual
 
 -- Value syntax is matched before definitional equality. In particular, an
 -- opaque/named helper cannot accidentally match its unfolded implementation.
-private partial def matchValue (expected actual : Expr)
+private partial def matchValue (point expected actual : Expr)
     (operationArgument : Bool := false) : MetaM Unit := do
   let expected ← Registry.structural expected
   let actual ← Registry.structural actual
@@ -97,7 +102,7 @@ private partial def matchValue (expected actual : Expr)
       throwError "representation input does not match {actual}"
     return
   let type ← inferType expected
-  if operationArgument && (← sameFixedDiscreteValue expected actual type) then return
+  if operationArgument && (← sameFixedDataValue point expected actual type) then return
   if (← isProp type) || ((← isType expected) && !(← isProp expected)) ||
       (← isClass? type).isSome then
     unless ← isDefEq expected actual do
@@ -112,31 +117,31 @@ private partial def matchValue (expected actual : Expr)
       throwError "representation input types differ at {actual}"
     let structureName := if expected.isAppOfArity ``Prod.mk 4 then ``Prod else ``Subtype
     let fields := expected.getAppArgs
-    matchValue fields[2]! (.proj structureName 0 actual)
-    matchValue fields[3]! (.proj structureName 1 actual)
+    matchValue point fields[2]! (.proj structureName 0 actual)
+    matchValue point fields[3]! (.proj structureName 1 actual)
     return
   match expected, actual with
   | .lam _ type body _, .lam _ otherType otherBody _ =>
-    matchValue type otherType
+    matchValue point type otherType
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+      matchValue point (body.instantiate1 index) (otherBody.instantiate1 index)
   | .lam _ type body _, _ =>
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (mkApp actual index)
+      matchValue point (body.instantiate1 index) (mkApp actual index)
   | _, .lam _ type body _ =>
     withLocalDeclD `index type fun index =>
-      matchValue (mkApp expected index) (body.instantiate1 index)
+      matchValue point (mkApp expected index) (body.instantiate1 index)
   | .forallE _ type body _, .forallE _ otherType otherBody _ =>
     -- Implication antecedents are proposition-valued binder domains; compare
     -- their mathematical heads just like the body, while ordinary types retain
     -- the type/instance comparison above.
-    matchValue type otherType
+    matchValue point type otherType
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+      matchValue point (body.instantiate1 index) (otherBody.instantiate1 index)
   | .proj name index value, .proj otherName otherIndex otherValue =>
     unless name == otherName && index == otherIndex do
       throwError "representation expression {expected} does not match {actual}"
-    matchValue value otherValue
+    matchValue point value otherValue
   | .const name _, .const otherName _ =>
     unless name == otherName && (← isDefEq expected actual) do
       throwError "representation expression {expected} does not match {actual}"
@@ -155,7 +160,7 @@ private partial def matchValue (expected actual : Expr)
         expectedFn.isConstOf ``LT.lt || expectedFn.isConstOf ``GE.ge ||
         expectedFn.isConstOf ``GT.gt
       for index in [:first.size] do
-        matchValue first[index]! second[index]! (!comparison)
+        matchValue point first[index]! second[index]! (!comparison)
     else unless expected == actual do
       throwError "representation expression {expected} does not match {actual}"
 
@@ -270,7 +275,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
     expected := mkAppN expected.getAppFn
       #[expected.getAppArgs[0]!, expected.getAppArgs[2]!, expected.getAppArgs[1]!]
   let actual ← normalizeComparison (view?.map (·.predicate) |>.getD sourceBody)
-  matchValue expected actual
+  matchValue point expected actual
   try
     let mut usedEvidence := false
     for argument in parameters ++ proofArguments do
