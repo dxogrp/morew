@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Terminal
 import Morew.Reformulation.Replace
 import Morew.Elab.Expr
-import Morew.Elab.Rewrite.Direct
+import Morew.Elab.Rewrite.Reduction
 
 /-!
 # Terminal cone-membership conversion
@@ -251,10 +251,10 @@ private def normalizeDirectPresentation (presentation : PresentationState) : Met
   let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
       (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
     let reduce := fun expression => dsimpPreservingProofLets expression (preserveOperations := false)
-    let objective ← Morew.Elab.Rewrite.Direct.normalize presentation.objective reduce fun candidate => do
+    let objective ← Morew.Elab.Rewrite.Reduction.normalize presentation.objective reduce fun candidate => do
       return (← Morew.Elab.Conic.reifyObjective { presentation with objective := candidate }).isOk
     let constraints ← presentation.constraints.mapM fun row => do
-      let predicate ← Morew.Elab.Rewrite.Direct.normalizePredicate row.predicate reduce fun candidate => do
+      let predicate ← Morew.Elab.Rewrite.Reduction.normalizePredicate row.predicate reduce fun candidate => do
         let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate candidate
         for leaf in leaves do
           if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return false

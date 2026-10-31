@@ -7,7 +7,7 @@ import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Rewrite.Direct
+import Morew.Elab.Rewrite.Reduction
 import Morew.Elab.Expr
 import Morew.Elab.State
 
@@ -208,7 +208,7 @@ private partial def normalizeDirectRows (work : Work) (reduce : Expr → MetaM E
   let feasible ← feasibility work.presentation
   let constraints ← work.presentation.constraints.mapIdxM fun index row => do
     if work.certifiedRows[index]!.isSome then return row
-    let predicate ← Direct.normalizePredicate row.predicate reduce
+    let predicate ← Reduction.normalizePredicate row.predicate reduce
       (fun candidate => return (← Rows.certifyRows feasible #[candidate]).isOk)
       (opaqueProblemDependencies := true)
     return { row with predicate }
@@ -262,7 +262,7 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
     | none => pure work
     | some reduce => do
       let feasible ← feasibility work.presentation
-      let objective ← Direct.normalize work.presentation.objective reduce fun candidate => do
+      let objective ← Reduction.normalize work.presentation.objective reduce fun candidate => do
         let canonical ← { work.presentation with objective := candidate }.canonicalProblem
         let realObjective ← mkAppOptM ``Morew.Problem.objective
           #[some work.presentation.domainType, some (mkConst ``Real), some canonical]

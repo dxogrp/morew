@@ -13,7 +13,7 @@ A surface reduction may expose a directly certifiable function or predicate.
 Failed reductions retain the original operation instances for rule discovery.
 -/
 
-namespace Morew.Elab.Rewrite.Direct
+namespace Morew.Elab.Rewrite.Reduction
 
 open Lean Lean.Meta
 
@@ -61,4 +61,4 @@ def normalizePredicate (predicate : Expr) (reduce : Expr → MetaM Expr)
     mkLambdaFVars #[point] (← normalizeBody point (mkApp predicate point) reduce certify
       opaqueProblemDependencies)
 
-end Morew.Elab.Rewrite.Direct
+end Morew.Elab.Rewrite.Reduction

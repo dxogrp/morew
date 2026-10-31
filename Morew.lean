@@ -61,9 +61,9 @@ import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.Runner
 import Morew.Elab.Rewrite.Comparison
 import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Rewrite.Direct
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Rewrite.Plan
+import Morew.Elab.Rewrite.Reduction
 import Morew.Elab.Rewrite.Registry
 import Morew.Elab.State
 import Morew.Fn
