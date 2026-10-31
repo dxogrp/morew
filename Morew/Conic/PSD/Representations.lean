@@ -8,14 +8,15 @@ import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.LambdaMax
 import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.PSD.NuclearNorm
+import Morew.Conic.PSD.LogDet
 import Morew.Rewrite.Basic
 
 /-!
 # Exact positive-semidefinite representation records
 
-These records express spectral bounds, matrix fractions, and positive-definite
-domains using the existing PSD cone and scalar inequalities, and connect their
-mathematical equivalences to the public rewrite API.
+These records express spectral bounds, matrix fractions, log-determinants, and
+positive-definite domains using the existing PSD and exponential cones and scalar
+inequalities, and connect their mathematical equivalences to the public rewrite API.
 The narrower mathematical imports remain independent of rewrite certificates
 and do not install the modeling language or any global matrix norm instance.
 -/
@@ -84,3 +85,26 @@ noncomputable def nuclearNormEpigraph {m n : Nat} :
     simpa only [Prod.exists] using nuclearNorm_le_iff A t
 
 end Morew.Conic.Spectral
+
+namespace Morew.Conic.LogDet
+
+/-- Exact PSD/exponential hypograph of log-determinant on its positive-definite
+domain. Triangular coordinates introduce no upper-triangle equality rows. -/
+noncomputable def hypograph {n : Nat} (hn : 0 < n) :
+    HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
+      Fn.logDet X.1) where
+  Auxiliary := LowerTriangularEntries n × (Fin n → ℝ)
+  target X t aux :=
+    (fromBlocksFin X.1 (lowerTriangularMatrix aux.1) (lowerTriangularMatrix aux.1).transpose
+      (Matrix.diagonal (fun i => lowerTriangularMatrix aux.1 i i))).PosSemidef ∧
+    (∀ i, (aux.2 i, 1, lowerTriangularMatrix aux.1 i i) ∈ EXP) ∧ t ≤ ∑ i, aux.2 i
+  source_iff_exists X t := by
+    simpa only [Prod.exists] using le_logDet_iff X.1 X.2 t hn
+
+/-- The ordinary logarithm-of-determinant spelling has the same domain and lift. -/
+noncomputable def nativeHypograph {n : Nat} (hn : 0 < n) :
+    HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
+      Real.log (Matrix.det X.1)) :=
+  hypograph hn
+
+end Morew.Conic.LogDet
