@@ -188,7 +188,8 @@ def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
   State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       attempt source retained
-        (fun point body prove accept => Match.declaration point body name accept prove) provider
+        (fun point body prove accept =>
+          Match.declaration point body name accept prove (conicNegation := true)) provider
 
 /-- Preserve the checked whole-predicate adapter for concrete certificate
 expressions. If that adapter cannot prepare the record, typed matching may
@@ -201,7 +202,8 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
       let direct ← Plan.plan source rule provider
       if let .ok result := direct then return .ok result
       attempt source retained
-        (fun point body prove accept => Match.rule point body rule accept prove) provider
+        (fun point body prove accept =>
+          Match.rule point body rule accept prove (conicNegation := true)) provider
 
 private structure CertifiedCandidate where
   name : Name
