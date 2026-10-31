@@ -31,9 +31,11 @@ import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
 import MorewTest.Conic.PSD.LambdaMax
+import MorewTest.Conic.PSD.LogDet
 import MorewTest.Conic.PSD.MatrixFraction
 import MorewTest.Conic.PSD.NuclearNorm
 import MorewTest.Conic.PSD.SpectralNorm
+import MorewTest.Conic.PSD.Triangular
 import MorewTest.Conic.PSDElab
 import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
@@ -65,6 +67,7 @@ import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
 import MorewTest.ImportCompatibility.LocalDefinitions
 import MorewTest.ImportCompatibility.LocalDefinitions.Defined
+import MorewTest.ImportCompatibility.LogDet
 import MorewTest.ImportCompatibility.NegatedOccurrence
 import MorewTest.ImportCompatibility.Negation
 import MorewTest.ImportCompatibility.NegationNLP
@@ -132,6 +135,8 @@ import MorewTest.Reformulation.IndexNames
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
+import MorewTest.Reformulation.LogDet
+import MorewTest.Reformulation.LogDetFailures
 import MorewTest.Reformulation.MatrixFraction
 import MorewTest.Reformulation.MatrixFractionFailures
 import MorewTest.Reformulation.NLP
