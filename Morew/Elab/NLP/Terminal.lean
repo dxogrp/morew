@@ -7,6 +7,7 @@ import Morew.Elab.NLP.Form
 import Morew.Elab.NLP.Rewrite
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Rewrite.Decomposition
+import Morew.Elab.Rewrite.Reduction
 import Morew.Elab.Expr
 import Morew.Elab.State
 
@@ -200,8 +201,29 @@ private def originalError (original : PresentationState) (origin : Nat)
     rowIndex? := some origin
     reason := ← addMessageContext m!"constraint `{label}` is not certified as a smooth NLP by the available rules: {error.reason}\nexact rewriting: {ruleError.reason}\nuse `nlp at {label}` or `nlp at {label} using ruleName` before `nlp`; expose nested nonsmooth occurrences with an explicit epigraph or hypograph step" }
 
-private partial def lower (original : PresentationState) (work : Work) :
-    MetaM (Except Domain.DomainError Work) := do
+-- A surface reduction is accepted only for directly smooth leaves. Retrying
+-- after accepted reductions lets a later guard provide domain evidence to an
+-- earlier row without exposing unsuccessful reductions to rule discovery.
+private partial def normalizeDirectRows (work : Work) (reduce : Expr → MetaM Expr) : MetaM Work := do
+  let feasible ← feasibility work.presentation
+  let constraints ← work.presentation.constraints.mapIdxM fun index row => do
+    if work.certifiedRows[index]!.isSome then return row
+    let predicate ← Reduction.normalizePredicate row.predicate reduce
+      (fun candidate => return (← Rows.certifyRows feasible #[candidate]).isOk)
+      (opaqueProblemDependencies := true)
+    return { row with predicate }
+  if constraints.map (·.predicate) == work.presentation.constraints.map (·.predicate) then
+    return work
+  let presentation := { work.presentation with constraints }
+  unless ← isDefEq (← presentation.canonicalProblem) (← work.presentation.canonicalProblem) do
+    throwError "direct NLP normalization changed feasibility"
+  normalizeDirectRows { work with presentation } reduce
+
+private partial def lower (original : PresentationState) (work : Work)
+    (reduce? : Option (Expr → MetaM Expr)) : MetaM (Except Domain.DomainError Work) := do
+  let work ← match reduce? with
+    | some reduce => normalizeDirectRows work reduce
+    | none => pure work
   let mut work := work
   let mut firstError? := none
   for index in [:work.presentation.constraints.size] do
@@ -213,25 +235,39 @@ private partial def lower (original : PresentationState) (work : Work) :
     | .error rowError =>
       let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
       match ← Rewrite.plan predicate retained (insertionIndex := index) with
-      | .ok prepared => return ← lower original (← applyPrepared work index prepared)
+      | .ok prepared => return ← lower original (← applyPrepared work index prepared) reduce?
       | .error ruleError =>
-        if let some next ← tryGroup work index then return ← lower original next
+        if let some next ← tryGroup work index then return ← lower original next reduce?
         if firstError?.isNone then
           firstError? := some (← originalError original work.rowOrigins[index]! rowError ruleError)
   match firstError? with
   | some error => return .error error
   | none => return .ok work
 
-private def planCore (presentation : PresentationState) : MetaM (Except Domain.DomainError Result) := do
+private def planCore (presentation : PresentationState) (reduce? : Option (Expr → MetaM Expr)) :
+    MetaM (Except Domain.DomainError Result) := do
   let canonical ← presentation.canonicalProblem
   let work : Work := {
     presentation
     equivalence := ← mkAppM ``Morew.GlobalEquivalence.refl #[canonical]
     rowOrigins := presentation.constraints.mapIdx fun index _ => index
     certifiedRows := presentation.constraints.map fun _ => none }
-  let work ← match ← lower presentation work with
+  let work ← match ← lower presentation work reduce? with
     | .ok work => pure work
     | .error error => return .error error
+  -- Final feasibility can expose margins only after exact row lowering. Check
+  -- the complete reduced objective against that predicate, then let buildForm
+  -- combine its domain with the already certified row domains as usual.
+  let work ← match reduce? with
+    | none => pure work
+    | some reduce => do
+      let feasible ← feasibility work.presentation
+      let objective ← Reduction.normalize work.presentation.objective reduce fun candidate => do
+        let canonical ← { work.presentation with objective := candidate }.canonicalProblem
+        let realObjective ← mkAppOptM ``Morew.Problem.objective
+          #[some work.presentation.domainType, some (mkConst ``Real), some canonical]
+        return (← Domain.certifyWithEvidence feasible #[realObjective] Rows.factsProvider).isOk
+      pure { work with presentation := { work.presentation with objective } }
   let form ← match ← buildForm work.presentation work.certifiedRows with
     | .ok form => pure form
     | .error error =>
@@ -252,8 +288,11 @@ private def planCore (presentation : PresentationState) : MetaM (Except Domain.D
     auxiliaries := work.auxiliaries }
 
 /-- Plan deterministic exact lowering and certify the complete final problem.
-No visible names or declarations are emitted. Failures restore caller state. -/
-def plan (presentation : PresentationState) : MetaM (Except Domain.DomainError Result) :=
+No visible names or declarations are emitted. Failures restore caller state.
+An optional surface reducer is admitted only after direct certification; failed
+reductions never enter registered matching. -/
+def plan (presentation : PresentationState) (reduce? : Option (Expr → MetaM Expr) := none) :
+    MetaM (Except Domain.DomainError Result) :=
   State.withIsolatedMVars do
     try
       for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
@@ -267,7 +306,7 @@ def plan (presentation : PresentationState) : MetaM (Except Domain.DomainError R
       Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map
           (fun (value : Result) => value.replaceFVars oldVars newVars))
-        instances.toList (planCore presentation)
+        instances.toList (planCore presentation reduce?)
     catch error =>
       return .error {
         source := presentation.objective, expression := presentation.objective

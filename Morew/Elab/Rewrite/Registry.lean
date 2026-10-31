@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Basic
+import Morew.Elab.Rewrite.Comparison
 import Lean
 
 /-!
@@ -58,6 +59,16 @@ declaration names in sorted order. `conic at bound using shiftedAbsEpigraph` and
 the corresponding `nlp` command infer `center` from the entire selected row. Applied certificate
 expressions use ordinary Lean elaboration. Explicit selection never falls back
 to another rule, and a namespace by itself gives a declaration no priority.
+
+Both consumers reuse real epigraph and hypograph rules through outer unary
+negations: `-f x ≤ t` uses a hypograph rule at `-t`, and `t ≤ -f x` uses an
+epigraph rule at `-t`. Nested negations and either comparison spelling are
+checked through exact equivalences. Discovery combines direct and adapted
+declarations; two distinct successful rules remain ambiguous. Domains, the
+actual order/negation/norm instances, and target admissibility are still checked.
+Real graph records similarly match signed equalities, such as `y = -f x`
+through `-y = f x`. Whole-predicate lifts retain literal matching. These
+adaptations do not normalize subtraction or negative coefficients.
 
 All four representation families may express rule premises through subtype
 inputs or declaration proof parameters, without changing the model's original
@@ -269,29 +280,38 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
     let sourceHead := body.getAppFn.constName?
     let sourceHead := if sourceHead == some ``GE.ge then some ``LE.le else sourceHead
     let args := body.getAppArgs
-    let mut epi := none
-    let mut hypo := none
-    let mut graphLeft := none
-    let mut graphRight := none
+    let mut epigraphs := #[]
+    let mut hypographs := #[]
+    let mut graphs := #[]
     let mut outputHead? := none
     if body.isAppOfArity ``LE.le 4 then
       outputHead? ← fixedTypeHead? args[0]!
-      epi ← operation? args[2]!
-      hypo ← operation? args[3]!
+      epigraphs := epigraphs.push (← operation? args[2]!)
+      hypographs := hypographs.push (← operation? args[3]!)
     else if body.isAppOfArity ``GE.ge 4 then
       outputHead? ← fixedTypeHead? args[0]!
-      epi ← operation? args[3]!
-      hypo ← operation? args[2]!
+      epigraphs := epigraphs.push (← operation? args[3]!)
+      hypographs := hypographs.push (← operation? args[2]!)
     else if body.isAppOfArity ``Eq 3 then
       outputHead? ← fixedTypeHead? args[0]!
-      graphLeft ← operation? args[1]!
-      graphRight ← operation? args[2]!
+      graphs := graphs.push (← operation? args[1]!)
+      graphs := graphs.push (← operation? args[2]!)
+    for view in (← Comparison.signedViews body (fun e => structural e)).toList.drop 1 do
+      let args := view.predicate.getAppArgs
+      if view.predicate.isAppOfArity ``LE.le 4 then
+        epigraphs := epigraphs.push (← operation? args[2]!)
+        hypographs := hypographs.push (← operation? args[3]!)
+      else if view.predicate.isAppOfArity ``Eq 3 then
+        graphs := graphs.push (← operation? args[1]!)
+        graphs := graphs.push (← operation? args[2]!)
+    -- Filter the sorted declarations once: several views of the same rule are
+    -- one candidate, while direct-negative and derived declarations both stay.
     return (← entries target).filterMap fun entry =>
       let compatible := match entry.family with
         | .exact => sourceHead == some entry.head
-        | .epigraph => compatibleOperation entry epi
-        | .hypograph => compatibleOperation entry hypo
-        | .graph => compatibleOperation entry graphLeft || compatibleOperation entry graphRight
+        | .epigraph => epigraphs.any (compatibleOperation entry)
+        | .hypograph => hypographs.any (compatibleOperation entry)
+        | .graph => graphs.any (compatibleOperation entry)
       let compatibleType := match entry.outputHead?, outputHead? with
         | some expected, some actual => expected == actual
         | _, _ => true

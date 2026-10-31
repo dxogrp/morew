@@ -83,7 +83,7 @@ reformulation selected : ambiguousSource := by
 
 example : GlobalEquivalence ambiguousSource selected := selected.equivalence
 
-/-- error: constraint `bound`: expected an ExactConstraintLift -/
+/-- error: constraint `bound`: expected ExactConstraintLift -/
 #guard_msgs (substring := true) in
 reformulation wrongRecord : source := by
   nlp at bound using (0 : ℝ)

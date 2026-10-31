@@ -68,17 +68,28 @@ private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
     #[some type.getAppArgs[0]!, some type.getAppArgs[1]!, some value, some proof]
   return (input, proofs.push proof)
 
-private def normalizeComparison (expression : Expr) : MetaM Expr := do
-  let expression ← Registry.structural expression
-  if expression.isAppOfArity ``GE.ge 4 then
-    let args := expression.getAppArgs
-    return mkAppN (mkConst ``LE.le expression.getAppFn.constLevels!)
-      #[args[0]!, args[1]!, args[3]!, args[2]!]
-  return expression
+private def normalizeComparison (expression : Expr) : MetaM Expr :=
+  Comparison.normalize expression (fun e => Registry.structural e)
+
+-- Fixed data parameters may compute to the same value, including section
+-- parameters such as `n + 0` and `n`. Mathematical coordinates, functions,
+-- types, proofs, and instances keep their separate typed syntax checks.
+-- Data-value comparison occurs only below an already matched operation,
+-- never at a comparison endpoint.
+private def sameFixedDataValue (point expected actual type : Expr) : MetaM Bool := do
+  if (← Expr.hasUnresolved expected) || (← Expr.hasUnresolved actual) then return false
+  let type ← whnf type
+  if type.isSort || type.isForall || (← isProp type) ||
+      (← isClass? type).isSome || (← Expr.isSupportedSpace type) then return false
+  let some name := type.getAppFn.constName? | return false
+  let some (.inductInfo _) := (← getEnv).find? name | return false
+  if (← Expr.depends point expected) || (← Expr.depends point actual) then return false
+  withNewMCtxDepth <| isDefEq expected actual
 
 -- Value syntax is matched before definitional equality. In particular, an
 -- opaque/named helper cannot accidentally match its unfolded implementation.
-private partial def matchValue (expected actual : Expr) : MetaM Unit := do
+private partial def matchValue (point expected actual : Expr)
+    (operationArgument : Bool := false) : MetaM Unit := do
   let expected ← Registry.structural expected
   let actual ← Registry.structural actual
   if expected.isMVar then
@@ -91,6 +102,7 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
       throwError "representation input does not match {actual}"
     return
   let type ← inferType expected
+  if operationArgument && (← sameFixedDataValue point expected actual type) then return
   if (← isProp type) || ((← isType expected) && !(← isProp expected)) ||
       (← isClass? type).isSome then
     unless ← isDefEq expected actual do
@@ -105,31 +117,31 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
       throwError "representation input types differ at {actual}"
     let structureName := if expected.isAppOfArity ``Prod.mk 4 then ``Prod else ``Subtype
     let fields := expected.getAppArgs
-    matchValue fields[2]! (.proj structureName 0 actual)
-    matchValue fields[3]! (.proj structureName 1 actual)
+    matchValue point fields[2]! (.proj structureName 0 actual)
+    matchValue point fields[3]! (.proj structureName 1 actual)
     return
   match expected, actual with
   | .lam _ type body _, .lam _ otherType otherBody _ =>
-    matchValue type otherType
+    matchValue point type otherType
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+      matchValue point (body.instantiate1 index) (otherBody.instantiate1 index)
   | .lam _ type body _, _ =>
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (mkApp actual index)
+      matchValue point (body.instantiate1 index) (mkApp actual index)
   | _, .lam _ type body _ =>
     withLocalDeclD `index type fun index =>
-      matchValue (mkApp expected index) (body.instantiate1 index)
+      matchValue point (mkApp expected index) (body.instantiate1 index)
   | .forallE _ type body _, .forallE _ otherType otherBody _ =>
     -- Implication antecedents are proposition-valued binder domains; compare
     -- their mathematical heads just like the body, while ordinary types retain
     -- the type/instance comparison above.
-    matchValue type otherType
+    matchValue point type otherType
     withLocalDeclD `index type fun index =>
-      matchValue (body.instantiate1 index) (otherBody.instantiate1 index)
+      matchValue point (body.instantiate1 index) (otherBody.instantiate1 index)
   | .proj name index value, .proj otherName otherIndex otherValue =>
     unless name == otherName && index == otherIndex do
       throwError "representation expression {expected} does not match {actual}"
-    matchValue value otherValue
+    matchValue point value otherValue
   | .const name _, .const otherName _ =>
     unless name == otherName && (← isDefEq expected actual) do
       throwError "representation expression {expected} does not match {actual}"
@@ -144,7 +156,11 @@ private partial def matchValue (expected actual : Expr) : MetaM Unit := do
         throwError "representation operation {expected} does not match {actual}"
       let first := expected.getAppArgs
       let second := actual.getAppArgs
-      for index in [:first.size] do matchValue first[index]! second[index]!
+      let comparison := expectedFn.isConstOf ``Eq || expectedFn.isConstOf ``LE.le ||
+        expectedFn.isConstOf ``LT.lt || expectedFn.isConstOf ``GE.ge ||
+        expectedFn.isConstOf ``GT.gt
+      for index in [:first.size] do
+        matchValue point first[index]! second[index]! (!comparison)
     else unless expected == actual do
       throwError "representation expression {expected} does not match {actual}"
 
@@ -218,11 +234,14 @@ private inductive ExactInput where
   deriving BEq
 
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
-    (reverseGraph : Bool) (exactInput : ExactInput) : MetaM Result := do
+    (reverseGraph : Bool) (exactInput : ExactInput)
+    (view? : Option Comparison.View := none) : MetaM (Except Exception Result) := do
   let (parameters, _, type) ← forallMetaTelescopeReducing (← inferType originalRule)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.representation type
+  if view?.isSome && family == .exact then
+    throwError "comparison adaptation requires a graph, epigraph, or hypograph representation"
   let (input, proofArguments) ← if family == .exact then
       match exactInput with
       | .whole => do
@@ -255,67 +274,90 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
     unless family == .graph do throwError "not a graph representation"
     expected := mkAppN expected.getAppFn
       #[expected.getAppArgs[0]!, expected.getAppArgs[2]!, expected.getAppArgs[1]!]
-  let actual ← normalizeComparison sourceBody
-  matchValue expected actual
-  let mut usedEvidence := false
-  for argument in parameters ++ proofArguments do
-    usedEvidence := (← solveProof point argument prove?) || usedEvidence
-  checkIndependent point parameters
-  let proof ← instantiateMVars proof
-  let proof ← if reverseGraph then do
-      let lhs := actual.getAppArgs[1]!
-      let rhs := actual.getAppArgs[2]!
-      mkAppM ``Iff.trans #[← mkAppOptM ``eq_comm #[none, some lhs, some rhs], proof]
-    else pure proof
-  if ← Plan.unresolved proof then
-    throwError "the representation contains unresolved parameters or missing domain evidence"
-  let proofType ← whnf (← inferType proof)
-  unless ← isDefEq proofType.getAppArgs[0]! sourceBody do
-    throwError "the representation does not describe the entire selected predicate"
-  let existsType ← whnf proofType.getAppArgs[1]!
-  unless existsType.isAppOfArity ``Exists 2 do
-    throwError "internal error: representation target is not existential"
-  let auxiliary ← expose (← instantiateMVars existsType.getAppArgs[0]!)
-  if ← Expr.depends point auxiliary then
-    throwError "representation auxiliary type depends on the decision variable"
-  checkWithKernel proof
-  let target ← expose existsType.getAppArgs[1]!
-  return { auxiliary, target, sourceIff := proof, usedEvidence }
+  let actual ← normalizeComparison (view?.map (·.predicate) |>.getD sourceBody)
+  matchValue point expected actual
+  try
+    let mut usedEvidence := false
+    for argument in parameters ++ proofArguments do
+      usedEvidence := (← solveProof point argument prove?) || usedEvidence
+    checkIndependent point parameters
+    let proof ← instantiateMVars proof
+    let proof ← if reverseGraph then do
+        let lhs := actual.getAppArgs[1]!
+        let rhs := actual.getAppArgs[2]!
+        mkAppM ``Iff.trans #[← mkAppOptM ``eq_comm #[none, some lhs, some rhs], proof]
+      else pure proof
+    if ← Plan.unresolved proof then
+      throwError "the representation contains unresolved parameters or missing domain evidence"
+    let proof ← match view? with
+      | some view => mkAppM ``Iff.trans #[view.sourceIff, proof]
+      | none => pure proof
+    let proofType ← whnf (← inferType proof)
+    unless ← isDefEq proofType.getAppArgs[0]! sourceBody do
+      throwError "the representation does not describe the entire selected predicate"
+    let existsType ← whnf proofType.getAppArgs[1]!
+    unless existsType.isAppOfArity ``Exists 2 do
+      throwError "internal error: representation target is not existential"
+    let auxiliary ← expose (← instantiateMVars existsType.getAppArgs[0]!)
+    if ← Expr.depends point auxiliary then
+      throwError "representation auxiliary type depends on the decision variable"
+    checkWithKernel proof
+    let target ← expose existsType.getAppArgs[1]!
+    return .ok { auxiliary, target, sourceIff := proof, usedEvidence }
+  catch error => return .error error
 
 private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
     (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
-  let result : Except (Bool × Exception) α ← State.withIsolatedMVars do
-    let tryAttempt := fun reverse inputMode => State.withIsolatedMVars do
-      let matched ← try attempt point sourceBody (← prepare) prove? reverse inputMode
-        catch exception => return .error (false, exception)
+  -- Diagnose the furthest successful stage: operation matching, domain/proof
+  -- validation, then target certification. An adapted domain failure should
+  -- not be hidden behind the original negative head's shape mismatch.
+  let result : Except (Nat × Exception) α ← State.withIsolatedMVars do
+    let tryAttempt := fun reverse inputMode view? => State.withIsolatedMVars do
+      let matched ← try attempt point sourceBody (← prepare) prove? reverse inputMode view?
+        catch exception => return .error (0, exception)
+      let matched ← match matched with
+        | .ok matched => pure matched
+        | .error exception => return .error (1, exception)
       try return .ok (← accept matched)
-      catch exception => return .error (true, exception)
-    match ← tryAttempt false exactInput with
+      catch exception => return .error (2, exception)
+    match ← tryAttempt false exactInput none with
     | .ok value => return .ok value
     | .error original =>
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
       let (family, inputType, _) ← Registry.representation type
+      if family == .graph || family == .epigraph || family == .hypograph then
+        let mut failure := original
+        if family == .graph then
+          -- Preserve both direct graph orientations before adapting any signs.
+          match ← tryAttempt true exactInput none with
+          | .ok value => return .ok value
+          | .error next =>
+            if failure.1 < next.1 then failure := next
+        for view in (← Comparison.signedViews sourceBody
+            (fun e => Registry.structural e)).toList.drop 1 do
+          for reverse in (if family == .graph then [false, true] else [false]) do
+            match ← tryAttempt reverse exactInput (some view) with
+            | .ok value => return .ok value
+            | .error next =>
+              if failure.1 < next.1 then failure := next
+        return .error failure
       let subtypeWhole := family == .exact &&
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
           !(← isDefEq inputType (← inferType point))
       if exactInput == .whole && subtypeWhole then
         -- Retry only subtype wrappers around the same complete decision point.
         -- Concrete records never acquire declaration-style input inference.
-        return ← tryAttempt false .subtypeWhole
-      if family == .graph || (family == .exact && exactInput == .infer) then
-        -- Retry the whole checked attempt: a matched graph orientation may
-        -- still fail the consumer's target certification. Exact records also
-        -- retain the whole-input fallback for unused inputs or coordinates,
-        -- including subtype guards around the complete decision point.
-        match ← tryAttempt (family == .graph)
-            (if family == .exact then
-              if subtypeWhole then .subtypeWhole else .whole
-            else exactInput) with
+        return ← tryAttempt false .subtypeWhole none
+      if family == .exact && exactInput == .infer then
+        -- Exact records retain the whole-input fallback for unused inputs or
+        -- coordinates, including subtype guards around the complete point.
+        match ← tryAttempt false
+            (if subtypeWhole then .subtypeWhole else .whole) none with
         | .ok value => return .ok value
         | .error failure =>
           -- Prefer an actual target-certification failure to a mismatch.
-          if !original.1 && failure.1 then return .error failure
+          if original.1 < 2 && failure.1 == 2 then return .error failure
       return .error original
   match result with
   | .ok value => pure value
@@ -325,7 +367,8 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
 `accept` in its isolated attempt, preserving only a successful result's proof
 dependencies. Concrete exact lifts retain their whole-decision interpretation;
 subtype wrappers may add checked guards around that same point. Graph
-orientations count as one candidate. -/
+orientations and checked real negation views count as one candidate per record.
+Whole-predicate lifts do not receive comparison adaptations. -/
 def rule {α : Type} (point sourceBody expression : Expr)
     (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
   checked point sourceBody (pure expression) accept prove? .whole

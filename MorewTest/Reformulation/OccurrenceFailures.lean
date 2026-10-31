@@ -101,8 +101,8 @@ def repeatedExpressionSource := problem (x : ℝ) minimize x ^ 2 + x ^ 2
 reformulation repeatedExpression : repeatedExpressionSource certificate repeatedExpressionAlias := by
   epigraph t at (x ^ 2)
 
-/-- error: the occurrence bound has the wrong objective sense -/
-#guard_msgs in
+/-- error: cannot certify bound context -/
+#guard_msgs (substring := true) in
 reformulation wrongSense : source certificate wrongSenseAlias := by
   hypograph t at loss
 

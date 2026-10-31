@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Terminal
 import Morew.Reformulation.Replace
 import Morew.Elab.Expr
+import Morew.Elab.Rewrite.Reduction
 
 /-!
 # Terminal cone-membership conversion
@@ -242,11 +243,32 @@ private def materializeTerminalConic (state : ReformState)
       status := .terminal
     }
 
+-- Explicit class constructors historically reduced during surface
+-- canonicalization. Keep that behavior for directly conic predicates and
+-- complete affine objectives. A failed check retains its operations for registry
+-- matching, so reduction cannot authorize a rule for a different instance.
+private def normalizeDirectPresentation (presentation : PresentationState) : MetaM PresentationState := do
+  let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
+      (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
+    let reduce := fun expression => dsimpPreservingProofLets expression (preserveOperations := false)
+    let objective ← Morew.Elab.Rewrite.Reduction.normalize presentation.objective reduce fun candidate => do
+      return (← Morew.Elab.Conic.reifyObjective { presentation with objective := candidate }).isOk
+    let constraints ← presentation.constraints.mapM fun row => do
+      let predicate ← Morew.Elab.Rewrite.Reduction.normalizePredicate row.predicate reduce fun candidate => do
+        let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate candidate
+        for leaf in leaves do
+          if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return false
+        return true
+      return { row with predicate }
+    return .ok { presentation with objective, constraints }
+  return result.toOption.getD presentation
+
 /-- Plan the complete exact conversion and request all generated local names. -/
 def prepareTerminalConic (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft := withRef step do
   let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
+    let presentation ← normalizeDirectPresentation presentation
     match ← Morew.Elab.Conic.Terminal.plan presentation with
     | .error error => throwError "terminal conic validation is uncertified: {error.reason}"
     | .ok result => pure (result, sectionFVars)

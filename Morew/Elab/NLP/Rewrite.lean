@@ -164,72 +164,6 @@ private def registeredCandidates (source domain : Expr) : MetaM (Array Name) :=
     let predicate ← mkLambdaFVars #[point] body
     Morew.Elab.Rewrite.Registry.candidates .nlp predicate
 
-private def proofSides (proof : Expr) : MetaM (Expr × Expr) := do
-  let type ← whnf (← inferType proof)
-  unless type.isAppOfArity ``Iff 2 do throwError "internal error: expected exact iff evidence"
-  return (type.getAppArgs[0]!, type.getAppArgs[1]!)
-
--- Higher-order unification cannot always recover a pair from separate field
--- constraints, notably `using maxEpigraph` on a constant bound. Expose only
--- product constructors in these fresh inference patterns; source expressions
--- and the supplied representation remain unchanged.
-private partial def freshInput (type : Expr) : MetaM Expr := do
-  let shape ← whnf type
-  if shape.isAppOfArity ``Prod 2 then
-    mkAppM ``Prod.mk #[← freshInput shape.getAppArgs[0]!,
-      ← freshInput shape.getAppArgs[1]!]
-  else mkFreshExprMVar type
-
-private def adaptProductRepresentation (source domain rule : Expr)
-    (inputType outputType : Expr) (proofName adapter : Name)
-    (symmetric : Bool := false) : MetaM Expr :=
-  withLocalDeclD `point domain fun point => do
-    let input ← freshInput inputType
-    let output ← freshInput outputType
-    let proof ← mkAppM proofName #[rule, input, output]
-    let (predicate, _) ← proofSides proof
-    let predicate ← if symmetric then
-        mkEq predicate.getAppArgs[2]! predicate.getAppArgs[1]!
-      else pure predicate
-    unless ← isDefEq predicate (mkApp source point) do
-      throwError "the supplied exact certificate does not describe the entire selected predicate"
-    let input ← instantiateMVars input
-    let output ← instantiateMVars output
-    unless (← Domain.Evidence.complete input) && (← Domain.Evidence.complete output) do
-      throwError "cannot infer the exact representation's input and bound maps; supply an explicitly instantiated ExactConstraintLift"
-    let input ← mkLambdaFVars #[point] input
-    let output ← mkLambdaFVars #[point] output
-    Morew.Elab.Rewrite.Plan.checkLift source (← mkAppM adapter #[rule, input, output])
-
-private def customLift (source domain rule : Expr) : MetaM Expr := do
-  let saved ← saveState
-  try
-    return ← Morew.Elab.Rewrite.Plan.customLift source domain rule
-  catch original =>
-    saved.restore
-    let type ← whnf (← inferType rule)
-    let args := type.getAppArgs
-    if type.isAppOfArity ``Morew.EpigraphRepresentation 4 then
-      return ← adaptProductRepresentation source domain rule args[0]! args[1]!
-        ``Morew.EpigraphRepresentation.source_iff_exists
-        ``Morew.EpigraphRepresentation.toExactConstraintLift
-    if type.isAppOfArity ``Morew.HypographRepresentation 4 then
-      return ← adaptProductRepresentation source domain rule args[0]! args[1]!
-        ``Morew.HypographRepresentation.source_iff_exists
-        ``Morew.HypographRepresentation.toExactConstraintLift
-    if type.isAppOfArity ``Morew.GraphRepresentation 3 then
-      let saved ← saveState
-      try
-        return ← adaptProductRepresentation source domain rule args[0]! args[1]!
-          ``Morew.GraphRepresentation.source_iff_exists
-          ``Morew.GraphRepresentation.toExactConstraintLift
-      catch _ =>
-        saved.restore
-        return ← adaptProductRepresentation source domain rule args[0]! args[1]!
-          ``Morew.GraphRepresentation.source_iff_exists
-          ``Morew.GraphRepresentation.toExactConstraintLiftSymm true
-    throw original
-
 private def failure (source : Expr) (exception : Exception) : MetaM Error := do
   return { expression := source, reason := ← addMessageContext exception.toMessageData }
 
@@ -254,14 +188,22 @@ private def planCore (source : Expr) (retained : Array Expr)
     if let some name := declaration? then
       return .ok (← finishDeclaration name finishCertificate)
     if let some rule := rule? then
+      -- Concrete graph and bound records use the same typed matcher as named
+      -- registrations. Definitional equality alone could erase a custom source
+      -- operation before its actual instance has been checked.
+      unless (← whnf (← inferType rule)).isAppOfArity ``Morew.ExactConstraintLift 2 do
+        return .ok (← matchAndFinish source domain retained
+          (fun point body prove accept =>
+            Morew.Elab.Rewrite.Match.rule point body rule accept prove) finishCertificate)
       let direct : Except Exception Result ← State.withIsolatedMVars do
-        try return .ok (← finishCertificate (.exact (← customLift source domain rule)))
+        try return .ok (← finishCertificate
+          (.exact (← Morew.Elab.Rewrite.Plan.checkLift source rule)))
         catch exception => return .error exception
       match direct with
       | .ok result => return .ok result
       | .error original =>
-        -- Retry only the supplied record, retaining concrete exact lifts' whole-input
-        -- interpretation. Target checking belongs inside graph-orientation retries.
+        -- A supplied exact lift retains its whole-input interpretation; the
+        -- checked retry can discharge subtype guards from retained evidence.
         let reachedTarget ← IO.mkRef false
         let reachedPremise ← IO.mkRef false
         try

@@ -43,6 +43,11 @@ private def compactPSDOption : Name :=
 private def compactPSDCoordinatesOption : Name :=
   `Morew.Reformulation.Internal.compactPSDCoordinates
 
+-- Applied Lp coordinate projections are implicit in ordinary function notation.
+-- Enable this only for print payloads; reconstruction views retain the fields.
+private def coordinateNotationOption : Name :=
+  `Morew.Reformulation.Internal.coordinateNotation
+
 -- Lean normally prints atomic proof names even with `pp.proofs = false`.
 -- Annotating just the bound-proof slots makes its ordinary proof-omission
 -- machinery hide them, without changing constructors, indices, or types.
@@ -208,14 +213,44 @@ def problemTypeSyntaxFromExpression (expression : Expr) :
     value := ← exactExpressionSyntax value
   }
 
--- Disable automatic zeta reduction while explicitly reducing data lets. Proof
--- lets stay in their original scope so later analytic checks can use their
--- evidence without treating a decision- or index-dependent fact as global.
-private def proofPreservingSimpMethods : Simp.Methods :=
+-- Preserve class operation heads and their actual instances. Reducing a
+-- constructor-backed `Neg.neg`, `LE.le`, or `Norm.norm` here would erase the
+-- operations that typed rewrite matching must check. Operands still simplify,
+-- as do the ordinary structure projections used by problem scaffolding.
+private def classOperationPrefix? (expression : Expr) : MetaM (Option (Expr × Array Expr)) := do
+  let .const name _ := expression.getAppFn | return none
+  let some info ← getProjectionFnInfo? name | return none
+  unless info.fromClass do return none
+  let arguments := expression.getAppArgs
+  let prefixSize := min arguments.size (info.numParams + 1)
+  return some (mkAppN expression.getAppFn (arguments.extract 0 prefixSize),
+    arguments.extract prefixSize arguments.size)
+
+-- Disable automatic zeta reduction while explicitly reducing data lets when
+-- requested. Proof lets then stay in their original scope so later analytic
+-- checks can use their evidence without treating a decision-dependent fact as
+-- global.
+private def presentationSimpMethods (preserveProofLets : Bool)
+    (preserveOperations : Bool := true) : Simp.Methods :=
   let defaults := Simp.mkDefaultMethodsCore #[]
   { defaults with
     pre := fun expression => do
+      if preserveOperations then
+        if let some (function, arguments) ← classOperationPrefix? expression then
+          -- Keep the checked operation instance intact during reduction, but
+          -- still apply the explicitly supplied rewrite lemmas at this root.
+          -- In particular, exponential substitution uses `Real.exp_pos` here.
+          match ← Simp.rewritePre (rflOnly := false) expression with
+          | .visit result => return .visit result
+          | .done result => return .done result
+          | .continue _ => pure ()
+          let result ← Simp.congrArgs { expr := function } arguments
+          match ← Simp.rewritePost (rflOnly := false) result.expr with
+          | .visit rewritten => return .visit (← result.mkEqTrans rewritten)
+          | .done rewritten => return .done (← result.mkEqTrans rewritten)
+          | .continue _ => return .done result
       if let .letE name type value body nondep := expression then
+        unless preserveProofLets do return ← defaults.pre expression
         unless ← isProp type do
           return .visit { expr := body.instantiate1 value }
         -- The default have-telescope traversal also absorbs following data
@@ -231,7 +266,11 @@ private def proofPreservingSimpMethods : Simp.Methods :=
           return .done { result with expr, proof? }
       defaults.pre expression
     dpre := fun expression => do
+      if preserveOperations then
+        if let some (function, arguments) ← classOperationPrefix? expression then
+          return .done (mkAppN function (← arguments.mapM Simp.dsimp))
       if let .letE name type value body nondep := expression then
+        unless preserveProofLets do return ← defaults.dpre expression
         unless ← isProp type do
           return .visit (body.instantiate1 value)
         return ← withLetDecl name type value (nondep := nondep) fun binding => do
@@ -253,18 +292,20 @@ def simpOnly (expression : Expr) (lemmas : Array Name := #[])
     (config := if preserveProofLets then { zeta := false, zetaUnused := false } else {})
     (simpTheorems := #[theorems])
     (congrTheorems := ← getSimpCongrTheorems)
-  let (result, _) ← if preserveProofLets then
-      Simp.main expression context (methods := proofPreservingSimpMethods)
-    else simp expression context
+  let (result, _) ← Simp.main expression context
+    (methods := presentationSimpMethods preserveProofLets)
   instantiateMVars result.expr
 
-/-- Reduce generated scaffolding while retaining local proof evidence. -/
-def dsimpPreservingProofLets (expression : Expr) : MetaM Expr := do
+/-- Reduce generated scaffolding while retaining local proof evidence. Operation
+reduction is reserved for directly certifying a complete predicate, never for
+discovering a registered representation. -/
+def dsimpPreservingProofLets (expression : Expr)
+    (preserveOperations : Bool := true) : MetaM Expr := do
   let context ← Simp.mkContext
     (config := { zeta := false, zetaUnused := false })
     (simpTheorems := #[{}]) (congrTheorems := ← getSimpCongrTheorems)
   let (expression, _) ← Simp.dsimpMain expression context
-    (methods := proofPreservingSimpMethods)
+    (methods := presentationSimpMethods true preserveOperations)
   instantiateMVars expression
 
 private partial def splitConstraintBody (body : Expr) (count : Nat) : MetaM (Array Expr) := do
@@ -524,6 +565,25 @@ private def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
     match ← trySynthInstance (← inferType stored) with
     | .some inferred => isDefEq stored inferred
     | _ => pure false
+
+open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+@[delab app.WithLp.ofLp]
+private def delabLpCoordinate : Delab := do
+  let options ← getOptions
+  unless options.getBool coordinateNotationOption && !options.getBool `pp.explicit do failure
+  withOverApp 4 do
+    let expression ← getExpr
+    guard <| expression.isAppOfArity ``WithLp.ofLp 4
+    let args := expression.getAppArgs
+    let domain ← inferType args[2]!
+    let functionType := Lean.mkLambda `_ .default domain args[1]!
+    let projection := mkAppN expression.getAppFn (args.extract 0 2)
+    let canonical ← mkAppOptM ``CoeFun.mk
+      #[some domain, some functionType, some projection]
+    guard (← presentationInstanceResynthesizes canonical)
+    let value ← withNaryArg 2 delab
+    let index ← withNaryArg 3 delab
+    `($value $index)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.powerSet]
@@ -1137,13 +1197,14 @@ def refreshProblemView (targetName : Name)
             (forRegistration := true)
           let (compact, mathematicalRows) ← withOptions (fun options =>
               options.setBool `pp.proofs false |>.set `pp.proofs.threshold (0 : Nat)
-                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true) do
+                |>.setBool compactIndexProofsOption true |>.setBool compactPSDOption true
+                |>.setBool coordinateNotationOption true) do
             problemViewWithRowsFromExpression (fun rows names =>
               powerChainPrintRows rows (fun expression =>
                 delabPresentationTerm expression names false)) target template instantiateBinderTypes
               (forRegistration := true)
-          let detailed ← if getPPProofs (← getOptions) then pure display else
-            withOptions (·.setBool `pp.proofs true) do
+          let detailed ← withOptions (fun options =>
+              options.setBool `pp.proofs true |>.setBool coordinateNotationOption true) do
               problemViewFromExpression target template instantiateBinderTypes
                 (forRegistration := true)
           pure (replay, display,

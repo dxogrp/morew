@@ -188,20 +188,23 @@ def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
   State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       attempt source retained
-        (fun point body prove accept => Match.declaration point body name accept prove) provider
+        (fun point body prove accept =>
+          Match.declaration point body name accept prove) provider
 
-/-- Preserve the checked whole-predicate adapter for concrete certificate
-expressions. If that adapter cannot prepare the record, typed matching may
-reconstruct subtype inputs using the existing retained-domain policy. Both
-attempts use exactly the supplied record; registered rules are never searched. -/
+/-- Concrete graph and bound records use typed matching, including their actual
+operation instances. Whole-predicate certificates retain their checked direct
+adapter, with a typed retry for subtype guards. Registered rules are never
+searched when a record is supplied. -/
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
-      let direct ← Plan.plan source rule provider
-      if let .ok result := direct then return .ok result
+      if (← whnf (← inferType rule)).isAppOfArity ``Morew.ExactConstraintLift 2 then
+        let direct ← Plan.plan source rule provider
+        if let .ok result := direct then return .ok result
       attempt source retained
-        (fun point body prove accept => Match.rule point body rule accept prove) provider
+        (fun point body prove accept =>
+          Match.rule point body rule accept prove) provider
 
 private structure CertifiedCandidate where
   name : Name
