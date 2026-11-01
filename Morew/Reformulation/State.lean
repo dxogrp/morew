@@ -131,8 +131,10 @@ structure ReformState where
   source : TSyntax `term
   /-- Fully qualified declaration name of the source problem. -/
   sourceName : Name
-  /-- Outer parameter names used by the applied source. Decision binders must
-  avoid these names when its instantiated presentation is re-elaborated. -/
+  /-- Outer parameter names used by the applied source or introduced into the
+  current semantic problem by later steps. Decision binders must avoid these
+  names when the presentation is re-elaborated. Certificate-only dependencies
+  do not add reservations. -/
   usedSourceParameterNames : Array Name := #[]
   /-- Whether the source presentation was instantiated from an application. -/
   instantiatedSource : Bool := false

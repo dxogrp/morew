@@ -127,6 +127,26 @@ reformulation deriveBeforeHypograph : maximum certificate deriveBeforeHypographA
   derive bound : x = x using (fun point _ => Eq.refl point)
   hypograph t as bound
 
+section
+variable (cap : ℝ) (hcap : 1 ≤ cap)
+
+-- A derived operand can introduce a parameter absent from the original source.
+-- Later explicit binders must still respect source-parameter name reservations.
+#guard_error_fragments ["decision variable `cap` conflicts with a source parameter"] in
+assert_derive_atomic% derivedParameterEpigraph derivedParameterEpigraphAlias in
+reformulation derivedParameterEpigraph : bounded
+    certificate derivedParameterEpigraphAlias := by
+  derive relaxed : x ≤ cap using (fun _ hp => hp.2.trans hcap)
+  epigraph cap
+
+#guard_error_fragments ["decision variable `cap` conflicts with a source parameter"] in
+assert_derive_atomic% derivedParameterSubstitution derivedParameterSubstitutionAlias in
+reformulation derivedParameterSubstitution : bounded
+    certificate derivedParameterSubstitutionAlias := by
+  derive relaxed : x ≤ cap using (fun _ hp => hp.2.trans hcap)
+  substitute x := cap
+end
+
 -- The predicate's actual operation instance must agree with its proof.
 private abbrev reversedLE : LE ℝ := ⟨fun a b => b ≤ a⟩
 

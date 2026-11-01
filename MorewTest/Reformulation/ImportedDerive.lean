@@ -54,6 +54,22 @@ example (u : ℝ) : (continuedFamily offset).feasible u ↔
     0 ≤ u + offset ∧ 0 ≤ (u + offset) + (u + offset) ∧ 0 ≤ u + offset := Iff.rfl
 end
 
+section
+variable (auxiliary_aux auxiliary_aux_1 : ℝ)
+
+-- Freshening against parameters introduced by derive permits ordinary imported
+-- continuation using those same parameters.
+reformulation continuedAuxiliary : (freshenedAuxiliary auxiliary_aux auxiliary_aux_1) := by
+  derive square : 0 ≤ auxiliary_aux_2 ^ 2 using (by
+    intro point _
+    exact sq_nonneg point.2)
+
+example : GlobalEquivalence SecondOrderCustom.source
+    (continuedAuxiliary auxiliary_aux auxiliary_aux_1) :=
+  (freshenedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1).trans
+    (continuedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1)
+end
+
 namespace Shadow
 
 def cap (_ : ℝ) : Prop := False

@@ -257,6 +257,47 @@ reformulation afterAuxiliary : SecondOrderCustom.source := by
 example : GlobalEquivalence SecondOrderCustom.source afterAuxiliary := afterAuxiliary.equivalence
 example (x y u : ℝ) : afterAuxiliary.objective ((x, y), u) = x + y := rfl
 
+section
+variable (auxiliary_aux auxiliary_aux_1 : ℝ)
+
+-- Newly introduced operand parameters participate in later generated-name
+-- allocation, even though the original source did not depend on them.
+reformulation freshenedAuxiliary : SecondOrderCustom.source := by
+  derive ambient : auxiliary_aux = auxiliary_aux ∧ auxiliary_aux_1 = auxiliary_aux_1
+    using (by intro _ _; exact ⟨rfl, rfl⟩)
+  conic at auxiliary using SecondOrderCustom.auxiliaryRule
+
+example : GlobalEquivalence SecondOrderCustom.source
+    (freshenedAuxiliary auxiliary_aux auxiliary_aux_1) :=
+  freshenedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1
+
+/--
+info: problem (x y auxiliary_aux_2 : ℝ)
+  minimize x + y
+  subject to
+    before : Real.exp x ≤ 100
+    auxiliary_conic_1 : auxiliary_aux_2 = x
+    auxiliary_conic_2 : (y, 1 / 2, ![auxiliary_aux_2]) ∈ RSOC 1
+    after : y ≤ 10
+    ambient : auxiliary_aux = auxiliary_aux ∧ auxiliary_aux_1 = auxiliary_aux_1
+-/
+#guard_msgs in
+#printp freshenedAuxiliary
+end
+
+section
+variable (t : ∀ x : ℝ, x = x) (u : ℝ)
+
+-- Proof-only parameters and unrelated section locals do not reserve decision names.
+reformulation proofOnlyParameter : free := by
+  derive reflexive : x = x using (fun point _ => t point)
+  epigraph t
+  substitute x := u
+
+example : GlobalEquivalence free proofOnlyParameter := proofOnlyParameter.equivalence t
+example (x t : ℝ) : proofOnlyParameter.feasible (x, t) ↔ x = x ∧ x ≤ t := Iff.rfl
+end
+
 def shiftedFamily (offset : ℝ) :=
   problem (x : ℝ)
     let shifted := x + offset
