@@ -150,7 +150,7 @@ def negationCoverage :
   preimage point := -point.1
   rightInverse point := by simp
 
-/-- error: Application type mismatch -/
+/-- error: Type mismatch -/
 #guard_msgs (substring := true) in
 reformulation staleCertificateTarget : quadraticSource
     certificate staleCertificateAlias := by
@@ -162,7 +162,7 @@ run_cmd do
     `MorewTest.Reformulation.SubstitutionFailures.staleCertificateTarget
     `MorewTest.Reformulation.SubstitutionFailures.staleCertificateAlias
 
-/-- error: Application type mismatch -/
+/-- error: Type mismatch -/
 #guard_msgs (substring := true) in
 reformulation wrongMapCertificateTarget : quadraticSource
     certificate wrongMapCertificateAlias := by

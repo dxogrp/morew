@@ -413,6 +413,35 @@ private def parameterizationCertificate (state : ReformState)
         "substitution of `{oldName.eraseMacroScopes}` by `{(ref.reprint.getD "<replacement>").trimAscii.toString}`: {message}"
     | exception => throw exception
 
+/-- Check explicit coverage against the complete, already elaborated map.
+Canonical checkpoints can be definitionally equal to a named source without
+sharing its syntax. Checking before the pullback application prevents postponed
+tuple-pattern elaboration from interfering with that source comparison. -/
+private def explicitSubstitutionCertificate (state : ReformState)
+    (mapTerm provided : TSyntax `term) : CommandElabM (TSyntax `term) :=
+  runTermElabM fun sectionFVars => withoutErrToSorry do
+    let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
+    let map ← elabTermEnsuringType mapTerm
+      (← mkArrow typed.semanticDomainType typed.semanticDomainType)
+    synthesizeSyntheticMVarsNoPostponing
+    let map ← instantiateMVars map
+    let expected ← mkAppM ``Morew.FeasibleSurjection #[typed.semantic, map]
+    let certificate ← elabTermEnsuringType provided expected
+    synthesizeSyntheticMVarsNoPostponing
+    if (← getThe Core.State).messages.hasErrors then throwAbortTerm
+    let certificate ← instantiateMVars certificate
+    if certificate.hasMVar || certificate.hasSorry then
+      throwErrorAt provided "substitution coverage contains incomplete evidence"
+    withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+      checkWithKernel certificate
+    let name ← mkAuxDeclName (kind := `substitution)
+    -- Retain the checked source and complete map, even when the supplied
+    -- theorem's inferred type spells that source through another declaration.
+    let certificate ← mkAuxDefinition name (← instantiateMVars expected) certificate
+      (zetaDelta := true) (compile := false)
+    modifyEnv (addNoncomputable · name)
+    exactExpressionSyntax certificate
+
 private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))
@@ -444,7 +473,7 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
 
   let stepCertificate ← match providedCertificate? with
     | some proofTerm =>
-        pure ⟨← liftTermElabM <| Morew.Syntax.preResolveTerm proofTerm.raw⟩
+        explicitSubstitutionCertificate state mapTerm proofTerm
     | none =>
         parameterizationCertificate state replacementRef oldName scopedNewName binderIndex
           replacement mapTerm selectedRule?
