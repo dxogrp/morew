@@ -10,10 +10,7 @@ import Morew
 
 `restrict label : proposition using repair` can discard feasible points when
 each has a representative satisfying the new condition with no worse objective.
-The certificate preserves global optimization behavior; the feasible sets may
-differ. Repairs need not be smooth, invertible, or unique.
-Restrictions may remove original global optimizers and do not guarantee
-preservation of local optima or better solver performance.
+The certificate preserves global optimization behavior; the feasible sets may differ.
 -/
 
 namespace Examples.Restrict
@@ -44,8 +41,7 @@ reformulation ordered : symmetric := by
 #printp ordered
 example : GlobalEquivalence symmetric ordered := ordered.equivalence
 
--- For maximization, absolute value improves negative feasible points.
--- `GlobalImprovement` already uses the objective's `OrderDual` order.
+-- Restrict to nonnegative points by replacing x with |x|.
 def maximum :=
   problem (x : ℝ)
     maximize x
@@ -58,6 +54,7 @@ def absoluteRepair : GlobalImprovement maximum
   map point := ⟨|point.1|,
     ⟨⟨(by norm_num : (-1 : ℝ) ≤ 0).trans (abs_nonneg _), abs_le.mpr point.2⟩,
       abs_nonneg _⟩⟩
+  -- OrderDual makes objective_le require x ≤ |x| for this maximization problem.
   objective_le point := le_abs_self point.1
 
 reformulation nonnegativeMaximum : maximum := by
