@@ -5,6 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Atom
 import Morew.Elab.Expr
+import Morew.Elab.Substitution.Coordinates
+import Morew.Elab.Substitution.Match
+import Morew.Elab.Substitution.Rules
 import Morew.Reformulation.Presentation
 
 /-!
@@ -48,11 +51,6 @@ private partial def simplifyExpLog (stx : Lean.Syntax) : MacroM Lean.Syntax := d
         if inner.raw.isIdent then pure inner.raw else pure simplified
     | _ => pure simplified
 
-private def isTrueSyntax (stx : Lean.Syntax) : Bool :=
-  match stx with
-  | `(True) => true
-  | _ => false
-
 private def mkProduct (terms : Array (TSyntax `term)) : MacroM (TSyntax `term) := do
   if h : terms.size > 0 then
     let mut result := terms[0]
@@ -65,27 +63,6 @@ private def mkProduct (terms : Array (TSyntax `term)) : MacroM (TSyntax `term) :
 private def mkProductPattern (names : Array Name) : MacroM (TSyntax `term) := do
   let terms := names.map fun name => (⟨mkIdent name⟩ : TSyntax `term)
   mkProduct terms
-
-private def mkConjunctionEvidence (proof : TSyntax `term) (index count : Nat) :
-    MacroM (TSyntax `term) := do
-  let mut evidence := proof
-  for _ in [:index] do
-    evidence ← `(($evidence).2)
-  if index + 1 < count then
-    evidence ← `(($evidence).1)
-  pure evidence
-
-private partial def mkProductProjection (point : TSyntax `term)
-    (index count : Nat) : MacroM (TSyntax `term) := do
-  if count == 0 || index >= count then
-    Macro.throwError "invalid product projection"
-  else if count == 1 then
-    pure point
-  else if index + 1 == count then
-    `(($point).2)
-  else
-    let initial ← `(($point).1)
-    mkProductProjection initial index (count - 1)
 
 private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) : NameSet :=
   match stx with
@@ -121,10 +98,15 @@ private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Nam
   let localNames := view.definitions.foldl
     (fun names definition => names.insert definition.name.eraseMacroScopes) localNames
   let localNames := localNames.toList
+  let ambientNames ← runTermElabM fun _ => do
+    (← getLCtx).getFVars.mapM fun fvar => do
+      return (← fvar.fvarId!.getDecl).userName.eraseMacroScopes
   let env ← getEnv
   let candidates := (collectIdents replacement).toList.filter fun name =>
     !name.isAnonymous && !sameUserName name oldName &&
       !(localNames.any fun localName => localName.isPrefixOf name.eraseMacroScopes) &&
+      !(ambientNames.any fun localName =>
+        !localName.isAnonymous && localName.isPrefixOf name.eraseMacroScopes) &&
       !env.contains name
   pure candidates.toArray
 
@@ -249,57 +231,47 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
           visit (state.view.definitions.zip definitions).toList
             #[binders[binderIndex]!] #[replacement] names #[]
 
-private def replacementIsRealExpOf (state : ReformState)
-    (binderIndex : Nat) (newName : Name) (replacement : TSyntax `term) :
-    CommandElabM Bool :=
-  withTypedPresentation state fun presentation => do
-    let oldBinder := presentation.binders[binderIndex]!
-    let presentation := { presentation with
-      binders := presentation.binders.set! binderIndex { oldBinder with name := newName }
-    }
-    withPresentationBinders presentation fun binderTypes binders => do
-      let expression ← elabTerm replacement (some binderTypes[binderIndex]!)
-      synthesizeSyntheticMVarsNoPostponing
-      let expression ← instantiateMVars expression
-      let some atom ← Morew.Elab.Atom.recognizeAtom? expression
-        | pure false
-      pure <| atom.kind == .exp && atom.operands.size == 1 &&
-        atom.operands[0]!.fvarId? == binders[binderIndex]!.fvarId?
-
-private structure PositiveConstraintMatch where
-  index : Nat
-  normalization? : Option (TSyntax `term)
-
-private def findPositiveConstraint (state : ReformState)
-    (binderIndex : Nat) : CommandElabM (Option PositiveConstraintMatch) :=
-  withTypedPresentation state fun presentation =>
-  withPresentationBinders presentation fun _ binders => do
-    let point ← packPoint binders
-    let binder : TSyntax `term := ⟨mkIdent presentation.binders[binderIndex]!.name⟩
-    let expectedSyntax ← liftMacroM `(0 < $binder)
-    let expected ← elabTerm expectedSyntax (some (mkSort Level.zero))
-    synthesizeSyntheticMVarsNoPostponing
-    let expected ← instantiateMVars expected
-    for index in [:presentation.constraints.size] do
-      let candidate ← simpOnly <| mkApp presentation.constraints[index]!.predicate point
-      if ← isDefEq candidate expected then
-        let normalization? ← if candidate == expected then pure none else do
-          -- Preserve the full definitional equivalence, including nested aliases,
-          -- as a checked rewrite instead of remembering only a head declaration.
-          let equivalence := mkApp2 (mkConst ``Iff) candidate expected
-          let proof := mkExpectedPropHint (mkApp (mkConst ``Iff.rfl) expected) equivalence
-          -- Close over section parameters too, including anonymous instances.
-          let proof ← mkLambdaFVars (← getLCtx).getFVars proof (usedOnly := true)
-          check proof
-          pure <| some (← exactExpressionSyntax proof)
-        return some { index, normalization? }
-    pure none
-
 private def constraintIsTypedTrue (state : ReformState)
     (index : Nat) : CommandElabM Bool :=
   withTypedPresentation state fun presentation =>
     withLocalDeclD `point presentation.domainType fun point =>
       isDefEq (mkApp presentation.constraints[index]!.predicate point) (mkConst ``True)
+
+/-- Discharge a transformed row using only unconditional image facts, separately
+from coverage. A right inverse says nothing about the image of the replacement.
+The checked equality is also retained for aliases and subsequent script steps. -/
+private def independentTrueNormalization (state : ReformState)
+    (view : Morew.Syntax.ProblemView) (index : Nat) :
+    CommandElabM (Option (TSyntax `term)) :=
+  withTypedPresentation state fun presentation => do
+    let presentation := { presentation with
+      binders := presentation.binders.mapIdx fun i binder =>
+        { binder with name := view.binders[i]!.name } }
+    withPresentationBinders presentation fun _ binders =>
+      withViewDefinitions view fun definitions => do
+        let proposition ← elabTermEnsuringType view.constraints[index]!.proposition
+          (mkSort Level.zero)
+        synthesizeSyntheticMVarsNoPostponing
+        let proposition ← instantiateMVars proposition
+        -- Unfold the predicate's definitional wrappers; the rewrite theorems
+        -- still check the actual operations in the resulting proposition.
+        let body ← Morew.Elab.Substitution.Evidence.predicateView proposition 32
+        let mut theorems : SimpTheorems := {}
+        for name in #[``Real.exp_pos, ``sq_nonneg, ``true_and, ``and_true] do
+          theorems ← theorems.addConst name
+        let context ← Simp.mkContext (simpTheorems := #[theorems])
+          (congrTheorems := ← getSimpCongrTheorems)
+        let (result, _) ← Simp.main body context (methods := Simp.mkDefaultMethodsCore #[])
+        unless result.expr.isConstOf ``True do return none
+        let proof ← result.getProof
+        let equality ← mkEq proposition (mkConst ``True)
+        unless ← isDefEq (← inferType proof) equality do return none
+        let proof := mkExpectedPropHint proof equality
+        let proof ← mkLetFVars definitions proof
+        let proof ← mkLambdaFVars binders proof (usedOnly := true)
+        let proof ← mkLambdaFVars (← getLCtx).getFVars proof (usedOnly := true)
+        checkWithKernel proof
+        return some (← exactExpressionSyntax proof)
 
 /-- Keep dependent definition blocks source-aligned under substitution. Even
 simplifying an earlier scalar alias can change a later proof or data type, so
@@ -344,9 +316,103 @@ private def simplifiedPresentationCheck (state : ReformState)
       saved.restore (restoreInfo := true)
       setEnv saved.meta.core.env
 
-private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
+/-- Certify the complete coordinate map against the current semantic problem.
+Only source feasibility supplies coverage; the target presentation is irrelevant
+to rule selection. The tuple equivalence keeps all unselected coordinates. -/
+private def parameterizationCertificate (state : ReformState)
+    (ref : Lean.Syntax)
+    (oldName newName : Name) (binderIndex : Nat) (replacement mapTerm : TSyntax `term)
+    (selectedRule? : Option (TSyntax `term)) : CommandElabM (TSyntax `term) := do
+  try
+    runTermElabM fun sectionFVars => do
+      let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
+      let presentation := typed.presentation
+      let binderTypes := presentation.binders.map (·.type)
+      let split ← Morew.Elab.Substitution.Coordinates.split
+        typed.semanticDomainType binderTypes binderIndex
+      let splitType ← whnf (← inferType split)
+      let retainedType := splitType.getAppArgs[1]!.getAppArgs[0]!
+      -- These temporary model binders leave scope before evidence is searched.
+      let map ← withPresentationBinders presentation fun _ binders =>
+        withLocalDeclD newName binderTypes[binderIndex]! fun fresh => do
+          let replacement ← elabPresentationTerm replacement (binders.push fresh)
+            (some binderTypes[binderIndex]!)
+          synthesizeSyntheticMVarsNoPostponing
+          let replacement ← instantiateMVars replacement
+          withLocalDeclD `retained retainedType fun retained =>
+            withLocalDeclD `coordinate binderTypes[binderIndex]! fun coordinate => do
+              let mut arguments := #[]
+              let mut retainedIndex := 0
+              for index in [:binders.size] do
+                if index == binderIndex then arguments := arguments.push coordinate
+                else
+                  arguments := arguments.push (← Morew.Elab.Substitution.Coordinates.project
+                    retained retainedIndex (binders.size - 1))
+                  retainedIndex := retainedIndex + 1
+              let body := replacement.replaceFVars (binders.push fresh)
+                (arguments.push coordinate)
+              mkLambdaFVars #[retained, coordinate] body
+      let fullMap ← elabTermEnsuringType mapTerm
+        (← mkArrow typed.semanticDomainType typed.semanticDomainType)
+      synthesizeSyntheticMVarsNoPostponing
+      let fullMap ← instantiateMVars fullMap
+      let expectedRuleType ← mkAppM ``Morew.CoordinateParameterization #[map]
+      let selection ← match selectedRule? with
+        | none => pure (none, none)
+        | some ruleSyntax => do
+          if ruleSyntax.raw.isIdent then
+            if let some (.const name _) ← resolveId? ruleSyntax (withInfo := true) then
+              pure (none, some name)
+            else
+              let rule ← elabTermEnsuringType ruleSyntax expectedRuleType
+              synthesizeSyntheticMVarsNoPostponing
+              pure (some (← instantiateMVars rule), none)
+          else
+            let rule ← elabTermEnsuringType ruleSyntax expectedRuleType
+            synthesizeSyntheticMVarsNoPostponing
+            pure (some (← instantiateMVars rule), none)
+      let certificate ← withLocalDeclD `sourcePoint typed.semanticDomainType fun point => do
+        let feasibleType ← mkAppM ``Morew.Problem.feasible #[typed.semantic, point]
+        withLocalDeclD `sourceFeasible feasibleType fun feasible => do
+          let canonicalEvidence ← mkAppM ``Iff.mp
+            #[mkApp typed.normalization.feasibleIff point, feasible]
+          let coordinates ← whnf (← mkAppM ``Equiv.toFun #[split, point])
+          let retained ← Morew.Elab.Substitution.Registry.structural (mkProj ``Prod 0 coordinates)
+          let selected ← Morew.Elab.Substitution.Registry.structural (mkProj ``Prod 1 coordinates)
+          let accept (result : Morew.Elab.Substitution.Match.Result) : MetaM Expr := do
+            let coverage ← mkLambdaFVars #[point, feasible] result.rangeProof
+            let certificate ← mkAppM ``Morew.CoordinateParameterization.toFeasibleSurjection
+              #[result.rule, typed.semantic, split, split, coverage]
+            let expected ← mkAppM ``Morew.FeasibleSurjection #[typed.semantic, fullMap]
+            unless ← isDefEq (← inferType certificate) expected do
+              throwError "coordinate parameterization does not preserve the complete decision tuple"
+            checkWithKernel certificate
+            return certificate
+          match selection with
+          | (some rule, _) =>
+            Morew.Elab.Substitution.Match.rule
+              map point retained selected canonicalEvidence rule accept
+          | (_, some name) =>
+            Morew.Elab.Substitution.Match.declaration
+              map point retained selected canonicalEvidence name accept
+          | _ =>
+            Morew.Elab.Substitution.Match.discover
+              map point retained selected canonicalEvidence accept
+      -- Store the checked term once; command rollback also removes this helper.
+      let name ← mkAuxDeclName (kind := `substitution)
+      let certificate ← mkAuxDefinitionFor name certificate (zetaDelta := true) (compile := false)
+      modifyEnv (addNoncomputable · name)
+      exactExpressionSyntax certificate
+  catch
+    | .error _ message =>
+      throwErrorAt ref
+        "substitution of `{oldName.eraseMacroScopes}` by `{(ref.reprint.getD "<replacement>").trimAscii.toString}`: {message}"
+    | exception => throw exception
+
+private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))
+    (selectedRule? : Option (TSyntax `term))
     (oldName : Name) (binderIndex : Nat)
     (allocation : Morew.Elab.Reformulation.NameAllocation) :
     CommandElabM SurfaceStepResult := do
@@ -354,6 +420,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     | throwErrorAt replacement "internal error: missing substitution binder allocation"
   let scopedNewName ← withFreshMacroScope do
     MonadQuotation.addMacroScope newName
+  let replacementRef := replacement.raw
   let replacement ← expandReplacementDefinitions state binderIndex
     newName scopedNewName replacement
 
@@ -361,17 +428,7 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
   let newBinders := state.view.binders.set! binderIndex {
     oldBinder with name := scopedNewName
   }
-  let isRegisteredExp ← replacementIsRealExpOf state binderIndex scopedNewName replacement
-  if (← get).messages.hasErrors then
-    throwAbortCommand
-  let positiveMatch? ← if isRegisteredExp then
-      findPositiveConstraint state binderIndex
-    else
-      pure none
-  let positiveIndex? := positiveMatch?.map (·.index)
-  let normalizationLemmas := match positiveMatch?.bind (·.normalization?) with
-    | some proof => state.normalizationLemmas.push proof
-    | none => state.normalizationLemmas
+  let mut normalizationLemmas := state.normalizationLemmas
 
   let binderNames := newBinders.map fun binder => binder.name
   let domainType := state.semanticDomainType
@@ -380,6 +437,13 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     if i == binderIndex then replacement else ⟨mkIdent binder.name⟩
   let mapResult ← liftMacroM <| mkProduct mapComponents
   let mapTerm ← liftMacroM `(fun ($domainPattern : $domainType) => $mapResult)
+
+  let stepCertificate ← match providedCertificate? with
+    | some proofTerm =>
+        pure ⟨← liftTermElabM <| Morew.Syntax.preResolveTerm proofTerm.raw⟩
+    | none =>
+        parameterizationCertificate state replacementRef oldName scopedNewName binderIndex
+          replacement mapTerm selectedRule?
 
   let substitutedView ← substitutePresentation state binderIndex scopedNewName replacement
   let substitutedObjective := substitutedView.objective
@@ -404,7 +468,10 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
     let wasPresentedAsTrue ← constraintIsTypedTrue state index
     let substitutedProposition := substitutedView.constraints[index]!.proposition
     let proposition ← liftMacroM <| simplifyExpLog substitutedProposition
-    let provedTrue := isTrueSyntax proposition || positiveIndex? == some index
+    let normalization? ← independentTrueNormalization state substitutedView index
+    let provedTrue := normalization?.isSome
+    if let some proof := normalization? then
+      normalizationLemmas := normalizationLemmas.push proof
     if provedTrue && !wasPresentedAsTrue then
       removedConstraintNames :=
         removedConstraintNames.insert constraint.name.eraseMacroScopes
@@ -429,58 +496,6 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
         objective := substitutedObjective
         constraints := substitutedConstraints }
 
-  let stepCertificate ← match providedCertificate? with
-    | some proofTerm =>
-        pure ⟨← liftTermElabM <| Morew.Syntax.preResolveTerm proofTerm.raw⟩
-    | none => do
-        unless isRegisteredExp do
-          throwErrorAt replacement
-            "no registered substitution rule matches this expression; provide `using` with a `FeasibleSurjection` certificate"
-        let some positiveIndex := positiveIndex?
-          | throwErrorAt step
-              "the registered exponential rule requires the current constraint `0 < {oldName.eraseMacroScopes}`; provide `using` for a more general feasible domain"
-        let current := state.semantic
-        -- Earlier steps may have removed positivity constraints through aliases.
-        let normalizationLemmas ← liftMacroM <|
-          normalizationSimpLemmas state.sourceName state.normalizationLemmas
-        let pointIdent : TSyntax `ident := ⟨mkIdent `point⟩
-        let pointTerm : TSyntax `term := ⟨pointIdent.raw⟩
-        let sourcePoint ← liftMacroM `(($pointTerm).1)
-        let selectedSource ← liftMacroM <|
-          mkProductProjection sourcePoint binderIndex state.view.binders.size
-        let mut preimageComponents : Array (TSyntax `term) := #[]
-        for index in [:state.view.binders.size] do
-          let component ← liftMacroM <|
-            mkProductProjection sourcePoint index state.view.binders.size
-          if index == binderIndex then
-            preimageComponents := preimageComponents.push (← liftMacroM `(Real.log $component))
-          else
-            preimageComponents := preimageComponents.push component
-        let preimage ← liftMacroM <| mkProduct preimageComponents
-        let canonicalFeasible ← withTypedPresentation state fun presentation => do
-          let feasible ← mkFeasibleFunction presentation.domainType
-            (presentation.constraints.map (·.predicate))
-          -- Anonymous section instances get fresh names on each elaboration.
-          -- Abstract them so the certificate can infer them in its own context.
-          let instances ← (← getLCtx).getFVars.filterM fun fvar =>
-            return (← fvar.fvarId!.getDecl).binderInfo.isInstImplicit
-          let feasible ← mkLambdaFVars instances (← simpOnly feasible) (usedOnly := true)
-          exactExpressionSyntax feasible
-        let feasibleIdent : TSyntax `ident := ⟨mkIdent `normalizedFeasible⟩
-        let feasible : TSyntax `term := ⟨feasibleIdent.raw⟩
-        let positiveEvidence ← liftMacroM <|
-          mkConjunctionEvidence feasible positiveIndex state.view.constraints.size
-        liftMacroM `(
-          ({
-            preimage := fun $pointIdent => $preimage
-            rightInverse := fun $pointIdent => by
-              have $feasibleIdent : ($canonicalFeasible) ($pointTerm).1 := by
-                simpa only [$[$normalizationLemmas],*] using ($pointTerm).2
-              have positive : 0 < $selectedSource := by
-                exact $positiveEvidence
-              simp only [Real.exp_log positive]
-          } : Morew.FeasibleSurjection $current $mapTerm))
-
   let current := state.semantic
   let nextSemantic ← liftMacroM `(Morew.Problem.pullback $current $mapTerm)
   let primitiveEquivalence ← liftMacroM `(
@@ -501,7 +516,8 @@ private def materializeSubstitution (state : ReformState) (step : Lean.Syntax)
 /-- Plan a substitution and defer materialization until name preflight succeeds. -/
 def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
     (oldIdent : TSyntax `ident) (replacement : TSyntax `term)
-    (providedCertificate? : Option (TSyntax `term)) :
+    (providedCertificate? : Option (TSyntax `term))
+    (selectedRule? : Option (TSyntax `term) := none) :
     CommandElabM SurfaceStepDraft := do
   let replacement : TSyntax `term :=
     ⟨← liftTermElabM <| preResolveReplacement state.view replacement.raw⟩
@@ -518,7 +534,7 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
   pure {
     nameRequests := #[request]
     materialize := fun allocation =>
-      materializeSubstitution state step replacement providedCertificate?
+      materializeSubstitution state step replacement providedCertificate? selectedRule?
         oldName binderIndex allocation
   }
 

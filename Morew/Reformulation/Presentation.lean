@@ -424,7 +424,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
           else
             let exact := mkAppN exactParts[partIndex]! arguments
             let exact ← simpOnly exact
-              (if simplifyExpLogTerms then #[``Real.log_exp, ``Real.exp_pos] else #[])
+              (if simplifyExpLogTerms then #[``Real.log_exp, ``Real.exp_pos, ``sq_nonneg] else #[])
               (unfold := #[sourceName]) (preserveProofLets := true)
             let removedSourceConstraint := partIndex > 0 &&
               removedConstraintNames.contains
@@ -1239,7 +1239,7 @@ def normalizationSimpLemmas (sourceName : Name)
     lemmas := lemmas.push (← `(
       Lean.Parser.Tactic.simpLemma| $proof:term))
   for declaration in #[``Morew.Problem.pullback, ``Morew.Problem.epigraph,
-      ``Morew.Problem.hypograph, ``Real.log_exp, ``Real.exp_pos,
+      ``Morew.Problem.hypograph, ``Real.log_exp, ``Real.exp_pos, ``sq_nonneg,
       ``true_and, ``and_true, ``and_assoc, ``eq_self, ``iff_self] do
     lemmas := lemmas.push (← `(
       Lean.Parser.Tactic.simpLemma| $(mkIdent declaration):term))
