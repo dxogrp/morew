@@ -94,6 +94,7 @@ import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.PowerChainPrinting
 import Morew.Reformulation.Presentation
+import Morew.Reformulation.Rename
 import Morew.Reformulation.Replace
 import Morew.Reformulation.Restrict
 import Morew.Reformulation.State

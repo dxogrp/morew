@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Derive
 import Morew.Reformulation.Restrict
+import Morew.Reformulation.Rename
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
@@ -409,6 +410,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareDerive state label proposition provided
       | `(reformulationStep| restrict $label:ident : $proposition:term using $provided:term) =>
           prepareRestrict state label proposition provided
+      | `(reformulationStep| rename constraint $source:ident to $destination:ident) =>
+          prepareRenameConstraint state source destination
       | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
