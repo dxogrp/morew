@@ -40,9 +40,8 @@ def logarithmic :=
       positive : 0 < x
       cap : x ≤ 3
 
--- Renaming the domain row does not interfere with its later removal: every
--- exponential value is positive. The surviving cap keeps its position.
 reformulation exponential : logarithmic := by
+  -- Renaming the domain row does not interfere with its later removal.
   rename constraint positive to domain
   substitute x := Real.exp u
   rename constraint cap to upper
