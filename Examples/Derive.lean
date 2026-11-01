@@ -57,26 +57,5 @@ example : GlobalEquivalence logarithmic exponentialCoordinates :=
   exponentialCoordinates.equivalence
 example : IsSmoothNLP exponentialCoordinates := exponentialCoordinates.isSmoothNLP
 
--- A derived row can also be selected by a later named-constraint command.
-def interval :=
-  problem (x : ℝ)
-    minimize x
-    subject to
-      lower : -1 ≤ x
-      upper : x ≤ 1
-
-theorem absoluteBound : ∀ point, interval.feasible point → |point| ≤ 1 := by
-  intro point hp
-  exact abs_le.mpr hp
-
-reformulation intervalNLP : interval := by
-  derive abs_bound : |x| ≤ 1 using absoluteBound
-  nlp at abs_bound
-  nlp
-
-#printp intervalNLP
-example : GlobalEquivalence interval intervalNLP := intervalNLP.equivalence
-example : IsSmoothNLP intervalNLP := intervalNLP.isSmoothNLP
-
 end
 end Examples.Derive
