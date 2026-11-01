@@ -185,6 +185,8 @@ import MorewTest.Reformulation.PrintDetails
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Rename
+import MorewTest.Reformulation.RenameFailures
+import MorewTest.Reformulation.RenameIsolation
 import MorewTest.Reformulation.Replace
 import MorewTest.Reformulation.Restrict
 import MorewTest.Reformulation.RestrictFailures
