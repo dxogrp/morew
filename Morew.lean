@@ -85,7 +85,7 @@ import Morew.NLP.Domain
 import Morew.NLP.Rows
 import Morew.NLP.Smooth
 import Morew.Reformulation
-import Morew.Reformulation.AddedConstraint
+import Morew.Reformulation.Append
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
 import Morew.Reformulation.Derive

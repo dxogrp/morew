@@ -6,14 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Replace
 
 /-!
-# Surface materialization of added constraints
+# Appending certified constraints
 
 Derived constraints and certified restrictions share typed row elaboration and
 canonical presentation. Their handlers check different semantic certificates;
 this module only closes the new predicate and appends the certified row.
 -/
 
-namespace Morew.Reformulation.Internal.AddedConstraint
+namespace Morew.Reformulation.Internal.Append
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
@@ -108,4 +108,4 @@ def finish (style : Style) (state : ReformState)
     checkpoint? := some { semantic, view }
   }
 
-end Morew.Reformulation.Internal.AddedConstraint
+end Morew.Reformulation.Internal.Append

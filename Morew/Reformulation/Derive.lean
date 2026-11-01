@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.AddedConstraint
+import Morew.Reformulation.Append
 
 /-!
 # Derived constraints
@@ -18,7 +18,7 @@ namespace Morew.Reformulation.Internal
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def deriveStyle : AddedConstraint.Style := {
+private def deriveStyle : Append.Style := {
   description := "derived constraint"
   certificateKind := `derivedConstraint
   family := "derived"
@@ -33,7 +33,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
   runTermElabM fun sectionFVars => withoutErrToSorry do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
-      AddedConstraint.elaboratePredicate deriveStyle state typed proposition
+      Append.elaboratePredicate deriveStyle state typed proposition
     -- The temporary model binders are no longer in scope: only the source
     -- point quantified by this contract may supply decision-dependent facts.
     let expected ← withLocalDeclD `point typed.semanticDomainType fun point => do
@@ -51,7 +51,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
       pure proof
     let addition ← mkAppM ``Morew.addConstraintEquivalence
       #[typed.semantic, predicate, implied]
-    AddedConstraint.finish deriveStyle state typed name proposition predicate propositionSyntax addition
+    Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition
 
 /-- Preflight the explicit label before elaborating a derived row or its proof. -/
 def prepareDerive (state : ReformState) (label : TSyntax `ident)

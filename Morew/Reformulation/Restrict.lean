@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.AddedConstraint
+import Morew.Reformulation.Append
 
 /-!
 # Certified restrictions
@@ -17,7 +17,7 @@ namespace Morew.Reformulation.Internal
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def restrictStyle : AddedConstraint.Style := {
+private def restrictStyle : Append.Style := {
   description := "restriction"
   certificateKind := `restrictedConstraint
   family := "restricted"
@@ -32,7 +32,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
   runTermElabM fun sectionFVars => withoutErrToSorry do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
-      AddedConstraint.elaboratePredicate restrictStyle state typed proposition
+      Append.elaboratePredicate restrictStyle state typed proposition
     let natural ← mkAppM ``Morew.Problem.addConstraint #[typed.semantic, predicate]
     let expected ← mkAppM ``Morew.GlobalImprovement #[typed.semantic, natural]
     -- The repair concerns the complete current problem. Neither temporary
@@ -49,7 +49,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
       pure certificate
     let addition ← mkAppM ``Morew.restrictionEquivalence
       #[typed.semantic, predicate, improvement]
-    AddedConstraint.finish restrictStyle state typed name proposition
+    Append.finish restrictStyle state typed name proposition
       predicate propositionSyntax addition
 
 /-- Preflight the explicit label before elaborating a restriction or its certificate. -/
