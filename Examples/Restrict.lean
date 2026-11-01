@@ -63,9 +63,12 @@ reformulation nonnegativeMaximum : maximum := by
 #printp nonnegativeMaximum
 example : GlobalEquivalence maximum nonnegativeMaximum := nonnegativeMaximum.equivalence
 
--- Ordinary square substitution retains both signs of the new coordinate.
--- Selecting the square-root representative requires its own admissibility proof.
--- Here both `u = 2` and `u = -2` attain zero before restriction; only `2` remains.
+-- Select a nonnegative representative after square substitution.
+-- Substituting `x := u ^ 2` allows both signs of `u`.
+-- `restrictionImprovement` reuses the square-root preimage in `squareCoverage`
+-- to repair each `u` to `√(u²) = |u|`. Proving this preimage is nonnegative
+-- justifies adding `0 ≤ u`; its square is unchanged, so the objective is preserved.
+-- Both `u = ±2` initially minimize the problem; the restriction retains `u = 2`.
 def nonnegativeSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2
