@@ -398,6 +398,9 @@ private def elabReformulationCore : CommandElab := fun stx => do
       | `(reformulationStep| substitute $oldName:ident := $replacement:term
           $[using $provided:term]?) =>
           prepareSubstitution state step oldName replacement provided
+      | `(reformulationStep| substitute $oldName:ident := $replacement:term
+          via $rule:term) =>
+          prepareSubstitution state step oldName replacement none (some rule)
       | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>

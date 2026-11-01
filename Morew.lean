@@ -70,6 +70,11 @@ import Morew.Elab.Rewrite.Plan
 import Morew.Elab.Rewrite.Reduction
 import Morew.Elab.Rewrite.Registry
 import Morew.Elab.State
+import Morew.Elab.Substitution.Coordinates
+import Morew.Elab.Substitution.Evidence
+import Morew.Elab.Substitution.Match
+import Morew.Elab.Substitution.Registry
+import Morew.Elab.Substitution.Rules
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.Fn.Matrix
@@ -99,6 +104,7 @@ import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean
 import Morew.Rewrite.Polyhedral
 import Morew.Rewrite.Polyhedral.Lemmas
+import Morew.Substitution
 import Morew.Syntax
 import Morew.Syntax.Elab
 import Morew.Syntax.Grammar
@@ -107,3 +113,4 @@ import Morew.Syntax.Presentation
 import Morew.Syntax.Printer
 import Morew.Transform
 import Morew.Transform.Context
+import Morew.Transform.Parameterization

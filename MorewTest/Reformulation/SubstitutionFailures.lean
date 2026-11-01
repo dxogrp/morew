@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew
+import MorewTest.Diagnostics
 
 /-!
 # Substitution diagnostics and failed-command rollback
@@ -79,8 +80,8 @@ def unrestrictedSource :=
   problem (x : ℝ)
     minimize Real.log x
 
-/-- error: the registered exponential rule requires the current constraint `0 < x`; provide `using` for a more general feasible domain -/
-#guard_msgs in
+#guard_error_fragments ["substitution of `x` by `Real.exp u`",
+  "Morew.Substitution.exp", "cannot establish coordinate coverage"] in
 reformulation missingPositivityTarget : unrestrictedSource
     certificate missingPositivityAlias := by
   epigraph t as logarithm_bound
@@ -120,8 +121,8 @@ def source :=
     subject to
       positive : 0 < x
 
-/-- error: no registered substitution rule matches this expression; provide `using` with a `FeasibleSurjection` certificate -/
-#guard_msgs in
+#guard_error_fragments ["substitution of `x` by `Real.exp u`",
+  "no registered coordinate parameterization matches"] in
 reformulation target : source certificate failedAlias := by
   substitute x := Real.exp u
 

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation
 import MorewTest.Atom.Support
+import MorewTest.Diagnostics
 
 /-!
 # Atom recognition in surface models
@@ -40,8 +41,8 @@ def customSubstitutionSource :=
     subject to
       positive : 0 < x
 
-/-- error: no registered substitution rule matches this expression; provide `using` with a `FeasibleSurjection` certificate -/
-#guard_msgs in
+#guard_error_fragments ["substitution of `x` by `exponentialAlias u`",
+  "no registered coordinate parameterization matches"] in
 reformulation customSubstitutionTarget : customSubstitutionSource := by
   substitute x := exponentialAlias u
 

@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Surface.Fixtures
+import MorewTest.Diagnostics
 
 /-!
 # Surface diagnostics and rollback
@@ -33,10 +34,10 @@ def negativeSource :=
     subject to
       positive : 0 < x
 
-/-- error: no registered substitution rule matches this expression; provide `using` with a `FeasibleSurjection` certificate -/
-#guard_msgs in
+#guard_error_fragments ["substitution of `x`", "Morew.Substitution.square",
+  "does not match"] in
 reformulation noCoverageTarget : negativeSource := by
-  substitute x := u ^ 2
+  substitute x := u ^ 3
 
 /-- error: unknown decision variable `y` -/
 #guard_msgs in

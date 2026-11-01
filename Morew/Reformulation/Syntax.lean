@@ -16,10 +16,13 @@ namespace Morew
 /-- Syntax category for one proof-producing reformulation step. -/
 declare_syntax_cat reformulationStep
 
-/-- Substitute a decision variable with a parameterization, optionally using
-an explicit feasible-surjection certificate. -/
+/-- Substitute a decision variable with a registered parameterization, optionally
+using an explicit whole-problem feasible-surjection certificate. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
+/-- Select a coordinate parameterization without registry fallback. -/
+syntax (name := substituteViaStep)
+  "substitute " ident " := " term " via " term : reformulationStep
 /-- Introduce an epigraph variable for a minimization objective, optionally
 choosing the generated constraint's presentation label. -/
 syntax (name := epigraphStep)
