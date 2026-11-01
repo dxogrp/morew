@@ -43,7 +43,6 @@ abbrev coordinateMap (f : Retained → New → Old)
     (point : Y) : X :=
   sourceSplit.symm ((targetSplit point).1, f (targetSplit point).1 (targetSplit point).2)
 
-@[simp]
 theorem coordinateMap_retained (f : Retained → New → Old)
     (sourceSplit : X ≃ Retained × Old) (targetSplit : Y ≃ Retained × New)
     (point : Y) :
@@ -51,7 +50,6 @@ theorem coordinateMap_retained (f : Retained → New → Old)
       (targetSplit point).1 := by
   simp only [coordinateMap, Equiv.apply_symm_apply]
 
-@[simp]
 theorem coordinateMap_selected (f : Retained → New → Old)
     (sourceSplit : X ≃ Retained × Old) (targetSplit : Y ≃ Retained × New)
     (point : Y) :
