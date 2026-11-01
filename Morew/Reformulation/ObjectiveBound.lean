@@ -76,6 +76,17 @@ private def materializeObjectiveBound (state : ReformState)
 
   let primitive ← liftMacroM <|
     liftCertificateEquivalence state.runner primitiveEquivalence
+  -- Protect the newly introduced bound as a checkpoint row, while retaining
+  -- the natural epigraph/hypograph as the semantic certificate contract.
+  let canonical ← runTermElabM fun _ => do
+    let canonical ← canonicalTargetExpression state.sourceName state.checkpoint.semantic
+      state.checkpoint.semanticAnchor state.checkpoint.view state.removedCheckpointRows
+      nextSemantic state.simplifyExpLogTerms
+    let next ← elabTerm nextSemantic none
+    synthesizeSyntheticMVarsNoPostponing
+    discard <| checkedPointwiseNormalization state.sourceName
+      (← instantiateMVars next) canonical state.normalizationLemmas
+    exactExpressionSyntax canonical
   pure {
     view := newView
     semantic := nextSemantic
@@ -83,8 +94,14 @@ private def materializeObjectiveBound (state : ReformState)
     primitiveCertificate := primitive
     simplifyExpLogTerms := state.simplifyExpLogTerms
     hasSubstitution := state.hasSubstitution
-    removedConstraintNames := state.removedConstraintNames
+    liveCheckpointRows := Array.range newView.constraints.size
+    removedCheckpointRows := {}
     normalizationLemmas := state.normalizationLemmas
+    checkpoint? := some {
+      semantic := canonical
+      semanticAnchor := nextSemantic
+      view := newView
+    }
   }
 
 /-- Plan an epigraph or hypograph step with its binder and constraint-label requests. -/

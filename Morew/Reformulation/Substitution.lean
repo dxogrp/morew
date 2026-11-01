@@ -495,9 +495,11 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
         pure { definition with value, typeSyntax?, inferredTypeSyntax? }
   let mut constraints : Array Morew.Syntax.ConstraintView := #[]
   let mut substitutedConstraints : Array Morew.Syntax.ConstraintView := #[]
-  let mut removedConstraintNames := state.removedConstraintNames
+  let mut liveCheckpointRows : Array Nat := #[]
+  let mut removedCheckpointRows := state.removedCheckpointRows
   for index in [:state.view.constraints.size] do
     let constraint := state.view.constraints[index]!
+    let checkpointIndex := state.liveCheckpointRows[index]!
     let wasPresentedAsTrue ← constraintIsTypedTrue state index
     let substitutedProposition := substitutedView.constraints[index]!.proposition
     let proposition ← liftMacroM <| simplifyExpLog substitutedProposition
@@ -506,9 +508,9 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     if let some proof := normalization? then
       normalizationLemmas := normalizationLemmas.push proof
     if provedTrue && !wasPresentedAsTrue then
-      removedConstraintNames :=
-        removedConstraintNames.insert constraint.name.eraseMacroScopes
+      removedCheckpointRows := removedCheckpointRows.insert checkpointIndex
     else
+      liveCheckpointRows := liveCheckpointRows.push checkpointIndex
       constraints := constraints.push { constraint with proposition }
       substitutedConstraints := substitutedConstraints.push
         { constraint with proposition := substitutedProposition }
@@ -542,7 +544,8 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     primitiveCertificate := primitive
     simplifyExpLogTerms := true
     hasSubstitution := true
-    removedConstraintNames
+    liveCheckpointRows
+    removedCheckpointRows
     normalizationLemmas
   }
 

@@ -104,9 +104,10 @@ private def materializeTerminalNLP (state : ReformState)
       primitiveCertificate := ← exactExpressionSyntax primitive
       simplifyExpLogTerms := state.simplifyExpLogTerms
       hasSubstitution := state.hasSubstitution
-      removedConstraintNames := {}
+      liveCheckpointRows := Array.range view.constraints.size
+      removedCheckpointRows := {}
       normalizationLemmas := state.normalizationLemmas
-      checkpoint? := some { semantic, view }
+      checkpoint? := some { semantic, semanticAnchor := semantic, view }
       constraintSplices := prepared.replacedIndices.map fun index =>
         { index, count := (prepared.rowOrigins.filter (· == index)).size }
       terminalForm? := some (.nlp, ← exactExpressionSyntax form)

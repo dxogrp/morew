@@ -43,8 +43,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (fun x : ℝ => (x ≤ 3 ∧ 0 ≤ x) ∧ InDomain x))
   let semantic ← `(Morew.Problem.epigraph
     (Morew.Problem.pullback $checkpoint (fun y : ℝ => Real.exp y)))
-  let canonical ← canonicalTargetExpression ``source checkpoint view
-    (({} : NameSet).insert `positive) semantic true
+  let canonical ← canonicalTargetExpression ``source checkpoint checkpoint view
+    (({} : Std.HashSet Nat).insert 1) semantic true
   let expected ← elabTerm (← `(Morew.Problem.mk
     (fun point : ℝ × ℝ => point.2)
     (fun point : ℝ × ℝ =>
@@ -73,7 +73,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 run_cmd Lean.Elab.Command.liftTermElabM do
   let some view := Morew.Syntax.getProblemView? (← getEnv) ``source
     | throwError "missing test source presentation"
-  let base ← canonicalTargetExpression ``source (← `(source)) view {} (← `(source)) false
+  let base ← canonicalTargetExpression ``source (← `(source)) (← `(source)) view {} (← `(source)) false
   let current ← typedPresentationFromExpression base view
   let selected := current.constraints[0]!
   let next := { current with constraints := #[
@@ -113,7 +113,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let some view := Morew.Syntax.getProblemView? (← getEnv) ``constantSource
     | throwError "missing constant-objective source presentation"
   let canonical ← canonicalTargetExpression ``constantSource
-    (← `(constantSource)) view {} (← `(constantSource)) false
+    (← `(constantSource)) (← `(constantSource)) view {} (← `(constantSource)) false
   let objective ← mkAppM ``Morew.Problem.objective #[canonical]
   let objective ← simpOnly objective
   if (objective.find? fun expression => expression.isConstOf ``constantSource).isSome then
