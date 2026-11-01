@@ -9,13 +9,7 @@ import Morew
 # Certified coordinate substitutions
 
 `substitute` replaces a selected coordinate and proves that every feasible
-original point has a preimage. The replacement need not be injective: squaring
-covers nonnegative values, with the square root as a chosen preimage.
-
-A registered parameterization supplies reusable coverage mathematics; `via`
-selects one explicitly. Morew checks its range against the current constraints
-and preserves all other coordinates. The existing `using` form instead accepts
-a complete, problem-specific `FeasibleSurjection` certificate.
+original point has a preimage.
 -/
 
 namespace Examples.Substitution
@@ -39,7 +33,9 @@ reformulation squared : nonnegative := by
 example : GlobalEquivalence nonnegative squared := squared.equivalence
 example : IsSmoothNLP squared := squared.isSmoothNLP
 
--- `via` chooses a reusable descriptor; the current problem supplies coverage.
+-- Without `via`, Morew searches the registered substitution rules. Here `via`
+-- selects only `Morew.Substitution.square`, with no fallback to another rule.
+-- In contrast, `using` supplies a complete problem-specific `FeasibleSurjection`.
 reformulation explicitlySquared : nonnegative := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
@@ -68,8 +64,10 @@ def scaled :=
       slope : 0 < a
       budget : x ≤ 4
 
--- The slope is a retained decision coordinate. Its nonzero condition follows
--- from source feasibility, and the generated maps leave `a` unchanged.
+-- A substitution can depend on another decision variable: here its coefficient
+-- is `a`. The source constraint `0 < a` guarantees `a ≠ 0`, so every feasible
+-- original point has a preimage with `u = x / a`. Both the substitution
+-- `(a, u) ↦ (a, a * u)` and the chosen preimage `(a, x) ↦ (a, x / a)` preserve `a`.
 reformulation retainedCoefficient : scaled := by
   substitute x := a * u
 
