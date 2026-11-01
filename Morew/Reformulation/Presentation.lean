@@ -381,8 +381,8 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
 rows. `sourceName` is retained only for unfolding the original problem container;
 the checkpoint itself may be an explicitly constructed canonical problem. -/
 def canonicalTargetExpressionFromExpressions (sourceName : Name)
-    (source : Expr) (sourceView : Morew.Syntax.ProblemView)
-    (removedConstraintNames : NameSet) (semanticExpression : Expr)
+    (source semanticAnchor : Expr) (sourceView : Morew.Syntax.ProblemView)
+    (removedCheckpointRows : Std.HashSet Nat) (semanticExpression : Expr)
     (simplifyExpLogTerms : Bool) : TermElabM Expr := do
   let (domain, objective, constraints) ←
     sourceProblemParts sourceName source sourceView.constraints.size
@@ -402,7 +402,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
         mkFeasibleFunction domain protectedConstraints
       let protectedSource ← mkAppM ``Morew.Problem.mk
         #[protectedObjective, protectedFeasible]
-      let protectedSemantic ← protectCheckpoint semanticExpression source protectedSource
+      let protectedSemantic ← protectCheckpoint semanticExpression semanticAnchor protectedSource
       let transformed ← simpOnly protectedSemantic (unfold :=
         #[``Morew.Problem.pullback, ``Morew.Problem.epigraph,
           ``Morew.Problem.hypograph]) (preserveProofLets := true)
@@ -427,8 +427,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
               (if simplifyExpLogTerms then #[``Real.log_exp, ``Real.exp_pos, ``sq_nonneg] else #[])
               (unfold := #[sourceName]) (preserveProofLets := true)
             let removedSourceConstraint := partIndex > 0 &&
-              removedConstraintNames.contains
-                sourceView.constraints[partIndex - 1]!.name.eraseMacroScopes
+              removedCheckpointRows.contains (partIndex - 1)
             if removedSourceConstraint then
               -- The step supplied checked normalization evidence for this
               -- removal.  Use the canonical `True` row here even when the
@@ -460,17 +459,20 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
 /-- Elaborate a source and transformation spine, then canonicalize their checked
 expressions while protecting the checkpoint's ordered rows. -/
 def canonicalTargetExpression (sourceName : Name)
-    (sourceTerm : TSyntax `term) (sourceView : Morew.Syntax.ProblemView)
-    (removedConstraintNames : NameSet) (semantic : TSyntax `term)
+    (sourceTerm semanticAnchorTerm : TSyntax `term) (sourceView : Morew.Syntax.ProblemView)
+    (removedCheckpointRows : Std.HashSet Nat) (semantic : TSyntax `term)
     (simplifyExpLogTerms : Bool) : TermElabM Expr := do
   let source ← elabTerm sourceTerm none
   synthesizeSyntheticMVarsNoPostponing
   let source ← instantiateMVars source
+  let semanticAnchor ← elabTerm semanticAnchorTerm none
+  synthesizeSyntheticMVarsNoPostponing
+  let semanticAnchor ← instantiateMVars semanticAnchor
   let semanticExpression ← elabTerm semantic none
   synthesizeSyntheticMVarsNoPostponing
   let semanticExpression ← instantiateMVars semanticExpression
-  canonicalTargetExpressionFromExpressions sourceName source sourceView
-    removedConstraintNames semanticExpression simplifyExpLogTerms
+  canonicalTargetExpressionFromExpressions sourceName source semanticAnchor sourceView
+    removedCheckpointRows semanticExpression simplifyExpLogTerms
 
 private partial def splitProductDomain (domain : Expr) : Nat → MetaM (Array Expr)
   | 0 => throwError "a problem presentation requires at least one decision variable"

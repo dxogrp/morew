@@ -52,10 +52,14 @@ private def validateTypedPrimitive (state : ReformState)
       throwErrorAt result.primitiveCertificate
         "primitive reformulation certificate contains unresolved metavariables"
     let checkpoint := result.checkpoint?.getD state.checkpoint
-    unless result.checkpoint?.isNone || result.removedConstraintNames.isEmpty do
+    unless result.checkpoint?.isNone || result.removedCheckpointRows.isEmpty do
       throwError "a new canonicalization checkpoint must start with no removed constraints"
+    match validateCheckpointRows checkpoint.view.constraints.size result.view.constraints.size
+        result.liveCheckpointRows result.removedCheckpointRows with
+    | .ok () => pure ()
+    | .error message => throwError "invalid reformulation row inventory: {message}"
     let nextCanonical ← canonicalTargetExpression state.sourceName checkpoint.semantic
-      checkpoint.view result.removedConstraintNames result.semantic
+      checkpoint.semanticAnchor checkpoint.view result.removedCheckpointRows result.semantic
       result.simplifyExpLogTerms
     let currentPresentation := typed.presentation
     let nextPresentation ←
@@ -170,6 +174,10 @@ private def reportNamePreflightError {α}
 def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     CommandElabM (Morew.Elab.Reformulation.StepResult ×
       SurfaceMaterialization) := do
+  match validateCheckpointRows state.checkpoint.view.constraints.size state.view.constraints.size
+      state.liveCheckpointRows state.removedCheckpointRows with
+  | .ok () => pure ()
+  | .error message => throwError "invalid reformulation row inventory: {message}"
   let plan := typedStepPlan state draft
   let active := state.usedSourceParameterNames.foldl
     (fun inventory name => inventory.insert .decisionBinder name)
@@ -229,7 +237,8 @@ def commitSurfaceStep (state : ReformState)
     certificateSyntax
     simplifyExpLogTerms := surface.simplifyExpLogTerms
     hasSubstitution := surface.hasSubstitution
-    removedConstraintNames := surface.removedConstraintNames
+    liveCheckpointRows := surface.liveCheckpointRows
+    removedCheckpointRows := surface.removedCheckpointRows
     normalizationLemmas := surface.normalizationLemmas
     terminalArtifact? := materialization.terminalArtifact?.map
       (·.replaceFVars materialization.sectionFVars sectionFVars)

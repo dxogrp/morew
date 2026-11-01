@@ -355,8 +355,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
         unless usedSourceParameterNames.contains name do
           usedSourceParameterNames := usedSourceParameterNames.push name
-    let canonical ← canonicalTargetExpressionFromExpressions sourceName source template
-      {} source false
+    let canonical ← canonicalTargetExpressionFromExpressions sourceName source source
+      template {} source false
     let sourceView ← problemViewFromExpression source template (instantiateBinderTypes := true)
     let presentation ← typedPresentationFromExpression canonical sourceView
     let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
@@ -389,7 +389,9 @@ private def elabReformulationCore : CommandElab := fun stx => do
     sourceName
     instantiatedSource
     usedSourceParameterNames
-    checkpoint := { semantic := sourceTerm, view := sourceView }
+    checkpoint := {
+      semantic := sourceTerm, semanticAnchor := sourceTerm, view := sourceView }
+    liveCheckpointRows := Array.range sourceView.constraints.size
     runner
   }
 

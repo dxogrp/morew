@@ -61,10 +61,37 @@ def globalEquivalenceRunner : CertificateRunner :=
 steps are normalized. A rewrite may establish a new checkpoint without changing
 the original source of the accumulated certificate. -/
 structure CanonicalCheckpoint where
-  /-- Stable syntax for the checked checkpoint problem. -/
+  /-- Checked row source supplying the protected objective and ordered rows. -/
   semantic : TSyntax `term
+  /-- Raw semantic problem replaced by the protected row source when normalizing
+  later transformations. Keeping this separate preserves explicit certificates
+  against the natural transformation history. -/
+  semanticAnchor : TSyntax `term
   /-- The checkpoint's ordered binder and constraint presentation. -/
   view : Morew.Syntax.ProblemView
+
+/-- Check that the internal row inventory is an ordered partition of the
+checkpoint, with one live identity for each displayed row. -/
+def validateCheckpointRows (checkpointCount rowCount : Nat)
+    (live : Array Nat) (removed : Std.HashSet Nat) : Except String Unit := do
+  unless live.size == rowCount do
+    throw "checkpoint row identities do not align with the displayed rows"
+  let mut seen : Std.HashSet Nat := {}
+  for position in [:live.size] do
+    let index := live[position]!
+    unless index < checkpointCount do
+      throw "live checkpoint row identity is out of bounds"
+    if position > 0 && live[position - 1]! >= index then
+      throw "live checkpoint row identities do not preserve checkpoint order"
+    if removed.contains index then
+      throw "a checkpoint row is both live and removed"
+    seen := seen.insert index
+  for index in removed do
+    unless index < checkpointCount do
+      throw "removed checkpoint row identity is out of bounds"
+    seen := seen.insert index
+  unless seen.size == checkpointCount do
+    throw "checkpoint row identities do not cover the checkpoint"
 
 /-- Replace one selected constraint in place by a fixed number of ordered rows.
 The index refers to the presentation at step entry. -/
@@ -146,8 +173,10 @@ structure ReformState where
   simplifyExpLogTerms : Bool := false
   /-- Whether the script has committed a substitution step. -/
   hasSubstitution : Bool := false
-  /-- Checkpoint constraint labels whose rows have been proved removable. -/
-  removedConstraintNames : NameSet := {}
+  /-- Original checkpoint positions, aligned with the current displayed rows. -/
+  liveCheckpointRows : Array Nat
+  /-- Checkpoint positions whose rows have been proved removable. -/
+  removedCheckpointRows : Std.HashSet Nat := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
   /-- Structural evidence produced by terminal validation. -/
@@ -169,8 +198,10 @@ structure SurfaceStepResult where
   simplifyExpLogTerms : Bool
   /-- Whether the proposed state includes a substitution. -/
   hasSubstitution : Bool
-  /-- Checkpoint constraint labels removed by the proposed state. -/
-  removedConstraintNames : NameSet
+  /-- Original checkpoint positions, aligned with the proposed displayed rows. -/
+  liveCheckpointRows : Array Nat
+  /-- Checkpoint positions removed by the proposed state. -/
+  removedCheckpointRows : Std.HashSet Nat
   /-- Accumulated checked predicate equivalences. -/
   normalizationLemmas : Array (TSyntax `term)
   /-- Optional new base for normalization after a checked rewrite. Its removal

@@ -177,9 +177,10 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
     primitiveCertificate := ← exactExpressionSyntax primitive
     simplifyExpLogTerms := state.simplifyExpLogTerms
     hasSubstitution := state.hasSubstitution
-    removedConstraintNames := {}
+    liveCheckpointRows := Array.range view.constraints.size
+    removedCheckpointRows := {}
     normalizationLemmas := state.normalizationLemmas
-    checkpoint? := some { semantic, view }
+    checkpoint? := some { semantic, semanticAnchor := semantic, view }
     constraintSplices := #[{ index, count := rows.size }]
   }
 

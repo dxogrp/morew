@@ -377,9 +377,10 @@ private def materializeOccurrenceBound (state : ReformState)
       primitiveCertificate := ← exactExpressionSyntax primitive
       simplifyExpLogTerms := state.simplifyExpLogTerms
       hasSubstitution := state.hasSubstitution
-      removedConstraintNames := {}
+      liveCheckpointRows := Array.range selected.view.constraints.size
+      removedCheckpointRows := {}
       normalizationLemmas := state.normalizationLemmas
-      checkpoint? := some { semantic, view := selected.view }
+      checkpoint? := some { semantic, semanticAnchor := semantic, view := selected.view }
     }
 
 /-- Plan a checked bound lift at one objective or constraint occurrence. -/
