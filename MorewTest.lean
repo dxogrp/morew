@@ -89,6 +89,7 @@ import MorewTest.ImportCompatibility.Runner
 import MorewTest.ImportCompatibility.SecondOrder
 import MorewTest.ImportCompatibility.SecondOrder.Defined
 import MorewTest.ImportCompatibility.Spectral
+import MorewTest.ImportCompatibility.Substitution
 import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
@@ -189,6 +190,8 @@ import MorewTest.Reformulation.SubstitutionBindingIdentity
 import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionFailures
 import MorewTest.Reformulation.SubstitutionGeneratedNames
+import MorewTest.Reformulation.SubstitutionRuleFailures
+import MorewTest.Reformulation.SubstitutionRules
 import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
@@ -210,6 +213,9 @@ import MorewTest.Rewrite.Registry.Second
 import MorewTest.Rewrite.Registry.Source
 import MorewTest.Rewrite.Registry.Types
 import MorewTest.Rewrite.Replace
+import MorewTest.Substitution.Evidence
+import MorewTest.Substitution.Registry
+import MorewTest.Substitution.Registry.Source
 import MorewTest.Surface.Affine
 import MorewTest.Surface.AppliedSourceDimensions
 import MorewTest.Surface.AppliedSources
@@ -225,3 +231,4 @@ import MorewTest.Surface.Reformulation
 import MorewTest.Syntax.PresentationValidation
 import MorewTest.Syntax.Printing
 import MorewTest.Transform
+import MorewTest.Transform.Parameterization
