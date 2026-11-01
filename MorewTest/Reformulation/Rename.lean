@@ -22,13 +22,13 @@ def orderedSource :=
       last : shifted ≤ 5
 
 reformulation ordered : orderedSource := by
-  rename constraint first to lower
-  rename constraint middle to bounds.upper
-  rename constraint last to shifted
-  rename constraint bounds.upper to bounds.upper
+  rename first to lower
+  rename middle to bounds.upper
+  rename last to shifted
+  rename bounds.upper to bounds.upper
 
 reformulation sameName : orderedSource := by
-  rename constraint middle to middle
+  rename middle to middle
 
 example : ordered = orderedSource := rfl
 example : sameName = orderedSource := rfl
@@ -48,9 +48,9 @@ info: problem (x : ℝ)
 
 -- The vacated name is available immediately, and labels may match binders.
 reformulation reused : orderedSource := by
-  rename constraint first to x
+  rename first to x
   derive first : x ≤ 3 using (by intro point hp; exact hp.2.1)
-  rename constraint first to copied
+  rename first to copied
 
 example (x : ℝ) : reused.feasible x ↔
     0 ≤ x ∧ x ≤ 3 ∧ x + 1 ≤ 5 ∧ x ≤ 3 := Iff.rfl
@@ -61,9 +61,9 @@ def trueRepair {X V : Type*} [Preorder V] (p : Problem X V) :
   objective_le _ := le_rfl
 
 reformulation restricted : orderedSource := by
-  rename constraint first to lower
+  rename first to lower
   restrict first : True using trueRepair orderedSource
-  rename constraint first to tag
+  rename first to tag
   substitute x := u
 
 example (u : ℝ) : restricted.feasible u ↔
@@ -75,9 +75,9 @@ def maximum :=
     subject to lower : 0 ≤ x
 
 reformulation maximumBound : maximum := by
-  rename constraint lower to domain
+  rename lower to domain
   hypograph t as bound
-  rename constraint bound to lower_bound
+  rename bound to lower_bound
   substitute x := u
 
 example (u t : ℝ) : maximumBound.objective (u, t) = t := rfl
@@ -98,8 +98,8 @@ def positiveSource :=
 -- the live row that later takes its label. A second removal also shifts slots.
 reformulation removedLabelReused : positiveSource := by
   substitute x := Real.exp u
-  rename constraint first to second
-  rename constraint third to remaining_positive
+  rename first to second
+  rename third to remaining_positive
   substitute y := Real.exp v
   epigraph t as third
 
@@ -109,12 +109,12 @@ example : GlobalEquivalence positiveSource removedLabelReused :=
   removedLabelReused.equivalence
 
 reformulation renamedAliasRemoved : positiveSource := by
-  rename constraint second to domain_x
-  rename constraint third to domain_y
+  rename second to domain_x
+  rename third to domain_y
   substitute x := Real.exp u
   substitute y := Real.exp v
   epigraph t as domain_x
-  rename constraint domain_x to objective_bound
+  rename domain_x to objective_bound
 
 example : renamedAliasRemoved = removedLabelReused := rfl
 
@@ -128,8 +128,8 @@ def leadingPositive :=
 
 reformulation shiftedIdentities : leadingPositive := by
   substitute x := Real.exp u
-  rename constraint middle to first
-  rename constraint last to final_domain
+  rename middle to first
+  rename last to final_domain
   substitute y := Real.exp v
   epigraph t as final_domain
 
@@ -144,12 +144,12 @@ def groupedSource :=
       positive : Positive x
 
 reformulation grouped : groupedSource := by
-  rename constraint tag to retained
-  rename constraint grouped to bounds
-  rename constraint positive to domain
+  rename tag to retained
+  rename grouped to bounds
+  rename positive to domain
   substitute x := Real.exp u
   epigraph t as objective_bound
-  rename constraint objective_bound to bound
+  rename objective_bound to bound
   substitute u := v
 
 example (v t : ℝ) : grouped.feasible (v, t) ↔
@@ -164,15 +164,15 @@ reformulation zeroBoundRemoved : zero := by
 
 reformulation renamedZeroBoundRemoved : zero := by
   epigraph t as bound
-  rename constraint bound to positive
+  rename bound to positive
   substitute t := u ^ 2
 
 reformulation zeroContinued : zero := by
   epigraph t as bound
-  rename constraint bound to positive
+  rename bound to positive
   substitute t := u ^ 2
   epigraph s as positive
-  rename constraint positive to square_bound
+  rename positive to square_bound
 
 example : zeroBoundRemoved = renamedZeroBoundRemoved := rfl
 example : GlobalEquivalence zero zeroBoundRemoved := zeroBoundRemoved.equivalence
@@ -196,11 +196,11 @@ def squareBoundRepair := squareBoundCoverage.restrictionImprovement
 -- even though checkpoints remove their tautological rows from presentation.
 reformulation principalBound : taggedZero := by
   epigraph t as bound
-  rename constraint bound to domain
+  rename bound to domain
   substitute t := u ^ 2 using squareBoundCoverage
-  rename constraint retained to kept
+  rename retained to kept
   restrict branch : 0 ≤ u using squareBoundRepair
-  rename constraint branch to nonnegative
+  rename branch to nonnegative
 
 example (x u : ℝ) : principalBound.feasible (x, u) ↔ True ∧ 0 ≤ u := Iff.rfl
 example : GlobalEquivalence taggedZero principalBound := principalBound.equivalence
@@ -219,18 +219,18 @@ def upperLift : ExactConstraintLift (fun x : ℝ => x ≤ 3) :=
 -- Current labels select rewrites, and generated families use that current
 -- spelling. Individual generated rows can then be renamed and selected again.
 reformulation conicRows : absoluteSource := by
-  rename constraint magnitude to cap
+  rename magnitude to cap
   conic at cap
-  rename constraint cap_conic_1 to upper
+  rename cap_conic_1 to upper
   conic at upper using upperLift
-  rename constraint upper_conic_1 to upper
+  rename upper_conic_1 to upper
 
 reformulation nlpRows : absoluteSource := by
-  rename constraint magnitude to cap
+  rename magnitude to cap
   nlp at cap
-  rename constraint cap_nlp_1 to upper
+  rename cap_nlp_1 to upper
   nlp at upper using upperLift
-  rename constraint upper_nlp_1 to upper
+  rename upper_nlp_1 to upper
 
 example (x : ℝ) : conicRows.feasible x ↔
     -5 ≤ x ∧ x ≤ 3 ∧ -x ≤ 3 ∧ x ≤ 5 := Iff.rfl
@@ -239,22 +239,22 @@ example : GlobalEquivalence absoluteSource conicRows := conicRows.equivalence
 example : GlobalEquivalence absoluteSource nlpRows := nlpRows.equivalence
 
 reformulation conicTerminal : absoluteSource := by
-  rename constraint magnitude to cap
+  rename magnitude to cap
   conic
 
 reformulation nlpTerminal : absoluteSource := by
-  rename constraint magnitude to cap
+  rename magnitude to cap
   nlp
 
 example : IsConic conicTerminal := conicTerminal.isConic
 example : IsSmoothNLP nlpTerminal := nlpTerminal.isSmoothNLP
 
 reformulation occurrenceRows : absoluteSource := by
-  rename constraint magnitude to budget
+  rename magnitude to budget
   epigraph a at (|x|) in budget as magnitude
-  rename constraint magnitude to lifted
+  rename magnitude to lifted
   conic at lifted
-  rename constraint lifted_conic_1 to positive_side
+  rename lifted_conic_1 to positive_side
 
 example (x a : ℝ) : occurrenceRows.feasible (x, a) ↔
     -5 ≤ x ∧ a ≤ 3 ∧ x ≤ 5 ∧ x ≤ a ∧ -x ≤ a := Iff.rfl
@@ -265,9 +265,9 @@ def lowerSource :=
     subject to lower : 1 ≤ x ^ 2
 
 reformulation lowerOccurrence : lowerSource := by
-  rename constraint lower to floor
+  rename lower to floor
   hypograph t at (x ^ 2) in floor as bound
-  rename constraint bound to square_bound
+  rename bound to square_bound
 
 example (x t : ℝ) : lowerOccurrence.feasible (x, t) ↔ 1 ≤ t ∧ t ≤ x ^ 2 := Iff.rfl
 
@@ -277,10 +277,10 @@ def vectorSource :=
     subject to bounds : 0 ≤ v ∧ v ≤ (fun _ => 3)
 
 reformulation vectorRenamed : vectorSource := by
-  rename constraint bounds to coordinate_bounds
+  rename bounds to coordinate_bounds
 
 reformulation vectorConic : vectorSource := by
-  rename constraint bounds to coordinate_bounds
+  rename bounds to coordinate_bounds
   conic
 
 example : vectorRenamed = vectorSource := rfl
@@ -299,8 +299,8 @@ def family :=
     subject to original : 0 ≤ shifted
 
 reformulation renamedFamily : (family offset) := by
-  rename constraint original to offset
-  rename constraint offset to domain
+  rename original to offset
+  rename offset to domain
 
 example : renamedFamily offset = family offset := rfl
 end
@@ -322,14 +322,14 @@ def source :=
     subject to bounds : right ≤ x ∧ x ≤ left
 
 reformulation target : (@source first second) := by
-  rename constraint bounds to interval
+  rename bounds to interval
 
 example : @target first second = @source first second := rfl
 
 reformulation bounded : (@source first second) := by
   epigraph t as objective_bound
-  rename constraint bounds to interval
-  rename constraint objective_bound to bound
+  rename bounds to interval
+  rename objective_bound to bound
   substitute x := u
 
 example (u t : ℝ) : (@bounded first second).feasible (u, t) ↔
@@ -347,7 +347,7 @@ def source :=
     subject to cap : cap x
 
 reformulation target : source := by
-  rename constraint cap to bound
+  rename cap to bound
 
 example (x : ℝ) : target.feasible x ↔ cap x := Iff.rfl
 end Hygiene

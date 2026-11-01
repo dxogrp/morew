@@ -8,7 +8,7 @@ import Morew
 /-!
 # Naming constraints during a reformulation
 
-`rename constraint old to new` changes a current label in place. Later steps
+`rename old to new` changes a current label in place. Later steps
 select the new label; the predicate and its position stay the same.
 -/
 
@@ -24,10 +24,10 @@ def bounded :=
 
 -- Choose a name before rewriting a row, then name its generated pieces.
 reformulation interval : bounded := by
-  rename constraint magnitude to cap
+  rename magnitude to cap
   conic at cap
-  rename constraint cap_conic_1 to upper
-  rename constraint cap_conic_2 to lower
+  rename cap_conic_1 to upper
+  rename cap_conic_2 to lower
 
 #printp interval
 example (x : ℝ) : interval.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl
@@ -42,11 +42,11 @@ def logarithmic :=
 
 reformulation exponential : logarithmic := by
   -- Renaming the domain row does not interfere with its later removal.
-  rename constraint positive to domain
+  rename positive to domain
   substitute x := Real.exp u
-  rename constraint cap to upper
+  rename cap to upper
   hypograph t as value_bound
-  rename constraint value_bound to objective_bound
+  rename value_bound to objective_bound
 
 #printp exponential
 example : GlobalEquivalence logarithmic exponential := exponential.equivalence

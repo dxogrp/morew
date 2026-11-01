@@ -59,53 +59,53 @@ def empty := problem (x : ℝ) minimize x
 #guard_error_fragments ["unknown or stale constraint label `missing`"] in
 assert_rename_atomic% missingSource missingSourceAlias in
 reformulation missingSource : bounded certificate missingSourceAlias := by
-  rename constraint missing to upper
+  rename missing to upper
 
 #guard_error_fragments ["unknown or stale constraint label `missing`"] in
 assert_rename_atomic% missingNoOp missingNoOpAlias in
 reformulation missingNoOp : bounded certificate missingNoOpAlias := by
-  rename constraint missing to missing
+  rename missing to missing
 
 #guard_error_fragments ["unknown or stale constraint label `missing`"] in
 assert_rename_atomic% emptySource emptySourceAlias in
 reformulation emptySource : empty certificate emptySourceAlias := by
-  rename constraint missing to fresh
+  rename missing to fresh
 
 #guard_error_fragments ["constraint name `upper` already exists"] in
 assert_rename_atomic% occupied occupiedAlias in
 reformulation occupied : bounded certificate occupiedAlias := by
-  rename constraint lower to upper
+  rename lower to upper
 
 #guard_error_fragments ["constraint name `cap_conic_1` already exists"] in
 assert_rename_atomic% generatedCollision generatedCollisionAlias in
 reformulation generatedCollision : bounded certificate generatedCollisionAlias := by
   conic at cap
-  rename constraint lower to cap_conic_1
+  rename lower to cap_conic_1
 
 -- Renaming creates no selector alias for the former name.
 #guard_error_fragments ["unknown or stale constraint label `cap`"] in
 assert_rename_atomic% staleConic staleConicAlias in
 reformulation staleConic : bounded certificate staleConicAlias := by
-  rename constraint cap to bound
+  rename cap to bound
   conic at cap
 
 #guard_error_fragments ["unknown or stale constraint label `cap`"] in
 assert_rename_atomic% staleNLP staleNLPAlias in
 reformulation staleNLP : bounded certificate staleNLPAlias := by
-  rename constraint cap to bound
+  rename cap to bound
   nlp at cap
 
 #guard_error_fragments ["unknown or stale constraint label `cap`"] in
 assert_rename_atomic% staleOccurrence staleOccurrenceAlias in
 reformulation staleOccurrence : bounded certificate staleOccurrenceAlias := by
-  rename constraint cap to bound
+  rename cap to bound
   epigraph t at (|x|) in cap
 
 #guard_error_fragments ["unknown or stale constraint label `lower`"] in
 assert_rename_atomic% staleRename staleRenameAlias in
 reformulation staleRename : bounded certificate staleRenameAlias := by
-  rename constraint lower to fresh
-  rename constraint lower to newer
+  rename lower to fresh
+  rename lower to newer
 
 -- Ordinary namespace components participate in exact label lookup.
 def qualified :=
@@ -118,23 +118,23 @@ def qualified :=
 #guard_error_fragments ["unknown or stale constraint label `cap`"] in
 assert_rename_atomic% unqualified unqualifiedAlias in
 reformulation unqualified : qualified certificate unqualifiedAlias := by
-  rename constraint cap to fresh
+  rename cap to fresh
 
 #guard_error_fragments ["constraint name `labels.other` already exists"] in
 assert_rename_atomic% qualifiedCollision qualifiedCollisionAlias in
 reformulation qualifiedCollision : qualified certificate qualifiedCollisionAlias := by
-  rename constraint labels.cap to labels.other
+  rename labels.cap to labels.other
 
 -- A late error also discards the helper stored by the completed conic step.
 #guard_error_fragments ["constraint name `upper` already exists"] in
 assert_rename_atomic% atomicTarget atomicAlias in
 reformulation atomicTarget : bounded certificate atomicAlias := by
   conic at cap
-  rename constraint lower to fresh
-  rename constraint fresh to upper
+  rename lower to fresh
+  rename fresh to upper
 
 reformulation atomicTarget : bounded certificate atomicAlias := by
-  rename constraint lower to lower
+  rename lower to lower
 
 example : GlobalEquivalence bounded atomicTarget := atomicAlias
 example : atomicTarget = bounded := rfl
@@ -145,13 +145,13 @@ def affine :=
     subject to
       cap : x ≤ 3
 
--- Contextual and escaped words remain usable as labels and can be renamed
--- back to their original spelling.
+-- Ordinary and escaped identifiers can be used as labels and renamed back
+-- to their original spelling.
 reformulation contextualRoundTrip : affine := by
-  rename constraint cap to «to»
-  rename constraint «to» to constraint
-  rename constraint constraint to «rename»
-  rename constraint «rename» to cap
+  rename cap to «to»
+  rename «to» to constraint
+  rename constraint to «rename»
+  rename «rename» to cap
 
 example : contextualRoundTrip = affine := rfl
 example : GlobalEquivalence affine contextualRoundTrip := contextualRoundTrip.equivalence
@@ -166,18 +166,18 @@ run_cmd do
 assert_rename_atomic% afterConic afterConicAlias in
 reformulation afterConic : affine certificate afterConicAlias := by
   conic
-  rename constraint cap to bound
+  rename cap to bound
 
 #guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in
 assert_rename_atomic% afterNLP afterNLPAlias in
 reformulation afterNLP : affine certificate afterNLPAlias := by
   nlp
-  rename constraint cap to bound
+  rename cap to bound
 
 run_cmd do
   for malformed in #[
-      "rename constraint lower to", "rename constraint to upper",
-      "rename lower to upper", "rename constraint lower upper"] do
+      "rename lower to", "rename to upper",
+      "rename constraint lower to upper", "rename lower upper"] do
     let command := "reformulation malformed : bounded := by\n  " ++ malformed
     match Lean.Parser.runParserCategory (← Lean.getEnv) `command command with
     | .error _ => pure ()

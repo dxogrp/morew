@@ -31,7 +31,7 @@ syntax (name := restrictStep)
   "restrict " ident " : " term " using " term : reformulationStep
 /-- Change one current constraint label without changing its predicate. -/
 syntax (name := renameConstraintStep)
-  "rename " &"constraint " ident &" to " ident : reformulationStep
+  "rename " ident &" to " ident : reformulationStep
 /-- Introduce an epigraph variable for a minimization objective, optionally
 choosing the generated constraint's presentation label. -/
 syntax (name := epigraphStep)

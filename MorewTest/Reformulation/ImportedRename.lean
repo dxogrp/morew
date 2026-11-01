@@ -13,17 +13,17 @@ open Morew Rename
 noncomputable section
 
 reformulation continued : conicRows := by
-  rename constraint upper to imported_upper
+  rename upper to imported_upper
   conic at imported_upper using upperLift
-  rename constraint imported_upper_conic_1 to final_upper
+  rename imported_upper_conic_1 to final_upper
 
 example : continued = conicRows := rfl
 example : GlobalEquivalence absoluteSource continued :=
   conicRows.equivalence.trans continued.equivalence
 
 reformulation renamedAgain : ordered := by
-  rename constraint bounds.upper to cap
-  rename constraint lower to first
+  rename bounds.upper to cap
+  rename lower to first
 
 example : renamedAgain = orderedSource := rfl
 
@@ -31,7 +31,7 @@ section
 variable (offset : ℝ)
 
 reformulation continuedFamily : (renamedFamily offset) := by
-  rename constraint domain to shifted_lower
+  rename domain to shifted_lower
   derive copied : 0 ≤ shifted using (by intro point hp; exact hp)
 
 example (x : ℝ) : (continuedFamily offset).feasible x ↔
@@ -46,7 +46,7 @@ set_option linter.overlappingInstances false
 variable [first : Rename.Instances.Parameter] [second : Rename.Instances.Parameter]
 
 reformulation continued : (@Rename.Instances.target first second) := by
-  rename constraint interval to preserved
+  rename interval to preserved
   substitute x := u
 
 run_cmd do
@@ -63,7 +63,7 @@ example (u : ℝ) : (@replayed first second).feasible u ↔
       u ≤ @Rename.Instances.Parameter.value first := Iff.rfl
 
 reformulation continuedBound : (@Rename.Instances.bounded first second) := by
-  rename constraint bound to objective_bound
+  rename bound to objective_bound
   substitute u := v
 
 example (v t : ℝ) : (@continuedBound first second).feasible (v, t) ↔
@@ -80,7 +80,7 @@ def Positive (_ : ℝ) : Prop := False
 def cap (_ : ℝ) : Prop := False
 
 reformulation hygienic : Hygiene.target := by
-  rename constraint bound to cap
+  rename bound to cap
   substitute x := u
 
 example (u : ℝ) : hygienic.feasible u ↔ Rename.Hygiene.cap u := Iff.rfl
