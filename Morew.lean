@@ -85,6 +85,7 @@ import Morew.NLP.Domain
 import Morew.NLP.Rows
 import Morew.NLP.Smooth
 import Morew.Reformulation
+import Morew.Reformulation.AddedConstraint
 import Morew.Reformulation.Command
 import Morew.Reformulation.Conic
 import Morew.Reformulation.Derive
@@ -94,6 +95,7 @@ import Morew.Reformulation.Occurrence
 import Morew.Reformulation.PowerChainPrinting
 import Morew.Reformulation.Presentation
 import Morew.Reformulation.Replace
+import Morew.Reformulation.Restrict
 import Morew.Reformulation.State
 import Morew.Reformulation.StepRunner
 import Morew.Reformulation.Substitution

@@ -26,6 +26,9 @@ syntax (name := substituteViaStep)
 /-- Append a named consequence of the complete current feasible predicate. -/
 syntax (name := deriveStep)
   "derive " ident " : " term " using " term : reformulationStep
+/-- Restrict feasibility using an explicit improvement to the restricted problem. -/
+syntax (name := restrictStep)
+  "restrict " ident " : " term " using " term : reformulationStep
 /-- Introduce an epigraph variable for a minimization objective, optionally
 choosing the generated constraint's presentation label. -/
 syntax (name := epigraphStep)
