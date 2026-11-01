@@ -53,6 +53,7 @@ import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
 import MorewTest.Conic.Terminal
 import MorewTest.Core
+import MorewTest.DerivedConstraint
 import MorewTest.Diagnostics
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
@@ -125,6 +126,9 @@ import MorewTest.Reformulation.ConeMembership.Defined
 import MorewTest.Reformulation.ConeMembershipAliases
 import MorewTest.Reformulation.ConeMembershipReplay
 import MorewTest.Reformulation.ContextualRewrite
+import MorewTest.Reformulation.Derive
+import MorewTest.Reformulation.DeriveFailures
+import MorewTest.Reformulation.DeriveIsolation
 import MorewTest.Reformulation.DirectNormalization
 import MorewTest.Reformulation.EuclideanPrinting
 import MorewTest.Reformulation.Exponential
@@ -132,6 +136,7 @@ import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
 import MorewTest.Reformulation.FunctionDecisionRecovery
 import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
+import MorewTest.Reformulation.ImportedDerive
 import MorewTest.Reformulation.IndexNames
 import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined

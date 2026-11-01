@@ -188,11 +188,27 @@ def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
 def commitSurfaceStep (state : ReformState)
     (result : Morew.Elab.Reformulation.StepResult)
     (materialization : SurfaceMaterialization) : CommandElabM ReformState := do
-  let (committed, sectionFVars) ← runTermElabM fun sectionFVars => do
+  let (committed, sectionFVars, usedSourceParameterNames) ← runTermElabM fun sectionFVars => do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let result := result.replaceFVars materialization.sectionFVars sectionFVars
     let committed ← typed.commit state.runner result
-    pure (committed, sectionFVars)
+    let mut usedSourceParameterNames := state.usedSourceParameterNames
+    if let .ok next := committed then
+      -- A new row can introduce section operands absent from the original
+      -- source application. Reserve only dependencies of the actual problem;
+      -- proof-only parameters in its equivalence certificate stay available.
+      let semantic ← instantiateMVars next.semantic
+      let canonical ← instantiateMVars next.canonical
+      let dependencies ←
+        (Lean.collectFVars (Lean.collectFVars {} semantic) canonical).addDependencies
+      -- The section telescope gives a deterministic order and excludes
+      -- temporary elaboration locals. Dependency closure includes local types.
+      for parameter in sectionFVars do
+        if dependencies.fvarSet.contains parameter.fvarId! then
+          let name := (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
+          unless usedSourceParameterNames.any (sameUserName · name) do
+            usedSourceParameterNames := usedSourceParameterNames.push name
+    pure (committed, sectionFVars, usedSourceParameterNames)
   let typed ← match committed with
     | .ok typed => pure typed
     | .error error =>
@@ -208,6 +224,7 @@ def commitSurfaceStep (state : ReformState)
     view := surface.view
     semantic := surface.semantic
     semanticDomainType := surface.semanticDomainType
+    usedSourceParameterNames
     checkpoint := surface.checkpoint?.getD state.checkpoint
     certificateSyntax
     simplifyExpLogTerms := surface.simplifyExpLogTerms

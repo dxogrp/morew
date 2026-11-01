@@ -29,6 +29,27 @@ structure ConstraintDecomposition {X : Type u} {V : Type v}
 
 namespace Problem
 
+/-- Append a constraint without changing the decision space or objective.
+
+The constructor itself does not assert that the new constraint is redundant.
+`addConstraintEquivalence` supplies exactness when it follows from current
+feasibility. -/
+def addConstraint {X : Type u} {V : Type v}
+    (p : Problem X V) (constraint : X → Prop) : Problem X V where
+  objective := p.objective
+  feasible point := p.feasible point ∧ constraint point
+
+@[simp]
+theorem addConstraint_objective {X : Type u} {V : Type v}
+    (p : Problem X V) (constraint : X → Prop) (point : X) :
+    (p.addConstraint constraint).objective point = p.objective point := rfl
+
+@[simp]
+theorem addConstraint_feasible {X : Type u} {V : Type v}
+    (p : Problem X V) (constraint : X → Prop) (point : X) :
+    (p.addConstraint constraint).feasible point ↔
+      p.feasible point ∧ constraint point := Iff.rfl
+
 /-- Replace a selected constraint by a predicate over a uniform auxiliary space.
 
 The target is defined on the original coordinates without a feasibility proof.
@@ -178,6 +199,18 @@ def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
   backward := {
     map := fun x => ⟨x.1, (feasible_iff x.1).mpr x.2⟩
     objective_le := fun x => le_of_eq (objective_eq x.1) }
+
+/-- Adding a consequence of current feasibility preserves the problem exactly.
+
+Both maps preserve the decision point and its objective value. The implication
+is checked against the original feasible predicate, before the new constraint
+is added. -/
+def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X V) (constraint : X → Prop)
+    (implied : ∀ point, p.feasible point → constraint point) :
+    GlobalEquivalence p (p.addConstraint constraint) :=
+  pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
+    (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
 
 /-- Replacing a constraint by an existentially equivalent auxiliary-variable
 predicate preserves global optimization behavior.

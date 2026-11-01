@@ -23,6 +23,9 @@ syntax (name := substituteStep)
 /-- Select a coordinate parameterization without registry fallback. -/
 syntax (name := substituteViaStep)
   "substitute " ident " := " term " via " term : reformulationStep
+/-- Append a named consequence of the complete current feasible predicate. -/
+syntax (name := deriveStep)
+  "derive " ident " : " term " using " term : reformulationStep
 /-- Introduce an epigraph variable for a minimization objective, optionally
 choosing the generated constraint's presentation label. -/
 syntax (name := epigraphStep)
