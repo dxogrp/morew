@@ -31,9 +31,10 @@ namespace Problem
 
 /-- Append a constraint without changing the decision space or objective.
 
-The constructor itself does not assert that the new constraint is redundant.
-`addConstraintEquivalence` supplies exactness when it follows from current
-feasibility. -/
+The constructor itself does not assert that the new constraint preserves global
+optimization behavior. `addConstraintEquivalence` supplies exactness when it
+follows from current feasibility; `restrictionEquivalence` instead accepts a
+feasible repair into the constraint whose objective is no worse. -/
 def addConstraint {X : Type u} {V : Type v}
     (p : Problem X V) (constraint : X → Prop) : Problem X V where
   objective := p.objective
@@ -212,6 +213,18 @@ def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
   pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
     (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
 
+/-- A feasible repair into an added constraint preserves global optimization
+behavior when its objective is no worse. The backward map is inclusion; the
+repair need not fix points already satisfying the constraint or be invertible. -/
+def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X V) (constraint : X → Prop)
+    (repair : GlobalImprovement p (p.addConstraint constraint)) :
+    GlobalEquivalence p (p.addConstraint constraint) where
+  forward := repair
+  backward := {
+    map := fun point => ⟨point.1, point.2.1⟩
+    objective_le := fun _ => le_rfl }
+
 /-- Replacing a constraint by an existentially equivalent auxiliary-variable
 predicate preserves global optimization behavior.
 
@@ -284,6 +297,56 @@ def pullbackEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
   backward := {
     map := fun y => ⟨f y.1, y.2⟩
     objective_le := fun _ => le_rfl }
+
+namespace FeasibleSurjection
+
+/-- Choose an admissible representative of each feasible pulled-back point.
+The chosen preimage represents exactly the same source point, so the repair
+preserves the objective. Admissibility is separate from source coverage. -/
+def restrictionImprovement
+    {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+    {p : Problem X V} {f : Y → X} (coverage : FeasibleSurjection p f)
+    (constraint : Y → Prop)
+    (admissible : ∀ point : FeasiblePoint p, constraint (coverage.preimage point)) :
+    GlobalImprovement (p.pullback f) ((p.pullback f).addConstraint constraint) where
+  map := fun point =>
+    let source : FeasiblePoint p := ⟨f point.1, point.2⟩
+    ⟨coverage.preimage source,
+      by
+        constructor
+        · change p.feasible (f (coverage.preimage source))
+          simpa only [coverage.rightInverse source] using source.2
+        · exact admissible source⟩
+  objective_le := fun point => by
+    change p.objective (f (coverage.preimage ⟨f point.1, point.2⟩)) ≤
+      p.objective (f point.1)
+    exact le_of_eq (congrArg p.objective (coverage.rightInverse ⟨f point.1, point.2⟩))
+
+/-- Selecting an admissible preimage preserves the represented source point. -/
+theorem restrictionImprovement_map_source
+    {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+    {p : Problem X V} {f : Y → X} (coverage : FeasibleSurjection p f)
+    (constraint : Y → Prop)
+    (admissible : ∀ point : FeasiblePoint p, constraint (coverage.preimage point))
+    (point : FeasiblePoint (p.pullback f)) :
+    f ((coverage.restrictionImprovement constraint admissible).map point).1 =
+      f point.1 :=
+  coverage.rightInverse ⟨f point.1, point.2⟩
+
+/-- Selecting an admissible preimage preserves the objective exactly, in either
+the ordinary order or its dual. -/
+theorem restrictionImprovement_objective_eq
+    {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+    {p : Problem X V} {f : Y → X} (coverage : FeasibleSurjection p f)
+    (constraint : Y → Prop)
+    (admissible : ∀ point : FeasiblePoint p, constraint (coverage.preimage point))
+    (point : FeasiblePoint (p.pullback f)) :
+    ((p.pullback f).addConstraint constraint).objective
+      ((coverage.restrictionImprovement constraint admissible).map point).1 =
+      (p.pullback f).objective point.1 :=
+  congrArg p.objective (coverage.restrictionImprovement_map_source constraint admissible point)
+
+end FeasibleSurjection
 
 /-- The epigraph construction preserves global optimization behavior. -/
 def epigraphEquivalence {X : Type u} {V : Type v} [Preorder V]
