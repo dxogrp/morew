@@ -105,10 +105,14 @@ private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Nam
   let candidates := (collectIdents replacement).toList.filter fun name =>
     !name.isAnonymous && !sameUserName name oldName &&
       !(localNames.any fun localName => localName.isPrefixOf name.eraseMacroScopes) &&
-      !(ambientNames.any fun localName =>
-        !localName.isAnonymous && localName.isPrefixOf name.eraseMacroScopes) &&
       !env.contains name
-  pure candidates.toArray
+  let fresh := candidates.filter fun name =>
+    !(ambientNames.any fun localName =>
+      !localName.isAnonymous && localName.isPrefixOf name.eraseMacroScopes)
+  -- Ambient coefficients do not compete with an actually fresh name. If all
+  -- names are ambient, retain the existing shadowing and source-collision
+  -- checks rather than replacing their more precise diagnostics.
+  pure (if fresh.isEmpty then candidates else fresh).toArray
 
 private def findBinderIndex (view : Morew.Syntax.ProblemView) (name : Name) : Option Nat :=
   view.binders.findIdx? fun binder => sameUserName binder.name name
