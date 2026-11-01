@@ -10,8 +10,7 @@ import Morew
 
 `derive label : proposition using proof` appends a visible constraint without
 changing the feasible set. The proof must show that the proposition follows
-from the current problem's feasibility. It can contain reasoning beyond the
-bounded evidence lookup used by substitution and conic rewriting.
+from the current problem's feasibility.
 -/
 
 namespace Examples.Derive
@@ -26,8 +25,7 @@ def logarithmic :=
       lower : 1 ≤ y
       ordered : y ≤ x
 
--- The proof receives the complete decision point `(y, x)` and current
--- feasibility. The displayed constraint labels are not Lean hypotheses.
+-- The proof receives the complete decision point `(y, x)` and current feasibility.
 theorem marginOfFeasible :
     ∀ point, logarithmic.feasible point → 1 ≤ point.2 := by
   intro point hp
@@ -44,9 +42,10 @@ reformulation logarithmicConic : logarithmic := by
 example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equivalence
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
--- Alternatively, the same derived margin establishes exponential coverage.
--- Its transformed row `1 ≤ Real.exp u` remains: positivity alone would be a
--- tautology after substitution, but this stronger bound restricts `u`.
+-- The derived bound proves positivity, allowing `x := Real.exp u`.
+-- After substitution, the margin becomes `1 ≤ Real.exp u`.
+-- This row remains because it is not a tautology, although it is still
+-- implied by the other constraints.
 reformulation exponentialCoordinates : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   substitute x := Real.exp u
