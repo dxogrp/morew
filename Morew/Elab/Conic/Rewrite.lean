@@ -89,7 +89,7 @@ private def proveObligation (point : Expr) (retained : Array Expr)
     throwError "registered conic rewrite was not certified: missing global matrix symmetry; required {goal} at every decision point"
   if reduced.isAppOf ``Matrix.PosDef then
     if let some proof ← MatrixDomain.prove? point reduced retained evidence then return some proof
-    throwError "registered conic rewrite was not certified: missing positive-definiteness evidence for the Schur pivot; required {goal}; supply a positive-definite domain constraint, independent proof, positive PSD margin, or retained identity-block PSD witness"
+    throwError "registered conic rewrite was not certified: missing positive-definiteness evidence for the matrix argument; required {goal}; supply a positive-definite domain constraint, independent proof, positive PSD margin, or retained identity-block PSD witness"
   if let .forallE name indexType body _ := reduced then
     let indexType ← whnf indexType
     unless indexType.isAppOfArity ``Fin 1 do return none

@@ -31,6 +31,8 @@ attribute [morew_conic]
   Morew.Conic.Spectral.lambdaMaxEpigraph
   Morew.Conic.Spectral.spectralNormEpigraph
   Morew.Conic.Spectral.nuclearNormEpigraph
+  Morew.Conic.LogDet.hypograph
+  Morew.Conic.LogDet.nativeHypograph
   Morew.Rewrite.absEpigraph
   Morew.Rewrite.posEpigraph
   Morew.Rewrite.maxEpigraph

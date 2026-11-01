@@ -9,13 +9,17 @@ import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.Exponential.Representations
 import Morew.Conic.PSD
+import Morew.Conic.PSD.Determinant
+import Morew.Conic.PSD.LDL
 import Morew.Conic.PSD.LambdaMax
+import Morew.Conic.PSD.LogDet
 import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.NuclearNorm
 import Morew.Conic.PSD.PositiveDefinite
 import Morew.Conic.PSD.Representations
 import Morew.Conic.PSD.SingularVectors
 import Morew.Conic.PSD.SpectralNorm
+import Morew.Conic.PSD.Triangular
 import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
