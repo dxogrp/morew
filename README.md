@@ -7,7 +7,7 @@ Features may be broken and/or missing, and the documentation is still incomplete
 
 ## Quickstart
 
-The following example shows a basic usage of Morew to reformulate a simple optimization problem into an equivalent epigraph form.
+The following example reformulates nonnegative least squares as a second-order cone program. It minimizes the Euclidean residual norm, which has the same minimizers as its square.
 
 More examples can be found in the [Examples](Examples) directory.
 
@@ -15,30 +15,37 @@ More examples can be found in the [Examples](Examples) directory.
 import Morew
 
 open Morew
-noncomputable section
+open scoped Matrix
 
-def original :=
-  problem (x : ℝ)
-    minimize (Real.log x)^2
+noncomputable def leastSquares (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
     subject to
-      positive : 0 < x
+      nonneg : x ≥ 0
 
-reformulation transformed : original := by
-  substitute x := Real.exp u
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+
+reformulation conicLeastSquares : (leastSquares A b) := by
   epigraph t
+  conic
 
-#check transformed.equivalence
-#printp transformed
+#check conicLeastSquares.equivalence
+#printp conicLeastSquares
 ```
 
-`#printp transformed` outputs:
+`WithLp.toLp 2` selects the Euclidean norm, and `x ≥ 0` means componentwise nonnegativity. `epigraph t` introduces the bound `‖Ax − b‖₂ ≤ t`; `conic` converts it to a cone constraint and certifies the target form.
+
+`#printp conicLeastSquares` outputs:
 
 ```text
-problem (u t : ℝ)
+problem (x : Fin n → ℝ) (t : ℝ)
   minimize t
   subject to
-    epigraph_t : u ^ 2 ≤ t
+    nonneg : x ∈ ℝ₊^n
+    epigraph_t_conic_1 : (t, A *ᵥ x - b) ∈ SOC m
 ```
+
+`conicLeastSquares.equivalence` certifies exact global equivalence with the original problem. This reformulates the problem; it does not invoke a numerical solver.
 
 ## License
 
