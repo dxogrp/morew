@@ -8,11 +8,11 @@ import Morew
 open Morew
 open Real
 
+namespace Examples.Basic
+
 /-
 Epigraph rewriting example
 -/
-namespace Examples.Basic
-
 namespace Epigraph
 noncomputable
 

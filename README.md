@@ -7,38 +7,45 @@ Features may be broken and/or missing, and the documentation is still incomplete
 
 ## Quickstart
 
-The following example shows a basic usage of Morew to reformulate a simple optimization problem into an equivalent epigraph form.
-
-More examples can be found in the [Examples](Examples) directory.
+Reformulate nonnegative least squares as a second-order cone program:
 
 ```lean
 import Morew
 
 open Morew
-noncomputable section
+open scoped Matrix
 
-def original :=
-  problem (x : ℝ)
-    minimize (Real.log x)^2
+noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
     subject to
-      positive : 0 < x
+      nonneg : x ≥ 0
 
-reformulation transformed : original := by
-  substitute x := Real.exp u
-  epigraph t
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 
-#check transformed.equivalence
-#printp transformed
+reformulation conicNonnegLS : (nonnegLS A b) := by
+  epigraph t as residualBound
+  conic at residualBound
+  rename residualBound_conic_1 to residualCone
+  conic
+
+noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
+  conicNonnegLS.equivalence A b
+
+#printp conicNonnegLS
 ```
 
-`#printp transformed` outputs:
+`#printp conicNonnegLS` outputs:
 
 ```text
-problem (u t : ℝ)
+problem (x : Fin n → ℝ) (t : ℝ)
   minimize t
   subject to
-    epigraph_t : u ^ 2 ≤ t
+    nonneg : x ∈ ℝ₊^n
+    residualCone : (t, A *ᵥ x - b) ∈ SOC m
 ```
+
+More examples can be found in the [Examples](Examples) directory.
 
 ## License
 
