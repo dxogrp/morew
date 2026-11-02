@@ -12,6 +12,32 @@ Second-order cone rewriting
 -/
 namespace Examples.SecondOrder
 
+/-
+Nonnegative least squares
+-/
+namespace NonnegLS
+
+open scoped Matrix
+
+noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
+    subject to
+      nonneg : x ≥ 0
+
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+
+reformulation conicNonnegLS : (nonnegLS A b) := by
+  epigraph t
+  conic
+
+noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
+  conicNonnegLS.equivalence A b
+
+#printp conicNonnegLS
+
+end NonnegLS
+
 namespace NormBound
 noncomputable section
 

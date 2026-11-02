@@ -11,30 +11,6 @@ open Real
 namespace Examples.Basic
 
 /-
-README quickstart: nonnegative least squares
--/
-namespace LeastSquares
-
-open scoped Matrix
-
-noncomputable def leastSquares (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
-  problem (x : Fin n → ℝ)
-    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
-    subject to
-      nonneg : x ≥ 0
-
-variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
-
-reformulation conicLeastSquares : (leastSquares A b) := by
-  epigraph t
-  conic
-
-#check conicLeastSquares.equivalence
-#printp conicLeastSquares
-
-end LeastSquares
-
-/-
 Epigraph rewriting example
 -/
 namespace Epigraph
