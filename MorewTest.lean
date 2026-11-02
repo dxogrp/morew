@@ -137,6 +137,7 @@ import MorewTest.Reformulation.ExponentialFailures
 import MorewTest.Reformulation.FunctionDecisionRecovery
 import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.ImportedDerive
+import MorewTest.Reformulation.ImportedRemove
 import MorewTest.Reformulation.ImportedRename
 import MorewTest.Reformulation.ImportedRestrict
 import MorewTest.Reformulation.IndexNames
@@ -184,6 +185,9 @@ import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.PrintDetails
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
+import MorewTest.Reformulation.Remove
+import MorewTest.Reformulation.RemoveFailures
+import MorewTest.Reformulation.RemoveIsolation
 import MorewTest.Reformulation.Rename
 import MorewTest.Reformulation.RenameFailures
 import MorewTest.Reformulation.RenameIsolation
@@ -215,6 +219,7 @@ import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Reformulation.VectorDomains
+import MorewTest.RemovedConstraint
 import MorewTest.Restriction
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Negation
