@@ -32,6 +32,9 @@ linters, and tests the release verification script. Ordinary CI does not repeat
 kernel rechecking; the manual release candidate workflow performs that check.
 There are no scheduled workflows.
 
+Each CI job allows 60 minutes for cold builds on slower hosted runners. A
+compatible project cache lets Lake reuse unchanged compiled modules.
+
 The `main` branch requires a pull request and these successful checks:
 
 - `Build (ubuntu-latest)`
