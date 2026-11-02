@@ -58,6 +58,7 @@ import MorewTest.Diagnostics
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
 import MorewTest.ExactConstraintLift
+import MorewTest.Fn.Norm
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
 import MorewTest.ImportCompatibility.CoercionReplay
@@ -137,6 +138,7 @@ import MorewTest.Reformulation.ExponentialFailures
 import MorewTest.Reformulation.FunctionDecisionRecovery
 import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.ImportedDerive
+import MorewTest.Reformulation.ImportedNorm
 import MorewTest.Reformulation.ImportedRemove
 import MorewTest.Reformulation.ImportedRemoveInstances
 import MorewTest.Reformulation.ImportedRename
@@ -158,6 +160,8 @@ import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.NegatedOccurrence
 import MorewTest.Reformulation.Negation
 import MorewTest.Reformulation.NegationNLP
+import MorewTest.Reformulation.Norm
+import MorewTest.Reformulation.NormFailures
 import MorewTest.Reformulation.ObjectiveBoundLabels
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceFailures
