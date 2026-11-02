@@ -70,10 +70,6 @@ This example lowers the domain first to demonstrate that either rewrite order
 is supported. The explicit early `conic at domain` step is optional: the log-det
 rule can use the original `PosDef` constraint directly, or recover positive
 definiteness from its retained PSD witness after domain lowering.
-
-This order retains the domain's witness block and auxiliary. Removing a row
-preserves the decision variables; eliminating that block together with its
-auxiliary would require a separate existential reconstruction.
 -/
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound

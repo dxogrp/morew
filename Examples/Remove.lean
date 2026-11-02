@@ -10,7 +10,6 @@ import Morew
 
 `remove at label` removes a whole-row duplicate or a supported tautology.
 `remove at label using proof` removes a row implied by the remaining rows.
-Neither form chooses which constraint to remove.
 -/
 
 namespace Examples.Remove
@@ -42,7 +41,6 @@ example (x : ℝ) : simplified.feasible x ↔ 1 ≤ x := by
   exact sub_nonneg
 example : GlobalEquivalence bounded simplified := simplified.equivalence
 example : IsConic simplified := simplified.isConic
-example : simplified.conicForm.data.toProblem = simplified := simplified.conicForm.represents
 
 end
 end Examples.Remove

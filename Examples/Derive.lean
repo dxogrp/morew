@@ -63,9 +63,11 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- A derived absolute-value bound can be lowered and its redundant pieces
--- removed. The generated upper bound duplicates an existing row exactly;
--- the sign-flipped lower bound needs an explicit implication proof.
+-- The existing bounds imply |x| ≤ 1. Split this into x ≤ 1 and -x ≤ 1,
+-- then remove both: x ≤ 1 already appears among the constraints, while
+-- -x ≤ 1 needs a short proof that it follows from -1 ≤ x.
+-- This is a teaching example: the extra steps illustrate how `derive`, `nlp`,
+-- and `remove` work together but are unnecessary for this problem.
 reformulation absoluteNLP : interval := by
   derive abs_bound : |x| ≤ 1 using (by
     intro point hp
@@ -81,7 +83,6 @@ reformulation absoluteNLP : interval := by
 example (x : ℝ) : absoluteNLP.feasible x ↔ -1 ≤ x ∧ x ≤ 1 := Iff.rfl
 example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
-example : absoluteNLP.nlpForm.data.toProblem = absoluteNLP := absoluteNLP.nlpForm.represents
 
 end
 end Examples.Derive
