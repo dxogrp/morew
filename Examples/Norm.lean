@@ -35,7 +35,7 @@ variable (b : Fin n → ℝ)
 
 reformulation normConic : (normBudget b) := by
   epigraph t as residualBound
-  conic at radius using Conic.SecondOrder.fnNorm2Epigraph
+  conic at radius
   conic
 
 #printp normConic
@@ -46,10 +46,9 @@ example : (normConic.conicForm b).data.toProblem = normConic b :=
 example : IsConic (normConic b) := normConic.isConic b
 
 -- The same source model can instead use the smooth polynomial representation.
--- Explicit `using` documents the chosen rule; automatic discovery also finds it.
 reformulation normNLP : (normBudget b) := by
   epigraph t as residualBound
-  nlp at radius using Rewrite.fnNorm2Epigraph
+  nlp at radius
   nlp
 
 #printp normNLP
