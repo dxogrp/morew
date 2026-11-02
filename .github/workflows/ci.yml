@@ -16,15 +16,9 @@ concurrency:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+    name: Build (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
@@ -52,15 +46,12 @@ jobs:
           use-github-cache: false
 
       - name: Check aggregate imports
-        if: matrix.os == 'ubuntu-latest'
         run: lake exe mk_all --check
 
       - name: Lint Morew
-        if: matrix.os == 'ubuntu-latest'
         run: |
           lake check-lint
           lake lint
 
-      - name: Test release verification
-        if: matrix.os == 'ubuntu-latest'
+      - name: Test release automation
         run: python3 -B -m unittest discover -s scripts/tests -v

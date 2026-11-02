@@ -1,8 +1,7 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,21 +13,105 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify published release
-    if: ${{ !github.event.release.prerelease }}
+    name: Build and verify release
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 60
+    outputs:
+      release_tag: ${{ steps.prerequisites.outputs.release_tag }}
+      source_sha: ${{ steps.prerequisites.outputs.source_sha }}
 
     steps:
-      - name: Check out the release tag
+      - name: Check out the selected commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require matching version and verified candidate
+      - name: Require main, an unused version, and successful CI for this commit
+        id: prerequisites
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: python3 -B scripts/verify_release.py release
+        run: python3 -B scripts/verify_release.py
+
+      - name: Set up Lean and fetch Mathlib artifacts
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1.7.0
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+          use-github-cache: false
+
+      - name: Build fresh project artifacts
+        run: |
+          lake clean morew
+          lake build --wfail
+
+      - name: Check aggregate imports and lint
+        run: |
+          lake exe mk_all --check
+          lake check-lint
+          lake lint
+
+      - name: Test release automation
+        run: python3 -B -m unittest discover -s scripts/tests -v
+
+      - name: Verify all project modules with leanchecker
+        env:
+          LEAN_NUM_THREADS: "1"
+        run: |
+          /usr/bin/time -v -o "$RUNNER_TEMP/morew-kernel-time.txt" \
+            lake env leanchecker Morew MorewTest Examples
+
+      - name: Summarize kernel-check measurements
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/morew-kernel-time.txt" ]; then
+            {
+              echo '### Kernel-check measurements'
+              echo
+              echo '```text'
+              cat "$RUNNER_TEMP/morew-kernel-time.txt"
+              echo '```'
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Summarize verified release
+        env:
+          RELEASE_TAG: ${{ steps.prerequisites.outputs.release_tag }}
+          SOURCE_SHA: ${{ steps.prerequisites.outputs.source_sha }}
+          LEAN_TOOLCHAIN: ${{ steps.prerequisites.outputs.lean_toolchain }}
+        run: |
+          {
+            echo '### Full release verification passed'
+            echo
+            printf 'Version: `%s`\n\n' "$RELEASE_TAG"
+            printf 'Source commit: `%s`\n\n' "$SOURCE_SHA"
+            printf 'Lean toolchain: `%s`\n' "$LEAN_TOOLCHAIN"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Create tag and publish release
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Check out the verified commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Recheck prerequisites and publish the verified commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ needs.verify.outputs.source_sha }}
+          RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
+        run: python3 -B scripts/publish_release.py

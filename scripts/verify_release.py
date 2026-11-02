@@ -49,12 +49,25 @@ def resolve_commit(root: Path, ref: str) -> str:
 
 
 def require_main_ancestry(root: Path, sha: str) -> None:
+    history = git(root, "rev-parse", "--is-shallow-repository")
+    if history.returncode or history.stdout.strip() != "false":
+        raise VerificationError("Release verification requires the full repository history.")
     main = resolve_commit(root, "refs/remotes/origin/main")
     result = git(root, "merge-base", "--is-ancestor", sha, main)
     if result.returncode == 1:
-        raise VerificationError("The release tag must point to a commit contained in origin/main.")
+        raise VerificationError("The release commit must be contained in origin/main.")
     if result.returncode:
         raise VerificationError("Cannot verify main ancestry; fetch the full repository history.")
+
+
+def require_unused_tag(root: Path, tag: str) -> None:
+    result = git(root, "show-ref", "--verify", "--quiet", f"refs/tags/{tag}")
+    if result.returncode == 0:
+        raise VerificationError(
+            f"Release tag {tag} already exists; choose a new package version. Existing tags are not reused."
+        )
+    if result.returncode != 1:
+        raise VerificationError("Cannot check existing release tags; check the repository checkout.")
 
 
 def fetch_workflow_runs(
@@ -125,11 +138,7 @@ def latest_successful_run(
             if type(run.get(key)) is not int or run[key] < 1:
                 raise VerificationError(f"GitHub returned a matching run without a valid {key}.")
         matching.append(run)
-    guidance = (
-        "Wait for ordinary CI on main to pass at this exact commit, then rerun the candidate."
-        if workflow == "ci.yml"
-        else "Complete a successful main-branch release candidate at this exact commit, then rerun release verification."
-    )
+    guidance = "Wait for ordinary CI on main to pass at this exact commit, then rerun the release workflow."
     if not matching:
         raise VerificationError(f"No matching {workflow} run exists for {sha}. {guidance}")
     latest = max(matching, key=lambda run: (run["run_number"], run["run_attempt"]))
@@ -143,43 +152,37 @@ def latest_successful_run(
     return url
 
 
-def verify(mode: str, root: Path) -> dict[str, str]:
+def verify(root: Path) -> dict[str, str]:
     repository = required_environment("GITHUB_REPOSITORY")
     if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None:
         raise VerificationError("GITHUB_REPOSITORY must have the form owner/repository.")
-    if mode == "candidate" and required_environment("GITHUB_REF") != "refs/heads/main":
-        raise VerificationError("Release candidates must be dispatched from refs/heads/main.")
+    if required_environment("GITHUB_EVENT_NAME") != "workflow_dispatch":
+        raise VerificationError("Release publication requires a workflow_dispatch event.")
+    if required_environment("GITHUB_REF") != "refs/heads/main":
+        raise VerificationError("Release publication must be dispatched from refs/heads/main.")
     version = stable_version(root)
+    tag = f"v{version}"
+    require_unused_tag(root, tag)
     sha = resolve_commit(root, "HEAD")
-    if mode == "candidate":
-        if sha != required_environment("GITHUB_SHA"):
-            raise VerificationError("The candidate checkout must match GITHUB_SHA exactly.")
-        workflow, event = "ci.yml", "push"
-    elif mode == "release":
-        tag = required_environment("RELEASE_TAG")
-        if tag != f"v{version}":
-            raise VerificationError("The release tag must equal v plus the lakefile.toml version.")
-        if resolve_commit(root, f"refs/tags/{tag}") != sha:
-            raise VerificationError("The release checkout must match the tagged commit exactly.")
-        require_main_ancestry(root, sha)
-        workflow, event = "release-candidate.yml", "workflow_dispatch"
-    else:
-        raise VerificationError(f"Unknown verification mode: {mode}")
+    if sha != required_environment("GITHUB_SHA"):
+        raise VerificationError("The release checkout must match GITHUB_SHA exactly.")
+    require_main_ancestry(root, sha)
     toolchain = (root / "lean-toolchain").read_text(encoding="utf-8").strip()
-    if not toolchain or len(toolchain.splitlines()) != 1:
-        raise VerificationError("lean-toolchain must contain exactly one nonempty toolchain name.")
-    runs = fetch_workflow_runs(repository, workflow, sha, event)
-    url = latest_successful_run(runs, repository, workflow, sha, event)
+    if not toolchain or any(character.isspace() or not character.isprintable() for character in toolchain):
+        raise VerificationError("lean-toolchain must contain one nonempty name without whitespace or control characters.")
+    runs = fetch_workflow_runs(repository, "ci.yml", sha, "push")
+    url = latest_successful_run(runs, repository, "ci.yml", sha, "push")
     return {
         "package_version": version,
+        "release_tag": tag,
         "source_sha": sha,
         "lean_toolchain": toolchain,
         "verification_run_url": url,
     }
 
 
-def report(mode: str, result: dict[str, str]) -> None:
-    label = "Candidate prerequisites verified" if mode == "candidate" else "Published release verified"
+def report(result: dict[str, str]) -> None:
+    label = "Release prerequisites verified"
     print(f"{label}: v{result['package_version']} at {result['source_sha']}.")
     print(f"Successful prerequisite: {result['verification_run_url']}")
     if output := os.environ.get("GITHUB_OUTPUT"):
@@ -199,10 +202,9 @@ def report(mode: str, result: dict[str, str]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("candidate", "release"))
-    args = parser.parse_args()
+    parser.parse_args()
     try:
-        report(args.mode, verify(args.mode, Path.cwd()))
+        report(verify(Path.cwd()))
     except (VerificationError, OSError, subprocess.TimeoutExpired, tomllib.TOMLDecodeError) as error:
         print(f"Release verification failed: {error}", file=sys.stderr)
         return 1
