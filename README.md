@@ -40,6 +40,12 @@ problem (u t : ℝ)
     epigraph_t : u ^ 2 ≤ t
 ```
 
+## Development
+
+`make build` builds the library, tests, and all examples. `make check` also runs
+the library linters and kernel rechecking. See [checks and releases](docs/releasing.md)
+for the CI checks, protected `main` branch, and release procedure.
+
 ## License
 
 Morew is licensed under the [Apache License, Version 2.0](LICENSE).

@@ -1,6 +1,6 @@
 name = "morew"
 version = "0.1.0"
-defaultTargets = ["Morew", "MorewTest"]
+defaultTargets = ["Morew", "MorewTest", "Examples"]
 lintDriver = "batteries/runLinter"
 lintDriverArgs = ["Morew"]
 
@@ -9,6 +9,9 @@ name = "Morew"
 
 [[lean_lib]]
 name = "MorewTest"
+
+[[lean_lib]]
+name = "Examples"
 
 [[require]]
 name = "mathlib"
