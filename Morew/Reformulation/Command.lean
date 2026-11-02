@@ -7,6 +7,7 @@ import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Derive
 import Morew.Reformulation.Restrict
 import Morew.Reformulation.Rename
+import Morew.Reformulation.Remove
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
@@ -412,6 +413,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
           prepareRestrict state label proposition provided
       | `(reformulationStep| rename $source:ident to $destination:ident) =>
           prepareRenameConstraint state source destination
+      | `(reformulationStep| remove at $selector:ident $[using $provided:term]?) =>
+          prepareRemove state selector provided
       | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
           prepareObjectiveBound state step binder label .minimize
       | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>

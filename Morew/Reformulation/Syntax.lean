@@ -32,6 +32,10 @@ syntax (name := restrictStep)
 /-- Change one current constraint label without changing its predicate. -/
 syntax (name := renameConstraintStep)
   "rename " ident &" to " ident : reformulationStep
+/-- Remove one selected row implied by the remaining constraints, optionally
+checking explicit implication evidence instead of bounded proof automation. -/
+syntax (name := removeStep)
+  "remove " "at " ident (" using " term)? : reformulationStep
 /-- Introduce an epigraph variable for a minimization objective, optionally
 choosing the generated constraint's presentation label. -/
 syntax (name := epigraphStep)

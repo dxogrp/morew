@@ -61,6 +61,7 @@ import Morew.Elab.ObjectiveContext
 import Morew.Elab.Reformulation
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Reformulation.Remove
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.Runner
 import Morew.Elab.Rewrite.Comparison
@@ -94,6 +95,7 @@ import Morew.Reformulation.ObjectiveBound
 import Morew.Reformulation.Occurrence
 import Morew.Reformulation.PowerChainPrinting
 import Morew.Reformulation.Presentation
+import Morew.Reformulation.Remove
 import Morew.Reformulation.Rename
 import Morew.Reformulation.Replace
 import Morew.Reformulation.Restrict
