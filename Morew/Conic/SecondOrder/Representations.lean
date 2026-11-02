@@ -27,10 +27,10 @@ noncomputable def normEpigraph {n : Nat} :
 /-- The named Euclidean norm uses one second-order cone row on its input coordinates. -/
 noncomputable def fnNorm2Epigraph {n : Nat} :
     EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm2 v) where
-  Auxiliary := Unit
-  target v t _ := (t, v) ∈ (Cone.secondOrder n).carrier
-  source_iff_exists v t := by
-    simpa only [Fn.norm2, exists_const] using norm_toLp_le_iff v t
+  Auxiliary := (normEpigraph (n := n)).Auxiliary
+  target v t u := normEpigraph.target (WithLp.toLp 2 v) t u
+  source_iff_exists v t :=
+    normEpigraph.source_iff_exists (WithLp.toLp 2 v) t
 
 /-- A squared Euclidean norm represented by a rotated cone. -/
 noncomputable def normSquareEpigraph {n : Nat} :
