@@ -79,6 +79,7 @@ import Morew.Elab.Substitution.Rules
 import Morew.Fn
 import Morew.Fn.Exponential
 import Morew.Fn.Matrix
+import Morew.Fn.Norm
 import Morew.Fn.Power
 import Morew.NLP
 import Morew.NLP.Basic
