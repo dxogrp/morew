@@ -64,8 +64,12 @@ private def feasibleFunction (domain : Expr) (rows : Array Expr) : MetaM Expr :=
   withLocalDeclD `point domain fun point => do
     mkLambdaFVars #[point] (conjunction (applyRows rows point))
 
-private def makeDecomposition (presentation : PresentationState) (index : Nat)
+/-- Separate exactly one displayed row from the retained ordered conjunction.
+Conjunctions inside an individual row keep their original boundaries. -/
+def makeDecomposition (presentation : PresentationState) (index : Nat)
     (targetProblem : Expr) : MetaM Expr := do
+  unless index < presentation.constraints.size do
+    throwError "constraint decomposition index is out of bounds"
   let rows := presentation.constraints.map (·.predicate)
   let remainder := splice rows index #[]
   let remainderFunction ← feasibleFunction presentation.domainType remainder

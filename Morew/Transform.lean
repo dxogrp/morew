@@ -18,10 +18,13 @@ namespace Morew
 universe u v w z
 
 /-- An exact decomposition of a problem's feasible predicate into the source
-constraint selected for replacement and the remainder left unchanged. -/
+constraint selected for replacement or removal and the remainder left unchanged.
+
+For removal, exactness requires a separate proof that the remainder implies
+the selected constraint. The decomposition itself makes no redundancy claim. -/
 structure ConstraintDecomposition {X : Type u} {V : Type v}
     (p : Problem X V) (source : X → Prop) where
-  /-- The part of the feasible predicate left unchanged by the lift. -/
+  /-- The part of the feasible predicate left unchanged by the transformation. -/
   remainder : X → Prop
   /-- The remainder and selected source constraint exactly recover the
   original feasible predicate. -/
@@ -50,6 +53,29 @@ theorem addConstraint_feasible {X : Type u} {V : Type v}
     (p : Problem X V) (constraint : X → Prop) (point : X) :
     (p.addConstraint constraint).feasible point ↔
       p.feasible point ∧ constraint point := Iff.rfl
+
+/-- Remove a selected constraint without changing the decision space or objective.
+
+The decomposition identifies the retained feasible predicate. Exactness requires
+that this remainder imply the selected constraint, as checked by
+`removeConstraintEquivalence`. -/
+def removeConstraint {X : Type u} {V : Type v}
+    {selected : X → Prop} (p : Problem X V)
+    (decomposition : ConstraintDecomposition p selected) : Problem X V where
+  objective := p.objective
+  feasible := decomposition.remainder
+
+@[simp]
+theorem removeConstraint_objective {X : Type u} {V : Type v}
+    {selected : X → Prop} (p : Problem X V)
+    (decomposition : ConstraintDecomposition p selected) (point : X) :
+    (p.removeConstraint decomposition).objective point = p.objective point := rfl
+
+@[simp]
+theorem removeConstraint_feasible {X : Type u} {V : Type v}
+    {selected : X → Prop} (p : Problem X V)
+    (decomposition : ConstraintDecomposition p selected) (point : X) :
+    (p.removeConstraint decomposition).feasible point ↔ decomposition.remainder point := Iff.rfl
 
 /-- Replace a selected constraint by a predicate over a uniform auxiliary space.
 
@@ -212,6 +238,20 @@ def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
     GlobalEquivalence p (p.addConstraint constraint) :=
   pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
     (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
+
+/-- Removing a consequence of the retained constraints preserves the problem
+exactly. Both maps preserve the decision point and its objective value.
+
+The implication uses only the remainder, so the selected constraint cannot
+justify its own removal. -/
+def removeConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+    {selected : X → Prop} (p : Problem X V)
+    (decomposition : ConstraintDecomposition p selected)
+    (implied : ∀ point, decomposition.remainder point → selected point) :
+    GlobalEquivalence p (p.removeConstraint decomposition) :=
+  pointwiseEquivalence p (p.removeConstraint decomposition) (fun _ => rfl)
+    (fun point => ⟨fun feasible => ((decomposition.feasible_iff point).mp feasible).1,
+      fun retained => (decomposition.feasible_iff point).mpr ⟨retained, implied point retained⟩⟩)
 
 /-- A feasible repair into an added constraint preserves global optimization
 behavior when its objective is no worse. The backward map is inclusion; the
