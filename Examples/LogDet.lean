@@ -34,6 +34,28 @@ reformulation maximumConic : maximum := by
 
 example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
+example : maximumConic.conicForm.data.rowCount = 5 := rfl
+
+-- Lowering the log-det bound first makes the original domain row redundant:
+-- the PSD and EXP rows already imply positive definiteness. Removing that row
+-- avoids the additional PSD block and auxiliary used by its separate lift.
+reformulation maximumWithoutDomainConic : maximum := by
+  hypograph t as logDet_bound
+  conic at logDet_bound
+  remove at domain using (by
+    intro point retained
+    exact ((Morew.Conic.LogDet.hypograph_iff point.1.1.toMatrix point.1.2
+      (by decide)).mpr ⟨point.2.1, point.2.2, retained.2⟩).1)
+  conic
+
+#printp maximumWithoutDomainConic
+
+example : GlobalEquivalence maximum maximumWithoutDomainConic :=
+  maximumWithoutDomainConic.equivalence
+example : IsConic maximumWithoutDomainConic := maximumWithoutDomainConic.isConic
+example : maximumWithoutDomainConic.conicForm.data.rowCount = 4 := rfl
+example : maximumWithoutDomainConic.conicForm.data.toProblem = maximumWithoutDomainConic :=
+  maximumWithoutDomainConic.conicForm.represents
 
 -- The same objective can use native `Real.log` and `Matrix.det` directly.
 def nativeMaximum :=
@@ -48,6 +70,10 @@ This example lowers the domain first to demonstrate that either rewrite order
 is supported. The explicit early `conic at domain` step is optional: the log-det
 rule can use the original `PosDef` constraint directly, or recover positive
 definiteness from its retained PSD witness after domain lowering.
+
+This order retains the domain's witness block and auxiliary. Removing a row
+preserves the decision variables; eliminating that block together with its
+auxiliary would require a separate existential reconstruction.
 -/
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound

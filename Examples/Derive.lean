@@ -56,5 +56,32 @@ example : GlobalEquivalence logarithmic exponentialCoordinates :=
   exponentialCoordinates.equivalence
 example : IsSmoothNLP exponentialCoordinates := exponentialCoordinates.isSmoothNLP
 
+def interval :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      lower : -1 ≤ x
+      upper : x ≤ 1
+
+-- A derived absolute-value bound can be lowered and its redundant pieces
+-- removed. The generated upper bound duplicates an existing row exactly;
+-- the sign-flipped lower bound needs an explicit implication proof.
+reformulation absoluteNLP : interval := by
+  derive abs_bound : |x| ≤ 1 using (by
+    intro point hp
+    exact abs_le.mpr hp)
+  nlp at abs_bound
+  remove at abs_bound_nlp_1
+  remove at abs_bound_nlp_2 using (by
+    intro point retained
+    exact neg_le.mpr retained.1)
+  nlp
+
+#printp absoluteNLP
+example (x : ℝ) : absoluteNLP.feasible x ↔ -1 ≤ x ∧ x ≤ 1 := Iff.rfl
+example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
+example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
+example : absoluteNLP.nlpForm.data.toProblem = absoluteNLP := absoluteNLP.nlpForm.represents
+
 end
 end Examples.Derive
