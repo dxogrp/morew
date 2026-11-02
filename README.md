@@ -24,7 +24,9 @@ noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) 
 variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 
 reformulation conicNonnegLS : (nonnegLS A b) := by
-  epigraph t
+  epigraph t as residualBound
+  conic at residualBound
+  rename residualBound_conic_1 to residualCone
   conic
 
 noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
@@ -40,7 +42,7 @@ problem (x : Fin n → ℝ) (t : ℝ)
   minimize t
   subject to
     nonneg : x ∈ ℝ₊^n
-    epigraph_t_conic_1 : (t, A *ᵥ x - b) ∈ SOC m
+    residualCone : (t, A *ᵥ x - b) ∈ SOC m
 ```
 
 More examples can be found in the [Examples](Examples) directory.
