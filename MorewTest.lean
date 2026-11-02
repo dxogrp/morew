@@ -138,6 +138,7 @@ import MorewTest.Reformulation.FunctionDecisionRecovery
 import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
 import MorewTest.Reformulation.ImportedDerive
 import MorewTest.Reformulation.ImportedRemove
+import MorewTest.Reformulation.ImportedRemoveInstances
 import MorewTest.Reformulation.ImportedRename
 import MorewTest.Reformulation.ImportedRestrict
 import MorewTest.Reformulation.IndexNames
@@ -187,6 +188,7 @@ import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Remove
 import MorewTest.Reformulation.RemoveFailures
+import MorewTest.Reformulation.RemoveInstances
 import MorewTest.Reformulation.RemoveIsolation
 import MorewTest.Reformulation.Rename
 import MorewTest.Reformulation.RenameFailures

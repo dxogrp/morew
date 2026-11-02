@@ -48,6 +48,16 @@ private def matchingProof? (goal : Expr) (action : MetaM Expr) : MetaM (Option E
     catch _ => return .error ()
   return result.toOption
 
+-- Data instances are taken from the source operations, not incidental operand
+-- computations. Proof-valued compatibility classes may still justify those
+-- operations; the complete theorem conclusion must match the original goal.
+private def withSourceInstances (operations : Array Expr) (action : MetaM Expr) :
+    MetaM Expr := do
+  let instances ← (← getLocalInstances).filterM fun localInst => do
+    if ← isProp (← inferType localInst.fvar) then return true
+    operations.anyM (Expr.depends localInst.fvar ·)
+  withLCtx (← getLCtx) instances action
+
 private partial def tautology? (goal : Expr) : MetaM (Option Expr) := do
   let body ← Substitution.Evidence.predicateView goal 32
   if body.isConstOf ``True then return some (mkConst ``True.intro)
@@ -65,12 +75,22 @@ private partial def tautology? (goal : Expr) : MetaM (Option Expr) := do
   let left := args[if reversed then 3 else 2]!
   let right ← Expr.reduceStructure args[if reversed then 2 else 3]!
   if weak then
-    if let some proof ← matchingProof? goal (mkAppM ``le_refl #[left]) then
+    let order ← Expr.reduceStructure args[1]!
+    -- A captured preorder need not be the currently registered instance.
+    if order.isAppOfArity ``Preorder.toLE 2 then
+      if let some proof ← matchingProof? goal
+          (mkAppOptM ``le_refl
+            #[some args[0]!, some order.getAppArgs[1]!, some left]) then
+        return some proof
+    if let some proof ← matchingProof? goal
+        (withSourceInstances #[args[1]!] (mkAppM ``le_refl #[left])) then
       return some proof
     if right.isAppOfArity ``HPow.hPow 6 || right.isAppOfArity ``Pow.pow 5 then
       let arguments := right.getAppArgs
+      let operation := mkAppN right.getAppFn (arguments.extract 0 (arguments.size - 2))
       return ← matchingProof? goal
-        (mkAppM ``sq_nonneg #[arguments[arguments.size - 2]!])
+        (withSourceInstances #[args[1]!, left, operation]
+          (mkAppM ``sq_nonneg #[arguments[arguments.size - 2]!]))
   else if right.isAppOfArity ``Real.exp 1 then
     return ← matchingProof? goal (mkAppM ``Real.exp_pos #[right.getAppArgs[0]!])
   return none
