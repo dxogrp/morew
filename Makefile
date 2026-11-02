@@ -2,7 +2,7 @@ BLUE := \033[36m
 BOLD := \033[1m
 RESET := \033[0m
 
-LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest
+LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest Examples
 
 .DEFAULT_GOAL := help
 
@@ -36,7 +36,7 @@ lint: build ## build and lint the shipped Morew library
 	@lake lint
 
 .PHONY: check-kernel
-check-kernel: build ## build and kernel-check all compiled Morew modules
+check-kernel: build ## build and kernel-check the library, tests, and examples
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
 	@$(LEANCHECK)
 
