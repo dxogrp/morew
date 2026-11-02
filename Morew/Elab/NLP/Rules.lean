@@ -29,4 +29,7 @@ attribute [morew_nlp]
   Morew.Rewrite.norm1Epigraph
   Morew.Rewrite.normInfEpigraph
   Morew.Rewrite.normInfToLpEpigraph
+  Morew.Rewrite.fnNorm1Epigraph
+  Morew.Rewrite.fnNormInfEpigraph
+  Morew.Rewrite.fnNorm2Epigraph
   Morew.Rewrite.euclideanNormEpigraph

@@ -42,7 +42,10 @@ attribute [morew_conic]
   Morew.Rewrite.norm1Epigraph
   Morew.Rewrite.normInfEpigraph
   Morew.Rewrite.normInfToLpEpigraph
+  Morew.Rewrite.fnNorm1Epigraph
+  Morew.Rewrite.fnNormInfEpigraph
   Morew.Conic.SecondOrder.normEpigraph
+  Morew.Conic.SecondOrder.fnNorm2Epigraph
   Morew.Conic.SecondOrder.normSquareEpigraph
   Morew.Conic.SecondOrder.sumSquaresEpigraph
   Morew.Conic.SecondOrder.squareEpigraph
