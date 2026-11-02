@@ -41,7 +41,7 @@ check-kernel: build ## build and kernel-check the library, tests, and examples
 	@$(LEANCHECK)
 
 .PHONY: check
-check: lint ## run the complete local development validation sequence
+check: lint ## run the local Lean build, lint, and kernel checks
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
 	@$(LEANCHECK)
 
