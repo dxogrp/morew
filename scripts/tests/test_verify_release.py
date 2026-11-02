@@ -56,9 +56,12 @@ class WorkflowGateTests(unittest.TestCase):
         with self.assertRaisesRegex(release.VerificationError, "No matching"):
             self.check([])
 
-    def test_newer_failure_cannot_reuse_older_success(self):
-        with self.assertRaisesRegex(release.VerificationError, "not successful"):
-            self.check([workflow_run(), workflow_run(run_number=11, conclusion="failure")])
+    def test_newer_unsuccessful_run_cannot_reuse_older_success(self):
+        for conclusion in ("failure", "cancelled", "timed_out", "neutral", "skipped"):
+            with self.subTest(conclusion=conclusion), self.assertRaisesRegex(
+                release.VerificationError, "not successful"
+            ):
+                self.check([workflow_run(), workflow_run(run_number=11, conclusion=conclusion)])
 
     def test_newer_pending_run_cannot_reuse_older_success(self):
         for status in ("queued", "in_progress", "waiting"):
@@ -155,12 +158,11 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.git("commit", "-qm", "Initial")
         self.sha = self.git("rev-parse", "HEAD")
         self.git("update-ref", "refs/remotes/origin/main", self.sha)
-        self.git("tag", "v0.1.0")
         environment = {
             "GITHUB_REPOSITORY": REPOSITORY,
+            "GITHUB_EVENT_NAME": "workflow_dispatch",
             "GITHUB_SHA": self.sha,
             "GITHUB_REF": "refs/heads/main",
-            "RELEASE_TAG": "v0.1.0",
         }
         self.environment = patch.dict(os.environ, environment)
         self.environment.start()
@@ -180,24 +182,32 @@ class ReleaseIdentityTests(unittest.TestCase):
     def write_version(self, version):
         (self.root / "lakefile.toml").write_text(f'version = "{version}"\n')
 
-    def test_candidate_checks_exact_main_push_commit(self):
-        result = release.verify("candidate", self.root)
+    def test_release_checks_exact_main_push_commit_and_derives_tag(self):
+        result = release.verify(self.root)
         self.assertEqual(result["source_sha"], self.sha)
         self.assertEqual(result["package_version"], "0.1.0")
+        self.assertEqual(result["release_tag"], "v0.1.0")
         self.assertEqual(result["lean_toolchain"], "leanprover/lean4:v4.33.0")
         self.fetch.assert_called_once_with(REPOSITORY, "ci.yml", self.sha, "push")
 
-    def test_candidate_rejects_non_main_ref_before_api(self):
+    def test_release_rejects_automatic_events_before_api(self):
+        for event in ("push", "release", "pull_request", "workflow_run"):
+            with self.subTest(event=event), patch.dict(os.environ, {"GITHUB_EVENT_NAME": event}):
+                with self.assertRaisesRegex(release.VerificationError, "workflow_dispatch"):
+                    release.verify(self.root)
+        self.fetch.assert_not_called()
+
+    def test_release_rejects_non_main_ref_before_api(self):
         for ref in ("refs/heads/topic", "refs/tags/v0.1.0"):
             with self.subTest(ref=ref), patch.dict(os.environ, {"GITHUB_REF": ref}):
                 with self.assertRaisesRegex(release.VerificationError, "dispatched from"):
-                    release.verify("candidate", self.root)
+                    release.verify(self.root)
         self.fetch.assert_not_called()
 
-    def test_candidate_rejects_wrong_checkout_before_api(self):
+    def test_release_rejects_wrong_checkout_before_api(self):
         with patch.dict(os.environ, {"GITHUB_SHA": "b" * 40}):
             with self.assertRaisesRegex(release.VerificationError, "match GITHUB_SHA"):
-                release.verify("candidate", self.root)
+                release.verify(self.root)
         self.fetch.assert_not_called()
 
     def test_stable_version_validation(self):
@@ -206,68 +216,97 @@ class ReleaseIdentityTests(unittest.TestCase):
             with self.subTest(version=version), self.assertRaisesRegex(
                 release.VerificationError, "canonical stable"
             ):
-                release.verify("candidate", self.root)
+                release.verify(self.root)
         self.fetch.assert_not_called()
         for version in ("0.1.0", "1.2.3", "12.20.300"):
             self.write_version(version)
             self.assertEqual(release.stable_version(self.root), version)
 
-    def test_release_checks_exact_candidate_commit(self):
-        result = release.verify("release", self.root)
-        self.assertEqual(result["source_sha"], self.sha)
-        self.fetch.assert_called_once_with(
-            REPOSITORY, "release-candidate.yml", self.sha, "workflow_dispatch"
-        )
-
-    def test_release_accepts_annotated_tag(self):
-        self.git("tag", "-d", "v0.1.0")
-        self.git("tag", "-a", "v0.1.0", "-m", "Version 0.1.0")
-        self.assertEqual(release.verify("release", self.root)["source_sha"], self.sha)
-
-    def test_release_tag_must_match_version(self):
-        for tag in ("0.1.0", "v0.2.0", "v0.1.0-rc.1"):
-            with self.subTest(tag=tag), patch.dict(os.environ, {"RELEASE_TAG": tag}):
-                with self.assertRaisesRegex(release.VerificationError, "tag must equal"):
-                    release.verify("release", self.root)
+    def test_existing_release_tag_fails_before_ancestry_or_api(self):
+        for options in ((), ("-a", "-m", "Version 0.1.0")):
+            self.git("tag", *options, "v0.1.0")
+            with self.subTest(options=options), patch.object(release, "require_main_ancestry") as ancestry:
+                with self.assertRaisesRegex(release.VerificationError, "already exists"):
+                    release.verify(self.root)
+                ancestry.assert_not_called()
+                self.assertEqual(self.git("rev-parse", "v0.1.0^{commit}"), self.sha)
+            self.git("tag", "-d", "v0.1.0")
         self.fetch.assert_not_called()
 
-    def test_release_checkout_must_match_tag(self):
-        self.git("commit", "--allow-empty", "-qm", "Different checkout")
-        with self.assertRaisesRegex(release.VerificationError, "match the tagged commit"):
-            release.verify("release", self.root)
-        self.fetch.assert_not_called()
+    def test_unrelated_tag_does_not_block_release(self):
+        self.git("tag", "v0.0.1")
+        self.assertEqual(release.verify(self.root)["release_tag"], "v0.1.0")
+
+    def test_tag_lookup_error_fails_closed(self):
+        with patch.object(release, "git") as command:
+            command.return_value = subprocess.CompletedProcess([], 128, "", "Git failure")
+            with self.assertRaisesRegex(release.VerificationError, "Cannot check existing"):
+                release.require_unused_tag(self.root, "v0.1.0")
 
     def test_release_must_be_contained_in_main(self):
         self.git("checkout", "-qb", "topic")
         self.git("commit", "--allow-empty", "-qm", "Unmerged")
-        self.git("tag", "-f", "v0.1.0")
-        with self.assertRaisesRegex(release.VerificationError, "contained in origin/main"):
-            release.verify("release", self.root)
+        with patch.dict(os.environ, {"GITHUB_SHA": self.git("rev-parse", "HEAD")}):
+            with self.assertRaisesRegex(release.VerificationError, "contained in origin/main"):
+                release.verify(self.root)
         self.fetch.assert_not_called()
 
-    def test_release_accepts_older_main_commit(self):
+    def test_release_accepts_dispatch_commit_after_main_advances(self):
         self.git("commit", "--allow-empty", "-qm", "Later main commit")
         self.git("update-ref", "refs/remotes/origin/main", "HEAD")
         self.git("checkout", "-q", self.sha)
-        self.assertEqual(release.verify("release", self.root)["source_sha"], self.sha)
+        self.assertEqual(release.verify(self.root)["source_sha"], self.sha)
 
     def test_missing_main_history_fails(self):
         self.git("update-ref", "-d", "refs/remotes/origin/main")
         with self.assertRaisesRegex(release.VerificationError, "fetch depth"):
-            release.verify("release", self.root)
+            release.verify(self.root)
         self.fetch.assert_not_called()
 
-    def test_report_distinguishes_prerequisites_from_finished_candidate(self):
-        result = release.verify("candidate", self.root)
+    def test_shallow_checkout_fails_even_when_head_is_main(self):
+        with tempfile.TemporaryDirectory() as directory:
+            shallow = Path(directory) / "checkout"
+            subprocess.run(
+                ["git", "clone", "--quiet", "--depth", "1", self.root.as_uri(), str(shallow)],
+                check=True, capture_output=True, text=True,
+            )
+            with self.assertRaisesRegex(release.VerificationError, "full repository history"):
+                release.verify(shallow)
+        self.fetch.assert_not_called()
+
+    def test_invalid_toolchain_fails_before_api(self):
+        for toolchain in ("", "\n", "leanprover/lean4:v4.33.0\nother", "two names", "name\x00"):
+            (self.root / "lean-toolchain").write_text(toolchain)
+            with self.subTest(toolchain=toolchain), self.assertRaisesRegex(
+                release.VerificationError, "lean-toolchain"
+            ):
+                release.verify(self.root)
+        self.fetch.assert_not_called()
+
+    def test_release_report_exports_validated_tag_without_claiming_publication(self):
+        result = release.verify(self.root)
         output = self.root / "output"
         summary = self.root / "summary"
         with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)}):
-            with patch("builtins.print"):
-                release.report("candidate", result)
+            with patch("builtins.print") as console:
+                release.report(result)
+        self.assertIn("release_tag=v0.1.0\n", output.read_text())
         self.assertIn(f"source_sha={self.sha}\n", output.read_text())
-        self.assertIn("Candidate prerequisites verified", summary.read_text())
+        self.assertIn("Release prerequisites verified", summary.read_text())
         self.assertIn(result["verification_run_url"], summary.read_text())
         self.assertIn(result["lean_toolchain"], summary.read_text())
+        self.assertNotIn("Published", summary.read_text())
+        console.assert_any_call(f"Release prerequisites verified: v0.1.0 at {self.sha}.")
+
+    def test_cli_verifies_current_checkout_without_mode_argument(self):
+        result = release.verify(self.root)
+        with patch.object(release.sys, "argv", ["verify_release.py"]):
+            with patch.object(release.Path, "cwd", return_value=self.root):
+                with patch.object(release, "verify", return_value=result) as verify:
+                    with patch.object(release, "report") as report:
+                        self.assertEqual(release.main(), 0)
+        verify.assert_called_once_with(self.root)
+        report.assert_called_once_with(result)
 
 
 if __name__ == "__main__":
