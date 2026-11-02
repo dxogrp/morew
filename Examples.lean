@@ -7,6 +7,7 @@ import Examples.Exponential
 import Examples.LogDet
 import Examples.NLP
 import Examples.Negation
+import Examples.Norm
 import Examples.PSD
 import Examples.Power
 import Examples.PowerFamilies
