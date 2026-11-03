@@ -86,6 +86,13 @@ example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
 example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     Rewrite.norm2Epigraph.target v t () = (0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2) := rfl
 
+-- Explicit callers retain the specialized record's public auxiliary and target.
+example {n : Nat} : (Rewrite.norm2Epigraph (n := n)).Auxiliary = Unit := rfl
+
+example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
+    Rewrite.norm2Epigraph.target v t () =
+      Rewrite.euclideanNormEpigraph.target (WithLp.toLp 2 v) t () := rfl
+
 example (v : Fin 0 → ℝ) (t : ℝ) :
     (∃ u, Rewrite.norm1Epigraph.target v t u) ↔ 0 ≤ t := by
   simp [Rewrite.norm1Epigraph]
@@ -96,7 +103,7 @@ example (v : Fin 0 → ℝ) (t : ℝ) :
 
 example (v : Fin 0 → ℝ) (t : ℝ) :
     Rewrite.norm2Epigraph.target v t () ↔ 0 ≤ t := by
-  simp [Rewrite.norm2Epigraph, sq_nonneg]
+  simp [Rewrite.norm2Epigraph, Rewrite.euclideanNormEpigraph, sq_nonneg]
 
 example (v : EuclideanSpace ℝ (Fin 0)) (t : ℝ) :
     Rewrite.euclideanNormEpigraph.target v t () ↔ 0 ≤ t := by

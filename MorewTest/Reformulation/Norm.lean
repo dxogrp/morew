@@ -82,7 +82,8 @@ example (t : ℝ) :
   simp [Rewrite.fnNormInfEpigraph, Rewrite.normInfEpigraph]
 example (t : ℝ) :
     (∃ u, (Rewrite.fnNorm2Epigraph (n := 0)).target Fin.elim0 t u) ↔ 0 ≤ t := by
-  simp [Rewrite.fnNorm2Epigraph, Rewrite.norm2Epigraph, sq_nonneg]
+  simp [Rewrite.fnNorm2Epigraph, Rewrite.norm2Epigraph, Rewrite.euclideanNormEpigraph,
+    sq_nonneg]
 example (t : ℝ) :
     (∃ u, (Conic.SecondOrder.fnNorm2Epigraph (n := 0)).target Fin.elim0 t u) ↔ 0 ≤ t := by
   rw [← Conic.SecondOrder.fnNorm2Epigraph.source_iff_exists]
