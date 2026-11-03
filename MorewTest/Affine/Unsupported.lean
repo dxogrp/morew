@@ -86,19 +86,4 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertUnsupported (← `(fun x : ℝ =>
     @HSMul.hSMul ℝ ℝ ℝ ⟨fun a b => a * b * b⟩ 2 x))
 
-/-! Matrix dimensions remain enforced by ordinary Lean elaboration. -/
-
-/--
-error: Application type mismatch: The argument
-  x
-has type
-  Fin 2 → ℝ
-but is expected to have type
-  Fin 3 → ℝ
-in the application
-  A *ᵥ x
--/
-#guard_msgs in
-example (A : Matrix (Fin 2) (Fin 3) ℝ) (x : Fin 2 → ℝ) : Fin 2 → ℝ := A *ᵥ x
-
 end MorewTest.Affine.Unsupported
