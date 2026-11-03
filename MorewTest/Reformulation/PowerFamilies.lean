@@ -48,7 +48,6 @@ reformulation power : (powerTargeted n) := by
 
 example : GlobalEquivalence (normSource n 2) (defaultTargeted n) := defaultTargeted.equivalence n
 example : GlobalEquivalence (normSource n 2) (defaultTerminal n) := defaultTerminal.equivalence n
-example : Conic.Form (defaultTerminal n) := defaultTerminal.conicForm n
 example : (defaultTerminal.conicForm n).data.toProblem = defaultTerminal n :=
   (defaultTerminal.conicForm n).represents
 example : IsConic (defaultTerminal n) := defaultTerminal.isConic n
@@ -65,8 +64,6 @@ example : GlobalEquivalence (normSource n 2) (power n) :=
 example : GlobalEquivalence (soc n) (power n) :=
   (soc.equivalence n).symm.trans
     ((powerTargeted.equivalence n).trans (power.equivalence n))
-example : Conic.Form (soc n) := soc.conicForm n
-example : Conic.Form (power n) := power.conicForm n
 example : (soc.conicForm n).data.toProblem = soc n := (soc.conicForm n).represents
 example : (power.conicForm n).data.toProblem = power n := (power.conicForm n).represents
 example : IsConic (soc n) := soc.isConic n
@@ -219,7 +216,6 @@ reformulation ready : (source n) := by
 
 example : GlobalEquivalence (source n) (targeted n hn) := targeted.equivalence n hn
 example : GlobalEquivalence (source n) (ready n hn) := ready.equivalence n hn
-example : Conic.Form (ready n hn) := ready.conicForm n hn
 example : (ready.conicForm n hn).data.toProblem = ready n hn :=
   (ready.conicForm n hn).represents
 example : (ready.conicForm n hn).data.sense = .maximize := rfl
@@ -251,7 +247,6 @@ reformulation ready : (source n ε) := by
   conic
 
 example : GlobalEquivalence (source n ε) (ready n hn ε) := ready.equivalence n hn ε hε
-example : Conic.Form (ready n hn ε) := ready.conicForm n hn ε
 example : (ready.conicForm n hn ε).data.toProblem = ready n hn ε :=
   (ready.conicForm n hn ε).represents
 example : (ready.conicForm n hn ε).data.sense = .minimize := rfl

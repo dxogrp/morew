@@ -40,7 +40,6 @@ reformulation terminal : source := by
 
 example : GlobalEquivalence source targeted := targeted.equivalence
 example : GlobalEquivalence source terminal := terminal.equivalence
-example : Conic.Form terminal := terminal.conicForm
 example : terminal.conicForm.data.toProblem = terminal := terminal.conicForm.represents
 example : terminal.conicForm.data.rowCount = 3 := rfl
 example (x t : ℝ) : targeted.feasible (x, t) ↔

@@ -294,7 +294,6 @@ example : automaticTarget.conicForm.data.toProblem = automaticTarget :=
 example : selectedTarget.conicForm.data.toProblem = selectedTarget :=
   selectedTarget.conicForm.represents
 
-example : Conic.Form automaticTarget := automaticTarget.conicForm
 example : IsConic selectedTarget := selectedTarget.isConic
 example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
 
@@ -331,7 +330,6 @@ reformulation target : source := by
 -- The exported form retains the index spelling and needs only its finiteness.
 example : target.conicForm.data.rowCount = 1 := rfl
 example : target.conicForm.data.toProblem = target := target.conicForm.represents
-example : Conic.Form target := target.conicForm
 example : IsConic target := target.isConic
 
 end AliasedFiniteIndex
