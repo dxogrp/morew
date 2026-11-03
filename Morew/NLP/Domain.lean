@@ -12,12 +12,11 @@ import Mathlib.Analysis.SpecialFunctions.Sqrt
 # Open evaluation domains for smooth nonlinear expressions
 
 Domains combine through intersections and finite families. Positivity and
-nonzero restrictions use continuity on the current domain, so nested restricted
-functions need no extension to a globally continuous function. Feasibility
-inclusion is separate evidence and does not alter the represented constraints.
+nonzero restrictions use continuity on the current domain. Separate proofs
+establish that feasible points belong to each domain.
 
-The smoothness rules apply to arbitrary domains in real normed spaces. They
-retain the native total expressions, including their values outside the domain.
+The smoothness rules apply to arbitrary domains in real normed spaces and
+preserve the total functions, including their values outside the domain.
 -/
 
 namespace Morew.NLP.Domain

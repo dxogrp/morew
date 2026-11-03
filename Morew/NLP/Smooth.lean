@@ -11,10 +11,9 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 /-!
 # Smooth expression closure rules
 
-These lemmas compose C² evidence on a common domain. Their function operands
-are explicit so a certifier can apply them to the functions it has inspected.
-No openness or finite-dimensionality assumption is needed for the closure rules.
-Finite sums and projections retain their supplied index set and fixed index.
+These lemmas compose C² functions on arbitrary domains in real normed spaces,
+including infinite-dimensional spaces. Finite sums and projections retain
+their supplied index set and fixed index.
 -/
 
 namespace Morew.NLP.Smooth
@@ -150,7 +149,7 @@ theorem contDiff_tanh : ContDiff ℝ 2 Real.tanh := by
   rw [representation]
   exact Real.contDiff_sinh.div Real.contDiff_cosh (fun x => (Real.cosh_pos x).ne')
 
-/-- Native hyperbolic tangent preserves smoothness without a domain side condition. -/
+/-- Native hyperbolic tangent preserves smoothness on every domain. -/
 theorem tanh (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => Real.tanh (f x)) domain :=
   contDiff_tanh.comp_contDiffOn hf

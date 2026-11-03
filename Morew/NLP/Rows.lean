@@ -10,14 +10,10 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Smoothness evidence for generated constraint rows
 
-These certificates describe only the supplied predicates. They make no claim
-about an objective or any other constraints. Finite families stay grouped, and
-each closed scalar comparison records smoothness of its exact difference.
-
-`Block` additionally retains the concrete scalar rows in `Type`, so terminal
-validation can construct NLP data without extracting data from a proof. Finite
-families use the ordered finite-sum equivalence; symbolic dimensions and empty
-families need no enumeration during elaboration.
+Each certificate describes a supplied predicate using smooth scalar residuals
+with closed bounds. `Block` stores the concrete rows and a proof that their
+conjunction is equivalent to the predicate. Finite families remain grouped, with rows
+ordered by coordinate, including symbolic dimensions and empty families.
 -/
 
 namespace Morew.NLP.Rows
@@ -93,7 +89,7 @@ theorem Certified.mono {s t : Set X} {p : X → Prop}
   | family p _ ih => exact .family p ih
   | of_iff p q equivalent _ ih => exact .of_iff p q equivalent ih
 
-/-- Rebase existing grammatical certificates along a globally smooth map. -/
+/-- Pull back row certificates along a globally smooth map. -/
 theorem Certified.pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     {domain : Set X} {p : X → Prop} (certified : Certified domain p)
     (f : Y → X) (smooth : ContDiff ℝ 2 f) :
@@ -114,27 +110,27 @@ theorem Certified.pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y
   | of_iff p q equivalent _ ih =>
     exact .of_iff (fun y => p (f y)) (fun y => q (f y)) (fun y => equivalent (f y)) ih
 
-/-- Smooth rebasing preserves openness of the evaluation domain. -/
+/-- The preimage of an open domain under a smooth map is open. -/
 theorem preimage_open {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (domain : Set X) (f : Y → X) (open_domain : IsOpen domain)
     (smooth : ContDiff ℝ 2 f) : IsOpen (f ⁻¹' domain) :=
   open_domain.preimage smooth.continuous
 
 omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-/-- Rebased feasibility supplies membership in the pulled-back domain. -/
+/-- Feasibility after composition implies membership in the preimage domain. -/
 theorem preimage_includes {Y : Type*} (domain : Set X) (p : X → Prop)
     (f : Y → X) (includes : ∀ x, p x → x ∈ domain) :
     ∀ y, p (f y) → y ∈ f ⁻¹' domain :=
   fun y hy => includes (f y) hy
 
-/-- Concrete smooth scalar rows representing exactly one predicate.
-The domain is evaluation evidence and is not included in `holds_iff`. -/
+/-- Concrete smooth scalar rows whose conjunction is equivalent to one predicate.
+The domain specifies where the residuals are smooth. -/
 structure Block (domain : Set X) (predicate : X → Prop) where
   /-- The number of normalized scalar rows, possibly symbolic or zero. -/
   rowCount : Nat
   /-- The actual residuals and bounds, with smoothness on the shared domain. -/
   rows : Fin rowCount → Row X domain
-  /-- Row-only satisfaction is equivalent to the original predicate. -/
+/-- Satisfaction of all rows is equivalent to the original predicate. -/
   holds_iff : ∀ x, (∀ i, (rows i).Holds x) ↔ predicate x
 
 namespace Block
@@ -174,7 +170,7 @@ def eq (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (fixed_residual_iff _ _).mp (h 0),
     fun h _ => (fixed_residual_iff _ _).mpr h⟩
 
-/-- Append conjunction rows in left-to-right order, without merging bounds. -/
+/-- Concatenate the rows of a conjunction in left-to-right order. -/
 def and (left : Block domain p) (right : Block domain q) :
     Block domain (fun x => p x ∧ q x) where
   rowCount := left.rowCount + right.rowCount
@@ -242,14 +238,13 @@ def ofIff (p q : X → Prop) (equivalent : ∀ x, p x ↔ q x)
   rows := block.rows
   holds_iff x := (block.holds_iff x).trans (equivalent x).symm
 
-/-- Restrict evaluation evidence without changing residuals, bounds, or order. -/
+/-- Restrict the evaluation domain, preserving residuals, bounds, and row order. -/
 def mono {s t : Set X} (block : Block s p) (subset : t ⊆ s) : Block t p where
   rowCount := block.rowCount
   rows i := { block.rows i with smooth := (block.rows i).smooth.mono subset }
   holds_iff := block.holds_iff
 
-/-- Rebase accepted rows along a smooth map, in particular an auxiliary-variable
-projection, without discovering their expressions or evidence again. -/
+/-- Pull back rows along a smooth map, including a projection from auxiliary variables. -/
 def pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (block : Block domain p) (f : Y → X) (smooth : ContDiff ℝ 2 f) :
     Block (f ⁻¹' domain) (fun y => p (f y)) where
@@ -260,8 +255,8 @@ def pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     smooth := (block.rows i).smooth.comp smooth.contDiffOn (fun _ h => h) }
   holds_iff y := block.holds_iff (f y)
 
-/-- Assemble an exact form from complete row data and objective/domain proofs.
-The separately supplied sense does not follow from representation equality. -/
+/-- Assemble an exact form from row data, an objective, smoothness and domain
+proofs, and the separately supplied objective sense. -/
 def toForm [FiniteDimensional ℝ X] (problem : Problem X ℝ)
     (block : Block domain problem.feasible) (sense : ObjectiveSense)
     (domain_isOpen : IsOpen domain)

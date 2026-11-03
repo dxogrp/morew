@@ -11,22 +11,9 @@ import Morew.Core
 # Certified smooth nonlinear programs
 
 NLP data stores a real objective, finitely many scalar residuals with closed
-bounds, and their C² proofs on a common open evaluation domain. Every point
-satisfying the rows must belong to that domain. The domain is proof data: it
-is not an extra constraint in `Data.toProblem`.
-
-Objectives and residuals remain total functions. `Form.represents` equates the
-entire represented problem, including objective values outside the evaluation
-domain. No convexity assumption is imposed on either the objective or the rows.
-
-With zero rows, every point is feasible, so the domain must contain all points.
-An empty domain is permitted when the rows are infeasible; smoothness on that
-domain is vacuous. Inconsistent bounds are therefore valid representations.
-
-Objective sense follows the conic API: maximizing problems retain an explicit
-`Problem X (OrderDual ℝ)` type and data with sense `.maximize`. Since `OrderDual`
-is a reducible synonym, representation equality alone does not certify the
-recorded sense. Conversion never negates the objective.
+bounds, and their C² proofs on a common open evaluation domain. The rows imply
+membership in that domain. Objectives and residuals are total functions and
+may be nonconvex. `Form` certifies equality with the represented problem.
 -/
 
 namespace Morew
@@ -103,8 +90,7 @@ end Bounds
 
 variable (X : Type u) [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-/-- A scalar residual with closed bounds and a C² proof on an evaluation domain.
-The residual is a total function; no affinity or convexity is required. -/
+/-- A total scalar residual with closed bounds and a C² proof on an evaluation domain. -/
 structure Row (domain : Set X) where
   /-- The total real-valued residual. -/
   residual : X → ℝ
@@ -113,14 +99,20 @@ structure Row (domain : Set X) where
   /-- The residual is twice continuously differentiable on the domain. -/
   smooth : ContDiffOn ℝ 2 residual domain
 
-/-- A row holds exactly when its residual satisfies its bounds.
-Domain membership is not part of this predicate. -/
+/-- A row holds exactly when its residual satisfies its bounds. -/
 def Row.Holds {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
     {domain : Set X} (row : Row X domain) (x : X) : Prop :=
   row.bounds.Contains (row.residual x)
 
 /-- Finite-dimensional smooth nonlinear-program data.
-The rows alone define feasibility and must imply membership in the open domain. -/
+
+The rows define feasibility and imply membership in the open evaluation domain.
+Zero rows make every point feasible, so the domain is then the whole space.
+An empty domain is allowed when the rows are infeasible; smoothness there is vacuous.
+
+Maximizing declarations use `Problem X (OrderDual ℝ)` and sense `.maximize`,
+with the original objective function. Since `OrderDual ℝ` is a reducible synonym
+for `ℝ`, equality of `Problem` values alone does not determine the sense. -/
 structure Data [FiniteDimensional ℝ X] where
   /-- Whether consumers should minimize or maximize the objective. -/
   sense : ObjectiveSense
@@ -145,9 +137,8 @@ namespace Data
 
 variable {X}
 
-/-- The ordinary problem with the unchanged objective and exactly the stored rows.
-The domain is not conjoined to feasibility. The returned type does not encode
-`sense`; maximizing declarations retain an explicit `OrderDual ℝ` value type. -/
+/-- The problem with the original objective and the conjunction of the stored rows.
+Objective sense is supplied by the declaration's value type, as described in `Data`. -/
 def toProblem (data : Data X) : Problem X ℝ where
   objective := data.objective
   feasible x := ∀ i, (data.rows i).Holds x
@@ -157,7 +148,7 @@ def toProblem (data : Data X) : Problem X ℝ where
 theorem toProblem_objective (data : Data X) (x : X) :
     data.toProblem.objective x = data.objective x := rfl
 
-/-- Conversion requires exactly the rows, without an additional domain test. -/
+/-- Feasibility is exactly the conjunction of the stored rows. -/
 @[simp]
 theorem toProblem_feasible (data : Data X) (x : X) :
     data.toProblem.feasible x ↔ ∀ i, (data.rows i).Holds x := Iff.rfl
@@ -166,9 +157,9 @@ end Data
 
 variable {X}
 
-/-- Concrete smooth-NLP data representing an entire problem exactly.
-Equality includes the objective outside the domain, but cannot certify agreement
-of the separately recorded objective sense with a source declaration. -/
+/-- Concrete smooth-NLP data with equality of the objective and feasible predicate.
+Equality includes objective values outside the evaluation domain. Objective
+sense is stored separately in `Data.sense`. -/
 structure Form (p : Problem X ℝ) where
   /-- The concrete smooth nonlinear-program representation. -/
   data : Data X
