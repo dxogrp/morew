@@ -7,7 +7,6 @@ import MorewTest.Reformulation.Composition
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.Derive
 import MorewTest.Reformulation.DeriveFailures
-import MorewTest.Reformulation.DeriveIsolation
 import MorewTest.Reformulation.Remove
 import MorewTest.Reformulation.RemoveFailures
 import MorewTest.Reformulation.RemoveIsolation

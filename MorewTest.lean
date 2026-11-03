@@ -146,7 +146,6 @@ import MorewTest.Reformulation.Derive
 import MorewTest.Reformulation.DeriveBackends
 import MorewTest.Reformulation.DeriveFailures
 import MorewTest.Reformulation.DeriveFailuresBackends
-import MorewTest.Reformulation.DeriveIsolation
 import MorewTest.Reformulation.DirectNormalization
 import MorewTest.Reformulation.Dispatch
 import MorewTest.Reformulation.EuclideanPrinting
