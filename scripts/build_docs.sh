@@ -20,10 +20,9 @@ LAKE_ARTIFACT_CACHE=false DOCGEN_SRC=vscode lake build Morew:docs
 mkdir -p "$repo_root/build"
 staging_dir=$(mktemp -d "$repo_root/build/docs.XXXXXX")
 trap 'rm -rf -- "$staging_dir"' EXIT
-mkdir -p "$staging_dir/api" "$staging_dir/source"
+mkdir -p "$staging_dir/api"
 cp -R .lake/build/manual/html-multi/. "$staging_dir/"
 cp -R .lake/build/doc/. "$staging_dir/api/"
-cp -R "$repo_root/Examples" "$staging_dir/source/"
 rm -rf -- "$site_dir"
 mv -- "$staging_dir" "$site_dir"
 printf 'Documentation: %s/index.html\n' "$site_dir"

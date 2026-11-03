@@ -38,6 +38,17 @@ private partial def normalizeBlock : MD4Lean.Block → MD4Lean.Block
   | .table head body => .table (head.map (·.map spaceBreaks)) (body.map (·.map (·.map spaceBreaks)))
   | other => other
 
+private def omitLicenseHeader (hl : SubVerso.Highlighting.Highlighted) :
+    SubVerso.Highlighting.Highlighted := Id.run do
+  let .seq parts := hl | return hl
+  match parts.toList with
+  | .token ⟨.commentDelim, "/-"⟩ :: .token ⟨.blockComment, body⟩ ::
+      .token ⟨.commentDelim, "-/"⟩ :: rest =>
+    if body.trimAscii.startsWith "Copyright " && body.contains "SPDX-License-Identifier:" then
+      return (SubVerso.Highlighting.Highlighted.seq rest.toArray).trimLeft
+    return hl
+  | _ => return hl
+
 -- Verso 4.33.0 drops Markdown line breaks; each example already supplies its title.
 private def normalizeModule (source : LitMod) : LitMod := Id.run do
   let mut firstModuleDoc := true
@@ -46,6 +57,9 @@ private def normalizeModule (source : LitMod) : LitMod := Id.run do
     let mut code := #[]
     for part in item.code do
       let normalized ← match part with
+        | .highlighted hl =>
+          pure (.highlighted (if item.kind == ``Lean.Parser.Module.header then
+            omitLicenseHeader hl else hl))
         | .markdownModDoc doc => do
           let mut blocks := doc.blocks.map normalizeBlock
           if firstModuleDoc then
@@ -64,9 +78,8 @@ private def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc 
   let doc := modToPage! (normalizeModule (loadJsonString! json)) #[.text title] title none
   { doc with construct := fun context =>
       let part := doc.construct context
-      let sourceLink := Verso.Doc.Block.para #[
-        .text "Source: ", .link #[.code sourcePath] ("source/" ++ sourcePath)]
-      { part with content := #[sourceLink] ++ part.content } }
+      let sourceCaption := Verso.Doc.Block.para #[.text "Source: ", .code sourcePath]
+      { part with content := #[sourceCaption] ++ part.content } }
 
 open Lean Lean.Elab Term Verso.Doc.Elab Verso.ArgParse
 open Lean.Doc.Syntax
