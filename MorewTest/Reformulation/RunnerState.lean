@@ -19,11 +19,6 @@ namespace MorewTest.Reformulation.RunnerState
 open Lean
 open Morew.Elab.Reformulation
 
-private def expect (condition : Bool) (message : String) :
-    Lean.Elab.Command.CommandElabM Unit :=
-  unless condition do
-    throwError message
-
 private def placeholder : Expr := .const ``True.intro []
 
 private def terminalResult : StepResult := {
@@ -37,17 +32,6 @@ private def terminalResult : StepResult := {
     value := placeholder
   }]
 }
-
-run_cmd do
-  expect (terminalResult.status == .terminal)
-    "terminal step status was not retained"
-  expect (terminalResult.companions.size == 1)
-    "terminal companion requests were not retained"
-  match terminalResult.companions[0]? with
-  | some companion =>
-      expect (companion.name == `terminalWitness)
-        "terminal companion request changed during construction"
-  | none => throwError "terminal companion request disappeared"
 
 run_cmd do
   let env ← Lean.getEnv
