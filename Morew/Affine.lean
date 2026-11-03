@@ -14,8 +14,7 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 # Certified affine constructions
 
 Each construction retains both an affine map and its pointwise equality with
-the original function. These algebraic helpers are independent of elaboration
-and of the modeling surface language.
+the original function.
 -/
 
 namespace Morew.Affine
@@ -98,11 +97,7 @@ noncomputable def mulConstRight {f : X → ℝ} (a : Certified f) (c : ℝ) :
     Certified (fun x => f x * c) :=
   smulConst a c
 
-/-- Divide by a certified nonzero constant.
-
-The nonzero witness records the reifier's supported fragment, even though
-totalized real division would also define an affine function at zero.
--/
+/-- Divide by a constant with a supplied nonzero proof. -/
 noncomputable def divConst {f : X → ℝ} (a : Certified f) (c : ℝ) (_h : c ≠ 0) :
     Certified (fun x => f x / c) where
   map := (mulConstRight a c⁻¹).map
@@ -115,7 +110,7 @@ noncomputable def powZero {f : X → ℝ} (_a : Certified f) :
   map := AffineMap.const ℝ X 1
   correct x := (pow_zero (f x)).symm
 
-/-- The zeroth power is constant without requiring its base to be affine. -/
+/-- The zeroth power of any real-valued function is constant. -/
 noncomputable def powZeroSource (f : X → ℝ) :
     Certified (fun x => f x ^ (0 : ℕ)) where
   map := AffineMap.const ℝ X 1
@@ -127,13 +122,13 @@ noncomputable def powOne {f : X → ℝ} (a : Certified f) :
   map := a.map
   correct x := (a.correct x).trans (pow_one (f x)).symm
 
-/-- The real zeroth power is constant even for a nonaffine base. -/
+/-- The real zeroth power of any real-valued function is constant. -/
 noncomputable def rpowZeroSource (f : X → ℝ) :
     Certified (fun x => Real.rpow (f x) 0) where
   map := AffineMap.const ℝ X 1
   correct x := (Real.rpow_zero (f x)).symm
 
-/-- The real first power preserves a scalar affine function without a sign premise. -/
+/-- The real first power preserves a scalar affine function. -/
 noncomputable def rpowOne {f : X → ℝ} (a : Certified f) :
     Certified (fun x => Real.rpow (f x) 1) where
   map := a.map

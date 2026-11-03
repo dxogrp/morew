@@ -6,10 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 import Lean.PrettyPrinter
 
 /-!
-# Mathematical display recipes for finite power chains
+# Displaying finite power-cone representations
 
-These recipes are used only by the problem printer. Their syntax leaves retain
-the names of the checked presentation; they are never reconstructed as terms.
+Formatting data for geometric-mean and inverse-product constraints. Syntax
+leaves retain the names of the checked presentation and serve as display text.
 -/
 
 namespace Morew.Syntax
@@ -17,8 +17,8 @@ namespace Morew.Syntax
 open Lean
 
 /-- One of the fixed rows in a geometric-mean or inverse-product chain.
-`membership` retains a terminal cone membership rather than displaying the
-earlier comparison. All syntax leaves are closed presentation syntax. -/
+`membership` selects cone notation for the final bound. Syntax leaves are
+closed presentation syntax. -/
 inductive PowerChainRow where
   /-- Equality of the first auxiliary and input coordinates. -/
   | first (auxiliary source : Syntax) (membership : Bool)

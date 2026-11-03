@@ -8,15 +8,14 @@ import Lean.Elab.Command
 import Lean.PrettyPrinter
 
 /-!
-# Source-aligned problem printing
+# Problem printing
 
 Validate registered problem declarations and format their stored presentations
 for `#printp`, preserving user names, objective sense, and constraint order.
 
-Refreshed reformulations also carry print-only compact and detailed views.
-Recognized power chains use an explicitly marked mathematical display by default;
+Reformulations carry compact and detailed display views.
+Recognized power-cone representations use a marked mathematical display by default;
 `pp.proofs true` selects ordinary Lean syntax with proof details at print time.
-Neither choice changes the separate syntax views consumed by reconstruction.
 -/
 
 namespace Morew
@@ -151,12 +150,8 @@ def elabPrintProblem : CommandElab := fun stx => do
     | some presentation =>
       if detailed then (presentation.detailed, #[])
       else (presentation.compact, presentation.mathematicalRows)
-  -- A `problem` term can occur as a proper subterm of another declaration.
-  -- During elaboration it still sees the enclosing declaration name, so such
-  -- a term may leave presentation metadata behind.  Metadata is deliberately
-  -- outside the trusted semantics; validate the result type beneath the
-  -- declaration's parameters before using it. Reduction also admits transparent
-  -- aliases hiding further parameters or the final `Problem` type.
+  -- A nested `problem` term can register metadata for its enclosing declaration.
+  -- Check the declaration's result type, reducing aliases and parameters.
   let isProblem ← liftTermElabM do
     let info ← getConstInfo declName
     Lean.Meta.forallTelescopeReducing info.type

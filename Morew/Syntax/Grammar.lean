@@ -9,7 +9,6 @@ import Lean.Parser
 # Problem surface grammar
 
 Syntax categories and parser declarations for problem terms and `#printp`.
-Parser names remain in `Morew`; elaboration and printing are separate modules.
 -/
 
 namespace Morew
