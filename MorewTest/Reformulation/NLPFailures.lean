@@ -152,5 +152,19 @@ reformulation validAfterFailures : source := by
 
 example : GlobalEquivalence source validAfterFailures := validAfterFailures.equivalence
 
+run_cmd do
+  let env ← Lean.getEnv
+  for target in #[`unknown, `stale, `reverse, `equality, `nested, `remaining,
+      `missingDomain, `noIdentity, `ambiguous, `wrongRecord, `wrongPredicate,
+      `unresolvedRule, `invalidGeneratedDomain, `strict, `afterAuxiliary] do
+    let name := `MorewTest.Reformulation.NLPFailures ++ target
+    for declaration in #[name, name ++ `equivalence] do
+      if env.contains declaration then
+        Lean.throwError "failed NLP reformulation emitted {declaration}"
+    if (Morew.Syntax.getProblemView? env name).isSome then
+      Lean.throwError "failed NLP reformulation registered presentation metadata"
+  if env.contains `MorewTest.Reformulation.NLPFailures.failedAlias then
+    Lean.throwError "failed NLP reformulation emitted its certificate alias"
+
 end
 end MorewTest.Reformulation.NLPFailures
