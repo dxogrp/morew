@@ -4,9 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
-import MorewTest.Reformulation.OccurrenceFailures
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Terminal conic steps reject later occurrence bounds without retaining outputs. -/
 
 namespace MorewTest.Reformulation.OccurrenceFailures
 

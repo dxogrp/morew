@@ -5,9 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
-import MorewTest.Reformulation.NLP
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Composition of conic and NLP steps through the public commands. -/
 
 namespace MorewTest.Reformulation.NLP
 

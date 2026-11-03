@@ -4,9 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
-import MorewTest.Reformulation.SubstitutionContext
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Grouped positivity across substitution and conic certification. -/
 
 namespace MorewTest.Reformulation.SubstitutionContext
 

@@ -5,9 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
-import MorewTest.Reformulation.NegationNLP
+import MorewTest.Diagnostics
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Negation and comparison rewrites respect the operations captured by each problem. -/
 
 namespace MorewTest.Reformulation.NegationNLP
 

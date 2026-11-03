@@ -5,7 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
-import MorewTest.Reformulation.Norm
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
