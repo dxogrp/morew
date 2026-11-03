@@ -23,20 +23,20 @@ open Lean Lean.Elab.Command Morew
 open MorewTest.Reformulation.PrintDetails (printed)
 
 run_cmd do
-  for declaration in #[``PowerPrinting.GeometricMean.singleton, ``PowerPrinting.GeometricMean.triple,
-      ``PowerPrinting.GeometricMean.targeted, ``PowerPrinting.GeometricMean.ready,
-      ``PowerPrinting.InverseProduct.singleton, ``PowerPrinting.InverseProduct.triple,
-      ``PowerPrinting.InverseProduct.targeted, ``PowerPrinting.InverseProduct.ready,
-      ``PowerFamilies.GeometricMean.singleton, ``PowerFamilies.GeometricMean.triple,
-      ``PowerFamilies.InverseProduct.singleton, ``PowerFamilies.InverseProduct.triple] do
-    checkMathematical declaration #["POW ((j + 1) / (j + 2))"]
-  checkMathematical ``PowerPrinting.GeometricMean.targeted
-    #["mean_aux[0] = x[0]", "j < n - 1", "0 ≤ mean_aux[n - 1]", "t ≤ mean_aux[n - 1]"]
-  checkMathematical ``PowerPrinting.GeometricMean.ready
-    #["mean_aux[0] - x[0] ∈ ({0} : Set ℝ)", "mean_aux[n - 1] - t ∈ ℝ₊"]
-  checkMathematical ``PowerPrinting.InverseProduct.targeted #["POW (1 / (n + 1))"]
-  checkMathematical ``PowerPrinting.InverseProduct.triple #["POW (1 / 4)"]
-  checkMathematical ``PowerPrinting.InverseProduct.singleton #["POW (1 / 2)"]
+  for (declaration, required) in #[
+      (``PowerPrinting.GeometricMean.singleton, #[]),
+      (``PowerPrinting.GeometricMean.triple, #[]),
+      (``PowerPrinting.GeometricMean.targeted, #["mean_aux[0] = x[0]", "j < n - 1", "0 ≤ mean_aux[n - 1]", "t ≤ mean_aux[n - 1]"]),
+      (``PowerPrinting.GeometricMean.ready, #["mean_aux[0] - x[0] ∈ ({0} : Set ℝ)", "mean_aux[n - 1] - t ∈ ℝ₊"]),
+      (``PowerPrinting.InverseProduct.singleton, #["POW (1 / 2)"]),
+      (``PowerPrinting.InverseProduct.triple, #["POW (1 / 4)"]),
+      (``PowerPrinting.InverseProduct.targeted, #["POW (1 / (n + 1))"]),
+      (``PowerPrinting.InverseProduct.ready, #[]),
+      (``PowerFamilies.GeometricMean.singleton, #[]),
+      (``PowerFamilies.GeometricMean.triple, #[]),
+      (``PowerFamilies.InverseProduct.singleton, #[]),
+      (``PowerFamilies.InverseProduct.triple, #[])] do
+    checkMathematical declaration (#["POW ((j + 1) / (j + 2))"] ++ required)
   for source in #[``PowerPrinting.GeometricMean.source, ``PowerPrinting.InverseProduct.source] do
     let compact ← printed source false
     unless compact == (← printed source true) && !compact.contains "-- Mathematical view" &&
