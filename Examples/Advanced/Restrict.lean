@@ -11,12 +11,39 @@ import Morew.Reformulation.Basic
 `restrict label : proposition using repair` can discard feasible points when
 each has a representative satisfying the new condition with no worse objective.
 The certificate preserves global optimization behavior; the feasible sets may differ.
+
+The examples first choose a nonnegative point in an interval, then order two
+interchangeable variables, and finally choose the nonnegative square root after
+a square substitution. Each step includes a proof that the chosen point is
+feasible and has an objective value at least as good as the original point.
 -/
 
 namespace Examples.Advanced.Restrict
 
 open Morew
 noncomputable section
+
+-- Restrict to nonnegative points by replacing x with |x|.
+def maximum :=
+  problem (x : ℝ)
+    maximize x
+    subject to
+      lower : -1 ≤ x
+      upper : x ≤ 1
+
+def absoluteRepair : GlobalImprovement maximum
+    (maximum.addConstraint (fun x => 0 ≤ x)) where
+  map point := ⟨|point.1|,
+    ⟨⟨(by norm_num : (-1 : ℝ) ≤ 0).trans (abs_nonneg _), abs_le.mpr point.2⟩,
+      abs_nonneg _⟩⟩
+  -- OrderDual makes objective_le require x ≤ |x| for this maximization problem.
+  objective_le point := le_abs_self point.1
+
+reformulation nonnegativeMaximum : maximum := by
+  restrict nonnegative : 0 ≤ x using absoluteRepair
+
+#printp nonnegativeMaximum
+example : GlobalEquivalence maximum nonnegativeMaximum := nonnegativeMaximum.equivalence
 
 -- Sorting interchangeable variables chooses an ordered representative.
 def symmetric :=
@@ -40,28 +67,6 @@ reformulation ordered : symmetric := by
 
 #printp ordered
 example : GlobalEquivalence symmetric ordered := ordered.equivalence
-
--- Restrict to nonnegative points by replacing x with |x|.
-def maximum :=
-  problem (x : ℝ)
-    maximize x
-    subject to
-      lower : -1 ≤ x
-      upper : x ≤ 1
-
-def absoluteRepair : GlobalImprovement maximum
-    (maximum.addConstraint (fun x => 0 ≤ x)) where
-  map point := ⟨|point.1|,
-    ⟨⟨(by norm_num : (-1 : ℝ) ≤ 0).trans (abs_nonneg _), abs_le.mpr point.2⟩,
-      abs_nonneg _⟩⟩
-  -- OrderDual makes objective_le require x ≤ |x| for this maximization problem.
-  objective_le point := le_abs_self point.1
-
-reformulation nonnegativeMaximum : maximum := by
-  restrict nonnegative : 0 ≤ x using absoluteRepair
-
-#printp nonnegativeMaximum
-example : GlobalEquivalence maximum nonnegativeMaximum := nonnegativeMaximum.equivalence
 
 -- Select a nonnegative representative after square substitution.
 -- Substituting `x := u ^ 2` allows both signs of `u`.
