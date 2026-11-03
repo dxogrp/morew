@@ -12,7 +12,6 @@ import MorewTest.Affine.StateIsolation
 import MorewTest.Affine.Support
 import MorewTest.Affine.TypedPresentation
 import MorewTest.Affine.Unsupported
-import MorewTest.Atom.DomainEvidence
 import MorewTest.Atom.Recognition
 import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
