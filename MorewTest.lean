@@ -149,6 +149,7 @@ import MorewTest.Reformulation.DeriveFailuresBackends
 import MorewTest.Reformulation.DirectNormalization
 import MorewTest.Reformulation.Dispatch
 import MorewTest.Reformulation.EuclideanPrinting
+import MorewTest.Reformulation.EuclideanPrintingConic
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
@@ -244,6 +245,7 @@ import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
 import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 import MorewTest.Reformulation.SecondOrderFailures
+import MorewTest.Reformulation.SingletonReplay
 import MorewTest.Reformulation.SmoothHelpers
 import MorewTest.Reformulation.Spectral
 import MorewTest.Reformulation.Spectral.Defined

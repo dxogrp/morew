@@ -12,6 +12,7 @@ import MorewTest.Reformulation.PowerFamilies
 import MorewTest.Reformulation.PowerNormFamilies
 import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.LogDet.Domains
+import MorewTest.Reformulation.EuclideanPrintingConic
 
 assert_not_imported Morew.Elab.NLP.Rewrite
 assert_not_imported Morew.Elab.NLP.Terminal

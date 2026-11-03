@@ -3,7 +3,6 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.PrintSupport
 
@@ -78,10 +77,6 @@ def explicitSource :=
     maximize -‖x‖
     subject to balance : x.ofLp 0 + x.ofLp 1 = 1
 
-reformulation conicTarget : source := by
-  hypograph t
-  conic
-
 run_cmd do
   for declaration in #[``target, ``registeredDetailed] do
     checkReadable declaration
@@ -91,10 +86,6 @@ run_cmd do
       throwError "registration-time proof options changed Euclidean printing"
     unless (← printed ``explicitSource proofs).contains "x.ofLp 0 + x.ofLp 1 = 1" do
       throwError "Euclidean print cleanup changed explicit source spelling"
-    let conicOutput ← printed ``conicTarget proofs
-    unless conicOutput.contains "x.ofLp)" && conicOutput.contains "SOC" &&
-        conicOutput.contains "x 0 + x 1" do
-      throwError "Euclidean coordinate notation changed a bare vector projection: {conicOutput}"
 
 run_cmd replayStored ``target `exactReplay `displayReplay
 

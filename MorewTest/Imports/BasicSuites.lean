@@ -35,6 +35,7 @@ import MorewTest.Reformulation.ImportedRemoveInstances
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.NameAllocation
 import MorewTest.Reformulation.PresentationUpdates
+import MorewTest.Reformulation.SingletonReplay
 
 assert_not_imported Morew.Elab.Conic.Plan
 assert_not_imported Morew.Elab.Conic.Terminal

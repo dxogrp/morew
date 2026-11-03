@@ -35,11 +35,6 @@ private def compactPSDOption : Name :=
 private def compactPSDCoordinatesOption : Name :=
   `Morew.Elab.Reformulation.compactPSDCoordinates
 
--- Applied Lp coordinate projections are implicit in ordinary function notation.
--- Enable this only for print payloads; reconstruction views retain the fields.
-private def coordinateNotationOption : Name :=
-  `Morew.Elab.Reformulation.coordinateNotation
-
 -- Matrix literals infer dimensions as successor constructors. Render just
 -- these literal constructors as numerals, retaining symbolic dimensions.
 private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat) := do
@@ -99,25 +94,6 @@ private def delabConeCarrier : Delab := do
     `(PSD $dimension)
   else
     `(ℝ₊^$dimension)
-
-open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
-@[delab app.WithLp.ofLp]
-private def delabLpCoordinate : Delab := do
-  let options ← getOptions
-  unless options.getBool coordinateNotationOption && !options.getBool `pp.explicit do failure
-  withOverApp 4 do
-    let expression ← getExpr
-    guard <| expression.isAppOfArity ``WithLp.ofLp 4
-    let args := expression.getAppArgs
-    let domain ← inferType args[2]!
-    let functionType := Lean.mkLambda `_ .default domain args[1]!
-    let projection := mkAppN expression.getAppFn (args.extract 0 2)
-    let canonical ← mkAppOptM ``CoeFun.mk
-      #[some domain, some functionType, some projection]
-    guard (← presentationInstanceResynthesizes canonical)
-    let value ← withNaryArg 2 delab
-    let index ← withNaryArg 3 delab
-    `($value $index)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.Cone.powerSet]
@@ -202,51 +178,6 @@ private def delabPowerConeMembership : Delab := do
     return ← `(@Membership.mem _ _ $(mkCIdent ``Set.instMembership) (POW $exponent) $value)
   `($value ∈ POW $exponent)
 
-private def presentationSingletonMembership {Y : Type} (value zero : Y) : Prop :=
-  value ∈ ({zero} : Set Y)
-
--- A readable singleton needs its container type when the stored view is
--- elaborated again: `value ∈ {0}` alone leaves Set versus Finset ambiguous.
--- Replay syntax already keeps explicit instances; only annotate the readable
--- canonical set spelling, preserving both subexpression positions and values.
-open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
-@[delab app.Membership.mem]
-private def delabZeroConeMembership : Delab := do
-  unless (← getOptions).getBool presentationNotationOption &&
-      !(← getOptions).getBool `pp.explicit do failure
-  let expression ← getExpr
-  guard <| expression.isAppOfArity ``Membership.mem 5
-  let args := expression.getAppArgs
-  guard <| (← whnfUntil args[1]! ``Set).isSome
-  let target ← whnf args[0]!
-  unless target.isConstOf ``Real do
-    let .forallE _ index range _ := target | failure
-    let range ← whnf range
-    guard <| !range.hasLooseBVars && range.isConstOf ``Real &&
-      (← whnf index).isAppOfArity ``Fin 1
-  let singleton := args[3]!.consumeMData
-  guard <| singleton.isAppOfArity ``Singleton.singleton 4
-  let singletonArgs := singleton.getAppArgs
-  let zero := singletonArgs[3]!.consumeMData
-  guard <| zero.isAppOfArity ``Zero.zero 2 ||
-    (zero.isAppOfArity ``OfNat.ofNat 3 &&
-      (zero.getAppArgs[1]! == mkRawNatLit 0 || zero.getAppArgs[1]! == mkNatLit 0))
-  let template ← mkAppM ``presentationSingletonMembership #[args[4]!, zero]
-  let some template ← unfoldDefinition? template | failure
-  let canonical := template.getAppArgs
-  guard (← isDefEq args[2]! canonical[2]!)
-  guard (← isDefEq singletonArgs[2]! canonical[3]!.getAppArgs[2]!)
-  let zeroInstance := zero.getAppArgs[if zero.isAppOfArity ``Zero.zero 2 then 1 else 2]!
-  unless (← presentationInstanceResynthesizes args[2]!) &&
-      (← presentationInstanceResynthesizes singletonArgs[2]!) &&
-      (← presentationInstanceResynthesizes zeroInstance) do
-    return ← withOptions (fun options => options.setBool `pp.explicit true
-      |>.setBool `pp.instances true) delabApp
-  let value ← withNaryArg 4 delab
-  let set ← withNaryArg 3 delab
-  let type ← withNaryArg 1 delab
-  `($value ∈ ($set : $type))
-
 private def presentationPSDMembership (n : Nat)
     (value : Morew.Conic.SymmetricMatrix n) : Prop :=
   value ∈ (Morew.Conic.Cone.positiveSemidefinite n).carrier
@@ -305,8 +236,8 @@ private def delabCompactPSDMembership : Delab := do
 def viewHooks : Morew.Elab.Reformulation.ViewHooks where
   options mode options := match mode with
     | .exact => options.setBool powerMembershipReplayOption true
-    | .compact => options.setBool compactPSDOption true |>.setBool coordinateNotationOption true
-    | .detailed => options.setBool coordinateNotationOption true
+    | .compact => options.setBool compactPSDOption true
+    | .detailed => options
   prepareReadable expression := do
     -- Exact cone replay shares the range proof through a closed lambda.
     -- Readable presentations expose its resulting membership directly.
