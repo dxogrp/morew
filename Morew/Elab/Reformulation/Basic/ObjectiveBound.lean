@@ -6,11 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.View
 
-/-!
-# Objective-bound steps
-
-Proof-producing epigraph and hypograph planning and materialization.
--/
+/-! Plan and materialize objective epigraph and hypograph steps. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -45,8 +41,7 @@ private def materializeObjectiveBound (state : ReformState)
         let next := equivalenceType.getAppArgs.back!
         unless next.isAppOfArity transformName 4 do
           throwError "internal error: objective-bound certificate has an unexpected target"
-        -- A maximum removes exactly its outer OrderDual. The remaining value
-        -- type can itself carry a dual order, which whnf would erase.
+        -- Remove exactly one outer OrderDual for maximization.
         let auxiliaryType := next.getArg! 1
         let order := next.getArg! 2
         let nextType ← whnf (← inferType next)
@@ -77,8 +72,7 @@ private def materializeObjectiveBound (state : ReformState)
 
   let primitive ← liftMacroM <|
     liftCertificateEquivalence state.runner primitiveEquivalence
-  -- Protect the newly introduced bound as a checkpoint row, while retaining
-  -- the natural epigraph/hypograph as the semantic certificate contract.
+  -- Checkpoint the new bound and retain the semantic epigraph/hypograph certificate.
   let canonical ← runTermElabM fun _ => do
     let canonical ← canonicalTargetExpression state.sourceName state.checkpoint.semantic
       state.checkpoint.semanticAnchor state.checkpoint.view state.removedCheckpointRows

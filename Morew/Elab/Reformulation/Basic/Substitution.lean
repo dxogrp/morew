@@ -11,11 +11,7 @@ import Morew.Elab.Substitution.Match
 import Morew.Elab.Substitution.Rules
 import Morew.Elab.Reformulation.View
 
-/-!
-# Substitution steps
-
-Inference, rule selection, and proof-producing substitution materialization.
--/
+/-! Infer, select, and materialize certified coordinate substitutions. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -77,9 +73,7 @@ private partial def collectIdents (stx : Lean.Syntax) (result : NameSet := {}) :
         result.insert value
   | _ => stx.getArgs.foldl (fun result child => collectIdents child result) result
 
-/-- Resolve globals without preempting displayed model bindings. Already
-captured global references remain intact; plain model references are resolved
-later under the retained bindings and their scoped aliases. -/
+/-- Resolve globals while retaining displayed bindings and captured global references. -/
 private partial def preResolveReplacement (view : Morew.Syntax.ProblemView)
     (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
   if stx.isIdent then
@@ -110,9 +104,7 @@ private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Nam
   let fresh := candidates.filter fun name =>
     !(ambientNames.any fun localName =>
       !localName.isAnonymous && localName.isPrefixOf name.eraseMacroScopes)
-  -- Ambient coefficients do not compete with an actually fresh name. If all
-  -- names are ambient, retain the existing shadowing and source-collision
-  -- checks rather than replacing their more precise diagnostics.
+  -- Prefer fresh names over ambient coefficients; otherwise apply shadowing and collision checks.
   pure (if fresh.isEmpty then candidates else fresh).toArray
 
 private def findBinderIndex (view : Morew.Syntax.ProblemView) (name : Name) : Option Nat :=
@@ -145,11 +137,8 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
       throwErrorAt replacement
         "ambiguous substitution: expected exactly one new decision variable, found {names}"
 
-/-- Resolve displayed binding names and retain their identities in replacement
-syntax, including when there are no model-local definitions. A replacement may
-use a definition only when its value and type are independent of the replaced
-variable. Inline those references before inserting the replacement into earlier
-definitions, the objective, constraints, and the semantic map. -/
+/-- Retain displayed binding identities in replacement syntax. Inline model definitions
+only when their values and types are independent of the replaced variable. -/
 private def expandReplacementDefinitions (state : ReformState) (binderIndex : Nat)
     (newName scopedNewName : Name) (replacement : TSyntax `term) :
     CommandElabM (TSyntax `term) := do
@@ -177,10 +166,8 @@ private def expandReplacementDefinitions (state : ReformState) (binderIndex : Na
           return ⟨← delabPresentationTerm expression
             (names.push (candidate.fvarId!, scopedNewName))⟩
 
-/-- Substitute the decision's free variable, preserving nested lexical binders
-and fixed global references. Recreate the sequential definition environment so
-later types, proofs, and bodies refer to the substituted bindings. No reduction
-is needed, so lets and direct occurrences retain their original structure. -/
+/-- Substitute the selected free variable while preserving lexical binders and globals.
+Rebuild sequential definitions so later dependent types and bodies use substituted bindings. -/
 private def substitutePresentation (state : ReformState) (binderIndex : Nat)
     (newName : Name) (replacement : TSyntax `term) :
     CommandElabM Morew.Syntax.ProblemView :=
@@ -191,8 +178,7 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
           let expression ← elabTermEnsuringType term type
           synthesizeSyntheticMVarsNoPostponing
           instantiateMVars expression
-        -- Elaborate all original bodies before introducing replacement definitions
-        -- with the same source names into the local context.
+        -- Elaborate original bodies before introducing replacement definitions with the same names.
         let objective ← elaborate state.view.objective presentation.valueType
         let constraints ← state.view.constraints.mapM fun constraint =>
           elaborate constraint.proposition (mkSort Level.zero)
@@ -242,9 +228,8 @@ private def constraintIsTypedTrue (state : ReformState)
     withLocalDeclD `point presentation.domainType fun point =>
       isDefEq (mkApp presentation.constraints[index]!.predicate point) (mkConst ``True)
 
-/-- Discharge a transformed row using only unconditional image facts, separately
-from coverage. A right inverse says nothing about the image of the replacement.
-The checked equality is also retained for aliases and subsequent script steps. -/
+/-- Discharge transformed rows using unconditional image facts and retain their normalization
+proofs. Coverage alone does not establish image properties. -/
 private def independentTrueNormalization (state : ReformState)
     (view : Morew.Syntax.ProblemView) (index : Nat) :
     CommandElabM (Option (TSyntax `term)) :=
@@ -258,8 +243,7 @@ private def independentTrueNormalization (state : ReformState)
           (mkSort Level.zero)
         synthesizeSyntheticMVarsNoPostponing
         let proposition ← instantiateMVars proposition
-        -- Unfold the predicate's definitional wrappers; the rewrite theorems
-        -- still check the actual operations in the resulting proposition.
+        -- Expose predicate wrappers before applying operation-checked rewrite theorems.
         let body ← Morew.Elab.Substitution.Evidence.predicateView proposition 32
         let mut theorems : SimpTheorems := {}
         for name in #[``Real.exp_pos, ``sq_nonneg, ``true_and, ``and_true] do
@@ -278,11 +262,8 @@ private def independentTrueNormalization (state : ReformState)
         checkWithKernel proof
         return some (← exactExpressionSyntax proof)
 
-/-- Keep dependent definition blocks source-aligned under substitution. Even
-simplifying an earlier scalar alias can change a later proof or data type, so
-preserve the complete block whenever one definition is proof-valued or has a
-type depending on the replaced decision. Checked pointwise normalization
-relates this presentation to the canonical target. -/
+/-- Preserve a definition block when it contains proofs or types depending on the replaced
+decision. Relate the retained presentation to the canonical target by normalization. -/
 private def preserveDefinitionExpressions (state : ReformState)
     (binderIndex : Nat) : CommandElabM Bool := do
   if state.view.definitions.isEmpty then return false
@@ -293,10 +274,8 @@ private def preserveDefinitionExpressions (state : ReformState)
           return (← isProof definition) ||
             (← Morew.Elab.Expr.depends binders[binderIndex]! (← inferType definition))
 
-/-- Check the complete proposed presentation before retaining simplification.
-Proof-bearing data can occur in definitions, the objective, or constraints;
-simplifying one expression may change the type expected by another. The probe
-leaves no declarations, messages, or elaboration state behind. -/
+/-- Check the complete proposed presentation before retaining simplifications of dependent
+expressions. Restore declarations, messages, and elaboration state after the probe. -/
 private def simplifiedPresentationCheck (state : ReformState)
     (view : Morew.Syntax.ProblemView) :
     CommandElabM Bool :=
@@ -321,9 +300,7 @@ private def simplifiedPresentationCheck (state : ReformState)
       saved.restore (restoreInfo := true)
       setEnv saved.meta.core.env
 
-/-- Certify the complete coordinate map against the current semantic problem.
-Only source feasibility supplies coverage; the target presentation is irrelevant
-to rule selection. The tuple equivalence keeps all unselected coordinates. -/
+/-- Certify the coordinate map from current source feasibility, preserving unselected coordinates. -/
 private def parameterizationCertificate (state : ReformState)
     (ref : Lean.Syntax)
     (oldName newName : Name) (binderIndex : Nat) (replacement mapTerm : TSyntax `term)
@@ -403,7 +380,7 @@ private def parameterizationCertificate (state : ReformState)
           | _ =>
             Morew.Elab.Substitution.Match.discover
               map point retained selected canonicalEvidence accept
-      -- Store the checked term once; command rollback also removes this helper.
+      -- Store the certificate once within the command transaction.
       let name ← mkAuxDeclName (kind := `substitution)
       let proof ← mkAuxDefinitionFor name proof (zetaDelta := true) (compile := false)
       modifyEnv (addNoncomputable · name)
@@ -414,10 +391,7 @@ private def parameterizationCertificate (state : ReformState)
         "substitution of `{oldName.eraseMacroScopes}` by `{(ref.reprint.getD "<replacement>").trimAscii.toString}`: {message}"
     | exception => throw exception
 
-/-- Check explicit coverage against the complete, already elaborated map.
-Canonical checkpoints can be definitionally equal to a named source without
-sharing its syntax. Checking before the pullback application prevents postponed
-tuple-pattern elaboration from interfering with that source comparison. -/
+/-- Check explicit coverage against the elaborated map before constructing its pullback. -/
 private def explicitSubstitutionCertificate (state : ReformState)
     (mapTerm provided : TSyntax `term) : CommandElabM (TSyntax `term) :=
   runTermElabM fun sectionFVars => withoutErrToSorry do
@@ -436,8 +410,7 @@ private def explicitSubstitutionCertificate (state : ReformState)
     withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
       checkWithKernel proof
     let name ← mkAuxDeclName (kind := `substitution)
-    -- Retain the checked source and complete map, even when the supplied
-    -- theorem's inferred type spells that source through another declaration.
+    -- Retain the checked source and map despite aliases in the certificate's inferred type.
     let proof ← mkAuxDefinition name (← instantiateMVars expected) proof
       (zetaDelta := true) (compile := false)
     modifyEnv (addNoncomputable · name)
@@ -525,8 +498,7 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
   let newView ← if ← simplifiedPresentationCheck state simplifiedView then
       pure simplifiedView
     else
-      -- Keep dependent uses aligned with their definitions. Positivity rows
-      -- removed above still have the same checked normalization evidence.
+      -- Preserve dependent definitions and the normalization evidence for removed positivity rows.
       pure { simplifiedView with
         definitions := substitutedDefinitions
         objective := substitutedObjective

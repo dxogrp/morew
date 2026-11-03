@@ -6,12 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.State
 import Morew.Elab.Reformulation.Syntax
 
-/-!
-# Internal reformulation dispatch
-
-Entry points install exactly one handler for each supported syntax kind. This
-registry is command implementation machinery, not a public extension API.
--/
+/-! Dispatch each reformulation syntax kind to exactly one import-installed handler. -/
 
 namespace Morew.Elab.Reformulation
 

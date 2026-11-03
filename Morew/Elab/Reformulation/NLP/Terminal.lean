@@ -7,45 +7,23 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.NLP.Terminal
 import Morew.Elab.Reformulation.Rows
 
-/-!
-# Terminal smooth-NLP validation
+/-! Apply exact direct-bound rewrites, then certify the complete objective and constraints
+on a common open domain. Emit equivalence, nlpForm, and isSmoothNLP declarations.
+Feasibility remains defined by the rows; domain guards are not added.
 
-Bare `nlp` certifies the complete objective and constraints on one common open
-evaluation domain after applying supported exact rewrites to direct nonsmooth
-bounds. It emits the unchanged objective and comparison presentation together
-with `.nlpForm` and `.isSmoothNLP`; no evaluation-domain guard is added to the
-feasible predicate. The concrete form alone flattens comparisons and finite
-coordinate families into scalar residuals and closed bounds.
+The form stores scalar residuals a - b with upper, lower, or fixed zero bounds.
+Displayed conjunctions and finite families remain grouped. Finite families support
+symbolic and zero dimensions; general quantifiers are unsupported. Maximization
+retains OrderDual ℝ and records maximize in the form.
 
-For `reformulation ready : source := by nlp`, the declarations include
-`ready.equivalence : GlobalEquivalence source ready`, `ready.nlpForm : NLP.Form ready`,
-and `ready.isSmoothNLP : IsSmoothNLP ready`. The form's
-`ready.nlpForm.represents : ready.nlpForm.data.toProblem = ready` includes objective
-values outside the evaluation domain. Its rows alone define feasibility.
-
-Scalar comparisons store the unchanged difference `a - b`: `a ≤ b` has upper
-bound zero, `a ≥ b` has lower bound zero, and `a = b` is fixed at zero. Named
-conjunction groups and `True` stay in the displayed target. Finite-vector
-comparisons and nested `Fin n` families flatten only inside the form, including
-symbolic and zero dimensions. General quantifiers are unsupported.
-
-This terminal step asserts smoothness, not convexity, and accepts nonconvex
-polynomials and products. It preserves maximizing objectives with an explicit
-`OrderDual ℝ` value type and separately records `.maximize` in the form. Use
-occurrence lifting or `nlp at label` before terminal validation when a nested
-nonsmooth expression needs explicit preparation. Subsequent steps in the same
-script are rejected; the emitted problem can start a new reformulation.
-
-All generated names are allocated together. Form checking, declaration emission,
-and presentation registration share the reformulation command's transaction.
--/
+The step ends the script. Allocate names and emit declarations and metadata in the
+command transaction. -/
 
 namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- These functions are static: retained section expressions are stored in the
--- artifact, so rebasing never leaves a captured local context behind.
+-- Keep section expressions in artifacts; adapter functions carry no local context.
 private def validateTerminalNLP (form expected : Expr)
     (sense : Morew.ObjectiveSense) : TermElabM Expr := do
   let type ← whnf (← inferType form)
@@ -127,8 +105,7 @@ private def materializeTerminalNLP (state : ReformState)
         rows := rows.push state.view.constraints[origin]!
     let template := { state.view with binders, constraints := rows }
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    -- Retained syntax preserves exact binding identities. Generated rows use
-    -- the planner's actual expressions rather than inferred alias references.
+    -- Retain source binding identities; use planner expressions for generated rows.
     let constraints := template.constraints.mapIdx fun i row =>
       if prepared.replacedIndices.contains prepared.rowOrigins[i]! then
         rendered.constraints[i]!

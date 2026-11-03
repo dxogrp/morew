@@ -5,11 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.View
 
-/-!
-# Surface step validation and commitment
-
-Bridge surface materialization to the checked typed runner before updating state.
--/
+/-! Validate materialized steps through the typed runner before committing surface state. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -116,8 +112,7 @@ private def validateTypedPrimitive (state : ReformState)
       if form.hasMVar || representedProblem.hasMVar then
         throwErrorAt formSyntax
           "terminal {adapter.description} form contains unresolved metavariables"
-      -- Section-instance types can contain metavariables assigned while
-      -- elaborating the target. The kernel needs their instantiated context.
+      -- Instantiate section-instance types before kernel checking.
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
       pure { adapter, form, representedProblem, ref := formSyntax.raw : CheckedTerminalArtifact }
@@ -192,15 +187,12 @@ def commitSurfaceStep (state : ReformState)
     let committed ← typed.commit state.runner result
     let mut usedSourceParameterNames := state.usedSourceParameterNames
     if let .ok next := committed then
-      -- A new row can introduce section operands absent from the original
-      -- source application. Reserve only dependencies of the actual problem;
-      -- proof-only parameters in its equivalence certificate stay available.
+      -- Reserve section-parameter names used by the problem; exclude certificate-only dependencies.
       let semantic ← instantiateMVars next.semantic
       let canonical ← instantiateMVars next.canonical
       let dependencies ←
         (Lean.collectFVars (Lean.collectFVars {} semantic) canonical).addDependencies
-      -- The section telescope gives a deterministic order and excludes
-      -- temporary elaboration locals. Dependency closure includes local types.
+      -- Collect dependencies in section-telescope order, including local types.
       for parameter in sectionFVars do
         if dependencies.fvarSet.contains parameter.fvarId! then
           let name := (← parameter.fvarId!.getDecl).userName.eraseMacroScopes

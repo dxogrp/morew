@@ -8,18 +8,13 @@ import Mathlib.Analysis.Normed.Lp.WithLp
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Lean.Meta.Tactic.Simp.Main
 
-/-!
-# Surface reformulation presentations
-
-Expression stabilization, canonical presentations, and checked normalization.
-These helpers are shared by step implementations and command emission.
--/
+/-! Stable syntax, canonical presentations, and normalization for steps and command emission. -/
 
 namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
-/-- Rendering contexts used by internal, import-installed presentation support. -/
+/-- Presentation rendering contexts. -/
 inductive ViewMode where
   /-- Fully explicit, fixed-reference syntax. -/
   | exact
@@ -28,8 +23,7 @@ inductive ViewMode where
   /-- A detailed print-only payload. -/
   | detailed
 
-/-- Backend presentation support. This is internal command machinery; semantic
-imports do not install a provider. Empty hooks retain ordinary rendering. -/
+/-- Backend rendering hooks; empty hooks use ordinary rendering. -/
 structure ViewHooks where
   /-- Enable backend delaborators only for the requested rendering context. -/
   options : ViewMode → Options → Options := fun _ => id
@@ -59,24 +53,18 @@ private def viewHooks : CoreM ViewHooks := do
   | [hooks] => pure hooks
   | _ => throwError "multiple internal reformulation presentation providers registered"
 
--- Enabled only while constructing the compact print payload. Replay and the
--- ordinary readable syntax remain independent of this presentation choice.
+-- Hide finite-index proofs only in compact print payloads.
 private def compactIndexProofsOption : Name :=
   `Morew.Elab.Reformulation.compactIndexProofs
 
--- Applied Lp coordinate projections are implicit in ordinary function notation.
--- Enable this only for print payloads; reconstruction views retain the fields.
+-- Use coordinate notation only in print payloads; replay views retain explicit fields.
 private def coordinateNotationOption : Name :=
   `Morew.Elab.Reformulation.coordinateNotation
 
--- Lean normally prints atomic proof names even with `pp.proofs = false`.
--- Annotating just the bound-proof slots makes its ordinary proof-omission
--- machinery hide them, without changing constructors, indices, or types.
--- Both term and type rendering use this copy only for compact print payloads.
+-- Annotate bound-proof slots to hide atomic proof names in compact term and type output.
 private def compactFiniteIndexProofs (expression : Expr) (replay : Bool) : MetaM Expr := do
   if replay || !(← getOptions).getBool compactIndexProofsOption then return expression
-  -- The delaborator also discards these replay annotations. Remove them before
-  -- finding constructors so annotated application heads cannot bypass hiding.
+  -- Erase replay annotations before locating finite-index constructors.
   let expression ← erasePatternRefAnnotations expression
   Meta.transform expression (post := fun value => do
     if value.isAppOfArity ``Fin.mk 3 then
@@ -109,8 +97,7 @@ private def annotatedFVarId? (infos : SubExpr.PosMap Elab.Info)
       some id
   | _ => none
 
-/-- Retain readable spelling while fixing the declaration and preventing local
-capture, just as `mkCIdentFrom` does for fully qualified identifiers. -/
+/-- Preserve readable spelling with fixed declaration identity and capture protection. -/
 private def freezePresentationConstant (stx : Lean.Syntax) (name : Name) : Lean.Syntax :=
   match (mkCIdentFrom stx stx.getId).raw with
   | .ident info raw identifier _ => .ident info raw identifier [.decl name []]
@@ -133,9 +120,7 @@ private partial def freezePresentationReferences
     stx.setArgs <| stx.getArgs.map fun child =>
       freezePresentationReferences infos binders sectionReferences parameterInstances child
 
-/-- Section variable UIDs survive fresh elaboration contexts, including for
-anonymous instances whose local names receive new macro scopes each time.
-They are suitable for transient semantic syntax within the current section. -/
+/-- Use stable section-variable UIDs for transient semantic syntax. -/
 private def sectionReferenceNames : TermElabM (Std.HashMap FVarId Name) := do
   let mut references := {}
   for (uid, sectionVar) in (← read).sectionFVars do
@@ -193,13 +178,11 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
       throwErrorAt term "term contains unresolved metavariables"
     stabilizeExpressionSyntax expression
 
-/-- Readable binder type syntax with fixed global references and local names
-that can be retained in presentation metadata across sections. -/
+/-- Readable binder types with fixed global references and persistent local names. -/
 def presentationTypeSyntax (type : Expr) (replay : Bool := true)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
   let type ← compactFiniteIndexProofs type replay
-  -- Generated auxiliary types need the same fixed class projections as row
-  -- bodies, while retaining their readable spelling in imported metadata.
+  -- Freeze class projections in auxiliary types.
   withOptions (fun options =>
       let options := options.setBool `pp.tagAppFns true
       if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
@@ -235,10 +218,7 @@ def problemTypeSyntaxFromExpression (expression : Expr) :
     value := ← exactExpressionSyntax value
   }
 
--- Preserve class operation heads and their actual instances. Reducing a
--- constructor-backed `Neg.neg`, `LE.le`, or `Norm.norm` here would erase the
--- operations that typed rewrite matching must check. Operands still simplify,
--- as do the ordinary structure projections used by problem scaffolding.
+-- Preserve class operation heads and instances while simplifying operands and structure projections.
 private def classOperationPrefix? (expression : Expr) : MetaM (Option (Expr × Array Expr)) := do
   let .const name _ := expression.getAppFn | return none
   let some info ← getProjectionFnInfo? name | return none
@@ -248,10 +228,7 @@ private def classOperationPrefix? (expression : Expr) : MetaM (Option (Expr × A
   return some (mkAppN expression.getAppFn (arguments.extract 0 prefixSize),
     arguments.extract prefixSize arguments.size)
 
--- Disable automatic zeta reduction while explicitly reducing data lets when
--- requested. Proof lets then stay in their original scope so later analytic
--- checks can use their evidence without treating a decision-dependent fact as
--- global.
+-- Reduce data lets explicitly and retain scoped proof lets.
 private def presentationSimpMethods (preserveProofLets : Bool)
     (preserveOperations : Bool := true) : Simp.Methods :=
   let defaults := Simp.mkDefaultMethodsCore #[]
@@ -259,9 +236,7 @@ private def presentationSimpMethods (preserveProofLets : Bool)
     pre := fun expression => do
       if preserveOperations then
         if let some (function, arguments) ← classOperationPrefix? expression then
-          -- Keep the checked operation instance intact during reduction, but
-          -- still apply the explicitly supplied rewrite lemmas at this root.
-          -- In particular, exponential substitution uses `Real.exp_pos` here.
+          -- Apply supplied rewrite lemmas while preserving the operation instance.
           match ← Simp.rewritePre (rflOnly := false) expression with
           | .visit result => return .visit result
           | .done result => return .done result
@@ -275,9 +250,7 @@ private def presentationSimpMethods (preserveProofLets : Bool)
         unless preserveProofLets do return ← defaults.pre expression
         unless ← isProp type do
           return .visit { expr := body.instantiate1 value }
-        -- The default have-telescope traversal also absorbs following data
-        -- lets, bypassing this pre-method and retaining their projections.
-        -- Visit the body explicitly while keeping the original proof scope.
+        -- Visit the body explicitly to retain proof scope and reduce following data lets.
         return ← withLetDecl name type value (nondep := nondep) fun binding => do
           let result ← Simp.simp (body.instantiate1 binding)
           let expr ← mkLetFVars #[binding] result.expr
@@ -318,9 +291,8 @@ def simpOnly (expression : Expr) (lemmas : Array Name := #[])
     (methods := presentationSimpMethods preserveProofLets)
   instantiateMVars result.expr
 
-/-- Reduce generated scaffolding while retaining local proof evidence. Operation
-reduction is reserved for directly certifying a complete predicate, never for
-discovering a registered representation. -/
+/-- Reduce generated structure while retaining evidence lets. Reduce operations only for
+direct certification of a complete predicate. -/
 def dsimpPreservingProofLets (expression : Expr)
     (preserveOperations : Bool := true) : MetaM Expr := do
   let context ← Simp.mkContext
@@ -381,9 +353,7 @@ def mkFeasibleFunction (domain : Expr) (constraints : Array Expr) : MetaM Expr :
     let propositions := constraints.map fun constraint => mkApp constraint point
     mkLambdaFVars #[point] <| mkConstraintConjunctionExpr propositions.toList
 
-/-- Replace only the checkpoint at the base of the supported transformation
-spine. In particular, do not search inside user objectives or constraints for
-references to an original source declaration. -/
+/-- Replace the checkpoint at the transformation spine's base. -/
 private partial def protectCheckpoint (expression checkpoint replacement : Expr) : MetaM Expr := do
   let expression := expression.consumeMData.headBeta
   if expression == checkpoint then return replacement
@@ -399,9 +369,8 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
   let base ← protectCheckpoint arguments[3]! checkpoint replacement
   pure <| mkAppN expression.getAppFn (arguments.set! 3 base)
 
-/-- Construct the canonical target while protecting the checkpoint's ordered
-rows. `sourceName` is retained only for unfolding the original problem container;
-the checkpoint itself may be an explicitly constructed canonical problem. -/
+/-- Construct the canonical target while preserving checkpoint rows.
+Use sourceName only to unfold the original problem container. -/
 def canonicalTargetExpressionFromExpressions (sourceName : Name)
     (source semanticAnchor : Expr) (sourceView : Morew.Syntax.ProblemView)
     (removedCheckpointRows : Std.HashSet Nat) (semanticExpression : Expr)
@@ -429,9 +398,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
         #[``Morew.Problem.pullback, ``Morew.Problem.epigraph,
           ``Morew.Problem.hypograph]) (preserveProofLets := true)
 
-      -- A same-domain rewrite can leave the protected objective as a bare
-      -- function. Normalize that function before restoring it, as well as
-      -- normalizing its applications below.
+      -- Normalize protected objectives both as functions and at applications.
       let exactObjective ← simpOnly objective (unfold := #[sourceName])
         (preserveProofLets := true)
       let exactParts := #[exactObjective] ++ constraints
@@ -451,11 +418,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
             let removedSourceConstraint := partIndex > 0 &&
               removedCheckpointRows.contains (partIndex - 1)
             if removedSourceConstraint then
-              -- The step supplied checked normalization evidence for this
-              -- removal.  Use the canonical `True` row here even when the
-              -- source predicate reaches positivity through a reducible
-              -- alias; the normalization proof below remains the soundness
-              -- check against the natural semantic problem.
+              -- Replace removed rows by True using the step's normalization evidence.
               pure (.done (mkConst ``True))
             else
               let placeholder ← mkFreshExprMVar (some (← inferType exact))
@@ -517,13 +480,10 @@ def packPoint (components : Array Expr) : MetaM Expr := do
   else
     throwError "a problem presentation requires at least one decision variable"
 
-/-- Internal delaboration flag, enabled only while generating stored presentations.
-Keeping it unregistered prevents ordinary pretty-printing options from enabling it. -/
+/-- Internal rendering flag for stored presentations. -/
 def presentationNotationOption : Name := `Morew.Elab.Reformulation.presentationNotation
 
--- Display generated operations explicitly when their instances differ from
--- the declaration's parameter context. Exact replay is stored separately and
--- keeps all instances, including when a later context changes typeclass search.
+-- Print operations explicitly when notation would choose different instances.
 /-- Check whether ordinary notation would recover the stored operation instance. -/
 def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
   withoutModifyingState do
@@ -553,10 +513,7 @@ private def delabLpCoordinate : Delab := do
 private def presentationSingletonMembership {Y : Type} (value zero : Y) : Prop :=
   value ∈ ({zero} : Set Y)
 
--- A readable singleton needs its container type when the stored view is
--- elaborated again: `value ∈ {0}` alone leaves Set versus Finset ambiguous.
--- Replay syntax already keeps explicit instances; only annotate the readable
--- canonical set spelling, preserving both subexpression positions and values.
+-- Annotate readable canonical singletons with their Set type for unambiguous replay.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabZeroSetMembership : Delab := do
@@ -629,14 +586,12 @@ open Lean.PrettyPrinter.Delaborator in
 @[delab app.Singleton.singleton]
 private def delabStoredSingleton : Delab := delabStoredInstance 4 2
 
-/-- Render a presentation body while freezing global references and retaining
-the supplied decision-variable and model-definition binding names. -/
+/-- Render with fixed global references and supplied binding names. -/
 def delabPresentationTerm (expression : Expr)
     (binders : Array (FVarId × Name)) (replay : Bool := true)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
   let hooks ← viewHooks
-  -- Proofs retained only as analytic evidence need not clutter the display.
-  -- Exact replay keeps them, and used proof bindings are never rewritten here.
+  -- Omit unused analytic proof bindings only from display syntax.
   let expression ← if replay then pure expression else
     Meta.transform expression (pre := fun expression => do
       if let some prepared ← hooks.prepareReadable expression then
@@ -646,13 +601,10 @@ def delabPresentationTerm (expression : Expr)
           return .visit (body.instantiate1 value)
       return .continue)
   let expression ← compactFiniteIndexProofs expression replay
-  -- Reserve the displayed names before choosing names for inner binders.
-  -- Generated decisions carry hygiene scopes, which must not make an inner
-  -- lambda appear free to reuse the same visible spelling.
+  -- Reserve visible model names before naming inner binders.
   withLCtx' (binders.foldl (fun context (id, name) =>
       context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
-  -- Tag application heads as constants even when their arguments are implicit,
-  -- so dimensions and coefficients supplied by class projections stay frozen.
+  -- Freeze constant heads with implicit arguments, including class projections.
   withOptions (fun options =>
       let options := options.setBool presentationNotationOption true |>.setBool `pp.tagAppFns true
         |>.setBool `pp.coercions.types true |>.setBool `pp.beta false
@@ -671,9 +623,7 @@ def delabPresentationTerm (expression : Expr)
     pure <| freezePresentationReferences infos binders
       sectionReferences parameterInstances stx.raw
 
-/-- Elaborate sequential model-local definitions beneath the current decision
-binders. The callback sees real let-bound locals, so their values remain
-available to type checking while references retain binding identity. -/
+/-- Elaborate sequential model definitions as let-bound locals under decision binders. -/
 def withViewDefinitions (view : Morew.Syntax.ProblemView)
     (action : Array Expr → TermElabM α) : TermElabM α := do
   let rec /-- Elaborate each definition in the scope of its predecessors. -/
@@ -694,10 +644,8 @@ def withViewDefinitions (view : Morew.Syntax.ProblemView)
           visit remaining (bindings.push binding)
   visit view.definitions.toList #[]
 
-/-- Elaborate a user term against the displayed names of retained bindings.
-Temporary let aliases let Lean handle lexical shadowing and projection notation;
-replacing only those aliases preserves the original binding identities. Global
-references captured by a macro retain their original resolution. -/
+/-- Elaborate under temporary aliases for displayed bindings, then restore binding identities.
+Retain global references captured by macros. -/
 partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
     (expectedType? : Option Expr := none) : TermElabM Expr := do
   let names ← bindings.mapM fun binding => do
@@ -729,8 +677,7 @@ partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
           elaborate remaining (aliases.push temporary) (values.push value)
   elaborate (collect term.raw {}).toList #[] #[]
 
-/-- Recognize only projections of the synthetic decision point. A projection
-inside an individual decision's type belongs to the user expression. -/
+/-- Recognize projections of the synthetic decision point only. -/
 private partial def decisionProjection? (point : Expr) (count : Nat)
     (expression : Expr) : Option (Nat × Nat) := do
   let expression := expression.consumeMData
@@ -750,9 +697,7 @@ private partial def decisionProjection? (point : Expr) (count : Nat)
   | 1 => some (start + size - 1, 1)
   | _ => none
 
-/-- Open exactly the outer decision lambda and the DSL's tuple pattern. Do not
-beta-, zeta-, or projection-reduce user bodies: those reductions can duplicate
-or erase the direct occurrences used by selectors. -/
+/-- Open the outer decision lambda and tuple pattern while preserving user-body occurrences. -/
 private def openPresentationBody (function domain : Expr) (binders : Array Expr) :
     MetaM Expr := do
   let .lam _ _ body _ := (← whnf function).consumeMData
@@ -770,9 +715,7 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
             alternative := rest.instantiate1 binder
           body := alternative
     Meta.transform body (pre := fun expression => do
-      -- Application traversal skips intermediate prefixes. A function-valued
-      -- decision can therefore appear as `Prod.snd ... point arg ...`; recover
-      -- its synthetic projection before traversing the remaining arguments.
+      -- Recover function-valued decision projections before visiting their application arguments.
       let (projection, arguments) :=
         if (expression.isAppOf ``Prod.fst || expression.isAppOf ``Prod.snd) &&
             expression.getAppNumArgs > 3 then
@@ -785,8 +728,7 @@ private def openPresentationBody (function domain : Expr) (binders : Array Expr)
         return .continue (some (mkAppN replacement arguments))
       return .continue)
 
-/-- Read the paired definition spines using the same opaque local for each
-binding in both bodies. Equal right-hand sides therefore keep distinct names. -/
+/-- Read paired definition sequences with shared opaque locals, preserving distinct binding identities. -/
 private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.ProblemView)
     (objective feasible : Expr) (names : Array (FVarId × Name))
     (replay : Bool) (parameterInstances : Std.HashMap FVarId Lean.Syntax)
@@ -816,8 +758,7 @@ private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.Probl
         (names.push (binding.fvarId!, definition.name))
   visit template.definitions.toList #[] objective feasible names
 
--- Inspect rows while their typed decision variables and local definitions are
--- still in scope. Callers may persist only frozen syntax, never these expressions.
+-- Inspect typed rows in scope; persist only frozen syntax.
 private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     (inspectRows : Array Expr → Array (FVarId × Name) → TermElabM α) (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
@@ -828,10 +769,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `Morew.Problem _ _`"
-  -- Reduce the problem container before preserving the field bodies.
-  -- Surrounding lets belong to the source declaration, and its head may
-  -- be irreducible. Weak-head reduction stops at `Problem.mk`, so it does not
-  -- unfold helpers or erase bindings inside the objective and feasibility.
+  -- Reduce the source container to Problem.mk while preserving field bodies and bindings.
   let target ← if recoverDefinitions then
       withTransparency .all <| whnf target
     else pure target
@@ -839,8 +777,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
   let binderTypes ← splitProductDomain domain template.binders.size
   let compactTypes := forRegistration && (← getOptions).getBool compactIndexProofsOption
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
-    -- A bare-name refresh normally keeps the template's spelling. Inspect a
-    -- type containing finite constructors only for its compact proof slots.
+    -- Retain bare-name type spelling; inspect finite constructors for compact proof slots.
     let binderType ← if compactTypes then erasePatternRefAnnotations binderTypes[index]!
       else pure binderTypes[index]!
     let hasFiniteConstructor := (binderType.find?
@@ -860,8 +797,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     let binderNames := binders.mapIdx fun index binder =>
       (binder.fvarId!, template.binders[index]!.name)
     let render definitions objectiveBody feasibleBody binderNames := do
-      -- Definitional reduction preserves sum indices when removing scaffolding;
-      -- `simp` can replace them with binder names from congruence theorems.
+      -- Use definitional reduction to preserve sum-index names.
       let objectiveBody ← if recoverDefinitions then pure objectiveBody else
         dsimpPreservingProofLets objectiveBody
       let feasibleBody ← if recoverDefinitions then pure feasibleBody else
@@ -888,9 +824,8 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
 
-/-- Recover printable bodies from a checked problem while retaining the supplied
-ordered names. Applied sources also instantiate binder types; existing bare-name
-sources retain their original spelling, including type aliases. -/
+/-- Recover printable bodies with ordered names. Instantiate applied-source binder types;
+retain existing bare-name source spelling. -/
 def problemViewFromExpression (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
     (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
@@ -938,17 +873,12 @@ def refreshProblemView (targetName : Name)
     CommandElabM Unit := do
   let hooks ← liftCoreM viewHooks
   let (refreshed, displayed, printed) ← runTermElabM fun _ => do
-    -- Inspect the declaration's own parameters, independently of the section
-    -- that emitted it. Fresh universe metavariables or ambient local names
-    -- must not leak into persistent presentation metadata.
+    -- Render using the declaration's own parameters for persistent metadata.
     let info ← getConstInfo targetName
     let target := Lean.mkConst targetName (info.levelParams.map Level.param)
     withLCtx {} {} do
       forallTelescopeReducing info.type (fun parameters _ => do
-        -- Anonymous instance names are fresh in each elaboration context.
-        -- Record their identities before choosing printable parameter names.
-        -- Named instance identities remain explicit even when a model binding
-        -- has the same display name; replay scopes that model binding instead.
+        -- Record instance identities before choosing printable parameter names.
         let anonymousInstances ← parameters.filterM fun parameter => do
           let declaration ← parameter.fvarId!.getDecl
           pure <| declaration.binderInfo == .instImplicit &&
@@ -957,19 +887,14 @@ def refreshProblemView (targetName : Name)
         let mut synthesizedInstanceIds : Std.HashSet FVarId := {}
         for parameter in anonymousInstances do
           synthesizedInstanceIds := synthesizedInstanceIds.insert parameter.fvarId!
-        -- Distinct section variables can have the same declaration binder name.
-        -- Choose one consistent display name per parameter before rendering any
-        -- binder type or body. Reserve existing names before adding suffixes, so
-        -- fresh names cannot capture a decision or another parameter's name.
+        -- Choose consistent distinct parameter names, reserving model and parameter names before freshening.
         let parameterNames ← parameters.mapM fun parameter =>
           return (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
         let decisionNames := template.binders.foldl
           (fun names binder => names.insert binder.name.eraseMacroScopes) ({} : NameSet)
         let decisionNames := template.definitions.foldl
           (fun names definition => names.insert definition.name.eraseMacroScopes) decisionNames
-        -- Hygiene separates colliding model bindings from named parameters in
-        -- exact syntax without changing either displayed name. Other bindings
-        -- remain untouched, so ordinary edits using their names still elaborate.
+        -- Use hygiene to separate colliding model bindings and parameters in exact syntax.
         let mut namedInstanceReferences : Std.HashMap FVarId Lean.Syntax := {}
         let mut replayScopedNames : NameSet := {}
         for parameter in parameters, name in parameterNames do
@@ -1010,10 +935,8 @@ def refreshProblemView (targetName : Name)
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          -- Replay named formal instances by local identity when available,
-          -- and by class type after import or a change of section names.
-          -- Concrete operation instances remain explicit constants. Parameter
-          -- order also freezes dependencies on earlier formal instances.
+          -- Replay formal instances by local identity or imported class type in parameter order.
+          -- Keep concrete operation instances explicit.
           let mut parameterInstances : Std.HashMap FVarId Lean.Syntax := {}
           for parameter in parameters, name in parameterNames do
             unless (← parameter.fvarId!.getDecl).binderInfo == .instImplicit do continue

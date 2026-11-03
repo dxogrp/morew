@@ -8,42 +8,14 @@ import Morew.Elab.NLP.Rewrite
 import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 
-/-!
-# Targeted exact smooth reformulations
+/-! Replace a selected nonsmooth bound with exactly equivalent smooth constraints.
+Automatic discovery requires one certified morew_nlp rule; using selects a declaration
+or certificate without fallback. Rules match the whole selected predicate.
 
-`nlp at label` replaces a direct nonsmooth bound by exactly equivalent smooth
-constraints. Native absolute value, positive part, maximum, finite supremum,
-and one/infinity/Euclidean norms have upper-bound rules; minimum and finite
-infimum have lower-bound rules. Operands and bounds may be nonlinear, provided
-all replacement residuals can be certified C² on an open domain containing the
-rewritten feasible set. This asserts no convexity.
-
-Automatic rewriting discovers `@[morew_nlp]` declarations and requires exactly
-one fully certified result. Shipped and user-defined rules use the same path;
-ambiguous successes are listed by fully qualified name. `using ruleName`
-selects only that declaration, inferring its parameters from the row. It need
-not be registered. Applied certificate expressions retain ordinary Lean
-elaboration, and an explicit failure never triggers automatic fallback.
-
-The command handles one outer operation. Use an occurrence epigraph or hypograph
-step first to expose a nested operation. `using rule` supplies an exact-lift,
-graph, epigraph, or hypograph representation of the entire selected predicate;
-it does not register a rule or bypass smoothness and domain certification.
-
-Coordinate inequalities and finite families remain grouped, including symbolic
-dimensions. The selected label is consumed. Generated labels use its final
-component followed by `_nlp_1`, `_nlp_2`, and so on; auxiliaries use `_aux`.
-The shared allocator freshens collisions without changing untouched labels.
-
-Domain evidence comes from checked closed comparisons in the proposed target,
-including generated guards, after exactness has been checked using only retained
-constraints. Rule premises can use independent hypotheses and bounded reasoning
-from retained closed comparisons, including compatible finite coordinates. The
-selected row and generated guards cannot prove their own replacement premises.
-Unsupported retained rows and the objective remain untouched. This step is
-nonterminal and emits no whole-model `NLP.Form`. Bare `nlp` performs terminal
-whole-model validation and emits a concrete form and representability proof.
--/
+Check exactness using retained constraints before using generated guards for domain
+inclusion. Certify residuals on an open domain containing proposed feasibility.
+Keep vector and finite-family rows grouped. Consume the selected label and allocate
+fresh _nlp_i row names and _aux binders. The step remains nonterminal. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -65,8 +37,7 @@ private def materializeNLP (state : ReformState) (index : Nat)
     let prepared := prepared.replaceFVars preparedVars sectionFVars
     let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
       typed.presentation index prepared.toResult
-    -- The analytic evidence must cover this precise ordered replacement, not
-    -- a stronger predicate or merely the selected row's original domain.
+    -- Require analytic evidence for this ordered replacement and proposed feasibility.
     let feasible ← mkAppM ``Morew.Problem.feasible #[replacement.targetProblem]
     let expected ← withLocalDeclD `point prepared.nextDomain fun point => do
       let membership ← mkAppM ``Membership.mem #[prepared.certified.domain, point]
@@ -95,8 +66,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
     let predicate := presentation.constraints[index]!.predicate
     let retained := presentation.constraints.extract 0 index ++
       presentation.constraints.extract (index + 1) presentation.constraints.size
-    -- Only structural finite evidence is shared. The affine helper-expansion
-    -- fallback is intentionally not part of smooth certification.
+    -- Share structural finite evidence without affine helper expansion.
     let mut instances := #[]
     for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
       for inst in ← Morew.Elab.Expr.sourceFiniteInstances source do

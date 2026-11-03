@@ -9,22 +9,15 @@ import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Reduction
 
-/-!
-# Terminal cone-membership conversion
-
-Bare `conic` lowers nonlinear conjunction leaves exactly and converts affine
-comparisons to nonnegative- or zero-cone memberships. Named affine groups and
-their local-definition references are preserved. The checked structural form
-is emitted beside the normalized target. All generated local names are
-allocated together before the terminal result is materialized.
--/
+/-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
+Preserve named groups and local definitions. Allocate generated names together and
+emit a structural form beside the target. -/
 
 namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- These functions are static: retained section expressions are stored in the
--- artifact, so rebasing never leaves a captured local context behind.
+-- Keep section expressions in artifacts; adapter functions carry no local context.
 private def validateTerminalConic (form expected : Expr)
     (sense : Morew.ObjectiveSense) : TermElabM Expr := do
   let type ← whnf (← inferType form)
@@ -80,10 +73,7 @@ private theorem retainedMatrixIsSymm {n : ℕ}
     (equality : retained = checked) (symmetry : checked.IsSymm) : retained.IsSymm :=
   equality.symm ▸ symmetry
 
--- Recover the already checked global symmetry proof from the semantic target.
--- The original matrix spelling can retain model-local names absent from that
--- target. Earlier substitutions can also require proved normalization identities;
--- transport symmetry along the checked matrix equality in that case.
+-- Recover semantic symmetry evidence and transport it along checked matrix equalities.
 private def normalizeRetainedPositiveSemidefinite (normalizationProof : Term)
     (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
   unless original.isAppOf ``Matrix.PosSemidef &&
@@ -113,19 +103,13 @@ private def normalizeRetainedPositiveSemidefinite (normalizationProof : Term)
   checkWithKernel iff
   return { body, iff, changed := true }
 
--- The semantic checkpoint can expose a custom relation, constant match, or
--- structure field while retained syntax still contains its original head.
--- After planning accepts the row, follow those reductions against its target.
--- Operand expressions and model-local bindings stay untouched; a leaf with no
--- comparisons to convert retains its original spelling.
+-- Follow accepted structural reductions while preserving operands and model-local bindings.
 private partial def normalizeRetainedBody (normalizationProof : Term)
     (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
   let body ← Morew.Elab.Expr.reduceStructure original (preserveLets := true)
   let target ← Morew.Elab.Expr.reduceStructure target
   if let .letE name type value rest _ := body then
-    -- PSD conversion introduces a symmetry proof whose type mentions this
-    -- binding. A source nondependent let must therefore become a reducible let:
-    -- keeping it opaque would hide its value from the checked symmetry proof.
+    -- Make source lets reducible when generated symmetry proofs depend on their values.
     return ← withLetDecl name type value fun binding => do
       let result ← normalizeRetainedBody normalizationProof (rest.instantiate1 binding) target
       return {
@@ -156,14 +140,11 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
     catch error => pure (.error error)
   if let .ok result := normalized then
     if result.changed then return result
-    -- Native memberships retain their spelling even when earlier substitution
-    -- lemmas are needed to identify their operands with the checked target.
+    -- Preserve native memberships while checking substituted operands by normalization.
     if body.isAppOfArity ``Membership.mem 5 && target.isAppOfArity ``Membership.mem 5 then
       if (← isDefEq body.getAppArgs[2]! target.getAppArgs[2]!) &&
           (← isDefEq body.getAppArgs[3]! target.getAppArgs[3]!) then return result
-  -- Iota/projection reduction can expose an accepted comparison hidden behind
-  -- a constant match or structure field. Only registered field accessors may
-  -- delta-unfold here; other unchanged user function heads remain intact.
+  -- Expose accepted comparisons through structural reduction and registered field accessors.
   let structural ← whnfCore body
   let exposed? ← if structural != body then pure (some structural)
     else do
@@ -188,11 +169,8 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
     throwError "retained membership normalization does not match the source proposition"
   return result
 
--- Retained source entries carry binding identities that the canonical semantic
--- predicates may have reduced away. Normalize them in their original local-let
--- scope; generated entries instead use the checked planner's actual expressions.
--- Target emission subsequently checks this complete view against the canonical
--- problem, including any identities established by preceding substitutions.
+-- Normalize retained entries in their original binding scope; use planner expressions
+-- for generated entries. Check the complete view against the canonical problem.
 private def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Array Term)
     (prepared : Morew.Elab.Conic.Terminal.Result)
     (template rendered : Morew.Syntax.ProblemView) : TermElabM Morew.Syntax.ProblemView := do
@@ -257,9 +235,7 @@ private def materializeTerminalConic (state : ReformState)
         rows := rows.push state.view.constraints[origin]!
     let template := { state.view with binders, constraints := rows }
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    -- Canonical predicates may have reduced a zero or negated model definition,
-    -- while the retained view deliberately still refers to its binding. These
-    -- equalities check their agreement without rewriting the displayed body.
+    -- Prove agreement with reduced zero/negation definitions while retaining their display names.
     let normalizationLemmas := state.normalizationLemmas ++
       #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩,
         ⟨mkCIdent ``sub_neg_eq_add⟩, ⟨mkCIdent ``zero_add⟩, ⟨mkCIdent ``neg_neg⟩]
@@ -285,10 +261,7 @@ private def materializeTerminalConic (state : ReformState)
       status := .terminal
     }
 
--- Explicit class constructors historically reduced during surface
--- canonicalization. Keep that behavior for directly conic predicates and
--- complete affine objectives. A failed check retains its operations for registry
--- matching, so reduction cannot authorize a rule for a different instance.
+-- Reduce explicit class constructors only after direct conic certification.
 private def normalizeDirectPresentation (presentation : PresentationState) : MetaM PresentationState := do
   let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
       (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do

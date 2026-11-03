@@ -6,12 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Presentation
 import Morew.Transform
 
-/-!
-# Typed reformulation runner
-
-Typed step interfaces, certificate composition, normalization, and atomic commit.
-This module does not depend on the surface reformulation command.
--/
+/-! Typed step interfaces, certificate composition, normalization, and atomic commit. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -19,8 +14,7 @@ open Lean Lean.Meta
 
 /-! ## Compositional step and certificate interfaces -/
 
-/-- A declaration requested by a terminal step.  Declaration-name preflight
-and actual environment mutation remain responsibilities of the command runner. -/
+/-- A companion declaration checked and emitted by the command runner. -/
 structure CompanionRequest where
   /-- Exact global name of the companion declaration. -/
   name : Name
@@ -71,16 +65,14 @@ structure PointwiseNormalization where
   /-- Global-equivalence certificate induced by the pointwise proofs. -/
   equivalence : Expr
 
-/-- The first phase of a step.  A handler exposes its entire name batch before
-its materializer is allowed to construct the typed result. -/
+/-- A step's complete name requests and deferred materializer. -/
 structure StepPlan (m : Type → Type) where
   /-- Complete presentation-name batch required by the step. -/
   nameRequests : Array NameRequest
   /-- Construct the typed result from the allocated names. -/
   materialize : NameAllocation → m StepResult
 
-/-- Preflight the complete request batch before allowing a step to materialize
-typed expressions or presentation edits. -/
+/-- Allocate the complete name batch before materialization. -/
 def StepPlan.run [Monad m] (plan : StepPlan m) (active : NameInventory) :
     ExceptT NamePreflightError m StepResult := do
   let allocation ← ExceptT.mk <| pure <|
@@ -136,8 +128,7 @@ def PointwiseNormalization.replaceFVars (normalization : PointwiseNormalization)
   equivalence := normalization.equivalence.replaceFVars oldFVars newFVars
 }
 
-/-- Rebase every typed expression retained by the runner onto the section
-variables supplied by a later `runTermElabM` invocation. -/
+/-- Rebase retained expressions onto a later runTermElabM section context. -/
 def RunnerState.replaceFVars (state : RunnerState)
     (oldFVars newFVars : Array Expr) : RunnerState := {
   semantic := state.semantic.replaceFVars oldFVars newFVars
@@ -151,8 +142,7 @@ def RunnerState.replaceFVars (state : RunnerState)
   status := state.status
 }
 
-/-- The algebraic operations for a certificate relation.  Keeping declaration
-names as data leaves the runner open to relations other than equivalence. -/
+/-- Declarations implementing a certificate relation and its composition operations. -/
 structure CertificateRunner where
   /-- Declaration implementing the certificate relation. -/
   relation : Name
@@ -160,7 +150,7 @@ structure CertificateRunner where
   refl : Name
   /-- Declaration implementing transitivity for the relation. -/
   trans : Name
-  /-- Optional declaration lifting global equivalence into the relation. -/
+  /-- Optional declaration converting global equivalence to the relation. -/
   liftEquivalence? : Option Name := none
 
 /-- Form the type `relation source target` selected by a certificate runner. -/
@@ -178,8 +168,7 @@ def CertificateRunner.compose (runner : CertificateRunner)
     (left right : Expr) : MetaM Expr :=
   mkAppM runner.trans #[left, right]
 
-/-- Lift a primitive global-equivalence certificate into the selected relation
-when the relation requires an explicit conversion. -/
+/-- Convert a primitive equivalence certificate to the selected relation when required. -/
 def CertificateRunner.liftEquivalence (runner : CertificateRunner)
     (certificate : Expr) : MetaM Expr :=
   match runner.liftEquivalence? with
@@ -257,9 +246,8 @@ private def validateDeltaEvidence (state : RunnerState) (result : StepResult)
     ensureHasType addition.pointwiseIff feasibilityEvidenceType
       s!"constraint addition `{addition.entry.name}` feasibility equivalence"
 
-/-- Validate and atomically commit a typed primitive step.  Presentation
-errors are returned without changing the caller's state; proof/type failures
-remain ordinary elaboration errors. -/
+/-- Validate and atomically commit a step. Return presentation errors without changing
+state; propagate proof and type elaboration errors. -/
 def RunnerState.commit (state : RunnerState) (runner : CertificateRunner)
     (result : StepResult) :
     MetaM (Except PresentationError RunnerState) := do

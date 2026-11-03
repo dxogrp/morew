@@ -6,14 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Rows
 
-/-!
-# Derived constraints
-
-Append a user-proved consequence of current feasibility. The supplied proof is
-checked against the complete current semantic problem before the new row is
-introduced. A fresh canonical checkpoint retains every displayed row and its
-label across subsequent reformulations.
--/
+/-! Append a consequence proved from current feasibility, then start a canonical checkpoint. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -35,8 +28,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
       Rows.Append.elaboratePredicate deriveStyle state typed proposition
-    -- The temporary model binders are no longer in scope: only the source
-    -- point quantified by this contract may supply decision-dependent facts.
+    -- Only the contract's quantified source point supplies decision-dependent facts.
     let expected ← withLocalDeclD `point typed.semanticDomainType fun point => do
       let feasible ← mkAppM ``Morew.Problem.feasible #[typed.semantic, point]
       mkForallFVars #[point] (← mkArrow feasible (mkApp predicate point))

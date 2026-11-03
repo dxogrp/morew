@@ -6,13 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Substitution.Evidence
 
-/-!
-# Checked removal of a selected constraint
-
-Only complete retained rows supply duplicate evidence. Tautologies use a fixed
-set of unconditional facts; arbitrary retained-context implications are checked
-separately and never added to the normalization simplifier.
--/
+/-! Remove duplicate constraints, tautologies, or rows implied by retained constraints.
+Duplicate search uses complete rows; tautology proofs use unconditional facts. -/
 
 namespace Morew.Elab.Reformulation.Remove
 
@@ -48,9 +43,7 @@ private def matchingProof? (goal : Expr) (action : MetaM Expr) : MetaM (Option E
     catch _ => return .error ()
   return result.toOption
 
--- Data instances are taken from the source operations, not incidental operand
--- computations. Proof-valued compatibility classes may still justify those
--- operations; the complete theorem conclusion must match the original goal.
+-- Use source operation instances and check the complete theorem conclusion.
 private def withSourceInstances (operations : Array Expr) (action : MetaM Expr) :
     MetaM Expr := do
   let instances ← (← getLocalInstances).filterM fun localInst => do
@@ -95,9 +88,8 @@ private partial def tautology? (goal : Expr) : MetaM (Option Expr) := do
     return ← matchingProof? goal (mkAppM ``Real.exp_pos #[right.getAppArgs[0]!])
   return none
 
-/-- Prove a selected duplicate or basic tautology without assigning caller
-metavariables. No ambient facts, retained-row subexpressions, or historical
-constraints participate in the search. -/
+/-- Prove duplicates from complete retained rows or basic tautologies from fixed facts.
+Preserve caller metavariables. -/
 def prove? (presentation : PresentationState) (index : Nat) : MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     try
@@ -152,10 +144,8 @@ private def applyRemovalCore (presentation : PresentationState) (index : Nat)
     checkWithKernel equivalence
     return { targetProblem, equivalence }
 
-/-- Apply an implication checked against exactly the current retained rows.
-The resulting canonical problem preserves every other row and all coordinates.
-Incomplete presentations are rejected, and caller metavariables remain unchanged
-even if typeclass synthesis or canonical presentation validation fails. -/
+/-- Remove a row using an implication from current retained rows.
+Preserve other rows, coordinates, and caller metavariables; reject incomplete presentations. -/
 def applyRemoval (presentation : PresentationState) (index : Nat)
     (implied : Expr) : MetaM Replace.RewriteResult := do
   let result ← State.withIsolatedMVars (ε := Empty) do
