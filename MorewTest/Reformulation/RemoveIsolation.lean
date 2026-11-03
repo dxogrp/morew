@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
@@ -12,7 +12,7 @@ import MorewTest.Environment
 namespace MorewTest.Reformulation.RemoveIsolation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-open Morew Morew.Reformulation.Internal
+open Morew Morew.Elab.Reformulation
 noncomputable section
 
 elab "remove_missing%" : term <= expected => do

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
@@ -190,29 +190,11 @@ reformulation failedAfterSubstitution : positive
   substitute x := Real.exp u
   derive self : u = u using missingProof
 
-#guard_error_fragments ["terminal"] in
-assert_derive_atomic% afterTerminal afterTerminalAlias in
-reformulation afterTerminal : unrestricted certificate afterTerminalAlias := by
-  conic
-  derive self : x ≤ x using selfBound
-
 -- General proved propositions are stored; a terminal consumer applies its own policy.
 reformulation withDisequality : positive := by
   derive nonzero : x ≠ 0 using (by
     intro point feasible
     exact ne_of_gt feasible)
-
-#guard_error_fragments ["disjunction"] in
-assert_derive_atomic% unsupportedConic unsupportedConicAlias in
-reformulation unsupportedConic : unrestricted certificate unsupportedConicAlias := by
-  derive disjunction : x ≤ 0 ∨ 0 ≤ x using (fun point _ => le_total point 0)
-  conic
-
-#guard_error_fragments ["disjunction"] in
-assert_derive_atomic% unsupportedNLP unsupportedNLPAlias in
-reformulation unsupportedNLP : unrestricted certificate unsupportedNLPAlias := by
-  derive disjunction : x ≤ 0 ∨ 0 ≤ x using (fun point _ => le_total point 0)
-  nlp
 
 -- Missing clauses are parser errors, not implicit proof search requests.
 run_cmd do

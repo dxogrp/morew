@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Basic
 import Morew.Elab.Substitution.Rules
 
 /-! # Theorem-backed coordinate substitution through the public DSL -/
@@ -261,19 +261,6 @@ def shiftedSquareRule {R : Type*} :
   preimage _ x := Real.sqrt (x.1 - 1)
   rightInverse _ x := by
     rw [shiftedSquare, Real.sq_sqrt (sub_nonneg.mpr x.2), sub_add_cancel]
-
--- Continued conic and NLP certification use the resulting semantic problem.
-reformulation squaredConic : nonnegative := by
-  substitute x := u ^ 2
-  epigraph t
-  conic
-example : IsConic squaredConic := squaredConic.isConic
-example : GlobalEquivalence nonnegative squaredConic := squaredConic.equivalence
-
-reformulation squaredNLP : nonnegative := by
-  substitute x := u ^ 2
-  nlp
-example : IsSmoothNLP squaredNLP := squaredNLP.isSmoothNLP
 
 end
 end MorewTest.Reformulation.SubstitutionRules

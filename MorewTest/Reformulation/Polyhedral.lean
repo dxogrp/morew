@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Conic
 
 /-!
 # Targeted polyhedral reformulations
@@ -201,7 +201,7 @@ def exactLift : ExactConstraintLift (fun x : Parameter.Index → ℝ =>
   ExactConstraintLift.ofIff (fun x =>
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
-    (fun _ => Morew.Conic.Polyhedral.abs_le_iff _ _)
+    (fun _ => Morew.Rewrite.Polyhedral.abs_le_iff _ _)
 
 reformulation customTarget : source := by
   conic at bound using exactLift

@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Syntax
+import Morew.Rewrite.Polyhedral
+import Morew.Elab.Rewrite.Registry
 
 /-! # Imported registered rules used by command integration tests -/
 

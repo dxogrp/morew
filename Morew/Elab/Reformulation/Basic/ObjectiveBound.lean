@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Presentation
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.View
 
 /-!
 # Objective-bound steps
@@ -11,7 +12,7 @@ import Morew.Reformulation.Presentation
 Proof-producing epigraph and hypograph planning and materialization.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
@@ -145,4 +146,18 @@ def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
       materializeObjectiveBound state binder expectedSense allocation
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.epigraphStep]
+private def elabEpigraph : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
+      prepareObjectiveBound state step binder label .minimize
+  | _ => throwUnsupportedSyntax
+
+@[morew_reformulation_step Morew.hypographStep]
+private def elabHypograph : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
+      prepareObjectiveBound state step binder label .maximize
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation
+import Morew.Elab.Reformulation.Runner
 
 /-!
 # Surface reformulation state
@@ -11,17 +11,9 @@ import Morew.Elab.Reformulation
 Shared surface state and certificate syntax. This is an internal implementation API.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
-
-/-- Compare the user-visible spelling of two surface names. -/
-def sameUserName (a b : Name) : Bool :=
-  a.eraseMacroScopes == b.eraseMacroScopes
-
-/-- Certificate operations selected by the surface runner. -/
-abbrev CertificateRunner :=
-  Morew.Elab.Reformulation.CertificateRunner
 
 private def namedTerm (name : Name) : TSyntax `term :=
   ⟨mkIdent name⟩
@@ -52,10 +44,6 @@ def liftCertificateEquivalence (runner : CertificateRunner)
   | some liftName =>
       let lift := namedTerm liftName
       `($lift $proofTerm)
-
-/-- The certificate relation used by the public reformulation command. -/
-def globalEquivalenceRunner : CertificateRunner :=
-  Morew.Elab.Reformulation.globalEquivalenceRunner
 
 /-- The exact problem whose ordered rows are protected while later standard
 steps are normalized. A rewrite may establish a new checkpoint without changing
@@ -101,41 +89,41 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
-/-- The two supported terminal representation artifacts. -/
-inductive TerminalKind where
-  | conic
-  | nlp
-  deriving BEq
-
-/-- User-facing name of a terminal representation. -/
-def TerminalKind.description : TerminalKind → String
-  | .conic => "conic"
-  | .nlp => "smooth NLP"
-
-/-- Suffix of the concrete terminal form declaration. -/
-def TerminalKind.formSuffix : TerminalKind → Name
-  | .conic => `conicForm
-  | .nlp => `nlpForm
-
-/-- Suffix of the terminal representability theorem. -/
-def TerminalKind.propertySuffix : TerminalKind → Name
-  | .conic => `isConic
-  | .nlp => `isSmoothNLP
+/-- Backend-owned operations for terminal evidence. Adapters are static values:
+all section-dependent expressions belong to `CheckedTerminalArtifact`. -/
+structure TerminalAdapter where
+  /-- User-facing representation name. -/
+  description : String
+  /-- Suffix of the concrete form declaration. -/
+  formSuffix : Name
+  /-- Suffix of the representability theorem. -/
+  propertySuffix : Name
+  /-- Validate the form, represented problem, and objective sense; return the
+  represented problem from the checked form's type. -/
+  validate : Expr → Expr → Morew.ObjectiveSense → TermElabM Expr
+  /-- Transport a form along a checked equality to the emitted target. -/
+  retarget : Expr → Expr → Expr → TermElabM Expr
+  /-- Construct representability evidence from the emitted form. -/
+  property : Expr → TermElabM Expr
 
 /-- Checked structural evidence retained until the final target is declared.
 Its free variables belong to the containing state's section-variable context. -/
 structure CheckedTerminalArtifact where
-  /-- The representation certified by the terminal step. -/
-  kind : TerminalKind
+  /-- Static operations supplied by the selected backend. -/
+  adapter : TerminalAdapter
   /-- A kernel-checked form of the final canonical problem. -/
   form : Expr
+  /-- The form's represented problem, retained in the same local context. -/
+  representedProblem : Expr
   /-- Source location of terminal validation. -/
   ref : Syntax
 
-/-- Move retained terminal evidence into a later elaboration context. -/
+/-- Move every retained terminal expression into a later elaboration context. -/
 def CheckedTerminalArtifact.replaceFVars (artifact : CheckedTerminalArtifact)
     (oldVars newVars : Array Expr) : CheckedTerminalArtifact :=
-  { artifact with form := artifact.form.replaceFVars oldVars newVars }
+  { artifact with
+    form := artifact.form.replaceFVars oldVars newVars
+    representedProblem := artifact.representedProblem.replaceFVars oldVars newVars }
 
 /-- Checked runner state together with syntax retained for declaration emission. -/
 structure ReformState where
@@ -210,7 +198,7 @@ structure SurfaceStepResult where
   /-- Ordered replacements indexed by entries at step entry. -/
   constraintSplices : Array ConstraintSplice := #[]
   /-- Form syntax to validate against the proposed canonical target. -/
-  terminalForm? : Option (TerminalKind × TSyntax `term) := none
+  terminalForm? : Option (TerminalAdapter × TSyntax `term) := none
   /-- Whether additional steps may follow this result. -/
   status : Morew.Elab.Reformulation.StepStatus := .continue
   /-- Additional declarations requested by the step. -/
@@ -235,4 +223,4 @@ structure SurfaceMaterialization where
   /-- Validated terminal evidence in the same section-variable context. -/
   terminalArtifact? : Option CheckedTerminalArtifact := none
 
-end Morew.Reformulation.Internal
+end Morew.Elab.Reformulation

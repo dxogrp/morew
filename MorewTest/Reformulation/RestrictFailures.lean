@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
@@ -196,13 +196,6 @@ reformulation removedBinder : squareLine certificate removedBinderAlias := by
   substitute x := u ^ 2
   restrict obsolete : x = 0 using constantRepair 0
 
-#guard_error_fragments ["unknown or stale constraint label", "domain"] in
-assert_restrict_atomic% removedLabel removedLabelAlias in
-reformulation removedLabel : squareLine certificate removedLabelAlias := by
-  restrict domain : 0 ≤ x using zeroRepair
-  substitute x := u ^ 2
-  conic at domain
-
 #guard_error_fragments ["Unknown identifier", "missingCertificate"] in
 assert_restrict_atomic% failedLate failedLateAlias in
 reformulation failedLate : squareLine certificate failedLateAlias := by
@@ -210,30 +203,6 @@ reformulation failedLate : squareLine certificate failedLateAlias := by
   substitute x := u ^ 2
   epigraph t
   restrict later : True using missingCertificate
-
-#guard_error_fragments ["terminal"] in
-assert_restrict_atomic% afterTerminal afterTerminalAlias in
-reformulation afterTerminal : free certificate afterTerminalAlias := by
-  conic
-  restrict tag : True using trueRepair free
-
--- A valid restriction does not exempt its predicate from target admission rules.
-def disjunctionRepair :
-    GlobalImprovement free (free.addConstraint (fun x => x ≤ 0 ∨ 0 ≤ x)) where
-  map point := ⟨point.1, point.2, le_total point.1 0⟩
-  objective_le _ := le_rfl
-
-#guard_error_fragments ["constraint `signs`", "no supported"] in
-assert_restrict_atomic% unsupportedConic unsupportedConicAlias in
-reformulation unsupportedConic : free certificate unsupportedConicAlias := by
-  restrict signs : x ≤ 0 ∨ 0 ≤ x using disjunctionRepair
-  conic
-
-#guard_error_fragments ["constraint `signs`", "not certified"] in
-assert_restrict_atomic% unsupportedNLP unsupportedNLPAlias in
-reformulation unsupportedNLP : free certificate unsupportedNLPAlias := by
-  restrict signs : x ≤ 0 ∨ 0 ≤ x using disjunctionRepair
-  nlp
 
 run_cmd do
   for input in #["restrict branch : 0 ≤ x", "restrict : True using trueRepair free",

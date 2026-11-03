@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PrintSupport
 
 /-!
@@ -123,7 +123,7 @@ run_cmd do
   -- Its compact payload must still inspect the checked binder types.
   let some template := Syntax.getProblemDisplayView? (← getEnv) ``bare
     | throwError "missing bare-name binder presentation"
-  Morew.Reformulation.Internal.refreshProblemView ``bare template
+  Morew.Elab.Reformulation.refreshProblemView ``bare template
   let some presentation := Syntax.getProblemPrintPresentation? (← getEnv) ``bare
     | throwError "missing compact bare-name binder presentation"
   unless presentation.compact.binders[1]!.typeSyntax == template.binders[1]!.typeSyntax do

@@ -3,8 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Conic.Terminal
-import Morew.Reformulation.Replace
+import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Reduction
 
@@ -18,10 +19,50 @@ is emitted beside the normalized target. All generated local names are
 allocated together before the terminal result is materialized.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-open Morew.Elab.Reformulation
+
+-- These functions are static: retained section expressions are stored in the
+-- artifact, so rebasing never leaves a captured local context behind.
+private def validateTerminalConic (form expected : Expr)
+    (sense : Morew.ObjectiveSense) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  unless type.isAppOfArity ``Morew.Conic.Form 5 do
+    throwError "terminal evidence is not a Conic.Form"
+  let represented := type.getAppArgs.back!
+  unless ← isDefEq represented expected do
+    throwError "terminal conic form does not represent the final canonical problem"
+  let data ← mkProjection form `data
+  let actualSense ← mkProjection data `sense
+  let expectedSense := match sense with
+    | .minimize => mkConst ``Morew.ObjectiveSense.minimize
+    | .maximize => mkConst ``Morew.ObjectiveSense.maximize
+  unless ← isDefEq actualSense expectedSense do
+    throwError "terminal conic form has the wrong objective sense"
+  pure represented
+
+private def retargetTerminalConic (form target equality : Expr) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  let arguments := type.getAppArgs.set! (type.getAppNumArgs - 1) target
+  let represents ← mkAppM ``Eq.trans #[← mkProjection form `represents, equality]
+  let data ← mkProjection form `data
+  pure <| mkAppN (mkConst ``Morew.Conic.Form.mk type.getAppFn.constLevels!)
+    (arguments ++ #[data, represents])
+
+private def terminalConicProperty (form : Expr) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  pure <| mkAppN (mkConst ``Morew.Conic.Form.isConic type.getAppFn.constLevels!)
+    (type.getAppArgs ++ #[form])
+
+private def terminalConicAdapter : TerminalAdapter := {
+  description := "conic"
+  formSuffix := `conicForm
+  propertySuffix := `isConic
+  validate := validateTerminalConic
+  retarget := retargetTerminalConic
+  property := terminalConicProperty
+}
 
 private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
   let name := state.view.constraints[origin]!.name.eraseMacroScopes
@@ -194,7 +235,7 @@ private def materializeTerminalConic (state : ReformState)
     let primitive ← state.runner.liftEquivalence exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
-    let primitive ← Replace.storeCertificate `_terminalConicCertificate primitive
+    let primitive ← Rows.storeCertificate `_terminalConicCertificate primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
     let mut binders := state.view.binders
     for i in [:prepared.auxiliaries.size] do
@@ -240,7 +281,7 @@ private def materializeTerminalConic (state : ReformState)
       checkpoint? := some { semantic, semanticAnchor := semantic, view }
       constraintSplices := prepared.replacedIndices.map fun index =>
         { index, count := (prepared.rowOrigins.filter (· == index)).size }
-      terminalForm? := some (.conic, ← exactExpressionSyntax form)
+      terminalForm? := some (terminalConicAdapter, ← exactExpressionSyntax form)
       status := .terminal
     }
 
@@ -291,4 +332,10 @@ def prepareTerminalConic (state : ReformState) (step : Syntax) :
         requested := Name.mkSimple s!"{stem}_conic_{count}", ref := step }
   return { nameRequests, materialize := materializeTerminalConic state prepared preparedVars }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.conicStep]
+private def elabConic : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| conic) => prepareTerminalConic state step
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

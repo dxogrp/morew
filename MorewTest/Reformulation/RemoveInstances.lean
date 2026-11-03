@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Basic
 
 /-! # Removal uses captured operations without treating operand data as instances -/
 

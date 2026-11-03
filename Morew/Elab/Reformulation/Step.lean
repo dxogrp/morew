@@ -3,9 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Presentation
-import Morew.Conic.Basic
-import Morew.NLP.Basic
+import Morew.Elab.Reformulation.View
 
 /-!
 # Surface step validation and commitment
@@ -13,7 +11,7 @@ import Morew.NLP.Basic
 Bridge surface materialization to the checked typed runner before updating state.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
@@ -80,7 +78,7 @@ private def validateTypedPrimitive (state : ReformState)
     for index in [:nextPresentation.binders.size] do
       let actual := updatedPresentation.binders[index]!
       let expected := nextPresentation.binders[index]!
-      unless sameUserName actual.name expected.name &&
+      unless sameVisibleName actual.name expected.name &&
           (← isDefEq actual.type expected.type) do
         throwError "presentation delta did not reproduce decision binder {index}"
     unless ← isDefEq updatedPresentation.objective nextPresentation.objective do
@@ -88,7 +86,7 @@ private def validateTypedPrimitive (state : ReformState)
     for index in [:nextPresentation.constraints.size] do
       let actual := updatedPresentation.constraints[index]!
       let expected := nextPresentation.constraints[index]!
-      unless sameUserName actual.name expected.name &&
+      unless sameVisibleName actual.name expected.name &&
           (← isDefEq actual.predicate expected.predicate) do
         throwError "presentation delta did not reproduce constraint {index}"
     let typedResult : Morew.Elab.Reformulation.StepResult := {
@@ -101,36 +99,28 @@ private def validateTypedPrimitive (state : ReformState)
     let expectedCanonical ← updatedPresentation.canonicalProblem
     unless ← isDefEq normalization.canonical expectedCanonical do
       throwError "checked normalization does not target the presentation delta"
-    let terminalArtifact? ← result.terminalForm?.mapM fun (kind, formSyntax) => do
+    let terminalArtifact? ← result.terminalForm?.mapM fun (adapter, formSyntax) => do
       unless result.status == .terminal do
-        throwErrorAt formSyntax "a {kind.description} form requires a terminal result"
+        throwErrorAt formSyntax "a {adapter.description} form requires a terminal result"
       let form ← elabTerm formSyntax none
       synthesizeSyntheticMVarsNoPostponing
       let form ← instantiateMVars form
       if form.hasMVar then
-        throwErrorAt formSyntax "terminal {kind.description} form contains unresolved metavariables"
-      let type ← whnf (← inferType form)
-      let (formName, formLabel) := match kind with
-        | .conic => (``Morew.Conic.Form, "Conic.Form")
-        | .nlp => (``Morew.NLP.Form, "NLP.Form")
-      unless type.isAppOfArity formName 5 do
-        throwErrorAt formSyntax "terminal evidence is not a {formLabel}"
-      unless ← isDefEq type.getAppArgs.back! expectedCanonical do
-        throwErrorAt formSyntax "terminal {kind.description} form does not represent the final canonical problem"
-      -- Use the form's stored instances even when finiteness was available
-      -- only inside a source constraint during planning.
-      let data ← mkProjection form `data
-      let sense ← mkProjection data `sense
-      let expectedSense := match nextPresentation.sense with
-        | .minimize => mkConst ``Morew.ObjectiveSense.minimize
-        | .maximize => mkConst ``Morew.ObjectiveSense.maximize
-      unless ← isDefEq sense expectedSense do
-        throwErrorAt formSyntax "terminal {kind.description} form has the wrong objective sense"
+        throwErrorAt formSyntax
+          "terminal {adapter.description} form contains unresolved metavariables"
+      let representedProblem ← withRef formSyntax <|
+        adapter.validate form expectedCanonical nextPresentation.sense
+      synthesizeSyntheticMVarsNoPostponing
+      let form ← instantiateMVars form
+      let representedProblem ← instantiateMVars representedProblem
+      if form.hasMVar || representedProblem.hasMVar then
+        throwErrorAt formSyntax
+          "terminal {adapter.description} form contains unresolved metavariables"
       -- Section-instance types can contain metavariables assigned while
       -- elaborating the target. The kernel needs their instantiated context.
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
-      pure { kind, form, ref := formSyntax.raw : CheckedTerminalArtifact }
+      pure { adapter, form, representedProblem, ref := formSyntax.raw : CheckedTerminalArtifact }
     pure (typedResult, sectionFVars, terminalArtifact?)
 
 private def typedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
@@ -154,10 +144,10 @@ private def reportNamePreflightError {α}
       let name := occupied.eraseMacroScopes
       match request.kind with
       | .explicitDecisionBinder | .inferredDecisionBinder => do
-          if state.usedSourceParameterNames.any (sameUserName · name) then
+          if state.usedSourceParameterNames.any (sameVisibleName · name) then
             throwErrorAt request.ref
               "decision variable `{name}` conflicts with a source parameter; rename the outer parameter or choose a different decision name"
-          if state.view.definitions.any (fun definition => sameUserName definition.name name) then
+          if state.view.definitions.any (fun definition => sameVisibleName definition.name name) then
             throwErrorAt request.ref
               "decision variable `{name}` conflicts with a model-local definition; choose a different decision name"
           throwErrorAt request.ref "decision variable `{name}` already exists"
@@ -214,7 +204,7 @@ def commitSurfaceStep (state : ReformState)
       for parameter in sectionFVars do
         if dependencies.fvarSet.contains parameter.fvarId! then
           let name := (← parameter.fvarId!.getDecl).userName.eraseMacroScopes
-          unless usedSourceParameterNames.any (sameUserName · name) do
+          unless usedSourceParameterNames.any (sameVisibleName · name) do
             usedSourceParameterNames := usedSourceParameterNames.push name
     pure (committed, sectionFVars, usedSourceParameterNames)
   let typed ← match committed with
@@ -244,4 +234,4 @@ def commitSurfaceStep (state : ReformState)
       (·.replaceFVars materialization.sectionFVars sectionFVars)
   }
 
-end Morew.Reformulation.Internal
+end Morew.Elab.Reformulation

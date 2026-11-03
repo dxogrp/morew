@@ -3,9 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Reformulation.Conic
 import Morew.Elab.Conic
 import MorewTest.Surface.Conic
-import Morew.Reformulation
 
 /-!
 # Affine recognition from existing surface presentations
@@ -68,7 +68,7 @@ private def checkSource (name : Name) (sense : ObjectiveSense)
   let some sourceValue ← unfoldDefinition? source
     | throwError "could not inspect source declaration"
   let presentation ←
-    Morew.Reformulation.Internal.typedPresentationFromExpression sourceValue view
+    Morew.Elab.Reformulation.typedPresentationFromExpression sourceValue view
   unless presentation.sense == sense do
     throwError "typed presentation lost the objective sense"
   if sense == .maximize then

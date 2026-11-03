@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Conic
 
 /-!
 # Exact exponential-cone reformulations
@@ -282,7 +282,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (← `(fun (x y z : ℝ) => (x, y, z) ∈ EXP)) none
   Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
   let original ← Lean.instantiateMVars original
-  let exact ← Morew.Reformulation.Internal.exactExpressionSyntax original
+  let exact ← Morew.Elab.Reformulation.exactExpressionSyntax original
   if (exact.raw.findStack? (fun _ => true) (fun stx =>
       stx.isOfKind ``Morew.Conic.exponentialCarrier)).isSome then
     Lean.throwError "exponential notation leaked into exact semantic syntax"

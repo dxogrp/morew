@@ -3,9 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Replace
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Rewrite.Plan
-import Morew.Reformulation.Syntax
+import Morew.Elab.Reformulation.Syntax
 import Morew.Transform.Context
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.Expr
@@ -19,10 +20,9 @@ terms. The selected context and every emitted presentation are checked against
 the current semantic problem before the runner commits the step.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-open Morew.Elab.Reformulation
 
 -- Only computational operands and logical predicate operands are selectable.
 -- Type parameters, proof arguments, and instances are not occurrences in the
@@ -145,7 +145,7 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
     let body ← instantiateMVars body
     let needle ← match selector with
       | `(boundOccurrence| $name:ident) =>
-          let some index := state.view.definitions.findIdx? (sameUserName ·.name name.getId)
+          let some index := state.view.definitions.findIdx? (sameVisibleName ·.name name.getId)
             | throwErrorAt name "unknown model-local definition `{name.getId.eraseMacroScopes}`"
           pure definitions[index]!
       | `(boundOccurrence| ($term:term)) =>
@@ -389,7 +389,7 @@ def prepareOccurrenceBound (state : ReformState) (_step : Syntax)
     (constraint? explicitLabel? : Option (TSyntax `ident))
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection) :
     CommandElabM SurfaceStepDraft := do
-  let row? ← constraint?.mapM (Replace.findConstraint state)
+  let row? ← constraint?.mapM (Rows.findConstraint state)
   -- The surrounding context, not the objective sense alone, determines which
   -- bound direction is valid. Its checked certificate also handles antitone
   -- contexts such as minimizing a negated reward or maximizing a negated loss.
@@ -404,4 +404,20 @@ def prepareOccurrenceBound (state : ReformState) (_step : Syntax)
     materialize := materializeOccurrenceBound state selector row? provided? direction
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.epigraphAtStep]
+private def elabEpigraphAt : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| epigraph $binder:ident at $selector:boundOccurrence
+      $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
+      prepareOccurrenceBound state step binder selector constraint label provided .upper
+  | _ => throwUnsupportedSyntax
+
+@[morew_reformulation_step Morew.hypographAtStep]
+private def elabHypographAt : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| hypograph $binder:ident at $selector:boundOccurrence
+      $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
+      prepareOccurrenceBound state step binder selector constraint label provided .lower
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

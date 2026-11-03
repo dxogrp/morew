@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Append
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.Rows
 
 /-!
 # Derived constraints
@@ -14,11 +15,11 @@ introduced. A fresh canonical checkpoint retains every displayed row and its
 label across subsequent reformulations.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def deriveStyle : Append.Style := {
+private def deriveStyle : Rows.Append.Style := {
   description := "derived constraint"
   certificateKind := `derivedConstraint
   family := "derived"
@@ -33,7 +34,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
   runTermElabM fun sectionFVars => withoutErrToSorry do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
-      Append.elaboratePredicate deriveStyle state typed proposition
+      Rows.Append.elaboratePredicate deriveStyle state typed proposition
     -- The temporary model binders are no longer in scope: only the source
     -- point quantified by this contract may supply decision-dependent facts.
     let expected ← withLocalDeclD `point typed.semanticDomainType fun point => do
@@ -51,7 +52,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
       pure proof
     let addition ← mkAppM ``Morew.addConstraintEquivalence
       #[typed.semantic, predicate, implied]
-    Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition
+    Rows.Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition
 
 /-- Preflight the explicit label before elaborating a derived row or its proof. -/
 def prepareDerive (state : ReformState) (label : TSyntax `ident)
@@ -63,4 +64,11 @@ def prepareDerive (state : ReformState) (label : TSyntax `ident)
     materialize := materializeDerive state label proposition provided
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.deriveStep]
+private def elabDerive : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| derive $label:ident : $proposition:term using $provided:term) =>
+      prepareDerive state label proposition provided
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

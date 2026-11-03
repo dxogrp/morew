@@ -6,9 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation
 
 /-!
-# Surface entry-point compatibility
+# Complete reformulation entry point
 
-The established narrow import must supply the DSL, built-in steps, certificates,
+The reformulation bundle supplies the DSL, built-in steps, certificates,
 and problem printer without relying on the library-wide import aggregator.
 -/
 

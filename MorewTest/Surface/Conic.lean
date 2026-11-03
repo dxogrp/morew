@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Reformulation.Conic
 import Morew.Conic
-import Morew.Reformulation
 
 /-!
 # Manual conic forms for surface problems

@@ -3,8 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Elab.Reformulation.Registry
 import Morew.Elab.NLP.Terminal
-import Morew.Reformulation.Replace
+import Morew.Elab.Reformulation.Rows
 
 /-!
 # Terminal smooth-NLP validation
@@ -39,10 +40,50 @@ All generated names are allocated together. Form checking, declaration emission,
 and presentation registration share the reformulation command's transaction.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-open Morew.Elab.Reformulation
+
+-- These functions are static: retained section expressions are stored in the
+-- artifact, so rebasing never leaves a captured local context behind.
+private def validateTerminalNLP (form expected : Expr)
+    (sense : Morew.ObjectiveSense) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  unless type.isAppOfArity ``Morew.NLP.Form 5 do
+    throwError "terminal evidence is not a NLP.Form"
+  let represented := type.getAppArgs.back!
+  unless ← isDefEq represented expected do
+    throwError "terminal smooth NLP form does not represent the final canonical problem"
+  let data ← mkProjection form `data
+  let actualSense ← mkProjection data `sense
+  let expectedSense := match sense with
+    | .minimize => mkConst ``Morew.ObjectiveSense.minimize
+    | .maximize => mkConst ``Morew.ObjectiveSense.maximize
+  unless ← isDefEq actualSense expectedSense do
+    throwError "terminal smooth NLP form has the wrong objective sense"
+  pure represented
+
+private def retargetTerminalNLP (form target equality : Expr) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  let arguments := type.getAppArgs.set! (type.getAppNumArgs - 1) target
+  let represents ← mkAppM ``Eq.trans #[← mkProjection form `represents, equality]
+  let data ← mkProjection form `data
+  pure <| mkAppN (mkConst ``Morew.NLP.Form.mk type.getAppFn.constLevels!)
+    (arguments ++ #[data, represents])
+
+private def terminalNLPProperty (form : Expr) : TermElabM Expr := do
+  let type ← whnf (← inferType form)
+  pure <| mkAppN (mkConst ``Morew.NLP.Form.isSmoothNLP type.getAppFn.constLevels!)
+    (type.getAppArgs ++ #[form])
+
+private def terminalNLPAdapter : TerminalAdapter := {
+  description := "smooth NLP"
+  formSuffix := `nlpForm
+  propertySuffix := `isSmoothNLP
+  validate := validateTerminalNLP
+  retarget := retargetTerminalNLP
+  property := terminalNLPProperty
+}
 
 private def terminalNLPStem (state : ReformState) (origin : Nat) : CommandElabM String := do
   let name := state.view.constraints[origin]!.name.eraseMacroScopes
@@ -64,7 +105,7 @@ private def materializeTerminalNLP (state : ReformState)
     let primitive ← state.runner.liftEquivalence exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
-    let primitive ← Replace.storeCertificate `_terminalNLPCertificate primitive
+    let primitive ← Rows.storeCertificate `_terminalNLPCertificate primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
     let mut binders := state.view.binders
     for i in [:prepared.auxiliaries.size] do
@@ -110,7 +151,7 @@ private def materializeTerminalNLP (state : ReformState)
       checkpoint? := some { semantic, semanticAnchor := semantic, view }
       constraintSplices := prepared.replacedIndices.map fun index =>
         { index, count := (prepared.rowOrigins.filter (· == index)).size }
-      terminalForm? := some (.nlp, ← exactExpressionSyntax form)
+      terminalForm? := some (terminalNLPAdapter, ← exactExpressionSyntax form)
       status := .terminal
     }
 
@@ -141,4 +182,10 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
         requested := Name.mkSimple s!"{stem}_nlp_{count}", ref := step }
   return { nameRequests, materialize := materializeTerminalNLP state prepared preparedVars }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.nlpStep]
+private def elabNLP : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| nlp) => prepareTerminalNLP state step
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

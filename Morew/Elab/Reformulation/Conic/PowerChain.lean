@@ -16,7 +16,7 @@ This changes only print metadata. No expression, instance, dimension, or proof
 is rewritten, and incomplete or ambiguous chains keep their ordinary display.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation.Conic
 
 open Lean Lean.Meta Lean.Elab.Term Qq
 open Morew.Conic
@@ -384,4 +384,4 @@ def powerChainPrintRows (rows : Array Expr) (renderLeaf : Expr → TermElabM Syn
     for (i, row) in candidate.rows do result := result.set! i (some row)
   return result
 
-end Morew.Reformulation.Internal
+end Morew.Elab.Reformulation.Conic

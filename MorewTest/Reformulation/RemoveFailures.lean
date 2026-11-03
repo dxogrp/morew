@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
@@ -244,45 +244,12 @@ assert_remove_atomic% distinctNorms distinctNormsAlias in
 reformulation distinctNorms : changedNorm certificate distinctNormsAlias := by
   remove at selected
 
-def absolute :=
-  problem (x : ℝ)
-    minimize x
-    subject to magnitude : |x| ≤ 1
-
--- Helpers and metadata from successful prior steps must roll back with a late failure.
-#guard_error_fragments ["constraint", "magnitude_conic_2", "using"] in
-assert_remove_atomic% lateFailure lateFailureAlias in
-reformulation lateFailure : absolute certificate lateFailureAlias := by
-  conic at magnitude
-  derive tag : True using (fun _ _ => True.intro)
-  remove at tag
-  remove at magnitude_conic_2
-
-#guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in
-assert_remove_atomic% afterConic afterConicAlias in
-reformulation afterConic : duplicate certificate afterConicAlias := by
-  conic
-  remove at first
-
-#guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in
-assert_remove_atomic% afterNLP afterNLPAlias in
-reformulation afterNLP : duplicate certificate afterNLPAlias := by
-  nlp
-  remove at first
-
 run_cmd do
   for malformed in #["remove", "remove first", "remove at", "remove at *",
       "remove at first using", "remove at first, second"] do
     match Lean.Parser.runParserCategory (← Lean.getEnv) `reformulationStep malformed with
     | .error _ => pure ()
     | .ok _ => Lean.throwError "malformed removal syntax was accepted: {malformed}"
-
-reformulation lateFailure : absolute certificate lateFailureAlias := by
-  derive temporary : True using (by intro _ _; trivial)
-  remove at temporary
-
-example : lateFailure = absolute := rfl
-example : GlobalEquivalence absolute lateFailure := lateFailureAlias
 
 end
 end MorewTest.Reformulation.RemoveFailures

@@ -3,19 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.ObjectiveBound
-import Morew.Reformulation.Derive
-import Morew.Reformulation.Restrict
-import Morew.Reformulation.Rename
-import Morew.Reformulation.Remove
-import Morew.Reformulation.Occurrence
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import Morew.Reformulation.TerminalConic
-import Morew.Reformulation.TerminalNLP
-import Morew.Reformulation.StepRunner
-import Morew.Reformulation.Substitution
-import Morew.Reformulation.Syntax
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.Step
 import Lean.Elab.MutualDef
 
 /-!
@@ -32,7 +21,7 @@ nonterminal.
 namespace Morew
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
-open Morew.Reformulation.Internal
+open Morew.Elab.Reformulation
 
 private def outputDeclName (ident : TSyntax `ident) : CommandElabM Name := do
   let shortName := ident.getId
@@ -246,47 +235,43 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
     runTermElabM fun sectionVars => do
       let artifact := artifact.replaceFVars state.sectionFVars sectionVars
       let target ← elabTerm appliedTarget none
-      let formType ← whnf (← inferType artifact.form)
-      let represented := formType.getAppArgs.back!
-      let formType := mkAppN formType.getAppFn
-        (formType.getAppArgs.set! (formType.getAppNumArgs - 1) target)
-      let form ← if ← isDefEq (← inferType artifact.form) formType then
-          pure artifact.form
+      let typed := state.typed.replaceFVars state.sectionFVars sectionVars
+      let represented := artifact.representedProblem
+      let equality ← if ← isDefEq represented target then
+          mkEqRefl represented
         else do
           -- Retained dependent definitions can agree with the canonical
           -- target by proved normalization rather than definitional equality.
           let some targetBody ← unfoldDefinition? target
-            | throwErrorAt artifact.ref "cannot inspect the emitted {artifact.kind.description} target"
+            | throwErrorAt artifact.ref
+                "cannot inspect the emitted {artifact.adapter.description} target"
           let normalization ← checkedPointwiseNormalization state.sourceName
             represented targetBody state.normalizationLemmas
-          let equality ← mkAppM ``problemEquality #[represented, target,
+          mkAppM ``problemEquality #[represented, target,
             normalization.objectiveEquality, normalization.feasibleIff]
-          let represents ← mkAppM ``Eq.trans
-            #[← mkProjection artifact.form `represents, equality]
-          let data ← mkProjection artifact.form `data
-          let constructor := match artifact.kind with
-            | .conic => ``Morew.Conic.Form.mk
-            | .nlp => ``Morew.NLP.Form.mk
-          pure <| mkAppN (mkConst constructor formType.getAppFn.constLevels!)
-            (formType.getAppArgs ++ #[data, represents])
+      let form ← artifact.adapter.retarget artifact.form target equality
+      discard <| withRef artifact.ref <|
+        artifact.adapter.validate form target typed.presentation.sense
+      synthesizeSyntheticMVarsNoPostponing
+      let form ← instantiateMVars form
+      let formType ← instantiateMVars (← inferType form)
+      if form.hasMVar || formType.hasMVar then
+        throwErrorAt artifact.ref
+          "emitted {artifact.adapter.description} form contains unresolved metavariables"
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
-      let formIdent := rootIdentFrom artifact.ref (targetName ++ artifact.kind.formSuffix)
-      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ artifact.kind.propertySuffix)
-      let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope
-        formType form
-      -- Elaborate both artifacts in the same section context. Lean does not
-      -- permit mixing a noncomputable data definition and a theorem in one
-      -- mutual group, so instantiate the newly declared form explicitly.
-      -- The form already carries its canonical instances. Source-local finite
-      -- evidence need not be available to typeclass search at emission time.
-      let namedFormType ← whnf (← inferType namedForm)
-      let propertyName := match artifact.kind with
-        | .conic => ``Morew.Conic.Form.isConic
-        | .nlp => ``Morew.NLP.Form.isSmoothNLP
-      let property := mkAppN
-        (mkConst propertyName namedFormType.getAppFn.constLevels!)
-        (namedFormType.getAppArgs ++ #[namedForm])
+      let formIdent := rootIdentFrom artifact.ref (targetName ++ artifact.adapter.formSuffix)
+      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ artifact.adapter.propertySuffix)
+      let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope formType form
+      -- Use the emitted form's stored instances when constructing its property.
+      let property ← artifact.adapter.property namedForm
+      synthesizeSyntheticMVarsNoPostponing
+      let property ← instantiateMVars property
+      if property.hasMVar then
+        throwErrorAt artifact.ref
+          "emitted {artifact.adapter.description} property contains unresolved metavariables"
+      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+        checkWithKernel property
       let propertyType ← inferType property
       let propertyDefinition ← `(Parser.Command.theorem|
         theorem $propertyIdent : $(← exactExpressionSyntax propertyType) :=
@@ -351,9 +336,9 @@ private def elabReformulationCore : CommandElab := fun stx => do
       let dependencies ← (Lean.collectFVars {} source).addDependencies
       for id in dependencies.fvarSet.toArray do
         let name := (← id.getDecl).userName.eraseMacroScopes
-        if template.binders.any (sameUserName ·.name name) then
+        if template.binders.any (sameVisibleName ·.name name) then
           throwError "source parameter `{name}` conflicts with a decision variable; rename the outer parameter"
-        if template.definitions.any (sameUserName ·.name name) then
+        if template.definitions.any (sameVisibleName ·.name name) then
           throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
         unless usedSourceParameterNames.contains name do
           usedSourceParameterNames := usedSourceParameterNames.push name
@@ -400,40 +385,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
   for step in steps do
     if state.typed.status == .terminal then
       throwErrorAt step "cannot apply a reformulation step after a terminal step"
-    let draft ← match step with
-      | `(reformulationStep| substitute $oldName:ident := $replacement:term
-          $[using $provided:term]?) =>
-          prepareSubstitution state step oldName replacement provided
-      | `(reformulationStep| substitute $oldName:ident := $replacement:term
-          via $rule:term) =>
-          prepareSubstitution state step oldName replacement none (some rule)
-      | `(reformulationStep| derive $label:ident : $proposition:term using $provided:term) =>
-          prepareDerive state label proposition provided
-      | `(reformulationStep| restrict $label:ident : $proposition:term using $provided:term) =>
-          prepareRestrict state label proposition provided
-      | `(reformulationStep| rename $source:ident to $destination:ident) =>
-          prepareRenameConstraint state source destination
-      | `(reformulationStep| remove at $selector:ident $[using $provided:term]?) =>
-          prepareRemove state selector provided
-      | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
-          prepareObjectiveBound state step binder label .minimize
-      | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
-          prepareObjectiveBound state step binder label .maximize
-      | `(reformulationStep| epigraph $binder:ident at $selector:boundOccurrence
-          $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
-          prepareOccurrenceBound state step binder selector constraint label provided .upper
-      | `(reformulationStep| hypograph $binder:ident at $selector:boundOccurrence
-          $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
-          prepareOccurrenceBound state step binder selector constraint label provided .lower
-      | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
-          prepareConic state step selector rule
-      | `(reformulationStep| nlp at $selector:ident $[using $rule:term]?) =>
-          prepareNLP state step selector rule
-      | `(reformulationStep| conic) =>
-          prepareTerminalConic state step
-      | `(reformulationStep| nlp) =>
-          prepareTerminalNLP state step
-      | _ => throwUnsupportedSyntax
+    let draft ← prepareStep state step
     let (result, materialization) ← runTypedStepPlan state draft
     state ← commitSurfaceStep state result materialization
 
@@ -451,8 +403,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
     outputRequests := outputRequests.push companion.nameRequest
   if let some artifact := state.terminalArtifact? then
     outputRequests := outputRequests ++ #[
-      { name := targetDeclName ++ artifact.kind.formSuffix, ref := artifact.ref },
-      { name := targetDeclName ++ artifact.kind.propertySuffix, ref := artifact.ref }]
+      { name := targetDeclName ++ artifact.adapter.formSuffix, ref := artifact.ref },
+      { name := targetDeclName ++ artifact.adapter.propertySuffix, ref := artifact.ref }]
   match Morew.Elab.Reformulation.preflightDeclarationNames
       (← getEnv) outputRequests with
   | .ok _ => pure ()

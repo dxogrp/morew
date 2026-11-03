@@ -3,21 +3,22 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Append
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.Rows
 
 /-!
 # Certified restrictions
 
 Append a constraint using an explicit improvement from the current problem to
-its restriction. This may discard feasible points; the certificate supplies
+its restriction. This may discard feasible points; the proof supplies
 retained representatives with objectives no worse in the optimization order.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def restrictStyle : Append.Style := {
+private def restrictStyle : Rows.Append.Style := {
   description := "restriction"
   certificateKind := `restrictedConstraint
   family := "restricted"
@@ -32,24 +33,24 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
   runTermElabM fun sectionFVars => withoutErrToSorry do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
-      Append.elaboratePredicate restrictStyle state typed proposition
+      Rows.Append.elaboratePredicate restrictStyle state typed proposition
     let natural ← mkAppM ``Morew.Problem.addConstraint #[typed.semantic, predicate]
     let expected ← mkAppM ``Morew.GlobalImprovement #[typed.semantic, natural]
     -- The repair concerns the complete current problem. Neither temporary
     -- model bindings nor the proposed restriction enter its source evidence.
     let improvement ← withRef provided do
-      let certificate ← elabTermEnsuringType provided expected
+      let proof ← elabTermEnsuringType provided expected
       synthesizeSyntheticMVarsNoPostponing
       if (← getThe Core.State).messages.hasErrors then throwAbortTerm
-      let certificate ← instantiateMVars certificate
-      if certificate.hasMVar || certificate.hasSorry then
+      let proof ← instantiateMVars proof
+      if proof.hasMVar || proof.hasSorry then
         throwError "restriction certificate contains unresolved metavariables or placeholders"
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-        checkWithKernel certificate
-      pure certificate
+        checkWithKernel proof
+      pure proof
     let addition ← mkAppM ``Morew.restrictionEquivalence
       #[typed.semantic, predicate, improvement]
-    Append.finish restrictStyle state typed name proposition
+    Rows.Append.finish restrictStyle state typed name proposition
       predicate propositionSyntax addition
 
 /-- Preflight the explicit label before elaborating a restriction or its certificate. -/
@@ -62,4 +63,11 @@ def prepareRestrict (state : ReformState) (label : TSyntax `ident)
     materialize := materializeRestrict state label proposition provided
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.restrictStep]
+private def elabRestrict : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| restrict $label:ident : $proposition:term using $provided:term) =>
+      prepareRestrict state label proposition provided
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

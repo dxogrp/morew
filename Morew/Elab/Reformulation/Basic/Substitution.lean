@@ -3,12 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Atom
 import Morew.Elab.Expr
 import Morew.Elab.Substitution.Coordinates
 import Morew.Elab.Substitution.Match
 import Morew.Elab.Substitution.Rules
-import Morew.Reformulation.Presentation
+import Morew.Elab.Reformulation.View
 
 /-!
 # Substitution steps
@@ -16,7 +17,7 @@ import Morew.Reformulation.Presentation
 Inference, rule selection, and proof-producing substitution materialization.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
@@ -103,7 +104,7 @@ private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Nam
       return (← fvar.fvarId!.getDecl).userName.eraseMacroScopes
   let env ← getEnv
   let candidates := (collectIdents replacement).toList.filter fun name =>
-    !name.isAnonymous && !sameUserName name oldName &&
+    !name.isAnonymous && !sameVisibleName name oldName &&
       !(localNames.any fun localName => localName.isPrefixOf name.eraseMacroScopes) &&
       !env.contains name
   let fresh := candidates.filter fun name =>
@@ -115,7 +116,7 @@ private def newBinderCandidates (view : Morew.Syntax.ProblemView) (oldName : Nam
   pure (if fresh.isEmpty then candidates else fresh).toArray
 
 private def findBinderIndex (view : Morew.Syntax.ProblemView) (name : Name) : Option Nat :=
-  view.binders.findIdx? fun binder => sameUserName binder.name name
+  view.binders.findIdx? fun binder => sameVisibleName binder.name name
 
 private def inferNewBinder (state : ReformState) (oldName : Name)
     (binderIndex : Nat) (replacement : TSyntax `term) : CommandElabM Name := do
@@ -205,13 +206,13 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
               (names : Array (FVarId × Name))
               (rewritten : Array Morew.Syntax.DefinitionView) :
               TermElabM Morew.Syntax.ProblemView := do
-            let substitute (expression : Expr) := expression.replaceFVars oldBindings newBindings
+            let substExpr (expression : Expr) := expression.replaceFVars oldBindings newBindings
             match remaining with
             | [] =>
-                let objective ← delabPresentationTerm (substitute objective) names
+                let objective ← delabPresentationTerm (substExpr objective) names
                 let constraints ← state.view.constraints.mapIdxM fun index constraint => do
                   return { constraint with
-                    proposition := ← delabPresentationTerm (substitute constraints[index]!) names }
+                    proposition := ← delabPresentationTerm (substExpr constraints[index]!) names }
                 let oldBinder := state.view.binders[binderIndex]!
                 return { state.view with
                   binders := state.view.binders.set! binderIndex { oldBinder with name := newName }
@@ -222,8 +223,8 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
                 let declaration ← original.fvarId!.getDecl
                 let some value := declaration.value?
                   | throwError "internal error: a model-local definition is not let-bound"
-                let type := substitute declaration.type
-                let value := substitute value
+                let type := substExpr declaration.type
+                let value := substExpr value
                 let typeSyntax ← delabPresentationTerm type names
                 let view := { view with
                   value := ← delabPresentationTerm value names
@@ -375,7 +376,7 @@ private def parameterizationCertificate (state : ReformState)
             let rule ← elabTermEnsuringType ruleSyntax expectedRuleType
             synthesizeSyntheticMVarsNoPostponing
             pure (some (← instantiateMVars rule), none)
-      let certificate ← withLocalDeclD `sourcePoint typed.semanticDomainType fun point => do
+      let proof ← withLocalDeclD `sourcePoint typed.semanticDomainType fun point => do
         let feasibleType ← mkAppM ``Morew.Problem.feasible #[typed.semantic, point]
         withLocalDeclD `sourceFeasible feasibleType fun feasible => do
           let canonicalEvidence ← mkAppM ``Iff.mp
@@ -385,13 +386,13 @@ private def parameterizationCertificate (state : ReformState)
           let selected ← Morew.Elab.Substitution.Registry.structural (mkProj ``Prod 1 coordinates)
           let accept (result : Morew.Elab.Substitution.Match.Result) : MetaM Expr := do
             let coverage ← mkLambdaFVars #[point, feasible] result.rangeProof
-            let certificate ← mkAppM ``Morew.CoordinateParameterization.toFeasibleSurjection
+            let proof ← mkAppM ``Morew.CoordinateParameterization.toFeasibleSurjection
               #[result.rule, typed.semantic, split, split, coverage]
             let expected ← mkAppM ``Morew.FeasibleSurjection #[typed.semantic, fullMap]
-            unless ← isDefEq (← inferType certificate) expected do
+            unless ← isDefEq (← inferType proof) expected do
               throwError "coordinate parameterization does not preserve the complete decision tuple"
-            checkWithKernel certificate
-            return certificate
+            checkWithKernel proof
+            return proof
           match selection with
           | (some rule, _) =>
             Morew.Elab.Substitution.Match.rule
@@ -404,9 +405,9 @@ private def parameterizationCertificate (state : ReformState)
               map point retained selected canonicalEvidence accept
       -- Store the checked term once; command rollback also removes this helper.
       let name ← mkAuxDeclName (kind := `substitution)
-      let certificate ← mkAuxDefinitionFor name certificate (zetaDelta := true) (compile := false)
+      let proof ← mkAuxDefinitionFor name proof (zetaDelta := true) (compile := false)
       modifyEnv (addNoncomputable · name)
-      exactExpressionSyntax certificate
+      exactExpressionSyntax proof
   catch
     | .error _ message =>
       throwErrorAt ref
@@ -426,21 +427,21 @@ private def explicitSubstitutionCertificate (state : ReformState)
     synthesizeSyntheticMVarsNoPostponing
     let map ← instantiateMVars map
     let expected ← mkAppM ``Morew.FeasibleSurjection #[typed.semantic, map]
-    let certificate ← elabTermEnsuringType provided expected
+    let proof ← elabTermEnsuringType provided expected
     synthesizeSyntheticMVarsNoPostponing
     if (← getThe Core.State).messages.hasErrors then throwAbortTerm
-    let certificate ← instantiateMVars certificate
-    if certificate.hasMVar || certificate.hasSorry then
+    let proof ← instantiateMVars proof
+    if proof.hasMVar || proof.hasSorry then
       throwErrorAt provided "substitution coverage contains incomplete evidence"
     withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-      checkWithKernel certificate
+      checkWithKernel proof
     let name ← mkAuxDeclName (kind := `substitution)
     -- Retain the checked source and complete map, even when the supplied
     -- theorem's inferred type spells that source through another declaration.
-    let certificate ← mkAuxDefinition name (← instantiateMVars expected) certificate
+    let proof ← mkAuxDefinition name (← instantiateMVars expected) proof
       (zetaDelta := true) (compile := false)
     modifyEnv (addNoncomputable · name)
-    exactExpressionSyntax certificate
+    exactExpressionSyntax proof
 
 private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     (replacement : TSyntax `term)
@@ -574,4 +575,19 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
         oldName binderIndex allocation
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.substituteStep]
+private def elabSubstitution : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| substitute $oldName:ident := $replacement:term
+      $[using $provided:term]?) =>
+      prepareSubstitution state step oldName replacement provided
+  | _ => throwUnsupportedSyntax
+
+@[morew_reformulation_step Morew.substituteViaStep]
+private def elabSubstitutionVia : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| substitute $oldName:ident := $replacement:term via $rule:term) =>
+      prepareSubstitution state step oldName replacement none (some rule)
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

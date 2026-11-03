@@ -3,13 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation
+import Morew.Elab.Reformulation.Runner
 import Mathlib.Data.Nat.Basic
 
 /-!
-# Typed-runner entry-point compatibility
+# Typed runner imports
 
-The established narrow import must expose name preflight, typed presentations,
+The typed runner module exposes name preflight, typed presentations,
 and certificate operations without importing the surface command.
 -/
 
@@ -23,7 +23,7 @@ run_cmd do
   for name in #[``NameInventory, ``PresentationState, ``PresentationDelta,
       ``StepPlan.run, ``RunnerState.commit, ``RunnerState.finalCertificate] do
     unless env.contains name do
-      throwError "the typed-runner entry point did not retain {name}"
+      throwError "the typed-runner entry point did not expose {name}"
   let requests : Array NameRequest := #[
     { id := 0, kind := .generatedBinderFamily, requested := `point }
   ]
@@ -31,7 +31,7 @@ run_cmd do
       preflightNameRequests { decisionBinders := #[`point] } requests
     | throwError "name preflight failed through the typed-runner entry point"
   unless allocation.findName? 0 == some `point_1 do
-    throwError "name preflight did not retain generated-name freshening"
+    throwError "name preflight did not expose generated-name freshening"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let nat := mkConst ``Nat

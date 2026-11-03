@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Rename
-import Morew.Reformulation.StepRunner
+import Morew.Elab.Reformulation.Basic.Rename
+import Morew.Elab.Reformulation.Step
 import MorewTest.Environment
 
 /-!
@@ -18,7 +18,7 @@ surface command's fixed public runner.
 namespace MorewTest.Reformulation.RenameIsolation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-open Morew Morew.Reformulation.Internal
+open Morew Morew.Elab.Reformulation
 
 def source :=
   problem (n : Nat)

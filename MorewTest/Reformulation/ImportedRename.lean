@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.Rename
+import Morew.Reformulation.Conic
+import MorewTest.Reformulation.RenameBackends
 
 /-! # Renamed labels and exact presentation replay survive module imports -/
 

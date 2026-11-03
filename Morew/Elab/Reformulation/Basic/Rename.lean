@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Replace
+import Morew.Elab.Reformulation.Registry
+import Morew.Elab.Reformulation.Rows
 
 /-!
 # Constraint-label renaming
@@ -13,7 +14,7 @@ natural semantic problem. The shared runner owns exact-name preflight,
 certificate composition, and atomic commitment.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Elab Lean.Elab.Command
 
@@ -48,8 +49,8 @@ private def materializeRenameConstraint (state : ReformState) (index : Nat)
 An existing row may keep its visible name, including across macro scopes. -/
 def prepareRenameConstraint (state : ReformState)
     (source destination : TSyntax `ident) : CommandElabM SurfaceStepDraft := do
-  let index ← Replace.findConstraint state source
-  let unchanged := sameUserName state.view.constraints[index]!.name destination.getId
+  let index ← Rows.findConstraint state source
+  let unchanged := sameVisibleName state.view.constraints[index]!.name destination.getId
   return {
     nameRequests := if unchanged then #[] else #[{
       id := 0, kind := .explicitConstraintLabel
@@ -57,4 +58,11 @@ def prepareRenameConstraint (state : ReformState)
     materialize := materializeRenameConstraint state index destination unchanged
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.renameConstraintStep]
+private def elabRename : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| rename $source:ident to $destination:ident) =>
+      prepareRenameConstraint state source destination
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

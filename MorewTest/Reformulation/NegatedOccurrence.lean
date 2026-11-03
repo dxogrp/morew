@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Diagnostics
 import MorewTest.Environment
 
@@ -46,13 +46,6 @@ info: problem (x value : ℝ)
 #guard_msgs in
 #printp logBound
 
-reformulation logConic : logBound := by conic
-
-example : GlobalEquivalence logSource logConic :=
-  logBound.equivalence.trans logConic.equivalence
-example : IsConic logConic := logConic.isConic
-example : logConic.conicForm.data.toProblem = logConic := logConic.conicForm.represents
-
 def absSource := problem (x : ℝ) maximize -|x|
 
 reformulation absBound : absSource := by
@@ -61,11 +54,6 @@ reformulation absBound : absSource := by
 example : GlobalEquivalence absSource absBound := absBound.equivalence
 example (x magnitude : ℝ) : absBound.objective (x, magnitude) = -magnitude := rfl
 example (x magnitude : ℝ) : absBound.feasible (x, magnitude) ↔ |x| ≤ magnitude := Iff.rfl
-
-reformulation absConic : absBound := by conic
-
-example : IsConic absConic := absConic.isConic
-example : absConic.conicForm.data.sense = .maximize := rfl
 
 def compoundSource :=
   problem (x y : ℝ)
@@ -80,13 +68,6 @@ reformulation compoundBound : compoundSource := by
 example (x y a b : ℝ) : compoundBound.objective (((x, y), a), b) = -(a + b) := rfl
 example (x y a b : ℝ) : compoundBound.feasible (((x, y), a), b) ↔
     1 ≤ x ∧ a ≤ Real.log x ∧ b ≤ min y 1 := Iff.rfl
-
-reformulation compoundConic : compoundBound := by conic
-
-example : GlobalEquivalence compoundSource compoundConic :=
-  compoundBound.equivalence.trans compoundConic.equivalence
-example : IsConic compoundConic := compoundConic.isConic
-example : compoundConic.conicForm.data.rowCount = 4 := rfl
 
 def nestedSource := problem (x : ℝ) minimize - - -Real.log x
 

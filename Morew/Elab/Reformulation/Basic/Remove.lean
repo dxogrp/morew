@@ -3,8 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Remove
-import Morew.Reformulation.Replace
+import Morew.Elab.Reformulation.Rows
 
 /-!
 # User-selected constraint removal
@@ -14,11 +15,11 @@ The shared replacement materializer establishes a fresh canonical checkpoint;
 context-dependent redundancy is not an unconditional simplification lemma.
 -/
 
-namespace Morew.Reformulation.Internal
+namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def removalStyle : Replace.Style := {
+private def removalStyle : Rows.Style := {
   family := "removed"
   diagnostic := "remove"
   certificateKind := `removedConstraint
@@ -54,21 +55,28 @@ private def materializeRemove (state : ReformState) (selector : TSyntax `ident)
     withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
       let replacement ← Morew.Elab.Reformulation.Remove.applyRemoval
         typed.presentation index implied
-      Replace.finish removalStyle state typed index {
+      Rows.finish removalStyle state typed index {
         auxiliary? := none
         nextDomain := typed.semanticDomainType
         rowPredicates := #[]
-        certificate := implied
+        «certificate» := implied
         replacement
       } allocation
 
 /-- Select exactly one current constraint. No names or auxiliaries are allocated. -/
 def prepareRemove (state : ReformState) (selector : TSyntax `ident)
     (provided? : Option (TSyntax `term)) : CommandElabM SurfaceStepDraft := do
-  let index ← Replace.findConstraint state selector
+  let index ← Rows.findConstraint state selector
   return {
     nameRequests := #[]
     materialize := materializeRemove state selector index provided?
   }
 
-end Morew.Reformulation.Internal
+@[morew_reformulation_step Morew.removeStep]
+private def elabRemove : StepHandler := fun state step => do
+  match step with
+  | `(reformulationStep| remove at $selector:ident $[using $provided:term]?) =>
+      prepareRemove state selector provided
+  | _ => throwUnsupportedSyntax
+
+end Morew.Elab.Reformulation

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Conic
 import MorewTest.Diagnostics
 
 /-!
@@ -76,7 +76,7 @@ reformulation wrongRecord : source certificate wrongRecordAlias := by
 predicate also matches the ordinary automatic absolute-value rule. -/
 def guardedLift (_ : True) : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) :=
   ExactConstraintLift.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Morew.Conic.Polyhedral.abs_le_iff x 3)
+    (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
 
 /-- error: constraint `bound`: failed to elaborate exact rule: exact rule contains unresolved metavariables -/
 #guard_msgs in
@@ -129,7 +129,7 @@ def booleanLift : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) where
   Auxiliary := Bool
   target x _ := x ≤ 3 ∧ -x ≤ 3
   source_iff_exists x := by
-    simp [Morew.Conic.Polyhedral.abs_le_iff]
+    simp [Morew.Rewrite.Polyhedral.abs_le_iff]
 
 /-- error: constraint `bound`: unsupported exact-lift decision space -/
 #guard_msgs (substring := true) in

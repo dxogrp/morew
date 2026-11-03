@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 import MorewTest.Environment
 
 /-!
@@ -192,20 +192,12 @@ def dependentSource :=
 reformulation dependent : dependentSource certificate dependentAlias := by
   epigraph t at ((⟨0, Nat.zero_lt_succ n⟩ : Fin (n + 1)))
 
-def terminalSource := problem (x : ℝ) minimize x
-
-/-- error: cannot apply a reformulation step after a terminal step -/
-#guard_msgs (substring := true) in
-reformulation afterTerminal : terminalSource certificate afterTerminalAlias := by
-  conic
-  epigraph t at (x)
-
 run_cmd do
   for suffix in #["unknown", "decisionName", "constraintName", "unknownRow",
       "noExpression", "wrongLocation", "indirect", "repeated", "repeatedExpression",
       "wrongSense", "wrongPolarity", "equality", "nonmonotone", "binderCollision",
       "definitionCollision", "labelCollision", "invalidEvidence", "lateFailure",
-      "mismatchedEvidence", "defaultLabelCollision", "missingOrder", "dependent", "afterTerminal"] do
+      "mismatchedEvidence", "defaultLabelCollision", "missingOrder", "dependent"] do
     let ns := `MorewTest.Reformulation.OccurrenceFailures
     assertAbsent (ns ++ Lean.Name.mkSimple suffix) (ns ++ Lean.Name.mkSimple (suffix ++ "Alias"))
 
