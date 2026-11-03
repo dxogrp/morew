@@ -49,8 +49,8 @@ check: lint ## run the local Lean build, lint, and kernel checks
 docs: ## build the documentation guide, examples, and API reference
 	@./scripts/build_docs.sh
 
-.PHONY: serve-docs
-serve-docs: ## serve generated documentation at http://127.0.0.1:8000
+.PHONY: preview
+preview: ## preview generated documentation at http://127.0.0.1:8000
 	@python3 -m http.server --bind 127.0.0.1 --directory build/docs 8000
 
 .PHONY: clean

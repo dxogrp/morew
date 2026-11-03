@@ -53,10 +53,8 @@ Build and preview the guide, examples, and API reference from the repository roo
 
 ```sh
 make docs
-make serve-docs
+make preview
 ```
-
-Open <http://127.0.0.1:8000>.
 
 ## License
 
