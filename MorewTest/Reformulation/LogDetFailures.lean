@@ -223,10 +223,6 @@ def validSource :=
       domain : X.toMatrix.PosDef
       bound : t ≤ Fn.logDet X.toMatrix
 
-#guard_error_fragments ["unknown or stale constraint label `absent`"] in
-assert_logdet_atomic%
-reformulation rejectedLabel : validSource := by conic at absent
-
 #guard_error_fragments ["unknown or stale constraint label `bound`"] in
 assert_logdet_atomic%
 reformulation rejectedStaleLabel : validSource := by
@@ -326,7 +322,7 @@ assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedNative
   rejectedSingular rejectedPositiveDeterminant rejectedIndefinite rejectedWrongMatrix
   rejectedZeroMargin rejectedWitness rejectedNonlinearMatrix rejectedNonlinearBound
   rejectedReverse rejectedEquality rejectedSymmetry rejectedEmpty rejectedEmptyAutomatic
-  rejectedEmptyTerminal rejectedOrder rejectedNegation rejectedLabel rejectedStaleLabel
+  rejectedEmptyTerminal rejectedOrder rejectedNegation rejectedStaleLabel
   rejectedAmbiguous rejectedNativeScalarAmbiguity
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command in

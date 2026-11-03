@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Diagnostics
+import MorewTest.Environment
 
 /-!
 # Targeted polyhedral diagnostics and rollback
@@ -28,6 +29,29 @@ private def assertAbsent (target aliasName : Lean.Name) :
   if (Morew.Syntax.getProblemView? env target).isSome then
     Lean.throwError "failed conic rewrite registered presentation metadata"
 
+elab "assert_polyhedral_atomic% " nested:command : command => do
+  let before ← Lean.getEnv
+  let `(command| reformulation $target:ident : $_source:ident
+      $[certificate $aliasName:ident]? := by $_steps:reformulationStep*) := nested
+    | Lean.throwError "expected a reformulation command"
+  let namespaceName ← Lean.getCurrNamespace
+  let targetName := namespaceName ++ target.getId
+  let names := #[targetName, targetName ++ `equivalence] ++
+    (match aliasName with
+      | some aliasName => #[namespaceName ++ aliasName.getId]
+      | none => #[])
+  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  let after ← Lean.getEnv
+  unless MorewTest.sameLocalDeclarationNames before after do
+    Lean.throwError "failed conic label lookup changed local declarations"
+  for name in names do
+    if after.contains name then
+      Lean.throwError "failed conic label lookup emitted {name}"
+    if (Morew.Syntax.getProblemView? after name).isSome ||
+        (Morew.Syntax.getProblemDisplayView? after name).isSome ||
+        (Morew.Syntax.getProblemPrintPresentation? after name).isSome then
+      Lean.throwError "failed conic label lookup registered presentation metadata for {name}"
+
 def source :=
   problem (x : ℝ)
     minimize x
@@ -36,6 +60,7 @@ def source :=
 
 /-- error: unknown or stale constraint label `missing` -/
 #guard_msgs in
+assert_polyhedral_atomic%
 reformulation unknown : source certificate unknownAlias := by
   conic at missing
 

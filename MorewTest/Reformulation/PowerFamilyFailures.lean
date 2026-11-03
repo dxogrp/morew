@@ -163,10 +163,6 @@ def nonmonotone :=
 reformulation nonmonotoneRejected : nonmonotone := by
   conic at inverse
 
-#guard_error_fragments ["missing"] in
-reformulation unknownLabel : (normSource 3) := by
-  conic at missing
-
 def lateFailure :=
   problem (x : Fin 2 → ℝ) (t : ℝ)
     minimize t

@@ -73,10 +73,6 @@ def bilinearSource :=
 assert_psd_atomic%
 reformulation bilinear : bilinearSource := by conic
 
-#guard_error_fragments ["unknown or stale constraint label `absent`"] in
-assert_psd_atomic%
-reformulation unknownLabel : diagonalSource := by conic at absent
-
 namespace MissingPD
 variable (A : SymmetricMatrix 1)
 
