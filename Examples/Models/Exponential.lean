@@ -9,6 +9,10 @@ open Morew
 
 /-!
 # Exponential-cone examples
+
+Relative entropy uses a nonnegative numerator and a positive denominator.
+Softplus needs no domain constraint; its lower bound defines the feasible set.
+Both objectives receive epigraph bounds and complete conic certificates.
 -/
 
 namespace Examples.Models.Exponential
@@ -24,13 +28,15 @@ def p :=
       -- This retained lower bound certifies the positive domain required by the rewrite.
       denominator : 1 ≤ b
 
-reformulation lowered : p := by
+reformulation entropyConic : p := by
   epigraph t as entropyBound
   conic at entropyBound
+  conic
 
 #printp p
-#printp lowered
-example : GlobalEquivalence p lowered := lowered.equivalence
+#printp entropyConic
+example : GlobalEquivalence p entropyConic := entropyConic.equivalence
+example : IsConic entropyConic := entropyConic.isConic
 
 end
 end RelativeEntropy
@@ -44,13 +50,27 @@ def p :=
     subject to
       lower : -2 ≤ x
 
-reformulation lowered : p := by
+-- Rewrite the selected epigraph constraint before certifying the whole problem.
+reformulation selectedConic : p := by
   epigraph t as loss
   conic at loss
-  epigraph value as objectiveBound
+  conic
 
-#printp lowered
-example : GlobalEquivalence p lowered := lowered.equivalence
+#printp selectedConic
+example : GlobalEquivalence p selectedConic := selectedConic.equivalence
+example : IsConic selectedConic := selectedConic.isConic
+
+-- The final `conic` command can also perform the softplus rewrite automatically.
+reformulation automaticConic : p := by
+  epigraph t as loss
+  conic
+
+#printp automaticConic
+#check automaticConic.conicForm.data
+example : GlobalEquivalence p automaticConic := automaticConic.equivalence
+example : automaticConic.conicForm.data.toProblem = automaticConic :=
+  automaticConic.conicForm.represents
+example : IsConic automaticConic := automaticConic.isConic
 
 end
 end Softplus

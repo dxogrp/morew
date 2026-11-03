@@ -8,11 +8,12 @@ import Morew.Reformulation.Conic
 open Morew
 
 /-!
-# Exact power-cone reformulations
+# Power-cone models
 
-Real exponents remain exact. Numeric range conditions are checked automatically;
-symbolic exponents use independent hypotheses such as `hp : 1 < p`.
-Base-domain evidence comes from retained constraints.
+Scalar powers, weighted means, geometric means, and inverse products have
+exact power-cone formulations. Retained constraints supply nonnegative or
+positive base domains. Numeric exponent conditions are checked automatically;
+symbolic cone exponents retain their explicit range assumptions.
 -/
 
 namespace Examples.Models.Power
@@ -35,6 +36,7 @@ reformulation ready : source := by
 #printp ready
 
 example : GlobalEquivalence source ready := ready.equivalence
+example : IsConic ready := ready.isConic
 
 end ConvexPower
 
@@ -57,6 +59,7 @@ reformulation ready : source := by
 #printp ready
 
 example : GlobalEquivalence source ready := ready.equivalence
+example : IsConic ready := ready.isConic
 
 end WeightedMean
 
@@ -75,6 +78,7 @@ reformulation ready : source := by
 
 #printp ready
 example : GlobalEquivalence source ready := ready.equivalence
+example : IsConic ready := ready.isConic
 
 end NegativePower
 
@@ -94,10 +98,55 @@ include hα in
 reformulation ready : (source α) := by
   conic
 
+#printp ready
+example : GlobalEquivalence (source α) (ready α) := ready.equivalence α
 example : (ready.conicForm α hα).data.toProblem = ready α :=
   (ready.conicForm α hα).represents
+example : IsConic (ready α) := ready.isConic α hα
 
 end DirectMembership
+
+namespace GeometricMean
+
+def source :=
+  problem (x : Fin 3 → ℝ)
+    maximize Fn.geoMean x
+    subject to
+      domain : 0 ≤ x
+      budget : ∑ i, x i ≤ 3
+
+reformulation ready : source := by
+  hypograph t as mean
+  conic
+
+-- Prefix means connect the coordinates in their original order.
+#printp ready
+example : GlobalEquivalence source ready := ready.equivalence
+example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
+example : IsConic ready := ready.isConic
+
+end GeometricMean
+
+namespace InverseProduct
+
+def source :=
+  problem (x : Fin 3 → ℝ)
+    minimize Fn.invProd x
+    subject to
+      -- This retained margin proves that every coordinate is strictly positive.
+      domain : (fun _ => 1) ≤ x
+      budget : ∑ i, x i ≤ 6
+
+reformulation ready : source := by
+  epigraph t as inverse
+  conic
+
+#printp ready
+example : GlobalEquivalence source ready := ready.equivalence
+example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
+example : IsConic ready := ready.isConic
+
+end InverseProduct
 
 end
 end Examples.Models.Power

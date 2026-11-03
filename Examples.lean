@@ -10,7 +10,6 @@ import Examples.Models.LogDet
 import Examples.Models.Norms
 import Examples.Models.PSD
 import Examples.Models.Power
-import Examples.Models.PowerFamilies
 import Examples.Models.SecondOrder
 import Examples.Models.Spectral
 import Examples.Transformations.Derive
