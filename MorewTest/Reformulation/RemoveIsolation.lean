@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Basic
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
 /-! # Removal proof completeness, isolated attempts, and the configured runner -/

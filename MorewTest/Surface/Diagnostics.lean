@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Basic
 import MorewTest.Surface.Fixtures
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Surface diagnostics and rollback

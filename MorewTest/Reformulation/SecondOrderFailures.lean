@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Second-order failure diagnostics and atomicity

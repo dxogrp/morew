@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 
 /-! Negation and comparison rewrites respect the operations captured by each problem. -/
 
