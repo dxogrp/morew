@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew
 import MorewTest.Diagnostics
 import MorewTest.Environment
+import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 
 /-!
 # Custom exact certificates with second-order targets
@@ -28,8 +29,6 @@ private theorem scalarCone (t : ℝ) :
 
 def userIdentity (x : ℝ) : ℝ := x
 
-def userSquare (x : ℝ) : ℝ := x ^ 2
-
 def graphRule : GraphRepresentation userIdentity where
   Auxiliary := Unit
   target x y _ :=
@@ -51,16 +50,6 @@ def hypographRule : HypographRepresentation userIdentity where
   target x t _ := (x - t, (0 : Fin 0 → ℝ)) ∈ (Cone.secondOrder 0).carrier
   source_iff_exists x t := by
     simp only [userIdentity, scalarCone, sub_nonneg, exists_const]
-
-def auxiliaryRule : ExactConstraintLift
-    (fun point : ℝ × ℝ => userSquare point.1 ≤ point.2) where
-  Auxiliary := ℝ
-  target point u := u = point.1 ∧
-    (let bound := point.2
-     True ∧ (bound, 1 / 2, ![u]) ∈ (Cone.rotatedSecondOrder 1).carrier)
-  source_iff_exists point := by
-    simp only [true_and, exists_eq_left, userSquare]
-    exact SecondOrder.square_le_iff point.1 point.2
 
 def graphSource :=
   problem (x y : ℝ)
@@ -104,14 +93,6 @@ example : GlobalEquivalence hypographSource hypographTarget := hypographTarget.e
 
 example (x y : ℝ) : hypographTarget.feasible (x, y) ↔
     (x - y, (0 : Fin 0 → ℝ)) ∈ (Cone.secondOrder 0).carrier := Iff.rfl
-
-def source :=
-  problem (x y : ℝ)
-    minimize x + y
-    subject to
-      before : Real.exp x ≤ 100
-      auxiliary : userSquare x ≤ y
-      after : y ≤ 10
 
 reformulation target : source := by
   conic at auxiliary using auxiliaryRule

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
-import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.PrintSupport
 
 /-! # Named vector norms reuse exact conic and smooth-NLP representations -/
 

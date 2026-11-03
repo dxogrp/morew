@@ -3,9 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.MatrixFraction
-import MorewTest.Reformulation.Spectral
-import MorewTest.Conic.Form
+import MorewTest.Reformulation.MatrixFraction.Defined
+import MorewTest.Reformulation.Spectral.Defined
+import MorewTest.Conic.Form.Defined
 
 /-!
 # Imported spectral and matrix-fraction certificates

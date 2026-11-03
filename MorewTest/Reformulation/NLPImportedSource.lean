@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Syntax
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-! # Separately compiled problem families used by targeted NLP regressions -/
 

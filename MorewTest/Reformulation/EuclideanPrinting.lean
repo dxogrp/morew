@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.PrintDetails
+import Morew.Reformulation
+import MorewTest.Reformulation.PrintSupport
 
 /-!
 # Euclidean coordinates in generated problem presentations

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.ImportCompatibility.PowerChainPrinting.Defined
-import MorewTest.Reformulation.PowerChainPrinting
+import MorewTest.Reformulation.PrintSupport
 
 /-!
 # Imported mathematical chains after specialization and continuation

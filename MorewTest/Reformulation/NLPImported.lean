@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Reformulation
 import MorewTest.Reformulation.NLPImportedSource
 
 /-! # Applied imported sources preserve definitions, parameters, and presentation -/

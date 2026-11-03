@@ -3,7 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.PSD
+import Morew.Reformulation
+import MorewTest.Diagnostics
+import MorewTest.Environment
+import MorewTest.Reformulation.PSD.Fixtures
 
 /-!
 # PSD diagnostic context and transactional failure
