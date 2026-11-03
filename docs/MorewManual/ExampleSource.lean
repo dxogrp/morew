@@ -60,8 +60,13 @@ private def normalizeModule (source : LitMod) : LitMod := Id.run do
     contents := contents.push { item with code }
   return { source with contents }
 
-private def renderExample (json title : String) : Verso.Doc.VersoDoc Manual :=
-  modToPage! (normalizeModule (loadJsonString! json)) #[.text title] title none
+private def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc Manual :=
+  let doc := modToPage! (normalizeModule (loadJsonString! json)) #[.text title] title none
+  { doc with construct := fun context =>
+      let part := doc.construct context
+      let sourceLink := Verso.Doc.Block.para #[
+        .text "Source: ", .link #[.code sourcePath] ("source/" ++ sourcePath)]
+      { part with content := #[sourceLink] ++ part.content } }
 
 open Lean Lean.Elab Term Verso.Doc.Elab Verso.ArgParse
 open Lean.Doc.Syntax
@@ -78,8 +83,10 @@ meta def includeExample : PartCommand
   | `(block|command{includeExample $args*}) => do
     let { modName, title } ← parseThe ExampleConfig (← parseArgs args)
     let json ← loadModuleJson "." modName.getId.toString
+    let sourcePath := modName.getId.toString.replace "." "/" ++ ".lean"
     let name ← mkFreshUserName (modName.getId ++ `examplePage)
-    let value ← elabTerm (← ``(renderExample $(quote json) $(quote title.getString))) none
+    let value ← elabTerm (← ``(renderExample $(quote json) $(quote title.getString)
+      $(quote sourcePath))) none
     withOptions (Lean.Compiler.LCNF.compiler.extract_closed.set · false) do
       addAndCompile <| .defnDecl {
         name, levelParams := [], type := ← Lean.Meta.inferType value, value,
