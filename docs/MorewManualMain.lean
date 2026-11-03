@@ -7,5 +7,5 @@ def main := manualMain (%doc MorewManual) (config := {
   emitTeX := false
   emitHtmlSingle := .no
   emitHtmlMulti := .immediately
-  htmlDepth := 1
+  htmlDepth := 3
 })

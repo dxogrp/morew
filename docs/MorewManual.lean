@@ -4,6 +4,7 @@ import MorewManual.Transformations
 import MorewManual.Models
 import MorewManual.Certificates
 import MorewManual.Advanced
+import MorewManual.Examples
 import MorewManual.API
 
 open Verso.Genre Manual
@@ -14,8 +15,6 @@ Morew is a mathematical optimization rewriting system in Lean.
 
 Start with {ref "getting-started"}[Getting started], then read
 {ref "transformations"}[Transformations] and {ref "certificates"}[Certificates].
-The [examples](examples/) present complete programs with their printed results.
-The [API reference](api/) lists declarations and their types.
 
 {include 0 MorewManual.GettingStarted}
 
@@ -26,5 +25,7 @@ The [API reference](api/) lists declarations and their types.
 {include 0 MorewManual.Certificates}
 
 {include 0 MorewManual.Advanced}
+
+{include 0 MorewManual.Examples}
 
 {include 0 MorewManual.API}
