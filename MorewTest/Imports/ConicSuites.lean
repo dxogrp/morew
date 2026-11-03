@@ -9,6 +9,7 @@ import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.PSD
 import MorewTest.Reformulation.Spectral
 import MorewTest.Reformulation.PowerFamilies
+import MorewTest.Reformulation.PowerNormFamilies
 import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.LogDet.Domains
 

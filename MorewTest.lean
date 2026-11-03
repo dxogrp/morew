@@ -215,6 +215,7 @@ import MorewTest.Reformulation.PowerChainPrinting
 import MorewTest.Reformulation.PowerChainRecognition
 import MorewTest.Reformulation.PowerFamilies
 import MorewTest.Reformulation.PowerFamilyFailures
+import MorewTest.Reformulation.PowerNormFamilies
 import MorewTest.Reformulation.PowerPrinting
 import MorewTest.Reformulation.PowerSource
 import MorewTest.Reformulation.PowerWorkflow
