@@ -78,20 +78,6 @@ section ConjoinedDomains
 
 variable (Q : Matrix (Fin n) (Fin n) ℝ)
 
-section Left
-variable (hQ : True ∧ Q.PosDef)
-reformulation fixedConjoinedLeft : (fixedSource n Q) := by conic
-example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedLeft n Q hQ) :=
-  fixedConjoinedLeft.equivalence n Q hQ
-end Left
-
-section Right
-variable (hQ : Q.PosDef ∧ True)
-reformulation fixedConjoinedRight : (fixedSource n Q) := by conic
-example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedRight n Q hQ) :=
-  fixedConjoinedRight.equivalence n Q hQ
-end Right
-
 section Nested
 variable (hQ : True ∧ (Q.PosDef ∧ True))
 reformulation fixedConjoinedNested : (fixedSource n Q) := by conic
