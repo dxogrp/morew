@@ -4,18 +4,24 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 
 /-!
-# Lifting objective and constraint components
+# Epigraphs of subexpressions
 
-We can use `let` to name a reusable expression available in the objective and constraints.
-The following commands after `epigraph` allow us to lift individual objective and constraint components:
+Use `let` to name an expression shared by the objective and constraints.
+An `epigraph` step can replace a selected subexpression by a new variable and
+add its epigraph bound, provided the surrounding expression preserves the
+required inequality. Its clauses identify the expression and evidence:
 - `at` selects a direct `let` reference or a parenthesized expression;
   exactly one match is required.
 - `in` selects a named constraint; without it, selection is within the objective.
 - `as` names the added bound constraint.
 - `using` supplies an explicit context certificate; otherwise Morew attempts
   automatic certification.
+
+Introducing these bounds records equivalence. A final `conic` or `nlp` step
+then certifies the complete reformulated problem in the chosen form.
 -/
 
 namespace Examples.Transformations.Subexpressions
@@ -56,6 +62,27 @@ reformulation budgetedConic : budgeted := by
 #printp budgetedConic
 example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
 example : IsConic budgetedConic := budgetedConic.isConic
+
+def nonlinear :=
+  problem (x y t : ℝ)
+    minimize (x * y - 1) ^ 2 + t
+    subject to
+      error : |x ^ 2 - y| ≤ t
+      budget : |x| + y ^ 2 ≤ 10
+
+-- The error is already a direct bound. In the budget, first replace |x|
+-- by a variable and add the direct bound named `magnitude`.
+reformulation smoothConstraints : nonlinear := by
+  nlp at error using Rewrite.absEpigraph
+  epigraph a at (|x|) in budget as magnitude
+  nlp at magnitude
+  nlp
+
+#printp smoothConstraints
+example : GlobalEquivalence nonlinear smoothConstraints := smoothConstraints.equivalence
+example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
+  smoothConstraints.nlpForm.represents
+example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP
 
 end
 end Examples.Transformations.Subexpressions

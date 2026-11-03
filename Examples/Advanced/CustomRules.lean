@@ -14,7 +14,9 @@ for automatic rule discovery. One definition can carry both attributes; each
 consumer still checks that its replacement rows are suitable for that target.
 
 Representation records live in `Type`, so define them with `def`, rather than
-`theorem`. The example below reuses the existing absolute-value equivalence.
+`theorem`. The examples below prove an epigraph formula for absolute deviation,
+a graph formula for absolute value, and a logarithm formula valid on positive
+inputs. Each formula is used to obtain an equivalent conic or smooth NLP problem.
 -/
 
 namespace Examples.Advanced.CustomRules
@@ -37,6 +39,8 @@ def fitting (center : ℝ) :=
     minimize t
     subject to
       deviation : absoluteDeviation center x ≤ t
+
+section
 
 variable (center : ℝ)
 
@@ -72,6 +76,38 @@ example : GlobalEquivalence (fitting center) (selected center) :=
   selected.equivalence center
 example : IsConic (selected center) := selected.isConic center
 
+#printp selected
+
+end
+
+-- The equation y = |x| is equivalent to 0 ≤ y and y² = x².
+-- Register this graph formula for smooth NLP reformulations.
+@[morew_nlp]
+def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
+  Auxiliary := Unit
+  target x y _ := 0 ≤ y ∧ y ^ 2 = x ^ 2
+  source_iff_exists x y := by
+    simp only [exists_const]
+    constructor
+    · rintro rfl
+      exact ⟨abs_nonneg x, sq_abs x⟩
+    · rintro ⟨hy, hsq⟩
+      simpa only [abs_of_nonneg hy] using (sq_eq_sq_iff_abs_eq_abs y x).mp hsq
+
+def signedGraph :=
+  problem (x y : ℝ)
+    minimize y
+    subject to graph : y = -|x ^ 2 - 1|
+
+-- Negation changes the graph equation to -y = |x² - 1|. The registered
+-- formula expresses this equation using smooth polynomial constraints.
+reformulation signedGraphNLP : signedGraph := by nlp
+
+#printp signedGraphNLP
+
+example : GlobalEquivalence signedGraph signedGraphNLP := signedGraphNLP.equivalence
+example : IsSmoothNLP signedGraphNLP := signedGraphNLP.isSmoothNLP
+
 -- A subtype states the domain on which a representation is exact. Existing
 -- constraints must prove that condition before the rule introduces auxiliaries.
 def positiveLogEpigraph :
@@ -97,6 +133,8 @@ def logarithmicBound :=
 reformulation logarithmicNLP : logarithmicBound := by
   nlp at bound using positiveLogEpigraph
   nlp
+
+#printp logarithmicNLP
 
 example : GlobalEquivalence logarithmicBound logarithmicNLP := logarithmicNLP.equivalence
 example : IsSmoothNLP logarithmicNLP := logarithmicNLP.isSmoothNLP

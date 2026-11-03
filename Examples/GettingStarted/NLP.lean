@@ -9,8 +9,8 @@ import Morew.Reformulation.NLP
 # Certified smooth-NLP reformulations
 
 `nlp at label` performs an exact rewrite of a direct nonsmooth bound; optional
-`using` selects its rule. For a nested term, first expose it with an occurrence
-epigraph or hypograph step.
+`using` selects its rule. The first problem has a direct absolute-value bound
+and a nonlinear polynomial objective.
 
 Bare `nlp` finishes the script by applying supported exact rewrites to direct
 bounds and certifying the complete objective and constraints as a smooth NLP.
@@ -27,13 +27,9 @@ def nonlinear :=
     minimize (x * y - 1) ^ 2 + t
     subject to
       error : |x ^ 2 - y| ≤ t
-      budget : |x| + y ^ 2 ≤ 10
 
 reformulation smoothConstraints : nonlinear := by
   nlp at error using Rewrite.absEpigraph -- explicit `using` clause is optional here
-  -- Expose the nested absolute value as the direct bound named `magnitude`.
-  epigraph a at (|x|) in budget as magnitude
-  nlp at magnitude
   nlp
 
 #printp smoothConstraints
@@ -42,22 +38,19 @@ example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
   smoothConstraints.nlpForm.represents
 example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP
 
-def normBound (n : ℕ) :=
-  problem (v : Fin n → ℝ) (t : ℝ)
-    minimize t
-    subject to
-      norm : ‖WithLp.toLp 2 v‖ ≤ t
+def negativeMinimum :=
+  problem (x : ℝ)
+    minimize -min (x ^ 2) (Real.sin x)
 
-variable (n : ℕ)
-
--- Automatic rewriting yields `0 ≤ t` and `∑ i, v i ^ 2 ≤ t ^ 2`,
--- preserving the symbolic dimension `n`.
-reformulation squaredNorm : (normBound n) := by
+-- An epigraph of -min f g is described by the two bounds -f ≤ t and -g ≤ t.
+-- Both expressions here are smooth, even though their minimum need not be.
+reformulation negativeMinimumNLP : negativeMinimum := by
+  epigraph t
   nlp
 
-#printp squaredNorm
-example : GlobalEquivalence (normBound n) (squaredNorm n) := squaredNorm.equivalence n
-example : IsSmoothNLP (squaredNorm n) := squaredNorm.isSmoothNLP n
+#printp negativeMinimumNLP
+example : GlobalEquivalence negativeMinimum negativeMinimumNLP := negativeMinimumNLP.equivalence
+example : IsSmoothNLP negativeMinimumNLP := negativeMinimumNLP.isSmoothNLP
 
 end
 end Examples.GettingStarted.NLP
