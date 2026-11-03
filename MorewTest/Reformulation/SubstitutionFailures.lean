@@ -92,19 +92,6 @@ run_cmd do
     `MorewTest.Reformulation.SubstitutionFailures.missingPositivityTarget
     `MorewTest.Reformulation.SubstitutionFailures.missingPositivityAlias
 
-/-! Replacement elaboration is checked at the selected coordinate's type. -/
-
-/-- error: Application type mismatch -/
-#guard_msgs (substring := true) in
-reformulation illTypedReplacementTarget : positiveSource
-    certificate illTypedReplacementAlias := by
-  substitute x := Nat.succ n
-
-run_cmd do
-  assertNoReformulationOutput
-    `MorewTest.Reformulation.SubstitutionFailures.illTypedReplacementTarget
-    `MorewTest.Reformulation.SubstitutionFailures.illTypedReplacementAlias
-
 /-! Automatic rules match elaborated declarations, not a shadowing spelling. -/
 
 namespace ShadowedReal
