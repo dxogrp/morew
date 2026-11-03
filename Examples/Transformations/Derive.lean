@@ -14,7 +14,7 @@ changing the feasible set. The proof must show that the proposition follows
 from the current problem's feasibility.
 -/
 
-namespace Examples.Derive
+namespace Examples.Transformations.Derive
 
 open Morew
 noncomputable section
@@ -86,4 +86,4 @@ example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
 
 end
-end Examples.Derive
+end Examples.Transformations.Derive

@@ -17,7 +17,7 @@ Representation records live in `Type`, so define them with `def`, rather than
 `theorem`. The example below reuses the existing absolute-value equivalence.
 -/
 
-namespace Morew.Examples.CustomRules
+namespace Examples.Advanced.CustomRules
 
 open Morew
 noncomputable section
@@ -102,4 +102,4 @@ example : GlobalEquivalence logarithmicBound logarithmicNLP := logarithmicNLP.eq
 example : IsSmoothNLP logarithmicNLP := logarithmicNLP.isSmoothNLP
 
 end
-end Morew.Examples.CustomRules
+end Examples.Advanced.CustomRules

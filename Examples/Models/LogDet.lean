@@ -13,7 +13,7 @@ Its exact conic rewrite requires a positive-definite matrix.
 The lift uses existing PSD and exponential cones.
 -/
 
-namespace Morew.Examples.LogDet
+namespace Examples.Models.LogDet
 
 open Morew Morew.Conic
 
@@ -83,4 +83,4 @@ example : GlobalEquivalence nativeMaximum domainFirstConic := domainFirstConic.e
 example : IsConic domainFirstConic := domainFirstConic.isConic
 
 end
-end Morew.Examples.LogDet
+end Examples.Models.LogDet

@@ -12,7 +12,7 @@ import Morew.Reformulation.Conic
 `remove at label using proof` removes a row implied by the remaining rows.
 -/
 
-namespace Examples.Remove
+namespace Examples.Transformations.Remove
 
 open Morew
 noncomputable section
@@ -43,4 +43,4 @@ example : GlobalEquivalence bounded simplified := simplified.equivalence
 example : IsConic simplified := simplified.isConic
 
 end
-end Examples.Remove
+end Examples.Transformations.Remove

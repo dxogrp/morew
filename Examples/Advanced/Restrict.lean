@@ -13,7 +13,7 @@ each has a representative satisfying the new condition with no worse objective.
 The certificate preserves global optimization behavior; the feasible sets may differ.
 -/
 
-namespace Examples.Restrict
+namespace Examples.Advanced.Restrict
 
 open Morew
 noncomputable section
@@ -90,4 +90,4 @@ example (u : ℝ) (hu : principalCoordinates.feasible u) : Real.sqrt (u ^ 2) = u
   Real.sqrt_sq hu
 
 end
-end Examples.Restrict
+end Examples.Advanced.Restrict

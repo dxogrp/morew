@@ -10,7 +10,7 @@ open Morew
 /-
 Second-order cone rewriting
 -/
-namespace Examples.SecondOrder
+namespace Examples.Models.SecondOrder
 
 /-
 Nonnegative least squares
@@ -80,4 +80,4 @@ example : GlobalEquivalence p lowered := lowered.equivalence
 end
 end QuadraticOverLinear
 
-end Examples.SecondOrder
+end Examples.Models.SecondOrder

@@ -9,7 +9,7 @@ import Morew.Reformulation.Conic
 # Native matrix PSD constraints and explicit Schur reformulations
 -/
 
-namespace Morew.Examples.PositiveSemidefinite
+namespace Examples.Models.PSD
 
 open Morew Morew.Conic
 noncomputable section
@@ -59,4 +59,4 @@ example : (schurConic.conicForm A).data.toProblem = schurConic A :=
   (schurConic.conicForm A).represents
 
 end
-end Morew.Examples.PositiveSemidefinite
+end Examples.Models.PSD

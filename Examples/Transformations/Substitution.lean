@@ -13,7 +13,7 @@ import Morew.Reformulation.NLP
 original point has a preimage.
 -/
 
-namespace Examples.Substitution
+namespace Examples.Transformations.Substitution
 
 open Morew
 noncomputable section
@@ -76,4 +76,4 @@ reformulation retainedCoefficient : scaled := by
 example : GlobalEquivalence scaled retainedCoefficient := retainedCoefficient.equivalence
 
 end
-end Examples.Substitution
+end Examples.Transformations.Substitution

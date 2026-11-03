@@ -15,7 +15,7 @@ symbolic exponents use independent hypotheses such as `hp : 1 < p`.
 Base-domain evidence comes from retained constraints.
 -/
 
-namespace Examples.Power
+namespace Examples.Models.Power
 
 noncomputable section
 
@@ -100,4 +100,4 @@ example : (ready.conicForm α hα).data.toProblem = ready α :=
 end DirectMembership
 
 end
-end Examples.Power
+end Examples.Models.Power

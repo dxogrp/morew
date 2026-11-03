@@ -14,7 +14,7 @@ Conic and smooth NLP rewrites share these identities, and graph records also
 support signed equations.
 -/
 
-namespace Examples.Negation
+namespace Examples.GettingStarted.GraphImpl
 
 open Morew
 
@@ -106,4 +106,4 @@ example : GlobalEquivalence signedGraph signedGraphNLP := signedGraphNLP.equival
 example : IsSmoothNLP signedGraphNLP := signedGraphNLP.isSmoothNLP
 
 end
-end Examples.Negation
+end Examples.GettingStarted.GraphImpl

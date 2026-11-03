@@ -17,7 +17,7 @@ bounds and certifying the complete objective and constraints as a smooth NLP.
 It records a concrete NLP form and certificates alongside the final problem.
 -/
 
-namespace Morew.Examples.NLP
+namespace Examples.GettingStarted.NLP
 
 open Morew
 noncomputable section
@@ -60,4 +60,4 @@ example : GlobalEquivalence (normBound n) (squaredNorm n) := squaredNorm.equival
 example : IsSmoothNLP (squaredNorm n) := squaredNorm.isSmoothNLP n
 
 end
-end Morew.Examples.NLP
+end Examples.GettingStarted.NLP

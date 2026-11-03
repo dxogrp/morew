@@ -18,7 +18,7 @@ The following commands after `epigraph` allow us to lift individual objective an
   automatic certification.
 -/
 
-namespace Morew.Examples.Components
+namespace Examples.Transformations.Subexpressions
 
 open Morew
 noncomputable section
@@ -58,4 +58,4 @@ example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
 example : IsConic budgetedConic := budgetedConic.isConic
 
 end
-end Morew.Examples.Components
+end Examples.Transformations.Subexpressions

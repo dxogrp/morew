@@ -17,7 +17,7 @@ It records a concrete conic form and certificates alongside the final problem.
 Objective bounds and coordinate substitutions remain explicit steps.
 -/
 
-namespace Examples.Conic
+namespace Examples.GettingStarted.Conic
 
 open Morew
 open Real
@@ -110,11 +110,11 @@ example : GlobalEquivalence p conicProb := conicProb.equivalence
 
 end Softplus
 end
-end Examples.Conic
+end Examples.GettingStarted.Conic
 
 open Morew
 
-namespace Examples.Basic
+namespace Examples.GettingStarted.Conic
 
 /-
 Targeted polyhedral rewriting
@@ -140,4 +140,4 @@ example : GlobalEquivalence p linearBounds := linearBounds.equivalence
 end
 end Polyhedral
 
-end Examples.Basic
+end Examples.GettingStarted.Conic

@@ -17,7 +17,7 @@ how `using` selects the alternative power-cone representation explicitly.
 Other competing registered rules still report ambiguity.
 -/
 
-namespace Examples.PowerFamilies
+namespace Examples.Models.PowerFamilies
 
 open Morew
 noncomputable section
@@ -120,4 +120,4 @@ example : IsConic ready := ready.isConic
 end InverseProduct
 
 end
-end Examples.PowerFamilies
+end Examples.Models.PowerFamilies

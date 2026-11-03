@@ -19,7 +19,7 @@ are both exact: the Euclidean bound becomes an SOC row for conic certification
 and a nonnegative bound plus a squared inequality for NLP certification.
 -/
 
-namespace Examples.Norm
+namespace Examples.Models.Norms
 
 open Morew
 
@@ -60,4 +60,4 @@ example : (normNLP.nlpForm b).data.toProblem = normNLP b :=
 example : IsSmoothNLP (normNLP b) := normNLP.isSmoothNLP b
 
 end
-end Examples.Norm
+end Examples.Models.Norms

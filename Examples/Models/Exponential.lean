@@ -11,7 +11,7 @@ open Morew
 # Exponential-cone examples
 -/
 
-namespace Examples.Exponential
+namespace Examples.Models.Exponential
 
 namespace RelativeEntropy
 noncomputable section
@@ -55,4 +55,4 @@ example : GlobalEquivalence p lowered := lowered.equivalence
 end
 end Softplus
 
-end Examples.Exponential
+end Examples.Models.Exponential

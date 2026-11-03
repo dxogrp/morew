@@ -12,7 +12,7 @@ import Morew.Reformulation.Conic
 select the new label; the predicate and its position stay the same.
 -/
 
-namespace Examples.Rename
+namespace Examples.Transformations.Rename
 
 open Morew
 noncomputable section
@@ -52,4 +52,4 @@ reformulation exponential : logarithmic := by
 example : GlobalEquivalence logarithmic exponential := exponential.equivalence
 
 end
-end Examples.Rename
+end Examples.Transformations.Rename

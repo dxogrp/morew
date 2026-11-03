@@ -8,7 +8,7 @@ import Morew.Reformulation.Basic
 open Morew
 open Real
 
-namespace Examples.Basic
+namespace Examples.GettingStarted.Basic
 
 /-
 Epigraph rewriting example
@@ -119,4 +119,4 @@ example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equival
 end
 end LogSquared
 
-end Examples.Basic
+end Examples.GettingStarted.Basic

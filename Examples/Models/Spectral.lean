@@ -13,7 +13,7 @@ definite matrix fractions have exact semidefinite representations. Nonlinear
 objectives first receive an epigraph bound.
 -/
 
-namespace Morew.Examples.Spectral
+namespace Examples.Models.Spectral
 
 open Morew Morew.Conic
 
@@ -115,4 +115,4 @@ example : IsConic positiveDefiniteConic := positiveDefiniteConic.isConic
 
 end
 
-end Morew.Examples.Spectral
+end Examples.Models.Spectral
