@@ -567,7 +567,7 @@ def alteredNorm :=
     subject to bound : t ≤ -(@Norm.norm (EuclideanSpace ℝ (Fin 2)) ⟨fun _ => 0⟩ x)
 
 #guard_error_fragments ["constraint `bound`"] in
-reformulation rejectedNorm : alteredNorm := by nlp at bound using Rewrite.euclideanNormEpigraph
+reformulation rejectedNorm : alteredNorm := by nlp at bound using Rewrite.norm2Epigraph
 
 assert_not_exists rejectedNeg rejectedOrder rejectedNorm
 

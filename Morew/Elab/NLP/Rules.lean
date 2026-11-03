@@ -14,9 +14,8 @@ for automatic selected-row rewriting. The same checked matching and smoothness
 certification applies to user registrations. Importing `Morew.NLP` alone does not
 activate attributes or import elaboration infrastructure.
 
-The Euclidean record covers both native Euclidean values and explicit `toLp 2`
-inputs. Register it once: `norm2Epigraph` is an equivalent specialized spelling,
-and remains available through `using` without introducing automatic ambiguity.
+The native `norm2Epigraph` record covers both Euclidean-space values and explicit
+`toLp 2` inputs. The separate `fnNorm2Epigraph` record matches the named function.
 -/
 
 attribute [morew_nlp]
@@ -32,4 +31,4 @@ attribute [morew_nlp]
   Morew.Rewrite.fnNorm1Epigraph
   Morew.Rewrite.fnNormInfEpigraph
   Morew.Rewrite.fnNorm2Epigraph
-  Morew.Rewrite.euclideanNormEpigraph
+  Morew.Rewrite.norm2Epigraph

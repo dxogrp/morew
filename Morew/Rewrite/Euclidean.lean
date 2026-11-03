@@ -13,6 +13,9 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 A native Euclidean norm bound is replaced by a nonnegative scalar bound and a
 squared-norm inequality. These ordinary polynomial targets are separate from the
 second-order-cone representations used by conic rewriting.
+
+`norm2Epigraph` handles native Euclidean-space values and vectors converted with
+`WithLp.toLp 2`. The named-function adapter `fnNorm2Epigraph` forwards to it.
 -/
 
 namespace Morew.Rewrite
@@ -30,25 +33,20 @@ theorem norm2_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
   · rintro ⟨ht, h⟩
     exact (sq_le_sq₀ hnorm ht).mp (hsq.symm ▸ h)
 
-/-- Exact native two-norm epigraph using two smooth polynomial inequalities. -/
-noncomputable def norm2Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp 2 v‖) where
-  Auxiliary := Unit
-  target v t _ := 0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2
-  source_iff_exists v t := by
-    simpa only [exists_const] using norm2_le_iff v t
-
-/-- The named Euclidean norm has the same two polynomial epigraph inequalities. -/
-noncomputable def fnNorm2Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm2 v) :=
-  norm2Epigraph
-
 /-- Native Euclidean-space values use their ordinary coordinates in the target. -/
-noncomputable def euclideanNormEpigraph {n : Nat} :
+noncomputable def norm2Epigraph {n : Nat} :
     EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) where
   Auxiliary := Unit
   target v t _ := 0 ≤ t ∧ (∑ i, (WithLp.ofLp v i) ^ 2) ≤ t ^ 2
   source_iff_exists v t := by
     simpa only [exists_const] using norm2_le_iff (WithLp.ofLp v) t
+
+/-- The named Euclidean norm has the same two polynomial epigraph inequalities. -/
+noncomputable def fnNorm2Epigraph {n : Nat} :
+    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm2 v) where
+  Auxiliary := (norm2Epigraph (n := n)).Auxiliary
+  target v t u := norm2Epigraph.target (WithLp.toLp 2 v) t u
+  source_iff_exists v t :=
+    norm2Epigraph.source_iff_exists (WithLp.toLp 2 v) t
 
 end Morew.Rewrite
