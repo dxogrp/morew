@@ -229,7 +229,6 @@ import MorewTest.Reformulation.RemoveBackends
 import MorewTest.Reformulation.RemoveFailures
 import MorewTest.Reformulation.RemoveFailuresBackends
 import MorewTest.Reformulation.RemoveInstances
-import MorewTest.Reformulation.RemoveIsolation
 import MorewTest.Reformulation.Rename
 import MorewTest.Reformulation.RenameBackends
 import MorewTest.Reformulation.RenameFailures

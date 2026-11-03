@@ -9,7 +9,6 @@ import MorewTest.Reformulation.Derive
 import MorewTest.Reformulation.DeriveFailures
 import MorewTest.Reformulation.Remove
 import MorewTest.Reformulation.RemoveFailures
-import MorewTest.Reformulation.RemoveIsolation
 import MorewTest.Reformulation.Rename
 import MorewTest.Reformulation.RenameFailures
 import MorewTest.Reformulation.RenameIsolation
