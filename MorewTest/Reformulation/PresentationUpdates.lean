@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Runner
-import Mathlib.Data.Nat.Basic
+import Morew.Elab.Reformulation.Presentation
+import Lean.Elab.BuiltinEvalCommand
 
 /-!
 # Atomic reformulation presentation updates
