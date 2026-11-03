@@ -240,7 +240,6 @@ import MorewTest.Reformulation.Restrict
 import MorewTest.Reformulation.RestrictBackends
 import MorewTest.Reformulation.RestrictFailures
 import MorewTest.Reformulation.RestrictFailuresBackends
-import MorewTest.Reformulation.RestrictIsolation
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom

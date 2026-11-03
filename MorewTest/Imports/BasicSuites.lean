@@ -15,7 +15,6 @@ import MorewTest.Reformulation.RenameFailures
 import MorewTest.Reformulation.RenameIsolation
 import MorewTest.Reformulation.Restrict
 import MorewTest.Reformulation.RestrictFailures
-import MorewTest.Reformulation.RestrictIsolation
 import MorewTest.Reformulation.SubstitutionRules
 import MorewTest.Reformulation.SubstitutionFailures
 import MorewTest.Reformulation.SubstitutionRuleFailures
