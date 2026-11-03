@@ -47,6 +47,17 @@ problem (x : Fin n → ℝ) (t : ℝ)
 
 More examples can be found in the [Examples](Examples) directory.
 
+## Documentation
+
+Build and preview the guide, examples, and API reference from the repository root:
+
+```sh
+make docs
+make serve-docs
+```
+
+Open <http://127.0.0.1:8000>.
+
 ## License
 
 Morew is licensed under the [Apache License, Version 2.0](LICENSE).
