@@ -3,11 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Plan
+import Morew.Elab.Evidence
+import Morew.Elab.Conic.Nonnegative
+import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Expr
 
 /-!
-# Retained lower bounds for exact conic rewrites
+# Retained lower bounds for checked sign evidence
 
 Only independent constants with checked sign evidence, or native non-strict
 lower bounds in retained entries, establish a domain fact. Finite coordinate
@@ -16,30 +18,11 @@ Search preserves presentation order and conjunction boundaries. Strict rows,
 arithmetic deductions, and the selected predicate are not sources of evidence.
 -/
 
-namespace Morew.Elab.Conic.Domain
+namespace Morew.Elab.Evidence.Sign
 
 open Lean Lean.Meta Qq
 
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
-
-private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
-  le_of_lt h
-
-/-- Prove the sign of an independent real constant from an independent local
-hypothesis or bounded numeral/rational evaluation, using canonical real order. -/
-def constantSign? (point value : Expr) (strict : Bool)
-    (index? : Option Expr := none) : MetaM (Option Expr) := do
-  if (← Expr.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
-  let value : Q(ℝ) := value
-  let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
-  -- A coordinate of the canonical zero vector reduces to `Real.zero` rather
-  -- than numeral syntax; reflexivity supplies its sign without arithmetic search.
-  if !strict && (← isDefEq value q((0 : ℝ))) then return some q(le_refl (0 : ℝ))
-  if let some proof ← Evidence.proveIndependent? point obligation index? then return some proof
-  if !strict then
-    if let some positive ← Evidence.proveIndependent? point q(0 < $value) index? then
-      return some (← mkAppM ``nonnegativeOfPositive #[positive])
-  return none
 
 private theorem positiveOfMargin {epsilon value : ℝ}
     (positive : 0 < epsilon) (bound : epsilon ≤ value) : 0 < value :=
@@ -82,13 +65,13 @@ private def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := 
   let domain ← whnf domain
   unless domain.isAppOfArity ``Fin 1 do return none
   let n := domain.getAppArgs[0]!
-  if (← Expr.depends point n) || (← Morew.Elab.Rewrite.Plan.unresolved n) then return none
+  if (← Expr.depends point n) || (← Expr.hasUnresolved n) then return none
   return some n
 
 private def signInMembership? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) :
     MetaM (Option Expr) := do
-  let some coordinate ← nonnegativeValue? point body | return none
+  let some coordinate ← Conic.nonnegativeValue? point body | return none
   let coordinate ← Expr.reduceStructure coordinate
   unless ← isDefEq (← inferType coordinate) q(ℝ) do
     let some index := index? | return none
@@ -178,4 +161,4 @@ def signFromRetained? (point value : Expr) (retainedBodies : Array Expr)
     if let some sign ← signInRow? point value body proof strict index? then return some sign
   return none
 
-end Morew.Elab.Conic.Domain
+end Morew.Elab.Evidence.Sign

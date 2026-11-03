@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
-import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.MatrixFraction.Defined
 
 /-! Matrix-fraction domains survive either targeted or terminal rewrite order. -/
 
@@ -15,18 +15,9 @@ open scoped Matrix
 
 noncomputable section
 
-def source (n : Nat) :=
-  problem (x : Fin n → ℝ) (P : SymmetricMatrix n) (t : ℝ)
-    minimize t
-    subject to
-      domain : P.toMatrix.PosDef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
-
 variable (n : Nat)
 
 reformulation terminal : (source n) := by conic
-
-reformulation domainIntermediate : (source n) := by conic at domain
 
 reformulation domainFirst : (source n) := by
   conic at domain

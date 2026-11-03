@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Conic.PSD
 import Morew.Elab.Affine.Expansion
-import Morew.Elab.Conic.Evidence
+import Morew.Elab.Evidence
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Ring
 

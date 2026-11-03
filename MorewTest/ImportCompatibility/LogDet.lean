@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.LogDet
+import MorewTest.Reformulation.LogDet.Defined
+import MorewTest.Reformulation.LogDet.Objectives
 
 /-! Imported log-det certificates retain domain evidence and exact presentation replay. -/
 

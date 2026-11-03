@@ -4,9 +4,10 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Rules
-import Morew.Elab.Conic.Domain
+import Morew.Elab.Evidence.Sign
+import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.MatrixDomain
-import Morew.Elab.Conic.Evidence
+import Morew.Elab.Evidence
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Expr
 import Morew.Elab.State
@@ -103,7 +104,7 @@ private def proveObligation (point : Expr) (retained : Array Expr)
       let value : Q(ℝ) := args[3]!
       let canonical : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
       unless ← isDefEq body canonical do return none
-      let some proof ← Domain.signFromRetained? point value retained evidence strict (some index)
+      let some proof ← Evidence.Sign.signFromRetained? point value retained evidence strict (some index)
         | throwError "registered conic rewrite was not certified: missing coordinatewise {if strict then "positive" else "nonnegative"} constant margin at {index}; required an independent ε with {if strict then "0 < ε" else "0 ≤ ε"} and a retained constraint ε ≤ {value}"
       let proof ← mkLambdaFVars #[index] proof
       unless ← isDefEq (← inferType proof) goal do return none
@@ -116,7 +117,7 @@ private def proveObligation (point : Expr) (retained : Array Expr)
       let value : Q(ℝ) := args[3]!
       let canonical : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
       if ← isDefEq reduced canonical then
-        if let some proof ← Domain.signFromRetained? point value retained evidence strict then
+        if let some proof ← Evidence.Sign.signFromRetained? point value retained evidence strict then
           return some proof
         throwError "registered conic rewrite was not certified: missing {if strict then "positive" else "nonnegative"} constant margin; required an independent ε with {if strict then "0 < ε" else "0 ≤ ε"} and a retained constraint ε ≤ {value}"
     if strict && (← isDefEq args[0]! q(Nat)) then

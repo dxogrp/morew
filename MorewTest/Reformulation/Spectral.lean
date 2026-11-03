@@ -4,7 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation
-import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.Spectral.Defined
+import MorewTest.Reformulation.PrintSupport
 
 /-! Exact spectral rows use the source norm and preserve rectangular dimensions. -/
 
@@ -62,16 +63,8 @@ end Universal
 
 end ConjoinedSymmetry
 
-open scoped Matrix.Norms.L2Operator in
-def normSource (m n : Nat) :=
-  problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
-    minimize t
-    subject to
-      bound : ‖A‖ ≤ t
-
 variable (m : Nat)
 
-reformulation normTarget : (normSource m n) := by conic
 example : GlobalEquivalence (normSource m n) (normTarget (m := m) (n := n)) :=
   normTarget.equivalence (m := m) (n := n)
 example : (normTarget.conicForm (m := m) (n := n)).data.rowCount = 2 := rfl
@@ -81,13 +74,6 @@ example : (normTarget.conicForm (m := m) (n := n)).data.toProblem =
     normTarget (m := m) (n := n) :=
   (normTarget.conicForm (m := m) (n := n)).represents
 
-open scoped Matrix.Norms.L2Operator in
-def normObjective :=
-  problem (A : Matrix (Fin 2) (Fin 3) ℝ)
-    minimize ‖A‖
-    subject to
-      anchor : A 0 0 = 1
-
 reformulation normObjectiveTarget : normObjective := by
   epigraph t
   conic
@@ -95,20 +81,12 @@ reformulation normObjectiveTarget : normObjective := by
 example : GlobalEquivalence normObjective normObjectiveTarget := normObjectiveTarget.equivalence
 example : IsConic normObjectiveTarget := normObjectiveTarget.isConic
 
-def nuclearSource (m n : Nat) :=
-  problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
-    minimize t
-    subject to
-      bound : Fn.nuclearNorm A ≤ t
-
-reformulation nuclearTarget : (nuclearSource m n) := by conic
 example : GlobalEquivalence (nuclearSource m n) (nuclearTarget (m := m) (n := n)) :=
   nuclearTarget.equivalence (m := m) (n := n)
 example : (nuclearTarget.conicForm (m := m) (n := n)).data.rowCount = 2 := rfl
 example : IsConic (nuclearTarget (m := m) (n := n)) :=
   nuclearTarget.isConic (m := m) (n := n)
 
-reformulation nuclearIntermediate : (nuclearSource m n) := by conic at bound
 reformulation nuclearChained : (nuclearIntermediate (m := m) (n := n)) := by conic
 example : GlobalEquivalence (nuclearSource m n) (nuclearChained (m := m) (n := n)) :=
   (nuclearIntermediate.equivalence (m := m) (n := n)).trans

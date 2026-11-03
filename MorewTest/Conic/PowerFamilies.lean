@@ -214,7 +214,7 @@ private def checkEvidence (source : TSyntax `term) (parameters : Nat)
       let check (goal : Expr) (index? : Option Expr) : MetaM Unit := do
         let before ← getMCtx
         let environment ← getEnv
-        let proof? ← Morew.Elab.Conic.Evidence.proveIndependent? points[0]! goal index?
+        let proof? ← Morew.Elab.Evidence.proveIndependent? points[0]! goal index?
         unless proof?.isSome == accepted do throwError "unexpected parameter evidence for {goal}"
         if let some proof := proof? then
           unless ← isDefEq (← inferType proof) goal do throwError "parameter evidence has wrong type"

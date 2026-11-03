@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Syntax
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
 # Shared surface problem fixtures

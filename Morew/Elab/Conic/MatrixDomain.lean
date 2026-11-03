@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Domain
+import Morew.Elab.Evidence
+import Morew.Elab.Conic
 import Morew.Elab.Conic.Symmetry
 import Morew.Conic.PSD.PositiveDefinite
 
@@ -171,7 +172,7 @@ private def fromSemidefinite? (point n matrix body proof : Expr) : MetaM (Option
   unless (← samePrefix coordinate canonical 2) &&
       (← samePrefix lower canonical.getAppArgs[5]! 2) &&
       (← isDefEq coordinate canonical) do return none
-  let some positive ← Domain.constantSign? point epsilon true | return none
+  let some positive ← Evidence.constantSign? point epsilon true | return none
   return some (← mkAppM ``positiveDefiniteOfMargin #[matrix, epsilon, positive, proof])
 
 private partial def retainedEvidence? (point n matrix goal body proof : Expr) :

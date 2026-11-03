@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic
 import Lean.Meta.Check
+import MorewTest.ElabSupport
 
 /-!
 # Shared affine test assertions
@@ -18,14 +19,6 @@ namespace MorewTest.Affine
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Affine
-
-def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let expression ← instantiateMVars expression
-  if expression.hasSorry || expression.hasMVar then
-    throwError "affine test did not fully elaborate: {expression}"
-  return expression
 
 def checkResult (source : Expr) (result : AffineResult) : MetaM Unit := do
   for expression in #[result.map, result.pointwiseEquality] do

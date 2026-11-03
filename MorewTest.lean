@@ -24,9 +24,12 @@ import MorewTest.Conic.ExponentialCone
 import MorewTest.Conic.ExponentialElab
 import MorewTest.Conic.ExponentialRows
 import MorewTest.Conic.Form
+import MorewTest.Conic.Form.Defined
+import MorewTest.Conic.Form.Support
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.Negation
+import MorewTest.Conic.Nonnegative
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
@@ -55,6 +58,7 @@ import MorewTest.Conic.Terminal
 import MorewTest.Core
 import MorewTest.DerivedConstraint
 import MorewTest.Diagnostics
+import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
 import MorewTest.ExactConstraintLift
@@ -148,8 +152,15 @@ import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
 import MorewTest.Reformulation.LogDet
+import MorewTest.Reformulation.LogDet.Defined
+import MorewTest.Reformulation.LogDet.Domains
+import MorewTest.Reformulation.LogDet.Objectives
+import MorewTest.Reformulation.LogDet.Ordering
+import MorewTest.Reformulation.LogDet.Printing
+import MorewTest.Reformulation.LogDet.Sources
 import MorewTest.Reformulation.LogDetFailures
 import MorewTest.Reformulation.MatrixFraction
+import MorewTest.Reformulation.MatrixFraction.Defined
 import MorewTest.Reformulation.MatrixFractionFailures
 import MorewTest.Reformulation.NLP
 import MorewTest.Reformulation.NLPCustom
@@ -174,6 +185,7 @@ import MorewTest.Reformulation.OccurrenceStructureDefaults
 import MorewTest.Reformulation.OccurrenceStructureProducts
 import MorewTest.Reformulation.OccurrenceTraversal
 import MorewTest.Reformulation.PSD
+import MorewTest.Reformulation.PSD.Fixtures
 import MorewTest.Reformulation.PSDFailures
 import MorewTest.Reformulation.Polyhedral
 import MorewTest.Reformulation.PolyhedralFailures
@@ -188,6 +200,7 @@ import MorewTest.Reformulation.PowerWorkflow
 import MorewTest.Reformulation.PresentationIndices
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.PrintSupport
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Remove
@@ -204,9 +217,11 @@ import MorewTest.Reformulation.RestrictIsolation
 import MorewTest.Reformulation.RunnerState
 import MorewTest.Reformulation.SecondOrder
 import MorewTest.Reformulation.SecondOrderCustom
+import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 import MorewTest.Reformulation.SecondOrderFailures
 import MorewTest.Reformulation.SmoothHelpers
 import MorewTest.Reformulation.Spectral
+import MorewTest.Reformulation.Spectral.Defined
 import MorewTest.Reformulation.SpectralFailures
 import MorewTest.Reformulation.SpectralPrinting
 import MorewTest.Reformulation.SubstitutionBindingIdentity

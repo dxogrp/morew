@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Rewrite
+import Morew.Conic.Polyhedral
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!

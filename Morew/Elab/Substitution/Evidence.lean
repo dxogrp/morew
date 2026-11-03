@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Domain
+import Morew.Elab.Evidence.Sign
 
 /-!
 # Bounded coordinate-parameterization evidence
@@ -25,7 +25,7 @@ open Lean Lean.Meta Qq
 
 private def complete (expression : Expr) : MetaM Bool := do
   return !(← Expr.hasUnresolved expression) &&
-    !(← Conic.Evidence.hasPlaceholders expression)
+    !(← Morew.Elab.Evidence.hasPlaceholders expression)
 
 /-- Expose bounded definitional predicate aliases and record projections while
 preserving typed comparison and membership heads. This is also the structural
@@ -116,10 +116,10 @@ private def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr)
   if !strict then
     if let some proof ← direct? point q(0 < $value) feasible? then
       return some (← mkAppM ``nonnegativeOfPositive #[proof])
-  if let some proof ← Conic.Domain.constantSign? point value strict then return some proof
+  if let some proof ← Morew.Elab.Evidence.constantSign? point value strict then return some proof
   if let some feasible := feasible? then
     for proof in ← leaves feasible do
-      if let some result ← Conic.Domain.signFromRetained? point value
+      if let some result ← Morew.Elab.Evidence.Sign.signFromRetained? point value
           #[← predicateView (← inferType proof) 32] proof strict then return some result
   return none
 
@@ -168,7 +168,7 @@ private partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
     if ← isDefEq left q((0 : ℝ)) then return ← sign? point right strict feasible?
     -- Negative signs and other independent numerical comparisons need no
     -- symbolic combination. The helper checks their actual order instances.
-    return ← Conic.Evidence.proveIndependent? point goal
+    return ← Morew.Elab.Evidence.proveIndependent? point goal
   if let some (value, reverse) ← nonzeroValue? goal then
     let value : Q(ℝ) := value
     let proof? ← if let some proof ← direct? point q($value ≠ 0) feasible? then

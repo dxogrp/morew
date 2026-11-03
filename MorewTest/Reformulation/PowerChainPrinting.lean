@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Reformulation.PowerPrinting
 import MorewTest.Reformulation.PowerFamilies
-import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.PrintSupport
 
 /-!
 # Mathematical chain output and ordinary detailed inspection
@@ -20,34 +20,6 @@ namespace MorewTest.Reformulation.PowerChainPrinting
 
 open Lean Lean.Elab.Command Morew
 open MorewTest.Reformulation.PrintDetails (printed)
-
-/-- Exercise the real command and ensure mathematical output is print-only. -/
-def checkMathematical (declaration : Name) (required : Array String := #[]) :
-    CommandElabM Unit := do
-  let compact ← printed declaration false
-  let detailed ← printed declaration true
-  let compactAgain ← printed declaration false
-  unless compact == compactAgain do
-    throwError "detailed inspection changed subsequent mathematical output"
-  unless compact.contains "-- Mathematical view" && compact.contains "[0]" &&
-      compact.contains "[j + 1]" && compact.contains "∀ j : ℕ, j <" do
-    throwError "a complete power chain did not receive mathematical output: {compact}"
-  if compact.contains "⋯" || compact.contains "_proof_" then
-    throwError "mathematical chain output leaked proof scaffolding: {compact}"
-  unless !detailed.contains "-- Mathematical view" && !detailed.contains "[j + 1]" &&
-      detailed.contains "⟨" && detailed.contains "POW" do
-    throwError "pp.proofs did not restore ordinary finite-index syntax: {detailed}"
-  for fragment in required do
-    unless compact.contains fragment do
-      throwError "mathematical output lost {fragment}: {compact}"
-  let environment ← getEnv
-  for view? in #[Syntax.getProblemView? environment declaration,
-      Syntax.getProblemDisplayView? environment declaration] do
-    let some view := view? | throwError "mathematical printing lost a stored syntax view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    let text := (← liftCoreM <| PrettyPrinter.ppTerm ⟨term⟩).pretty
-    if text.contains "-- Mathematical view" || text.contains "[j + 1]" then
-      throwError "mathematical coordinates entered stored replay syntax"
 
 run_cmd do
   for declaration in #[``PowerPrinting.GeometricMean.singleton, ``PowerPrinting.GeometricMean.triple,

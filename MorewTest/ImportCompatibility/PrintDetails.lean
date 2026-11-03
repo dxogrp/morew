@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.ImportCompatibility.PrintDetails.Defined
-import MorewTest.Reformulation.PrintDetails
+import MorewTest.Reformulation.PrintSupport
 
 /-!
 # Print-time proof detail after importing and continuing a reformulation
