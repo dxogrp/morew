@@ -5,6 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Basic
 
+/-!
+# Problems, epigraphs, and optimality certificates
+
+A `problem` names its variables, objective, and constraints. A `reformulation`
+records an equivalent problem and maps feasible points and global optima
+between the two. The examples introduce an objective epigraph, name its bound,
+and apply the same construction to problems with parameters.
+-/
+
 open Morew
 open Real
 
@@ -94,29 +103,5 @@ end
 
 end
 end Parameterized
-
-/-
-Substitute and epigraph rewriting example
--/
-namespace LogSquared
-noncomputable section
-
-def p :=
-  problem (x : ℝ)
-    minimize (log x)^2
-    subject to
-      pos : x > 0
-
-#printp p
-
-reformulation exponentialEpigraph : p := by
-  substitute x := exp u
-  epigraph t
-
-#printp exponentialEpigraph
-example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
-
-end
-end LogSquared
 
 end Examples.GettingStarted.Basic

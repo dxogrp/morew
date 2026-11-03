@@ -10,6 +10,8 @@ import Morew.Reformulation.Conic
 
 `remove at label` removes a whole-row duplicate or a supported tautology.
 `remove at label using proof` removes a row implied by the remaining rows.
+The lower bound `1 ≤ x` below makes `0 ≤ x` redundant. After removing it,
+the duplicate, and the tautology, `conic` certifies the remaining problem.
 -/
 
 namespace Examples.Transformations.Remove

@@ -9,7 +9,7 @@ import Morew.Reformulation.Conic
 # Certified complete conic reformulations
 
 `conic at label` performs an exact rewrite of a selected constraint; optional
-`using` selects its rule.
+`using` selects its rule. This step alone does not certify the whole problem.
 
 Bare `conic` finishes the script by rewriting supported constraints as cone
 memberships and certifying the complete problem as an affine cone program.
@@ -56,11 +56,6 @@ def p :=
       budget : residual x ≤ 0
 
 -- Affine certification expands transparent def/abbrev helpers automatically.
--- The defaults allow 32 nested expansions, 1024 unfoldings, and 100000
--- cumulative expression nodes per source expression. Set any limit to zero
--- to disable expansion. `set_option … in` changes only the following command;
--- this example raises the depth, though these shallow helpers need no override.
-set_option morew.affine.maxExpansionDepth 64 in
 reformulation conicProb : p := by
   conic
 
@@ -71,56 +66,10 @@ example : IsConic conicProb := conicProb.isConic
 
 end Helpers
 
-namespace LogSquared
-
-def p :=
-  problem (x : ℝ)
-    minimize (log x) ^ 2
-    subject to
-      positive : 0 < x
-
-reformulation conicProb : p := by
-  substitute x := exp u
-  epigraph t
-  conic
-
-#printp conicProb
-example : GlobalEquivalence p conicProb := conicProb.equivalence
-example : IsConic conicProb := conicProb.isConic
-
-end LogSquared
-
-namespace Softplus
-
-def p :=
-  problem (x : ℝ)
-    minimize Fn.softplus x
-    subject to
-      lower : -2 ≤ x
-
--- Terminal validation introduces the
--- finite auxiliary vector belonging to the softplus representation.
-reformulation conicProb : p := by
-  epigraph t as loss
-  conic
-
-#printp conicProb
-#check conicProb.conicForm.data
-example : GlobalEquivalence p conicProb := conicProb.equivalence
-
-end Softplus
-end
-end Examples.GettingStarted.Conic
-
-open Morew
-
-namespace Examples.GettingStarted.Conic
-
 /-
 Targeted polyhedral rewriting
 -/
 namespace Polyhedral
-noncomputable section
 
 def p :=
   problem (x : ℝ)
@@ -129,6 +78,7 @@ def p :=
       magnitude : |x| ≤ 5
       nonnegative : 0 ≤ x
 
+-- These selected rewrites expose linear bounds and record equivalence.
 reformulation linearBounds : p := by
   conic at magnitude
   epigraph t as distance
@@ -137,7 +87,19 @@ reformulation linearBounds : p := by
 #printp linearBounds
 example : GlobalEquivalence p linearBounds := linearBounds.equivalence
 
-end
+-- The final `conic` also constructs and certifies the complete conic form.
+reformulation conicProb : p := by
+  conic at magnitude
+  epigraph t as distance
+  conic at distance
+  conic
+
+#printp conicProb
+example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : conicProb.conicForm.data.toProblem = conicProb := conicProb.conicForm.represents
+example : IsConic conicProb := conicProb.isConic
+
 end Polyhedral
 
+end
 end Examples.GettingStarted.Conic

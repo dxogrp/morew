@@ -10,7 +10,9 @@ import Morew.Reformulation.NLP
 # Certified coordinate substitutions
 
 `substitute` replaces a selected coordinate and proves that every feasible
-original point has a preimage.
+original point has a preimage. Domain constraints justify the square and
+exponential substitutions below. Each script records global equivalence;
+scripts ending in `conic` or `nlp` also certify the complete resulting form.
 -/
 
 namespace Examples.Transformations.Substitution
@@ -40,6 +42,7 @@ example : IsSmoothNLP squared := squared.isSmoothNLP
 reformulation explicitlySquared : nonnegative := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
+-- This example intentionally stops at the substitution and its equivalence.
 example : GlobalEquivalence nonnegative explicitlySquared := explicitlySquared.equivalence
 
 def interval :=
@@ -74,6 +77,38 @@ reformulation retainedCoefficient : scaled := by
 
 #printp retainedCoefficient
 example : GlobalEquivalence scaled retainedCoefficient := retainedCoefficient.equivalence
+
+namespace LogSquared
+
+def p :=
+  problem (x : ℝ)
+    minimize (Real.log x) ^ 2
+    subject to
+      positive : 0 < x
+
+#printp p
+
+-- Positivity makes x = exp u a surjective parameterization of feasible x.
+-- The objective becomes u², whose epigraph is the intermediate problem.
+reformulation exponentialEpigraph : p := by
+  substitute x := Real.exp u
+  epigraph t
+
+#printp exponentialEpigraph
+example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
+
+-- The final step represents the quadratic bound with a cone and certifies
+-- the complete problem.
+reformulation conicProb : p := by
+  substitute x := Real.exp u
+  epigraph t
+  conic
+
+#printp conicProb
+example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : IsConic conicProb := conicProb.isConic
+
+end LogSquared
 
 end
 end Examples.Transformations.Substitution

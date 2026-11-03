@@ -10,6 +10,10 @@ import Morew.Reformulation.Conic
 
 `rename old to new` changes a current label in place. Later steps
 select the new label; the predicate and its position stay the same.
+The first example names the two bounds equivalent to an absolute-value
+constraint. The second uses positivity to substitute exponential coordinates.
+Both scripts intentionally stop with equivalence certificates; neither asks
+for certification of the complete problem as conic or smooth NLP.
 -/
 
 namespace Examples.Transformations.Rename

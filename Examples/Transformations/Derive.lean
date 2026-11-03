@@ -12,6 +12,10 @@ import Morew.Reformulation.NLP
 `derive label : proposition using proof` appends a visible constraint without
 changing the feasible set. The proof must show that the proposition follows
 from the current problem's feasibility.
+
+The first problem uses transitivity of its bounds to make positivity of the
+logarithm's argument available to later steps. The second illustrates adding,
+rewriting, and removing a redundant constraint before complete NLP certification.
 -/
 
 namespace Examples.Transformations.Derive
