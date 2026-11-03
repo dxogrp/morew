@@ -27,7 +27,7 @@ library = "Examples"
 
 [metadata]
 title = "Morew examples"
-description = "Optimization problems and certified reformulations in Lean."
+description = "Mathematical optimization rewriting system in Lean."
 
 [order_children]
 "Examples" = ["Examples.GettingStarted", "Examples.Transformations", "Examples.Models", "Examples.Advanced"]

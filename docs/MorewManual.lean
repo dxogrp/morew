@@ -10,7 +10,7 @@ open Verso.Genre Manual
 
 #doc (Manual) "Morew" =>
 
-Morew defines optimization problems and proves their reformulations in Lean.
+Morew is a mathematical optimization rewriting system in Lean.
 
 Start with {ref "getting-started"}[Getting started], then read
 {ref "transformations"}[Transformations] and {ref "certificates"}[Certificates].
