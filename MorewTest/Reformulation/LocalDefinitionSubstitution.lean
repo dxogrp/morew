@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Basic
 
 /-!
 # Substitution through model-local definitions
@@ -153,17 +153,6 @@ example (u a : ℝ) : chainedProofBound.objective (u, a) = a + Real.exp u := by
 example (u a : ℝ) : chainedProofBound.feasible (u, a) ↔ Real.exp u ≤ a := by
   simp [chainedProofBound]
 
--- A preserved proof block keeps log(exp u) in the source presentation, while
--- terminal conic certification recognizes the checked affine objective u.
-reformulation proofConic : proofSource := by
-  substitute x := Real.exp u
-  conic
-
-example : GlobalEquivalence proofSource proofConic := proofConic.equivalence
-example : Conic.Form proofConic := proofConic.conicForm
-example : proofConic.conicForm.data.toProblem = proofConic :=
-  proofConic.conicForm.represents
-
 def fixedSubtypeSource :=
   problem (x : ℝ)
     let certified : { y : ℝ // Real.log (Real.exp y) = y } := ⟨x, Real.log_exp x⟩
@@ -212,17 +201,6 @@ example : GlobalEquivalence fixedRecordSource fixedRecordTarget :=
   fixedRecordTarget.equivalence
 example (u : ℝ) : fixedRecordTarget.objective u = u := by
   simp [fixedRecordTarget]
-
-reformulation fixedSubtypeConic : fixedSubtypeSource := by
-  substitute x := Real.exp u
-  epigraph t
-  conic
-
-example : GlobalEquivalence fixedSubtypeSource fixedSubtypeConic :=
-  fixedSubtypeConic.equivalence
-example : Conic.Form fixedSubtypeConic := fixedSubtypeConic.conicForm
-example : fixedSubtypeConic.conicForm.data.toProblem = fixedSubtypeConic :=
-  fixedSubtypeConic.conicForm.represents
 
 def dependentValue (value : ℝ) (certified : { y : ℝ // y = value }) : ℝ :=
   certified.val

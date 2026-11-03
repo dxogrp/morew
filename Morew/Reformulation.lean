@@ -3,11 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 
 /-!
 # Reformulation command
 
-Compatibility entry point for the proof-producing reformulation DSL.
-Importing this module installs its syntax and command elaborator.
+Complete command entry point, including both backends and their default rules.
 -/

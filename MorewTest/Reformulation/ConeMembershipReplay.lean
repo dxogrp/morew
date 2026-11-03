@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Reformulation.Conic
 import MorewTest.Reformulation.ConeMembership.Defined
 
 /-!
@@ -284,7 +285,7 @@ def source :=
 run_cmd do
   let some template := Syntax.getProblemView? (← Lean.getEnv) ``source
     | Lean.throwError "missing distinct collision source metadata"
-  Morew.Reformulation.Internal.refreshProblemView ``source template
+  Morew.Elab.Reformulation.refreshProblemView ``source template
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``source
     | Lean.throwError "missing distinct collision replay metadata"
   unless containsIdentifier view.definitions[0]!.value `coeff &&

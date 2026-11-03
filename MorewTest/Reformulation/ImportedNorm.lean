@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Reformulation.Conic
+import Morew.Reformulation.NLP
 import MorewTest.Reformulation.Norm
 
 /-! # Named vector-norm certificates and source views survive imports -/

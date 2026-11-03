@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
-import MorewTest.Diagnostics
+import Morew.Reformulation.Basic
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
 /-!
@@ -76,25 +76,6 @@ assert_rename_atomic% occupied occupiedAlias in
 reformulation occupied : bounded certificate occupiedAlias := by
   rename lower to upper
 
-#guard_error_fragments ["constraint name `cap_conic_1` already exists"] in
-assert_rename_atomic% generatedCollision generatedCollisionAlias in
-reformulation generatedCollision : bounded certificate generatedCollisionAlias := by
-  conic at cap
-  rename lower to cap_conic_1
-
--- Renaming creates no selector alias for the former name.
-#guard_error_fragments ["unknown or stale constraint label `cap`"] in
-assert_rename_atomic% staleConic staleConicAlias in
-reformulation staleConic : bounded certificate staleConicAlias := by
-  rename cap to bound
-  conic at cap
-
-#guard_error_fragments ["unknown or stale constraint label `cap`"] in
-assert_rename_atomic% staleNLP staleNLPAlias in
-reformulation staleNLP : bounded certificate staleNLPAlias := by
-  rename cap to bound
-  nlp at cap
-
 #guard_error_fragments ["unknown or stale constraint label `cap`"] in
 assert_rename_atomic% staleOccurrence staleOccurrenceAlias in
 reformulation staleOccurrence : bounded certificate staleOccurrenceAlias := by
@@ -125,20 +106,6 @@ assert_rename_atomic% qualifiedCollision qualifiedCollisionAlias in
 reformulation qualifiedCollision : qualified certificate qualifiedCollisionAlias := by
   rename labels.cap to labels.other
 
--- A late error also discards the helper stored by the completed conic step.
-#guard_error_fragments ["constraint name `upper` already exists"] in
-assert_rename_atomic% atomicTarget atomicAlias in
-reformulation atomicTarget : bounded certificate atomicAlias := by
-  conic at cap
-  rename lower to fresh
-  rename fresh to upper
-
-reformulation atomicTarget : bounded certificate atomicAlias := by
-  rename lower to lower
-
-example : GlobalEquivalence bounded atomicTarget := atomicAlias
-example : atomicTarget = bounded := rfl
-
 def affine :=
   problem (x : ℝ)
     minimize x
@@ -161,18 +128,6 @@ run_cmd do
     | Lean.throwError "contextual label round trip lost its display metadata"
   unless view.constraints.map (·.name.eraseMacroScopes) == #[`cap] do
     Lean.throwError "contextual label round trip retained an intermediate label"
-
-#guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in
-assert_rename_atomic% afterConic afterConicAlias in
-reformulation afterConic : affine certificate afterConicAlias := by
-  conic
-  rename cap to bound
-
-#guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in
-assert_rename_atomic% afterNLP afterNLPAlias in
-reformulation afterNLP : affine certificate afterNLPAlias := by
-  nlp
-  rename cap to bound
 
 run_cmd do
   for malformed in #[

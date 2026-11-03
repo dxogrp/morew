@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 
 /-! Compiled sources whose direct occurrences would change under beta reduction. -/
 

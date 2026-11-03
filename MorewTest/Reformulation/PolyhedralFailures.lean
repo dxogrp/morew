@@ -3,8 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
+import MorewTest.Environment
 
 /-!
 # Targeted polyhedral diagnostics and rollback
@@ -28,6 +29,29 @@ private def assertAbsent (target aliasName : Lean.Name) :
   if (Morew.Syntax.getProblemView? env target).isSome then
     Lean.throwError "failed conic rewrite registered presentation metadata"
 
+elab "assert_polyhedral_atomic% " nested:command : command => do
+  let before ← Lean.getEnv
+  let `(command| reformulation $target:ident : $_source:ident
+      $[certificate $aliasName:ident]? := by $_steps:reformulationStep*) := nested
+    | Lean.throwError "expected a reformulation command"
+  let namespaceName ← Lean.getCurrNamespace
+  let targetName := namespaceName ++ target.getId
+  let names := #[targetName, targetName ++ `equivalence] ++
+    (match aliasName with
+      | some aliasName => #[namespaceName ++ aliasName.getId]
+      | none => #[])
+  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  let after ← Lean.getEnv
+  unless MorewTest.sameLocalDeclarationNames before after do
+    Lean.throwError "failed conic label lookup changed local declarations"
+  for name in names do
+    if after.contains name then
+      Lean.throwError "failed conic label lookup emitted {name}"
+    if (Morew.Syntax.getProblemView? after name).isSome ||
+        (Morew.Syntax.getProblemDisplayView? after name).isSome ||
+        (Morew.Syntax.getProblemPrintPresentation? after name).isSome then
+      Lean.throwError "failed conic label lookup registered presentation metadata for {name}"
+
 def source :=
   problem (x : ℝ)
     minimize x
@@ -36,6 +60,7 @@ def source :=
 
 /-- error: unknown or stale constraint label `missing` -/
 #guard_msgs in
+assert_polyhedral_atomic%
 reformulation unknown : source certificate unknownAlias := by
   conic at missing
 
@@ -76,7 +101,7 @@ reformulation wrongRecord : source certificate wrongRecordAlias := by
 predicate also matches the ordinary automatic absolute-value rule. -/
 def guardedLift (_ : True) : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) :=
   ExactConstraintLift.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Morew.Conic.Polyhedral.abs_le_iff x 3)
+    (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
 
 /-- error: constraint `bound`: failed to elaborate exact rule: exact rule contains unresolved metavariables -/
 #guard_msgs in
@@ -129,7 +154,7 @@ def booleanLift : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) where
   Auxiliary := Bool
   target x _ := x ≤ 3 ∧ -x ≤ 3
   source_iff_exists x := by
-    simp [Morew.Conic.Polyhedral.abs_le_iff]
+    simp [Morew.Rewrite.Polyhedral.abs_le_iff]
 
 /-- error: constraint `bound`: unsupported exact-lift decision space -/
 #guard_msgs (substring := true) in

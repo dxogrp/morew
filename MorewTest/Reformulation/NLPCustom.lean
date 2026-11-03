@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.NLP
 
 /-! # Explicit exact rules and evaluation-domain evidence for targeted NLP steps -/
 

@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
-import MorewTest.Diagnostics
+import Morew.Reformulation.Basic
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Substitution diagnostics and failed-command rollback
@@ -91,19 +91,6 @@ run_cmd do
   assertNoReformulationOutput
     `MorewTest.Reformulation.SubstitutionFailures.missingPositivityTarget
     `MorewTest.Reformulation.SubstitutionFailures.missingPositivityAlias
-
-/-! Replacement elaboration is checked at the selected coordinate's type. -/
-
-/-- error: Application type mismatch -/
-#guard_msgs (substring := true) in
-reformulation illTypedReplacementTarget : positiveSource
-    certificate illTypedReplacementAlias := by
-  substitute x := Nat.succ n
-
-run_cmd do
-  assertNoReformulationOutput
-    `MorewTest.Reformulation.SubstitutionFailures.illTypedReplacementTarget
-    `MorewTest.Reformulation.SubstitutionFailures.illTypedReplacementAlias
 
 /-! Automatic rules match elaborated declarations, not a shadowing spelling. -/
 

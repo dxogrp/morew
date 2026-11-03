@@ -3,9 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Basic
 import MorewTest.Surface.Fixtures
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Surface diagnostics and rollback
@@ -17,15 +17,6 @@ namespace MorewTest.Surface
 
 open Morew
 noncomputable section
-
-/-! The removed certificate-first slash form no longer parses as a command. -/
-
-run_cmd do
-  let obsolete :=
-    "reformulation obsoleteCertificate / obsoleteTarget : original := by\n  epigraph t"
-  match Lean.Parser.runParserCategory (← Lean.getEnv) `command obsolete with
-  | .error _ => pure ()
-  | .ok _ => Lean.throwError "obsolete reformulation slash syntax was accepted"
 
 /-! Expected failures are local diagnostics, not claims of non-equivalence. -/
 

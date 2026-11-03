@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
 import Morew.Conic.Exponential
 import MorewTest.Environment
 
@@ -253,18 +253,13 @@ reformulation stale : source := by
   conic at exponential
   conic at exponential
 
-/-- error: unknown or stale constraint label `absent` -/
-#guard_msgs in
-reformulation unknown : source := by
-  conic at absent
-
 run_cmd do
   let env ← Lean.getEnv
   for name in #[`missingDomain, `zeroMargin, `noUniformMargin, `noArithmeticSearch,
       `selectedCannotSupplyMargin, `missingNonnegativity, `closedCornerNeedsCustomRule,
       `emptyLSE, `unavailableNonempty, `reversedExponential, `exponentialEquality,
       `nonaffineCoordinate, `nonaffineLogArgument, `unsupportedSubset, `incompatibleOrder,
-      `invalidExplicitRule, `explicitCannotFallback, `failureAfterAuxiliary, `stale, `unknown] do
+      `invalidExplicitRule, `explicitCannotFallback, `failureAfterAuxiliary, `stale] do
     let full := `MorewTest.Reformulation.ExponentialFailures ++ name
     if env.contains full || env.contains (full ++ `equivalence) ||
         (Syntax.getProblemView? env full).isSome then

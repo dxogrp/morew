@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LogDet.Sources
 
 /-! Log-det maximization and negative-log-det minimization compose objective introductions. -/

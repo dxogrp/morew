@@ -13,7 +13,7 @@ import Morew.Transform
 
 Shared proof assembly for targeted conic and NLP rewrites. This layer applies
 checked replacement rows to a typed problem; command-level naming and
-presentation updates belong to `Morew.Reformulation.Replace`. Conjunction proofs preserve the
+presentation updates belong to `Morew.Elab.Reformulation.Rows`. Conjunction proofs preserve the
 boundaries of unselected rows, even when a row itself contains a conjunction.
 -/
 

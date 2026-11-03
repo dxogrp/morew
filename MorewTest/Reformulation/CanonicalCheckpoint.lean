@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Presentation
+import Morew.Elab.Reformulation.View
 import Morew.Syntax
 import Morew.Elab.Conic
 
@@ -18,7 +18,7 @@ selected row in place rather than moving to the end of the presentation.
 namespace MorewTest.Reformulation.CanonicalCheckpoint
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Term
-open Morew.Reformulation.Internal
+open Morew.Elab.Reformulation
 
 noncomputable section
 

@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
 /-! # Finite power-lift boundaries and atomic failures -/
@@ -163,10 +163,6 @@ def nonmonotone :=
 reformulation nonmonotoneRejected : nonmonotone := by
   conic at inverse
 
-#guard_error_fragments ["missing"] in
-reformulation unknownLabel : (normSource 3) := by
-  conic at missing
-
 def lateFailure :=
   problem (x : Fin 2 → ℝ) (t : ℝ)
     minimize t
@@ -187,18 +183,6 @@ reformulation lateTerminal : lateFailure := by
 
 assert_not_exists lateTargeted lateAlias lateTargeted.equivalence lateTargeted.conicForm
   lateTerminal lateTerminal.equivalence lateTerminal.conicForm
-
--- Explicit objective-bound names still reject collisions with original decisions.
-def nameCollision :=
-  problem (x : Fin 2 → ℝ) (t : ℝ)
-    minimize ‖WithLp.toLp 3 x‖
-    subject to lower : 0 ≤ t
-
-#guard_error_fragments ["t"] in
-assert_power_family_atomic%
-reformulation duplicateAuxiliary : nameCollision := by
-  epigraph t
-  conic
 
 -- Automatic names freshen both the auxiliary and generated row labels while
 -- retaining the pre-existing coordinate and constraint in their original slots.

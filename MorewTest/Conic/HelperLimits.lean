@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.HelperFixtures
-import MorewTest.Affine.Support
+import MorewTest.Affine.RowSupport
 import Lean.Meta.Tactic.AuxLemma
 
 /-!

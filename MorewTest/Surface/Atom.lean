@@ -3,9 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Basic
 import MorewTest.Atom.Support
-import MorewTest.Diagnostics
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Atom recognition in surface models

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Rewrite
-import MorewTest.Affine.Support
+import MorewTest.ElabSupport
 import Morew.Elab.Expr
 
 /-!

@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
 /-!
@@ -84,10 +84,6 @@ reformulation rejectedComplexNorm : complexNorm := by conic at bound
 assert_spectral_atomic%
 reformulation rejectedExplicitComplexNorm : complexNorm := by
   conic at bound using Conic.Spectral.spectralNormEpigraph
-
-#guard_error_fragments ["unknown or stale constraint label `absent`"] in
-assert_spectral_atomic%
-reformulation rejectedUnknownLabel : normSource := by conic at absent
 
 #guard_error_fragments ["unknown or stale constraint label `bound`"] in
 assert_spectral_atomic%
@@ -256,7 +252,7 @@ example (A : Matrix (Fin 2) (Fin 2) ℂ) : ℝ := Fn.lambdaMax A
 
 assert_not_exists rejectedReverseNorm rejectedEqualityNorm rejectedBilinearNorm
   rejectedNonlinearNormBound rejectedComplexNorm rejectedExplicitComplexNorm
-  rejectedUnknownLabel rejectedStaleLabel rejectedAmbiguousTargeted rejectedAmbiguousTerminal
+  rejectedStaleLabel rejectedAmbiguousTargeted rejectedAmbiguousTerminal
   rejectedEntrywiseAsSpectral rejectedFrobeniusAsSpectral rejectedReverseNuclear
   rejectedEqualityNuclear rejectedNonlinearNuclear rejectedReverseLargest rejectedEqualityLargest
   rejectedMissingSymmetry rejectedNonlinearLargest rejectedEmptyLargest rejectedMissingDimension

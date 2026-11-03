@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
 import Morew.Elab.Conic.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support

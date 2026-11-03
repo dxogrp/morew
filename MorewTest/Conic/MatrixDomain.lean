@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.MatrixDomain
-import MorewTest.Affine.Support
+import MorewTest.ElabSupport
 
 /-!
 # Adversarial positive-definite domain recognition

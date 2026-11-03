@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Conic
 
 /-!
 # Targeted second-order reformulations
@@ -340,7 +340,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun (v : Fin 2 → ℝ) (t : ℝ) => (t, v) ∈ SOC 2 ∧ (t, 1 / 2, v) ∈ RSOC 2)) none
   Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
   let original ← Lean.instantiateMVars original
-  let exact ← Morew.Reformulation.Internal.exactExpressionSyntax original
+  let exact ← Morew.Elab.Reformulation.exactExpressionSyntax original
   if (exact.raw.findStack? (fun _ => true) (fun stx =>
       stx.isOfKind ``Morew.Conic.socCarrier || stx.isOfKind ``Morew.Conic.rsocCarrier)).isSome then
     Lean.throwError "cone presentation notation leaked into exact semantic syntax"

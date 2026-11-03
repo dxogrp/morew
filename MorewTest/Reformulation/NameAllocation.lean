@@ -3,14 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation
-import Mathlib.Data.Nat.Basic
+import Morew.Elab.Reformulation.Names
+import Lean.Elab.BuiltinEvalCommand
 
 /-!
 # Reformulation name allocation
 
 Visible-name comparison, independent name inventories, and deterministic
-freshening are checked through the runner API without the public DSL.
+freshening are checked through the name-allocation API without the public DSL.
 -/
 
 namespace MorewTest.Reformulation.NameAllocation

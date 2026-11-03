@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew
+import Morew.Reformulation.Conic
 
 /-!
 # Certified finite power-cone reformulations

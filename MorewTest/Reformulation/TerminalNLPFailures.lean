@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.NLP
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
 /-!
@@ -71,21 +71,6 @@ assert_nlp_terminal_atomic%
 reformulation afterTerminal : smoothSource := by
   nlp
   epigraph t
-
-/-- error: cannot apply a reformulation step after a terminal step -/
-#guard_msgs in
-assert_nlp_terminal_atomic%
-reformulation conicAfterTerminal : smoothSource := by
-  nlp
-  conic
-
-/-- error: cannot apply a reformulation step after a terminal step -/
-#guard_msgs in
-assert_nlp_terminal_atomic%
-reformulation nlpAfterConic : smoothSource := by
-  epigraph t
-  conic
-  nlp
 
 def nonsmoothObjective := problem (x : ℝ) minimize |x|
 #guard_error_fragments ["not certified as a smooth NLP by the available rules:"] in

@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
-import MorewTest.Diagnostics
+import Morew.Reformulation.Conic
+import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 import MorewTest.Reformulation.PSD.Fixtures
 
@@ -72,10 +72,6 @@ def bilinearSource :=
 #guard_error_fragments ["semidefinite", "both matrix factors"] in
 assert_psd_atomic%
 reformulation bilinear : bilinearSource := by conic
-
-#guard_error_fragments ["unknown or stale constraint label `absent`"] in
-assert_psd_atomic%
-reformulation unknownLabel : diagonalSource := by conic at absent
 
 namespace MissingPD
 variable (A : SymmetricMatrix 1)

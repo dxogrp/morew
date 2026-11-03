@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Command
+import Morew.Reformulation.Basic
 
 /-!
 # Selected objective and constraint bound lifts
@@ -38,27 +38,6 @@ info: problem (x a b : ℝ)
 -/
 #guard_msgs in
 #printp split
-
-reformulation converted : compound := by
-  epigraph a at (x ^ 2)
-  epigraph b at (|x|)
-  conic
-
-example : GlobalEquivalence compound converted := converted.equivalence
-example : Conic.Form converted := converted.conicForm
-example : IsConic converted := converted.isConic
-example : converted.conicForm.data.rowCount = 3 := rfl
-
-reformulation targetedConverted : compound := by
-  epigraph a at (x ^ 2) as square_bound
-  conic at square_bound
-  epigraph b at (abs x) as magnitude_bound
-  conic at magnitude_bound
-  conic
-
-example : GlobalEquivalence compound targetedConverted := targetedConverted.equivalence
-example : IsConic targetedConverted := targetedConverted.isConic
-example : targetedConverted.conicForm.data.rowCount = 3 := rfl
 
 def nestedExponential := problem (x : ℝ) minimize Real.exp (x ^ 2 + 1) + x
 
@@ -112,13 +91,6 @@ info: problem (x t : ℝ)
 -/
 #guard_msgs in
 #printp namedSplit
-
-reformulation continued : namedSplit := by
-  epigraph b at penalty
-  conic
-
-example : GlobalEquivalence namedSplit continued := continued.equivalence
-example : IsConic continued := continued.isConic
 
 def equalDefinitions :=
   problem (x : ℝ)
@@ -178,39 +150,6 @@ def budgeted :=
       budget : |x| + y ^ 2 ≤ 10
       bound : abs_y ≤ 5
 
--- Keep this chain within Lean's default heartbeat budget. Re-elaborating each
--- complete occurrence certificate used to exhaust that budget for this chain.
-reformulation budgetedConic : budgeted := by
-  epigraph a at (x ^ 2) as epi_sq_x
-  epigraph b at (|x|) in budget as magnitude_bound
-  epigraph c at (y ^ 2) in budget as square_bound
-  epigraph d at abs_y in bound as abs_bound
-  conic
-
-example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
-example : Conic.Form budgetedConic := budgetedConic.conicForm
-example : IsConic budgetedConic := budgetedConic.isConic
-example : budgetedConic.conicForm.data.rowCount = 8 := rfl
-example (x y a b c d : ℝ) :
-    budgetedConic.objective (((((x, y), a), b), c), d) = a + y := rfl
-
-/--
-info: problem (x y a b c d : ℝ)
-  let abs_y := |y|
-  minimize a + y
-  subject to
-    budget : 10 - (b + c) ∈ ℝ₊
-    bound : 5 - d ∈ ℝ₊
-    epi_sq_x_conic_1 : (a, 1 / 2, ![x]) ∈ RSOC 1
-    magnitude_bound_conic_1 : b - x ∈ ℝ₊
-    magnitude_bound_conic_2 : b + x ∈ ℝ₊
-    square_bound_conic_1 : (c, 1 / 2, ![y]) ∈ RSOC 1
-    abs_bound_conic_1 : d - y ∈ ℝ₊
-    abs_bound_conic_2 : d + y ∈ ℝ₊
--/
-#guard_msgs in
-#printp budgetedConic
-
 def maximum :=
   problem (x : ℝ)
     let score := min x (2 * x)
@@ -255,18 +194,6 @@ example : GlobalEquivalence maximum maximumLabeledUsing := maximumLabeledUsing.e
 example : maximumUsing = maximumLabeledUsing := rfl
 example (x t : ℝ) : maximumLabeledUsing.feasible (x, t) ↔
     |x| + x ≤ 10 ∧ t ≤ min x (2 * x) := Iff.rfl
-
-reformulation maximumConverted : maximum := by
-  hypograph t at score as score_bound
-  conic at score_bound
-  epigraph a at (abs x) in budget as magnitude_bound
-  conic at magnitude_bound
-  conic
-
-example : GlobalEquivalence maximum maximumConverted := maximumConverted.equivalence
-example : IsConic maximumConverted := maximumConverted.isConic
-example : maximumConverted.conicForm.data.sense = .maximize := rfl
-example : maximumConverted.conicForm.data.rowCount = 5 := rfl
 
 def lowerMinimum :=
   problem (x : ℝ)

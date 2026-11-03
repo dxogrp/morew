@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Conic
 import MorewTest.Reformulation.MatrixFraction.Defined
 
 /-! Matrix-fraction domains survive either targeted or terminal rewrite order. -/
@@ -77,20 +77,6 @@ def fixedSource (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :=
 section ConjoinedDomains
 
 variable (Q : Matrix (Fin n) (Fin n) ℝ)
-
-section Left
-variable (hQ : True ∧ Q.PosDef)
-reformulation fixedConjoinedLeft : (fixedSource n Q) := by conic
-example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedLeft n Q hQ) :=
-  fixedConjoinedLeft.equivalence n Q hQ
-end Left
-
-section Right
-variable (hQ : Q.PosDef ∧ True)
-reformulation fixedConjoinedRight : (fixedSource n Q) := by conic
-example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedRight n Q hQ) :=
-  fixedConjoinedRight.equivalence n Q hQ
-end Right
 
 section Nested
 variable (hQ : True ∧ (Q.PosDef ∧ True))

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation
+import Morew.Reformulation.Conic
 
 /-!
 # Finite-index presentation boundaries
@@ -15,7 +15,7 @@ numerals, arithmetic, coercions, or dependent types have specialized instances.
 namespace MorewTest.Reformulation.PresentationIndices
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
-open Morew Morew.Reformulation.Internal
+open Morew Morew.Elab.Reformulation
 
 private def elaborate (term : TSyntax `term) (expectedType? : Option Expr := none) :
     TermElabM Expr := do

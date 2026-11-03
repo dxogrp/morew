@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.PowerChainPrinting
+import Morew.Elab.Reformulation.Conic.PowerChain
 import Morew.Conic.Power.GeometricMean
 import MorewTest.Environment
 import Lean.Meta.Tactic.AuxLemma
@@ -86,7 +86,7 @@ private def checkRows (rows : Array Expr) (expected : Array String)
   assigned.mvarId!.assign (mkNatLit 7)
   let before ← getMCtx
   let environment ← getEnv
-  let result ← Morew.Reformulation.Internal.powerChainPrintRows rows renderer
+  let result ← Morew.Elab.Reformulation.Conic.powerChainPrintRows rows renderer
   let after ← getMCtx
   unless result.map role == expected do
     throwError "unexpected power-chain roles: {result.map role}; expected {expected}"
@@ -298,7 +298,7 @@ run_cmd liftTermElabM do
   lambdaTelescope expression fun parameters body => do
     let rows := (splitRows body).map (·.replaceFVars #[parameters[0]!] #[mkConst ``j])
     checkRows rows geometricRoles
-    let recipes ← Morew.Reformulation.Internal.powerChainPrintRows rows renderLeaf
+    let recipes ← Morew.Elab.Reformulation.Conic.powerChainPrintRows rows renderLeaf
     let some (.step _ source index _) := recipes[1]! | throwError "missing global-vector step"
     unless containsIdentifier source `j do
       throwError "global-vector control no longer prints the short name j"
@@ -318,7 +318,7 @@ run_cmd liftTermElabM do
   lambdaTelescope expression fun _ body => do
     let rows := splitRows body
     checkRows rows geometricRoles
-    let recipes ← Morew.Reformulation.Internal.powerChainPrintRows rows renderLeaf
+    let recipes ← Morew.Elab.Reformulation.Conic.powerChainPrintRows rows renderLeaf
     let some (.step _ _ index size) := recipes[1]! | throwError "missing global-dimension step"
     unless containsIdentifier size `j do
       throwError "global-dimension control no longer prints the short name j"
