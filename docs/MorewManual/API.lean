@@ -6,6 +6,7 @@ open Verso.Genre Manual
 %%%
 tag := "api-index"
 file := "api-index"
+htmlSplit := .never
 %%%
 
 The [complete API reference](api/) includes declaration types, docstrings,

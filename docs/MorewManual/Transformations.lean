@@ -6,6 +6,7 @@ open Verso.Genre Manual
 %%%
 tag := "transformations"
 file := "transformations"
+htmlSplit := .never
 %%%
 
 A `reformulation q : p := by` script defines a new problem `q` and its
@@ -62,11 +63,3 @@ the new bound.
 For `conic at` and `nlp at`, `using rule` chooses a representation.
 For substitution, `via rule` chooses a coordinate parameterization;
 `using proof` supplies a feasible-surjection certificate for the complete problem.
-
-# Examples
-
-- [Subexpressions](examples/Examples/Transformations/Subexpressions/): named expressions, explicit subexpressions, and nested constraints.
-- [Substitution](examples/Examples/Transformations/Substitution/): square, affine, exponential, and variable-dependent substitutions.
-- [Rename](examples/Examples/Transformations/Rename/): constraint names before and after reformulation.
-- [Derive](examples/Examples/Transformations/Derive/): domain information and a derive/rewrite/remove sequence. Its redundant steps show the effect of each command.
-- [Remove](examples/Examples/Transformations/Remove/): duplicates, tautologies, and implied constraints.

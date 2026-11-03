@@ -6,6 +6,7 @@ open Verso.Genre Manual
 %%%
 tag := "certificates"
 file := "certificates"
+htmlSplit := .never
 %%%
 
 For minimization problems $`p` and $`q` with objectives $`f_p` and $`f_q`,
@@ -19,7 +20,7 @@ Maximization uses the reversed objective order, represented in Lean by `OrderDua
 
 Given `e : GlobalEquivalence p q` and a proof `hy` that a feasible point of `q`
 is optimal, `e.map_isGlobalOptimum_backward hy` proves optimality of its image in
-`p`. [Basic](examples/Examples/GettingStarted/Basic/) contains a complete proof.
+`p`.
 
 # Generated declarations
 
@@ -54,6 +55,5 @@ A substitution proves that its parameterization covers every feasible source
 point. A restriction supplies a feasible representative with an objective at
 least as good.
 
-See the [core API](api/Morew/Core.html),
-[representation API](api/Morew/Rewrite/Basic.html), and
-[custom-rule examples](examples/Examples/Advanced/CustomRules/).
+See the [core API](api/Morew/Core.html) and
+[representation API](api/Morew/Rewrite/Basic.html).

@@ -6,6 +6,7 @@ open Verso.Genre Manual
 %%%
 tag := "advanced"
 file := "advanced"
+htmlSplit := .never
 %%%
 
 # Custom rules
@@ -16,8 +17,6 @@ a target predicate, and the existential equivalence. These records are defined
 with `def`. Register them with `@[morew_conic]` or `@[morew_nlp]`, or choose a
 rule explicitly with `using`.
 
-[CustomRules](examples/Examples/Advanced/CustomRules/) demonstrates parameterized
-absolute deviation, an absolute-value graph, and logarithms on a positive domain.
 Domain conditions can be expressed by a subtype; the current constraints supply
 the required proof.
 
@@ -26,21 +25,19 @@ the required proof.
 For positive-definite $`A`, the condition $`tI-B^T A^{-1}B\succeq0` is equivalent
 to positive semidefiniteness of the block matrix
 $`\begin{pmatrix}A&B\\B^T&tI\end{pmatrix}`.
-[Schur](examples/Examples/Advanced/Schur/) proves a constraint equivalence and
-applies its certificate to a model.
+This equivalence gives a constraint representation for `conic at`.
 
 # Restrictions
 
 Adding a restriction can change the feasible set while preserving global optima
 through a suitable map of feasible points.
-[Restrict](examples/Examples/Advanced/Restrict/) develops three examples:
-replacing a coordinate by its absolute value, sorting interchangeable variables,
-and selecting a square-root branch after substitution.
+Representative maps can replace a coordinate by its absolute value, sort
+interchangeable variables, or select a square-root branch after substitution.
+Each map must preserve feasibility and give an objective at least as good.
 
 # Helper-function options
 
 Transparent helper functions are expanded during affine certification.
-[Conic](examples/Examples/GettingStarted/Conic/) gives a simple example.
 These options bound expansion for each source expression:
 
 :::table +header
