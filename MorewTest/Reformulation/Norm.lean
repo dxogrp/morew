@@ -82,15 +82,14 @@ example (t : ℝ) :
   simp [Rewrite.fnNormInfEpigraph, Rewrite.normInfEpigraph]
 example (t : ℝ) :
     (∃ u, (Rewrite.fnNorm2Epigraph (n := 0)).target Fin.elim0 t u) ↔ 0 ≤ t := by
-  simp [Rewrite.fnNorm2Epigraph, Rewrite.norm2Epigraph, Rewrite.euclideanNormEpigraph,
-    sq_nonneg]
+  simp [Rewrite.fnNorm2Epigraph, Rewrite.norm2Epigraph, sq_nonneg]
 example (t : ℝ) :
     (∃ u, (Conic.SecondOrder.fnNorm2Epigraph (n := 0)).target Fin.elim0 t u) ↔ 0 ≤ t := by
   rw [← Conic.SecondOrder.fnNorm2Epigraph.source_iff_exists]
   simp only [Fn.norm2_empty]
 
--- The coordinate compatibility record remains explicitly selectable at a
--- native norm source, including an applied symbolic dimension.
+-- The native Euclidean record handles converted vectors directly, including
+-- explicit selection with an applied symbolic dimension.
 def nativeSource (n : Nat) :=
   problem (x : Fin n → ℝ) (t : ℝ)
     minimize t

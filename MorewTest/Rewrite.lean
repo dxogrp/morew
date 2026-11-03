@@ -69,12 +69,12 @@ example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
   Rewrite.normInfToLpEpigraph.source_iff_exists v t
 
 example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
-    ‖WithLp.toLp 2 v‖ ≤ t ↔ ∃ u, Rewrite.norm2Epigraph.target v t u :=
-  Rewrite.norm2Epigraph.source_iff_exists v t
+    ‖WithLp.toLp 2 v‖ ≤ t ↔ ∃ u, Rewrite.norm2Epigraph.target (WithLp.toLp 2 v) t u :=
+  Rewrite.norm2Epigraph.source_iff_exists (WithLp.toLp 2 v) t
 
 example {n : Nat} (v : EuclideanSpace ℝ (Fin n)) (t : ℝ) :
-    ‖v‖ ≤ t ↔ ∃ u, Rewrite.euclideanNormEpigraph.target v t u :=
-  Rewrite.euclideanNormEpigraph.source_iff_exists v t
+    ‖v‖ ≤ t ↔ ∃ u, Rewrite.norm2Epigraph.target v t u :=
+  Rewrite.norm2Epigraph.source_iff_exists v t
 
 example {n : Nat} (v u : Fin n → ℝ) (t : ℝ) :
     Rewrite.norm1Epigraph.target v t u = (v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t) := rfl
@@ -84,14 +84,15 @@ example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
       (0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t)) := rfl
 
 example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
-    Rewrite.norm2Epigraph.target v t () = (0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2) := rfl
+    Rewrite.norm2Epigraph.target (WithLp.toLp 2 v) t () =
+      (0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2) := rfl
 
--- Explicit callers retain the specialized record's public auxiliary and target.
+-- Both native and named records retain the same auxiliary and coordinate target.
 example {n : Nat} : (Rewrite.norm2Epigraph (n := n)).Auxiliary = Unit := rfl
 
 example {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
-    Rewrite.norm2Epigraph.target v t () =
-      Rewrite.euclideanNormEpigraph.target (WithLp.toLp 2 v) t () := rfl
+    Rewrite.fnNorm2Epigraph.target v t () =
+      Rewrite.norm2Epigraph.target (WithLp.toLp 2 v) t () := rfl
 
 example (v : Fin 0 → ℝ) (t : ℝ) :
     (∃ u, Rewrite.norm1Epigraph.target v t u) ↔ 0 ≤ t := by
@@ -102,14 +103,14 @@ example (v : Fin 0 → ℝ) (t : ℝ) :
   simp [Rewrite.normInfEpigraph]
 
 example (v : Fin 0 → ℝ) (t : ℝ) :
-    Rewrite.norm2Epigraph.target v t () ↔ 0 ≤ t := by
-  simp [Rewrite.norm2Epigraph, Rewrite.euclideanNormEpigraph, sq_nonneg]
+    Rewrite.norm2Epigraph.target (WithLp.toLp 2 v) t () ↔ 0 ≤ t := by
+  simp [Rewrite.norm2Epigraph, sq_nonneg]
 
 example (v : EuclideanSpace ℝ (Fin 0)) (t : ℝ) :
-    Rewrite.euclideanNormEpigraph.target v t () ↔ 0 ≤ t := by
-  simp [Rewrite.euclideanNormEpigraph, sq_nonneg]
+    Rewrite.norm2Epigraph.target v t () ↔ 0 ≤ t := by
+  simp [Rewrite.norm2Epigraph, sq_nonneg]
 
-example (v : Fin 0 → ℝ) : ¬ Rewrite.norm2Epigraph.target v (-1) () := by
+example (v : Fin 0 → ℝ) : ¬ Rewrite.norm2Epigraph.target (WithLp.toLp 2 v) (-1) () := by
   change ¬ (0 ≤ (-1 : ℝ) ∧ _)
   norm_num
 

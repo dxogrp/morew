@@ -331,12 +331,14 @@ run_cmd liftTermElabM do
   check (← `(input (fun x : ℝ => shift x = shift 3) #[])) 1
   check (← `(input (fun x : ℝ => shift 3 = shift x) #[])) 1
 
--- One general Euclidean registration handles both carrier spellings. Adding the
--- specialized record is a real second success, not an implicit priority choice.
+-- One general Euclidean registration handles both carrier spellings. Adding a
+-- test-only alias is a real second success, not an implicit priority choice.
 run_cmd liftTermElabM do
   check (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[])) 2
   check (← `(input (fun v : EuclideanSpace ℝ (Fin 2) => ‖v‖ ≤ 3) #[])) 2
   check (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[])) 2
+    (some ``Morew.Rewrite.norm2Epigraph)
+  check (← `(input (fun v : EuclideanSpace ℝ (Fin 2) => ‖v‖ ≤ 3) #[])) 2
     (some ``Morew.Rewrite.norm2Epigraph)
 
 run_cmd liftTermElabM do
@@ -350,14 +352,20 @@ run_cmd liftTermElabM do
       (fun p : EuclideanSpace ℝ (Fin n) × ℝ =>
         (∑ i, (WithLp.ofLp p.1 i) ^ 2) ≤ p.2 ^ 2)])) 1
 
+noncomputable def alternateNorm2Epigraph {n : Nat} :
+    EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) :=
+  Rewrite.norm2Epigraph
+
 section
-attribute [local morew_nlp] Morew.Rewrite.norm2Epigraph
+attribute [local morew_nlp] alternateNorm2Epigraph
 
 run_cmd liftTermElabM do
   reject (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[]))
-    "ambiguous exact NLP rules: Morew.Rewrite.euclideanNormEpigraph, Morew.Rewrite.norm2Epigraph"
+    "ambiguous exact NLP rules: Morew.Rewrite.norm2Epigraph, MorewTest.NLP.Registry.alternateNorm2Epigraph"
   check (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[])) 2
     (some ``Morew.Rewrite.norm2Epigraph)
+  check (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[])) 2
+    (some ``alternateNorm2Epigraph)
 end
 
 -- The premise is essential: dropping nonnegativity changes the represented bound.
