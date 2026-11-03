@@ -184,18 +184,6 @@ reformulation lateTerminal : lateFailure := by
 assert_not_exists lateTargeted lateAlias lateTargeted.equivalence lateTargeted.conicForm
   lateTerminal lateTerminal.equivalence lateTerminal.conicForm
 
--- Explicit objective-bound names still reject collisions with original decisions.
-def nameCollision :=
-  problem (x : Fin 2 → ℝ) (t : ℝ)
-    minimize ‖WithLp.toLp 3 x‖
-    subject to lower : 0 ≤ t
-
-#guard_error_fragments ["t"] in
-assert_power_family_atomic%
-reformulation duplicateAuxiliary : nameCollision := by
-  epigraph t
-  conic
-
 -- Automatic names freshen both the auxiliary and generated row labels while
 -- retaining the pre-existing coordinate and constraint in their original slots.
 def automaticNameCollision :=

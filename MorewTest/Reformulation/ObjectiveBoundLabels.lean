@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Basic
+import MorewTest.Environment
 
 /-!
 # Explicit epigraph and hypograph labels
@@ -333,9 +334,33 @@ makeLabeledMinimum macroCollision from occupiedMacroLabel
 
 /-! Existing validation remains active with the optional-label syntax. -/
 
+elab "assert_objective_bound_atomic% " nested:command : command => do
+  let before ← Lean.getEnv
+  let `(command| reformulation $target:ident : $_source:ident
+      $[certificate $aliasName:ident]? := by $_steps:reformulationStep*) := nested
+    | Lean.throwError "expected a reformulation command"
+  let namespaceName ← Lean.getCurrNamespace
+  let targetName := namespaceName ++ target.getId
+  let names := #[targetName, targetName ++ `equivalence] ++
+    (match aliasName with
+      | some aliasName => #[namespaceName ++ aliasName.getId]
+      | none => #[])
+  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  let after ← Lean.getEnv
+  unless MorewTest.sameLocalDeclarationNames before after do
+    Lean.throwError "failed objective-bound step changed local declarations"
+  for name in names do
+    if after.contains name then
+      Lean.throwError "failed objective-bound step emitted {name}"
+    if (Morew.Syntax.getProblemView? after name).isSome ||
+        (Morew.Syntax.getProblemDisplayView? after name).isSome ||
+        (Morew.Syntax.getProblemPrintPresentation? after name).isSome then
+      Lean.throwError "failed objective-bound step registered presentation metadata for {name}"
+
 /-- error: decision variable `x` already exists -/
 #guard_msgs in
-reformulation binderCollision : minimumSource := by
+assert_objective_bound_atomic%
+reformulation binderCollision : minimumSource certificate binderCollisionAlias := by
   epigraph x as fresh_label
 
 /-- error: `hypograph` is not valid for a minimization problem -/
