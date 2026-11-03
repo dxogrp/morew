@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.NLP
-import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.EuclideanPrintingSupport
 
 /-!
 # Euclidean coordinates in generated NLP problem presentations
@@ -17,6 +17,7 @@ namespace MorewTest.Reformulation.EuclideanPrintingNLP
 
 open Lean Lean.Elab.Command Morew
 open MorewTest.Reformulation.PrintDetails (printed)
+open MorewTest.Reformulation.EuclideanPrintingSupport (checkStoredProjections replayStored)
 
 /-- Both print modes hide coordinate projections without changing the rows. -/
 def checkReadable (declaration : Name) : CommandElabM Unit := do
@@ -32,29 +33,6 @@ def checkReadable (declaration : Name) : CommandElabM Unit := do
         "hypograph_t_nlp_2 : ∑ i, x i ^ 2 ≤ (-t) ^ 2"] do
       unless output.contains fragment do
         throwError "readable Euclidean printing changed {fragment}: {output}"
-
-/-- The readable coordinate shorthand belongs only to the print payloads. -/
-def checkStoredProjections (declaration : Name) : CommandElabM Unit := do
-  for getter in #[Syntax.getProblemView?, Syntax.getProblemDisplayView?] do
-    let some view := getter (← getEnv) declaration
-      | throwError "Euclidean printing lost a stored reconstruction view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    let output := (← liftCoreM <| PrettyPrinter.ppTerm ⟨term⟩).pretty
-    unless output.contains "ofLp" do
-      throwError "print-only Euclidean coordinates entered reconstruction syntax: {output}"
-
-/-- Rebuild both stored views in the caller's instance context. -/
-def replayStored (declaration exactName displayName : Name) : CommandElabM Unit := do
-  for (getter, name) in #[(Syntax.getProblemView?, exactName),
-      (Syntax.getProblemDisplayView?, displayName)] do
-    let some view := getter (← getEnv) declaration
-      | throwError "missing Euclidean reconstruction view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-    let result ← getConstInfo ((← getCurrNamespace) ++ name)
-    if result.type.hasMVar || result.type.hasSorry ||
-        result.value!.hasMVar || result.value!.hasSorry then
-      throwError "Euclidean replay contains incomplete evidence"
 
 noncomputable section
 

@@ -69,6 +69,7 @@ import MorewTest.ImportCompatibility.AppliedSources.Defined
 import MorewTest.ImportCompatibility.CoercionReplay
 import MorewTest.ImportCompatibility.CoercionReplay.Defined
 import MorewTest.ImportCompatibility.DirectNormalization
+import MorewTest.ImportCompatibility.EuclideanPrintingConic
 import MorewTest.ImportCompatibility.EuclideanPrintingNLP
 import MorewTest.ImportCompatibility.Exponential
 import MorewTest.ImportCompatibility.Exponential.Defined
@@ -150,6 +151,7 @@ import MorewTest.Reformulation.DirectNormalization
 import MorewTest.Reformulation.Dispatch
 import MorewTest.Reformulation.EuclideanPrintingConic
 import MorewTest.Reformulation.EuclideanPrintingNLP
+import MorewTest.Reformulation.EuclideanPrintingSupport
 import MorewTest.Reformulation.Exponential
 import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures

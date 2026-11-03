@@ -12,7 +12,8 @@ namespace MorewTest.ImportCompatibility.EuclideanPrintingNLP
 
 open Morew
 open MorewTest.Reformulation.EuclideanPrintingNLP
-  (source target registeredDetailed checkReadable checkStoredProjections replayStored)
+  (source target registeredDetailed checkReadable)
+open MorewTest.Reformulation.EuclideanPrintingSupport (checkStoredProjections replayStored)
 
 noncomputable section
 
