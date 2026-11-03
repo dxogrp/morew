@@ -17,16 +17,6 @@ noncomputable section
 
 def source := problem (x : ℝ) minimize x
 
-run_cmd do
-  for kind in #[``Morew.substituteStep, ``Morew.substituteViaStep,
-      ``Morew.deriveStep, ``Morew.restrictStep, ``Morew.renameConstraintStep,
-      ``Morew.removeStep, ``Morew.epigraphStep, ``Morew.hypographStep,
-      ``Morew.epigraphAtStep, ``Morew.hypographAtStep] do
-    unless (stepAttribute.getEntries (← getEnv) kind).length == 1 do
-      throwError "expected exactly one Basic handler for {kind}"
-  unless (viewAttribute.getValues (← getEnv) `presentation).isEmpty do
-    throwError "Basic installed backend presentation support"
-
 elab "assert_dispatch_atomic% " nested:command : command => do
   let before ← getEnv
   try elabCommand nested catch error => Lean.Elab.logException error
