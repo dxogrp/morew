@@ -89,6 +89,37 @@ example (t : ℝ) :
   rw [← Conic.SecondOrder.fnNorm2Epigraph.source_iff_exists]
   simp only [Fn.norm2_empty]
 
+-- The coordinate compatibility record remains explicitly selectable at a
+-- native norm source, including an applied symbolic dimension.
+def nativeSource (n : Nat) :=
+  problem (x : Fin n → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      bound : ‖WithLp.toLp 2 x‖ ≤ t
+
+reformulation nativeSelectedNLP : (nativeSource n) := by
+  nlp at bound using (Rewrite.norm2Epigraph (n := n))
+
+example : Problem ((Fin n → ℝ) × ℝ) ℝ := nativeSelectedNLP n
+example (x : Fin n → ℝ) (t : ℝ) :
+    (nativeSelectedNLP n).feasible (x, t) ↔
+      0 ≤ t ∧ ∑ i, x i ^ 2 ≤ t ^ 2 := Iff.rfl
+
+/--
+info: problem (x : Fin n → ℝ) (t : ℝ)
+  minimize t
+  subject to
+    bound_nlp_1 : 0 ≤ t
+    bound_nlp_2 : ∑ i, x i ^ 2 ≤ t ^ 2
+-/
+#guard_msgs in
+#printp nativeSelectedNLP
+
+run_cmd do
+  unless (← PrintDetails.printed ``nativeSelectedNLP false) ==
+      (← PrintDetails.printed ``nativeSelectedNLP false) do
+    Lean.throwError "native norm lowering changed its deterministic presentation"
+
 def residual (m n : Nat) (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
   problem (x : Fin n → ℝ)
     let error := A *ᵥ x - b
