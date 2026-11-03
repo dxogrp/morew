@@ -11,8 +11,7 @@ import Morew.Reformulation.Conic
 For a positive-definite matrix `A`, the Schur complement `tI - Bᵀ A⁻¹ B`
 is positive semidefinite exactly when the block matrix `[A B; Bᵀ tI]` is
 positive semidefinite. We package this equivalence as a custom constraint rule
-and use it to obtain a certified conic problem. Positive definiteness of `A`
-is an explicit hypothesis of the certificate.
+and use it to obtain a conic problem.
 -/
 
 namespace Examples.Advanced.Schur

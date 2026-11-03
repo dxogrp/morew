@@ -6,12 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Certified log-determinant optimization
+# Log-determinant optimization
 
 `Fn.logDet X` means the total real function `Real.log X.det`.
-Maximizing it at a fixed trace requires a positive-definite domain for the
-exact conic rewrite. Three certified variants use PSD and exponential cones;
-removing the redundant domain constraint reduces the row count from five to four.
+Its conic representation requires a positive-definite matrix. Three variants
+maximize it at a fixed trace using PSD and exponential cones. Removing a
+redundant domain constraint reduces the row count from five to four.
 -/
 
 namespace Examples.Models.LogDet
@@ -37,9 +37,8 @@ example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
 example : maximumConic.conicForm.data.rowCount = 5 := rfl
 
--- Rewriting the log-det bound first makes the original domain row redundant:
--- the PSD and EXP rows already imply positive definiteness. Removing that row
--- avoids the additional PSD block and auxiliary used by its separate representation.
+-- The log-det bound's PSD and EXP rows imply positive definiteness. Removing
+-- the redundant domain row saves its separate PSD block and auxiliary.
 reformulation maximumWithoutDomainConic : maximum := by
   hypograph t as logDet_bound
   conic at logDet_bound
@@ -67,10 +66,8 @@ def nativeMaximum :=
       normalization : X.toMatrix.trace = 2
 
 /-
-This example rewrites the domain first to demonstrate that either rewrite order
-is supported. The explicit early `conic at domain` step is optional: the log-det
-rule can use the original `PosDef` constraint directly, or recover positive
-definiteness from its retained PSD representation.
+Rewrite the domain first. The log-det rule can use either the original
+`PosDef` constraint or its semidefinite representation to prove positive definiteness.
 -/
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound

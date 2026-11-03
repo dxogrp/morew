@@ -9,9 +9,8 @@ import Morew.Reformulation.NLP
 /-!
 # Making a proved consequence available to later steps
 
-`derive label : proposition using proof` appends a visible constraint without
-changing the feasible set. The proof must show that the proposition follows
-from the current problem's feasibility.
+`derive label : proposition using proof` appends a consequence of current
+feasibility, preserving the feasible set.
 
 The first problem uses transitivity of its bounds to make positivity of the
 logarithm's argument available to later steps. The second illustrates adding,
@@ -48,9 +47,7 @@ example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equ
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
 -- The derived bound proves positivity, allowing `x := Real.exp u`.
--- After substitution, the margin becomes `1 ≤ Real.exp u`.
--- This row remains because it is not a tautology, although it is still
--- implied by the other constraints.
+-- The margin remains as the redundant constraint `1 ≤ Real.exp u`.
 reformulation exponentialCoordinates : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   substitute x := Real.exp u
@@ -68,11 +65,9 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- The existing bounds imply |x| ≤ 1. Split this into x ≤ 1 and -x ≤ 1,
--- then remove both: x ≤ 1 already appears among the constraints, while
--- -x ≤ 1 needs a short proof that it follows from -1 ≤ x.
--- This is a teaching example: the extra steps illustrate how `derive`, `nlp`,
--- and `remove` work together but are unnecessary for this problem.
+-- This redundant sequence illustrates `derive`, `nlp`, and `remove` together:
+-- derive |x| ≤ 1, split it into two bounds, then remove them. The first is
+-- a duplicate; the second follows from -1 ≤ x.
 reformulation absoluteNLP : interval := by
   derive abs_bound : |x| ≤ 1 using (by
     intro point hp

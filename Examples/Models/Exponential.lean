@@ -11,7 +11,7 @@ open Morew
 # Exponential-cone examples
 
 Relative entropy uses a nonnegative numerator and a positive denominator.
-Softplus needs no domain constraint; its lower bound defines the feasible set.
+Softplus is defined on all real inputs; its lower bound defines the feasible set.
 Both objectives receive epigraph bounds and complete conic certificates.
 -/
 
@@ -25,7 +25,7 @@ def p :=
     minimize Fn.relativeEntropy a b
     subject to
       numerator : 0 ≤ a
-      -- This retained lower bound certifies the positive domain required by the rewrite.
+      -- This bound proves positivity of the denominator.
       denominator : 1 ≤ b
 
 reformulation entropyConic : p := by

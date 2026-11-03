@@ -19,9 +19,6 @@ open Real
 
 namespace Examples.GettingStarted.Basic
 
-/-
-Epigraph rewriting example
--/
 namespace Epigraph
 noncomputable
 
@@ -33,7 +30,6 @@ def p :=
 
 #printp p
 
--- Default epigraph rewriting
 reformulation epigraphForm : p := by
   epigraph t
 
@@ -64,9 +60,6 @@ reformulation labeledEpigraphForm : p := by
 
 end Epigraph
 
-/-
-Parameterized problem examples
--/
 namespace Parameterized
 noncomputable section
 

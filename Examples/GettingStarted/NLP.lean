@@ -6,11 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.NLP
 
 /-!
-# Certified smooth-NLP reformulations
+# Smooth NLP reformulations
 
 `nlp at label` performs an exact rewrite of a direct nonsmooth bound; optional
-`using` selects its rule. The first problem has a direct absolute-value bound
-and a nonlinear polynomial objective.
+`using` selects its rule.
 
 Bare `nlp` finishes the script by applying supported exact rewrites to direct
 bounds and certifying the complete objective and constraints as a smooth NLP.
@@ -43,7 +42,7 @@ def negativeMinimum :=
     minimize -min (x ^ 2) (Real.sin x)
 
 -- An epigraph of -min f g is described by the two bounds -f ≤ t and -g ≤ t.
--- Both expressions here are smooth, even though their minimum need not be.
+-- These two bounds use smooth expressions.
 reformulation negativeMinimumNLP : negativeMinimum := by
   epigraph t
   nlp

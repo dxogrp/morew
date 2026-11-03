@@ -7,16 +7,12 @@ import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 
 /-!
-# Registering custom exact rewrite rules
+# Registering custom rewrite rules
 
-`@[morew_conic]` and `@[morew_nlp]` make a proof-bearing representation available
-for automatic rule discovery. One definition can carry both attributes; each
-consumer still checks that its replacement rows are suitable for that target.
-
-Representation records live in `Type`, so define them with `def`, rather than
-`theorem`. The examples below prove an epigraph formula for absolute deviation,
-a graph formula for absolute value, and a logarithm formula valid on positive
-inputs. Each formula is used to obtain an equivalent conic or smooth NLP problem.
+`@[morew_conic]` and `@[morew_nlp]` register representations for automatic
+discovery. Define representation records with `def`; a definition may carry
+both attributes. The examples use an absolute-deviation epigraph, an
+absolute-value graph, and a logarithm representation on positive inputs.
 -/
 
 namespace Examples.Advanced.CustomRules
@@ -29,7 +25,7 @@ def absoluteDeviation (center x : ℝ) : ℝ := |x - center|
 @[morew_conic, morew_nlp]
 def absoluteDeviationEpigraph (center : ℝ) :
     EpigraphRepresentation (absoluteDeviation center) where
-  Auxiliary := Unit -- This replacement requires no additional decision variable.
+  Auxiliary := Unit -- No auxiliary decision variable.
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
   -- Certify the original bound iff an auxiliary satisfying the target exists.
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
@@ -65,9 +61,8 @@ example : (smooth.nlpForm center).data.toProblem = smooth center :=
   (smooth.nlpForm center).represents
 example : IsSmoothNLP (smooth center) := smooth.isSmoothNLP center
 
--- `using` selects this declaration alone and still infers `center`. Explicit
--- selection also works for unregistered rules and resolves automatic ambiguity.
--- Without `using`, exactly one matching rule must pass target certification.
+-- `using` selects a rule, including an unregistered one, and infers `center`.
+-- Automatic selection requires exactly one match passing target certification.
 reformulation selected : (fitting center) := by
   conic at deviation using absoluteDeviationEpigraph
   conic
@@ -108,8 +103,7 @@ reformulation signedGraphNLP : signedGraph := by nlp
 example : GlobalEquivalence signedGraph signedGraphNLP := signedGraphNLP.equivalence
 example : IsSmoothNLP signedGraphNLP := signedGraphNLP.isSmoothNLP
 
--- A subtype states the domain on which a representation is exact. Existing
--- constraints must prove that condition before the rule introduces auxiliaries.
+-- A subtype states the representation's domain, proved from existing constraints.
 def positiveLogEpigraph :
     EpigraphRepresentation (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
   Auxiliary := ℝ

@@ -10,14 +10,12 @@ import Morew.Reformulation.NLP
 # Vector norm models
 
 `Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the sum of absolute coordinates,
-Euclidean norm, and maximum absolute coordinate, respectively. They operate on
-ordinary real vectors without requiring a norm scope or a `WithLp` conversion.
-Native notation `‖WithLp.toLp p x‖` instead selects the `PiLp` p-norm; the
-Euclidean and finite p-norm examples below use it to choose an exponent.
+Euclidean norm, and maximum absolute coordinate of a real vector.
+`‖WithLp.toLp p x‖` selects the `PiLp` p-norm.
 
-The models fit data under norm bounds, compare three exact Euclidean
+The models fit data under norm bounds, compare three Euclidean
 representations at a symbolic dimension, and express a finite p-norm with
-power cones. Each complete formulation has conic or smooth NLP certification.
+power cones.
 -/
 
 namespace Examples.Models.Norms

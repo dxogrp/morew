@@ -6,10 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Certified complete conic reformulations
+# Conic reformulations
 
 `conic at label` performs an exact rewrite of a selected constraint; optional
-`using` selects its rule. This step alone does not certify the whole problem.
+`using` selects its rule.
 
 Bare `conic` finishes the script by rewriting supported constraints as cone
 memberships and certifying the complete problem as an affine cone program.
@@ -66,9 +66,6 @@ example : IsConic conicProb := conicProb.isConic
 
 end Helpers
 
-/-
-Targeted polyhedral rewriting
--/
 namespace Polyhedral
 
 def p :=

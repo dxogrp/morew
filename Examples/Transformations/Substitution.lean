@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 
 /-!
-# Certified coordinate substitutions
+# Coordinate substitutions
 
 `substitute` replaces a selected coordinate and proves that every feasible
 original point has a preimage. Domain constraints justify the square and
@@ -36,13 +36,12 @@ reformulation squared : nonnegative := by
 example : GlobalEquivalence nonnegative squared := squared.equivalence
 example : IsSmoothNLP squared := squared.isSmoothNLP
 
--- Without `via`, Morew searches the registered substitution rules. Here `via`
--- selects only `Morew.Substitution.square`, with no fallback to another rule.
--- In contrast, `using` supplies a complete problem-specific `FeasibleSurjection`.
+-- `via` selects a rule; automatic selection searches the registry.
+-- `using` supplies a problem-specific `FeasibleSurjection`.
 reformulation explicitlySquared : nonnegative := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
--- This example intentionally stops at the substitution and its equivalence.
+-- This example stops at the substitution and its equivalence.
 example : GlobalEquivalence nonnegative explicitlySquared := explicitlySquared.equivalence
 
 def interval :=
@@ -52,7 +51,7 @@ def interval :=
       lower : 1 ≤ x
       upper : x ≤ 5
 
--- Basic affine forms are recognized without a problem-specific certificate.
+-- Basic affine substitutions are recognized automatically.
 reformulation affineCoordinates : interval := by
   substitute x := 2 * u + 1
   conic
@@ -68,10 +67,8 @@ def scaled :=
       slope : 0 < a
       budget : x ≤ 4
 
--- A substitution can depend on another decision variable: here its coefficient
--- is `a`. The source constraint `0 < a` guarantees `a ≠ 0`, so every feasible
--- original point has a preimage with `u = x / a`. Both the substitution
--- `(a, u) ↦ (a, a * u)` and the chosen preimage `(a, x) ↦ (a, x / a)` preserve `a`.
+-- The coefficient a is another decision variable. Its constraint 0 < a
+-- gives the preimage u = x / a; substitution and its preimage both preserve a.
 reformulation retainedCoefficient : scaled := by
   substitute x := a * u
 

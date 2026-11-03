@@ -6,12 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Certified matrix and spectral reformulations
+# Matrix and spectral reformulations
 
 Largest eigenvalues, Euclidean operator norms, nuclear norms, and matrix
 fractions have exact semidefinite representations. The matrix fraction
 requires a positive-definite domain. After introducing objective epigraphs,
-each script constructs a globally equivalent certified conic program.
+each script constructs an equivalent conic program.
 -/
 
 namespace Examples.Models.Spectral
@@ -75,8 +75,7 @@ reformulation nuclearNormConic : nuclearNormModel := by
 example : GlobalEquivalence nuclearNormModel nuclearNormConic := nuclearNormConic.equivalence
 example : IsConic nuclearNormConic := nuclearNormConic.isConic
 
--- The matrix fraction requires the explicit positive-definite domain. Its
--- inverse is not regularized, and singular matrices are not admitted.
+-- The Schur representation of the matrix fraction requires positive definiteness.
 def matrixFractionModel :=
   problem (x : Fin 2 → ℝ) (P : SymmetricMatrix 2)
     minimize Fn.matrixFrac x P.toMatrix

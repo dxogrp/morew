@@ -8,14 +8,10 @@ import Morew.Reformulation.Basic
 /-!
 # Selecting feasible representatives
 
-`restrict label : proposition using repair` can discard feasible points when
-each has a representative satisfying the new condition with no worse objective.
-The certificate preserves global optimization behavior; the feasible sets may differ.
-
-The examples first choose a nonnegative point in an interval, then order two
-interchangeable variables, and finally choose the nonnegative square root after
-a square substitution. Each step includes a proof that the chosen point is
-feasible and has an objective value at least as good as the original point.
+`restrict label : proposition using repair` adds a constraint and proves global
+equivalence using a feasible representative with an objective at least as good.
+The examples choose nonnegative points, order interchangeable variables, and
+select the nonnegative square-root branch after a square substitution.
 -/
 
 namespace Examples.Advanced.Restrict
@@ -68,12 +64,9 @@ reformulation ordered : symmetric := by
 #printp ordered
 example : GlobalEquivalence symmetric ordered := ordered.equivalence
 
--- Select a nonnegative representative after square substitution.
--- Substituting `x := u ^ 2` allows both signs of `u`.
--- `restrictionImprovement` reuses the square-root preimage in `squareCoverage`
--- to repair each `u` to `√(u²) = |u|`. Proving this preimage is nonnegative
--- justifies adding `0 ≤ u`; its square is unchanged, so the objective is preserved.
--- Both `u = ±2` initially minimize the problem; the restriction retains `u = 2`.
+-- After x := u², use the square-root preimage in `squareCoverage` to replace
+-- u by √(u²) = |u|. This satisfies 0 ≤ u and preserves its square and objective.
+-- The substitution has optima u = ±2; the restriction retains u = 2.
 def nonnegativeSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2

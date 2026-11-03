@@ -93,7 +93,7 @@ def source (α : ℝ) :=
 
 variable (α : ℝ) (hα : 0 < α ∧ α < 1)
 
--- The range proof is retained by the certificate without appearing in POW α.
+-- The certificate uses hα to establish the exponent range for POW α.
 include hα in
 reformulation ready : (source α) := by
   conic

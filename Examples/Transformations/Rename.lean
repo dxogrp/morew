@@ -12,8 +12,7 @@ import Morew.Reformulation.Conic
 select the new label; the predicate and its position stay the same.
 The first example names the two bounds equivalent to an absolute-value
 constraint. The second uses positivity to substitute exponential coordinates.
-Both scripts intentionally stop with equivalence certificates; neither asks
-for certification of the complete problem as conic or smooth NLP.
+Both scripts stop at intermediate reformulations with equivalence certificates.
 -/
 
 namespace Examples.Transformations.Rename
@@ -45,7 +44,7 @@ def logarithmic :=
       cap : x ≤ 3
 
 reformulation exponential : logarithmic := by
-  -- Renaming the domain row does not interfere with its later removal.
+  -- Substitution removes the renamed domain row after proving it tautological.
   rename positive to domain
   substitute x := Real.exp u
   rename cap to upper

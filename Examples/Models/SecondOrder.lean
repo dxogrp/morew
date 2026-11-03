@@ -17,32 +17,37 @@ open Morew
 
 namespace Examples.Models.SecondOrder
 
-/-
-Nonnegative least squares
--/
 namespace NonnegLS
 
 open scoped Matrix
 
+-- ANCHOR: nonnegLS
 noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
   problem (x : Fin n → ℝ)
     minimize Fn.norm2 (A *ᵥ x - b)
     subject to
       nonneg : x ≥ 0
+-- ANCHOR_END: nonnegLS
 
 variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 
+-- ANCHOR: conicNonnegLS
 reformulation conicNonnegLS : (nonnegLS A b) := by
   epigraph t as residualBound
   conic at residualBound
   rename residualBound_conic_1 to residualCone
   conic
+-- ANCHOR_END: conicNonnegLS
 
+-- ANCHOR: nonnegLSCertificate
 noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
   conicNonnegLS.equivalence A b
 example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
+-- ANCHOR_END: nonnegLSCertificate
 
+-- ANCHOR: printNonnegLS
 #printp conicNonnegLS
+-- ANCHOR_END: printNonnegLS
 
 end NonnegLS
 

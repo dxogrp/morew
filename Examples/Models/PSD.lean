@@ -9,8 +9,7 @@ import Morew.Reformulation.Conic
 # Positive semidefinite and positive definite matrix constraints
 
 A native diagonal matrix constraint and a symmetric positive-definite domain
-become exact conic programs. Both examples retain their matrix structure and
-finish with global equivalence and conic certificates.
+become conic programs with global equivalence and conic certificates.
 -/
 
 namespace Examples.Models.PSD

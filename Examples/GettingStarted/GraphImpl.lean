@@ -13,9 +13,9 @@ Negation exchanges epigraph and hypograph inequalities: `-f x ≤ t` means
 `-t ≤ f x`, and `t ≤ -f x` means `f x ≤ -t`. The same identities produce
 conic and smooth NLP reformulations of the two problems below.
 
-The bound `1 ≤ x` ensures that the logarithm is evaluated on its positive
-domain. It justifies both the exponential-cone representation and the smooth
-NLP certificate for the logarithm itself. The norm requires no domain bound.
+The bound `1 ≤ x` proves positivity for both the logarithm's exponential-cone
+representation and its smooth NLP certificate. The norm representation holds
+on the whole Euclidean space.
 -/
 
 namespace Examples.GettingStarted.GraphImpl
