@@ -10,9 +10,8 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 /-!
 # Exact squared Euclidean-norm representations
 
-A native Euclidean norm bound is replaced by a nonnegative scalar bound and a
-squared-norm inequality. These ordinary polynomial targets are separate from the
-second-order-cone representations used by conic rewriting.
+A Euclidean norm bound becomes a nonnegative scalar bound and a squared-norm
+inequality.
 
 `norm2Epigraph` handles native Euclidean-space values and vectors converted with
 `WithLp.toLp 2`. The named-function adapter `fnNorm2Epigraph` forwards to it.

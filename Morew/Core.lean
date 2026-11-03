@@ -8,21 +8,16 @@ import Mathlib.Order.OrderDual
 /-!
 # Semantic core for Morew
 
-This module defines optimization problems and the certificates used to compare
-them.  The definitions deliberately make no convexity assumptions.  They also
-do not require the maps in a global equivalence to be inverses: a map in each
-direction, together with the corresponding objective inequalities, is enough
-to preserve global optimization behavior.
+Optimization problems and maps between feasible points that preserve global
+optimality through objective inequalities. The objective values carry an order;
+maximization uses its dual.
 -/
 
 namespace Morew
 
 universe u v w
 
-/-- Whether an optimization problem is minimized or maximized.
-
-Maximization is represented semantically by `OrderDual`; this explicit sense
-is shared by certified target data and presentation metadata. -/
+/-- The optimization direction stored in target data and problem presentations. -/
 inductive ObjectiveSense where
   /-- Minimize the objective in its ordinary order. -/
   | minimize
@@ -30,12 +25,8 @@ inductive ObjectiveSense where
   | maximize
   deriving Inhabited, BEq, Repr
 
-/-- An optimization problem before choosing whether its order is read as a
-minimization or maximization order.
-
-Maximization is represented by taking `V` to be `OrderDual W`.  Constraint
-names and other presentation information are intentionally kept outside this
-semantic structure. -/
+/-- An objective and a feasible predicate on a decision space.
+Use `V = OrderDual W` to maximize values in `W`. -/
 structure Problem (X : Type u) (V : Type v) where
   /-- The objective value at a decision point. -/
   objective : X → V
@@ -48,9 +39,7 @@ abbrev FeasiblePoint {X : Type u} {V : Type v} (p : Problem X V) :=
 
 namespace Problem
 
-/-- View the order on a problem's objective values in the opposite direction.
-In particular, a maximization problem with values in `V` is represented as a
-problem with values in `OrderDual V`. -/
+/-- Reverse the optimization order while preserving the objective and constraints. -/
 def orderDual {X : Type u} {V : Type v} (p : Problem X V) :
     Problem X (OrderDual V) where
   objective := p.objective
@@ -74,10 +63,8 @@ theorem orderDual_orderDual {X : Type u} {V : Type v} (p : Problem X V) :
 def HasFeasiblePoint {X : Type u} {V : Type v} (p : Problem X V) : Prop :=
   Nonempty (FeasiblePoint p)
 
-/-- A feasible point is globally optimal for the order carried by `V`.
-
-For ordinary ordered values this is global minimality.  For values in
-`OrderDual V` it is global maximality in the original order. -/
+/-- The point minimizes the objective in the order of `V`, or maximizes it
+when `V` is an order dual. -/
 def IsGlobalOptimum {X : Type u} {V : Type v} [LE V]
     (p : Problem X V) (x : FeasiblePoint p) : Prop :=
   ∀ y : FeasiblePoint p, p.objective x.1 ≤ p.objective y.1
@@ -87,7 +74,7 @@ def HasGlobalOptimum {X : Type u} {V : Type v} [LE V]
     (p : Problem X V) : Prop :=
   ∃ x : FeasiblePoint p, p.IsGlobalOptimum x
 
-/-- `b` is a lower bound on all feasible objective values.  For an objective
+/-- `b` is a lower bound on all feasible objective values. For an objective
 in an order dual this is an upper bound in the original order. -/
 def IsObjectiveLowerBound {X : Type u} {V : Type v} [LE V]
     (p : Problem X V) (b : V) : Prop :=
@@ -95,19 +82,15 @@ def IsObjectiveLowerBound {X : Type u} {V : Type v} [LE V]
 
 /-- There is a feasible objective value strictly below every proposed bound.
 For an objective in an order dual this is unboundedness above in the original
-order.  The strict inequality is essential on orders with a least element: a
-problem attaining that element is bounded, not unbounded. -/
+order. -/
 def IsUnbounded {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) : Prop :=
   ∀ b : V, ∃ x : FeasiblePoint p, p.objective x.1 < b
 
 end Problem
 
-/-- A one-way certificate from `p` to `q`.
-
-Every feasible point of `p` is sent to a feasible point of `q` whose objective
-is no worse in the minimization order.  This relation is the semantic seed for
-both reformulations and future relaxations. -/
+/-- A map from feasible points of `p` to feasible points of `q` whose objective
+is at most the source objective in the optimization order. -/
 structure GlobalImprovement {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     (p : Problem X V) (q : Problem Y V) where
   /-- Map source feasible points to target feasible points. -/
@@ -150,22 +133,18 @@ theorem map_isUnbounded
 
 end GlobalImprovement
 
-/-- A certificate that two problems have the same global optimization
-behavior.
-
-The maps need not be inverse functions.  The paired objective inequalities are
-the exact data needed for global-optimum and global-value preservation. -/
+/-- Feasible maps in both directions with objective inequalities that preserve
+global optimality and objective bounds. -/
 structure GlobalEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     (p : Problem X V) (q : Problem Y V) where
-  /-- A no-worse feasible map from the source to the target. -/
+  /-- A map to the target with an objective at most the source objective. -/
   forward : GlobalImprovement p q
-  /-- A no-worse feasible map from the target back to the source. -/
+  /-- A map to the source with an objective at most the target objective. -/
   backward : GlobalImprovement q p
 
 namespace GlobalEquivalence
 
-/-- Forget the backward half of an equivalence, yielding the explicitly
-oriented one-way certificate used by relaxation-style APIs. -/
+/-- Return the forward improvement map. -/
 def toGlobalImprovement
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :

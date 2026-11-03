@@ -10,9 +10,8 @@ import Mathlib.Data.Fintype.EquivFin
 /-!
 # Exact polyhedral bounds
 
-These identities express native real operations using scalar and coordinatewise
-inequalities. They are independent of affine recognition and reformulation.
-The norm bounds retain their scalar condition in dimension zero.
+Scalar and coordinatewise inequalities for absolute values, extrema, and vector
+norms. The norm bounds retain their scalar condition in dimension zero.
 -/
 
 namespace Morew.Rewrite.Polyhedral
@@ -35,8 +34,7 @@ theorem max_le_iff (a b t : ℝ) : max a b ≤ t ↔ a ≤ t ∧ b ≤ t :=
 theorem le_min_iff (a b t : ℝ) : t ≤ min a b ↔ t ≤ a ∧ t ≤ b :=
   _root_.le_min_iff
 
-/-- Reindex a nonempty finite maximum into one coordinatewise inequality.
-The ambient index type need not be finite. -/
+/-- Reindex a maximum over a nonempty finite support as a coordinatewise inequality. -/
 theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     s.sup' hs f ≤ t ↔
@@ -48,8 +46,7 @@ theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
   · intro h i hi
     simpa using h (s.equivFin ⟨i, hi⟩)
 
-/-- Reindex a nonempty finite minimum into one coordinatewise inequality.
-The ambient index type need not be finite. -/
+/-- Reindex a minimum over a nonempty finite support as a coordinatewise inequality. -/
 theorem le_inf'_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     t ≤ s.inf' hs f ↔

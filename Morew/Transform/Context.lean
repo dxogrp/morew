@@ -6,12 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Transform
 
 /-!
-# Bounds at selected objective and constraint occurrences
+# Epigraph and hypograph bounds for subexpressions
 
-An occurrence context retains the original selected value and the function or
-predicate obtained by replacing just that occurrence. Its certificate proves
-the direction needed to recover a source feasible point. Objective contexts may
-use source feasibility; constraint contexts may use only the retained rows.
+Replace a selected subexpression by an auxiliary bound and prove that the
+original problem can be recovered. Objective proofs use source feasibility;
+constraint proofs use the retained constraints and the replacement predicate.
 -/
 
 namespace Morew
@@ -28,7 +27,7 @@ inductive BoundDirection where
 
 namespace BoundDirection
 
-/-- The order relation imposed by an occurrence-bound step. -/
+/-- The inequality between the selected value and its auxiliary bound. -/
 def Rel {A : Type u} [LE A] (direction : BoundDirection) (value auxiliary : A) : Prop :=
   match direction with
   | .upper => value ≤ auxiliary
@@ -51,11 +50,8 @@ theorem rel_refl {A : Type u} [Preorder A] (direction : BoundDirection) (value :
 
 end BoundDirection
 
-/-- A certificate for replacing one objective occurrence by an auxiliary bound.
-
-`V` carries the optimization order, including `OrderDual` for maximization.
-The selected value's ordered type `A` need not be the objective-value type.
-The parameters retain the complete selected function and extracted context. -/
+/-- Replace `f x` in the objective context `C` by an auxiliary bound.
+`A` orders the selected values; `V` carries the optimization order. -/
 structure ObjectiveBoundContext {X : Type u} {A : Type v} {V : Type w}
     [LE A] [LE V] (p : Problem X V) (f : X → A) (C : X → A → V)
     (direction : BoundDirection) where
@@ -92,7 +88,7 @@ theorem objectiveBoundAt_objective {X : Type u} {A : Type v} {V : Type w} [LE A]
     (point : X × A) :
     (p.objectiveBoundAt f C direction).objective point = C point.1 point.2 := rfl
 
-/-- An objective occurrence lift retains every original constraint. -/
+/-- Introducing an objective bound retains every original constraint. -/
 @[simp]
 theorem objectiveBoundAt_feasible {X : Type u} {A : Type v} {V : Type w} [LE A]
     (p : Problem X V) (f : X → A) (C : X → A → V) (direction : BoundDirection)
@@ -139,10 +135,8 @@ def objectiveHypographAtEquivalence {X : Type u} {A : Type v} {V : Type w}
     GlobalEquivalence p (p.hypographAt f C) :=
   objectiveBoundAtEquivalence p f C .lower context
 
-/-- A certificate for replacing one occurrence in a selected constraint.
-
-Recovery may use the retained constraints, but never assume the selected source
-constraint. This prevents circular proofs of exactness. -/
+/-- Replace a subexpression in a constraint. Recovery uses the retained
+constraints, the replacement predicate, and the auxiliary bound. -/
 structure ConstraintBoundContext {X : Type u} {A : Type v} [LE A]
     (remainder source : X → Prop) (f : X → A) (C : X → A → Prop)
     (direction : BoundDirection) where
@@ -154,8 +148,8 @@ structure ConstraintBoundContext {X : Type u} {A : Type v} [LE A]
 
 namespace ConstraintBoundContext
 
-/-- Convert a contextual occurrence certificate to the existing exact-lift
-interface by retaining the assumptions on both sides of the equivalence. -/
+/-- Express a bound on a subexpression as an existential constraint equivalence
+under the retained assumptions. -/
 def toExactConstraintLift {X : Type u} {A : Type v} [Preorder A]
     {remainder source : X → Prop} {f : X → A} {C : X → A → Prop}
     {direction : BoundDirection}
@@ -174,8 +168,8 @@ end ConstraintBoundContext
 
 namespace Problem
 
-/-- Replace one occurrence of one selected constraint, leaving the objective
-and every retained row unchanged. The source label's predicate becomes `C`. -/
+/-- Replace a subexpression in a constraint by an auxiliary bound, preserving
+the objective and retained constraints. -/
 def constraintBoundAt {X : Type u} {A : Type v} {V : Type w} [LE A]
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
@@ -185,7 +179,7 @@ def constraintBoundAt {X : Type u} {A : Type v} {V : Type w} [LE A]
   feasible point := decomposition.remainder point.1 ∧ C point.1 point.2 ∧
     direction.Rel (f point.1) point.2
 
-/-- Constraint occurrence lifting preserves the original objective exactly. -/
+/-- Introducing a bound in a constraint preserves the objective. -/
 @[simp]
 theorem constraintBoundAt_objective {X : Type u} {A : Type v} {V : Type w} [LE A]
     {source : X → Prop} (p : Problem X V)
@@ -206,8 +200,7 @@ theorem constraintBoundAt_feasible {X : Type u} {A : Type v} {V : Type w} [LE A]
 
 end Problem
 
-/-- Constraint occurrence bounds preserve global optimization in either sense.
-The construction factors through the existing exact-constraint-lift theorem. -/
+/-- Introducing a bound in a constraint preserves global optimization in either sense. -/
 noncomputable def constraintBoundAtEquivalence
     {X : Type u} {A : Type v} {V : Type w} [Preorder A] [Preorder V]
     {source : X → Prop} (p : Problem X V)
