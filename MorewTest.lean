@@ -89,7 +89,6 @@ import MorewTest.ImportCompatibility.PrintDetails.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation
 import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation.Registered
-import MorewTest.ImportCompatibility.Reformulation
 import MorewTest.ImportCompatibility.Runner
 import MorewTest.ImportCompatibility.SecondOrder
 import MorewTest.ImportCompatibility.SecondOrder.Defined
