@@ -13,26 +13,17 @@ import Mathlib.Analysis.SpecialFunctions.Log.Basic
 /-!
 # Real matrix modeling functions
 
-The largest eigenvalue uses the supremum of the real spectrum. Its exact
-semidefinite representation requires a symmetric matrix of positive dimension;
-the empty spectrum has supremum zero in `ℝ`.
-
-The matrix fraction uses the totalized native inverse. Its exact Schur
-representation separately requires positive definiteness and does not extend
-its domain to singular matrices.
-
-The nuclear norm is the sum of the singular values of the associated Euclidean
-linear map. The domain dimension bounds the support, including empty matrices.
-
-The log determinant uses the totalized real logarithm. Its exact conic
-representation separately requires positive definiteness.
+Largest eigenvalues, matrix fractions, nuclear norms, and log-determinants
+are real-valued functions on ordinary matrices. Their exact conic
+representations use the domains stated at each definition.
 -/
 
 namespace Morew.Fn
 
 open Matrix
 
-/-- The logarithm of the determinant, with its usual domain requiring `X.PosDef`. -/
+/-- The total real function `Real.log X.det`. Its conic representation requires
+`X.PosDef`. The value on an empty matrix is zero. -/
 noncomputable def logDet {n : Nat} (X : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
   Real.log X.det
 
@@ -40,11 +31,13 @@ noncomputable def logDet {n : Nat} (X : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
   simp [logDet]
 
 /-- The supremum of the real spectrum; on nonempty symmetric matrices this is
-the largest eigenvalue. -/
+the largest eigenvalue and has an exact semidefinite representation. The
+supremum of the empty spectrum is zero in `ℝ`. -/
 noncomputable def lambdaMax {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
   sSup (spectrum ℝ A)
 
-/-- The real matrix fraction, with its usual domain requiring `P.PosDef`. -/
+/-- The real matrix fraction using mathlib's total matrix inverse. Its exact
+Schur-complement representation requires `P.PosDef`. -/
 noncomputable def matrixFrac {n : Nat} (x : Fin n → ℝ)
     (P : Matrix (Fin n) (Fin n) ℝ) : ℝ := x ⬝ᵥ (P⁻¹ *ᵥ x)
 
@@ -52,7 +45,8 @@ noncomputable def matrixFrac {n : Nat} (x : Fin n → ℝ)
 @[simp] theorem matrixFrac_empty (x : Fin 0 → ℝ) (P : Matrix (Fin 0) (Fin 0) ℝ) :
     matrixFrac x P = 0 := by simp [matrixFrac, dotProduct]
 
-/-- The sum of the singular values, with their multiplicities. -/
+/-- The sum of the singular values, with multiplicity, of the associated Euclidean
+linear map, indexed by the domain dimension. The value is zero if either dimension is empty. -/
 noncomputable def nuclearNorm {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) : ℝ :=
   ∑ i : Fin n, (Matrix.toEuclideanLin A).singularValues i
 

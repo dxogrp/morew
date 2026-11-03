@@ -15,10 +15,8 @@ import Morew.Rewrite.Basic
 # Exact positive-semidefinite representation records
 
 These records express spectral bounds, matrix fractions, log-determinants, and
-positive-definite domains using the existing PSD and exponential cones and scalar
-inequalities, and connect their mathematical equivalences to the public rewrite API.
-The narrower mathematical imports remain independent of rewrite certificates
-and do not install the modeling language or any global matrix norm instance.
+positive-definite domains using PSD and exponential cones and scalar inequalities.
+They connect the mathematical equivalences to the public rewrite API.
 -/
 
 open scoped Matrix Matrix.Norms.L2Operator
@@ -89,7 +87,7 @@ end Morew.Conic.Spectral
 namespace Morew.Conic.LogDet
 
 /-- Exact PSD/exponential hypograph of log-determinant on its positive-definite
-domain. Triangular coordinates introduce no upper-triangle equality rows. -/
+domain, with auxiliary coordinates on and below the diagonal. -/
 noncomputable def hypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
       Fn.logDet X.1) where
@@ -101,7 +99,7 @@ noncomputable def hypograph {n : Nat} (hn : 0 < n) :
   source_iff_exists X t := by
     simpa only [Prod.exists] using le_logDet_iff X.1 X.2 t hn
 
-/-- The ordinary logarithm-of-determinant spelling has the same domain and lift. -/
+/-- The ordinary logarithm-of-determinant expression has the same domain and representation. -/
 noncomputable def nativeHypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
       Real.log (Matrix.det X.1)) :=

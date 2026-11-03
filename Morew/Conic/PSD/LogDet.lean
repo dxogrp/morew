@@ -15,7 +15,7 @@ import Morew.Fn.Matrix
 
 Lower triangular factors give an exact PSD/exponential representation of the
 positive-definite log-determinant hypograph. The reverse implication proves
-positive definiteness, rather than assuming a domain for the totalized logarithm.
+positive definiteness from the cone constraints.
 -/
 
 namespace Morew.Conic.LogDet
@@ -83,9 +83,9 @@ theorem posDef_and_prod_le_det_of_triangular_block
     field_simp
   exact ⟨hX, hdetQ ▸ det_le_det hQ hdiff⟩
 
-/-- The positive-definite log-determinant hypograph has an exact PSD/exponential
-lift. The public rule requires positive dimension; the function itself remains
-the ordinary totalized logarithm of the determinant. -/
+/-- The positive-definite log-determinant hypograph in positive dimension has
+an exact PSD/exponential representation. The function is the total real
+logarithm of the determinant. -/
 theorem hypograph_iff (X : Matrix (Fin n) (Fin n) ℝ) (t : ℝ) (_hn : 0 < n) :
     (X.PosDef ∧ t ≤ Fn.logDet X) ↔
       ∃ z : LowerTriangularEntries n, ∃ u : Fin n → ℝ,
@@ -117,7 +117,7 @@ theorem hypograph_iff (X : Matrix (Fin n) (Fin n) ℝ) (t : ℝ) (_hn : 0 < n) :
         (Real.log_prod (fun i _ => (hd i).ne')).symm
       _ ≤ Fn.logDet X := Real.log_le_log (Finset.prod_pos fun i _ => hd i) hdet
 
-/-- The same lift as a hypograph representation on the established matrix domain. -/
+/-- The log-determinant hypograph representation on positive-definite matrices. -/
 theorem le_logDet_iff (X : Matrix (Fin n) (Fin n) ℝ) (hX : X.PosDef)
     (t : ℝ) (hn : 0 < n) :
     t ≤ Fn.logDet X ↔

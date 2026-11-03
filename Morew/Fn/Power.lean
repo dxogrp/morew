@@ -9,22 +9,21 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Finite geometric means and inverse products
 
-These are ordinary total real functions. The empty geometric mean and inverse
-product both equal one. Their exact conic representations separately require a
-nonempty dimension and coordinatewise nonnegative or strictly positive inputs.
-In particular, an inverse product with a zero factor is zero under real
-division's totalized semantics, outside its intended positive modeling domain.
+The geometric mean and reciprocal product are total real-valued functions.
+Their exact conic representations use the domains stated below.
 -/
 
 namespace Morew.Fn
 
-/-- The unweighted geometric mean of a finite real vector. Its usual domain is
-coordinatewise nonnegative; the empty vector has value one. -/
+/-- The unweighted geometric mean of a finite real vector. Its conic
+representation requires a nonempty vector with nonnegative coordinates.
+The empty vector has value one. -/
 noncomputable def geoMean {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   Real.rpow (∏ i, xs i) (1 / (n : ℝ))
 
-/-- The reciprocal of a finite product. Its intended modeling domain is
-coordinatewise strictly positive; the empty vector has value one. -/
+/-- The reciprocal of a finite product. Its conic representation requires a
+nonempty vector with strictly positive coordinates. The empty vector has value
+one, and a product with a zero factor has value zero under real division. -/
 noncomputable def invProd {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   (∏ i, xs i)⁻¹
 
@@ -82,7 +81,7 @@ theorem geoMean_eq_zero {n : Nat} (xs : Fin n → ℝ) (i : Fin n) (hi : xs i = 
   rw [Finset.prod_eq_zero (Finset.mem_univ i) hi]
   exact Real.zero_rpow (one_div_ne_zero hn)
 
-/-- An inverse product is positive on its intended positive domain. -/
+/-- An inverse product of strictly positive coordinates is positive. -/
 theorem invProd_pos {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 < xs i) :
     0 < invProd xs :=
   inv_pos.mpr (Finset.prod_pos (fun i _ => hx i))

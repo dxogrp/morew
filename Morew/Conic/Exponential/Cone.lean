@@ -16,13 +16,11 @@ import Mathlib.Tactic.Ring
 
 The exponential cone uses ordinary right-associated triples `(x, y, z)`.
 Its positive branch is `y * exp (x / y) ≤ z`, and its zero-scale boundary
-is `x ≤ 0 ∧ 0 ≤ z`. The boundary is part of the definition: replacing it
-with totalized real division would describe a different set.
+is `x ≤ 0 ∧ 0 ≤ z`.
 
 The cone laws and closedness follow from an equivalent intersection of
-homogeneous closed halfspaces. Finite products certify grouped exponential
-membership rows without expanding their coordinates or requiring a concrete
-dimension.
+homogeneous closed halfspaces. Finite products represent families of
+exponential-cone constraints at symbolic dimensions.
 -/
 
 namespace Morew.Conic.Cone

@@ -9,9 +9,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact exponential-cone representations
 
-Named functions and native composite spellings have separate records. Domain
-restrictions live in subtype inputs, so registration itself never trusts domain
-metadata. Nonempty log-sum-exp dimensions are explicit proof parameters.
+Named functions and native composite expressions have separate records.
+Subtype inputs carry domain hypotheses, and nonempty log-sum-exp dimensions
+are explicit proof parameters.
 -/
 
 namespace Morew.Conic.Exponential

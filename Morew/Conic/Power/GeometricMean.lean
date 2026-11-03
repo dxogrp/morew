@@ -10,10 +10,10 @@ import Morew.Rewrite.Basic
 /-!
 # Finite geometric-mean and inverse-product representations
 
-A deterministic left-to-right chain bounds each auxiliary by the corresponding
-prefix mean. The forward witnesses attain those bounds. The first auxiliary
-equals the first input; each remaining coordinate is connected by a power cone. This uniform
-layout works for symbolic nonempty dimensions without conditional coordinates.
+A left-to-right chain bounds each auxiliary by the corresponding prefix mean.
+The forward witnesses attain those bounds. The first auxiliary equals the
+first input; each remaining coordinate is connected by a power cone. This
+construction applies at symbolic nonempty dimensions.
 Hypographs retain negative lower bounds, and all geometric-mean zero boundaries
 are included. Inverse products require strictly positive input coordinates.
 -/
@@ -118,9 +118,8 @@ private theorem prefixMean_mem {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 ≤
   refine ⟨prefixMean_nonneg xs hx _, hx _, ?_⟩
   rw [abs_of_nonneg (prefixMean_nonneg xs hx _), prefixMean_step xs hx j]
 
-/-- A finite geometric-mean hypograph has an exact prefix-chain lift. The
-nonnegative final auxiliary, rather than the possibly negative bound, is the
-last power-cone coordinate. -/
+/-- A finite geometric-mean hypograph is represented by a chain of prefix means.
+The final auxiliary is nonnegative and bounds the arbitrary real hypograph variable. -/
 theorem le_geoMean_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     (hx : ∀ i, 0 ≤ xs i) :
     t ≤ Fn.geoMean xs ↔ ∃ u : Fin n → ℝ,
@@ -153,8 +152,8 @@ theorem invProdExponent_range (n : Nat) (hn : 0 < n) :
   apply inverse_exponent_range
   exact_mod_cast Nat.lt_add_one_iff.mpr hn
 
-/-- An inverse-product epigraph is the prefix-mean chain followed by one
-negative-power cone. Strictly positive input coordinates are essential. -/
+/-- An inverse-product epigraph on strictly positive coordinates is represented
+by a chain of prefix means followed by one negative-power cone. -/
 theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     (hx : ∀ i, 0 < xs i) :
     Fn.invProd xs ≤ t ↔ ∃ u : Fin n → ℝ,

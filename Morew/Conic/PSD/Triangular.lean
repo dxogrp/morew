@@ -44,7 +44,7 @@ theorem lowerTriangularMatrix_isLowerTriangular {n : Nat} (z : LowerTriangularEn
   intro i j h
   exact lowerTriangularMatrix_apply_of_lt z h
 
-/-- Restricting a lower-triangular matrix to these coordinates loses no entries. -/
+/-- Restriction to the lower-triangular coordinates reconstructs the original matrix. -/
 theorem lowerTriangularMatrix_restrict {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A.IsLowerTriangular) :
     lowerTriangularMatrix (fun ij => A ij.1.1 ij.1.2) = A := by

@@ -10,14 +10,9 @@ import Morew.Core
 # Certified affine cone programs
 
 Conic data records an affine objective and finitely many affine cone-membership
-rows. A `Conic.Form p` retains this data and an equality with the represented
-`Problem`, independently of any source-to-target global-equivalence certificate.
-Decision spaces require only real vector-space structure; no ambient norm is
-part of a conic certificate. Cone spaces retain their bundled normed structures.
-
-Objective sense is explicit data. Equality of `Problem` values cannot recover
-it, since `OrderDual ℝ` is a reducible synonym for `ℝ`. Maximizing problems must
-retain their explicit `OrderDual` type and use data with sense `.maximize`.
+rows. A `Conic.Form p` pairs this data with an equality to the represented
+problem. Decision spaces are real vector spaces; cone spaces carry their own
+normed structures.
 -/
 
 namespace Morew
@@ -43,8 +38,7 @@ variable {X}
 def Holds (c : Constraint X) (x : X) : Prop :=
   c.map x ∈ c.cone.carrier
 
-/-- The zero-cone row for an affine map. In particular, scalar and finite-vector
-maps can be used directly, without a one-coordinate scalar embedding. -/
+/-- The zero-cone row for an affine map, including scalar and finite-vector maps. -/
 def eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
   cone := { Space := Y, carrier := 0 }
@@ -82,8 +76,10 @@ end Constraint
 
 /-- Finite-dimensional affine cone-program data.
 
-The objective sense is recorded explicitly for consumers. It does not change
-the objective function or feasible predicate returned by `toProblem`. -/
+Objective sense is stored separately from the objective and constraints.
+Maximizing declarations use `Problem X (OrderDual ℝ)` and sense `.maximize`.
+Since `OrderDual ℝ` is a reducible synonym for `ℝ`, equality of `Problem` values
+alone does not determine the sense. -/
 structure Data [FiniteDimensional ℝ X] where
   /-- Whether consumers should minimize or maximize the objective. -/
   sense : ObjectiveSense
@@ -100,9 +96,8 @@ namespace Data
 
 variable {X}
 
-/-- The ordinary problem with exactly the stored objective and row predicates.
-The returned type does not encode `sense`; maximizing declarations retain an
-explicit `Problem X (OrderDual ℝ)` type at their declaration site. -/
+/-- The problem with the stored objective and row predicates. Its objective
+sense is supplied by the declaration's value type, as described in `Data`. -/
 def toProblem (data : Data X) : Problem X ℝ where
   objective := data.objective
   feasible x := ∀ i, (data.constraints i).Holds x
@@ -128,11 +123,8 @@ end Data
 
 variable {X}
 
-/-- Concrete conic data representing a problem exactly.
-
-The equality certifies the objective and feasibility, not agreement of the
-recorded sense with a source declaration. Keep `.maximize` explicit when the
-problem is declared with values in `OrderDual ℝ`. -/
+/-- Concrete conic data with equality of the objective and feasible predicate.
+Objective sense is stored separately in `Data.sense`. -/
 structure Form (p : Problem X ℝ) where
   /-- The concrete affine cone-program data. -/
   data : Data X

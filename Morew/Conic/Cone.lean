@@ -12,8 +12,8 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 # Bundled convex cones
 
 Each cone carries a finite-dimensional normed real vector space and a mathlib
-`ConvexCone`. The cone laws are checked proofs, not a classification tag.
-Custom cones need not be closed, nonempty, or contain zero.
+`ConvexCone`, which supplies closure under addition and positive scaling.
+The definition allows empty cones, cones excluding zero, and cones that are not closed.
 -/
 
 namespace Morew.Conic
@@ -39,7 +39,7 @@ attribute [instance] Cone.instNormedAddCommGroup Cone.instNormedSpace
 
 namespace Cone
 
-/-- The nonnegative cone in the real line, without a vector embedding. -/
+/-- The nonnegative cone in the real line. -/
 noncomputable def nonnegativeScalar : Cone where
   Space := ℝ
   carrier := ConvexCone.positive ℝ ℝ
@@ -48,8 +48,8 @@ noncomputable def nonnegativeScalar : Cone where
 noncomputable abbrev nonnegativeScalarCarrier : ConvexCone ℝ ℝ :=
   nonnegativeScalar.carrier
 
-/-- The zero cone in `Fin n → ℝ`. Its carrier is the singleton zero vector,
-not the empty cone denoted by mathlib's `⊥`. -/
+/-- The zero cone in `Fin n → ℝ`, whose carrier is the singleton zero vector.
+Mathlib's `⊥` instead denotes the empty cone. -/
 noncomputable def zero (n : Nat) : Cone where
   Space := Fin n → ℝ
   carrier := 0

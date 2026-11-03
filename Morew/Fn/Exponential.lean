@@ -9,10 +9,8 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Finite exponential modeling functions
 
-These are ordinary real-valued functions, with the totalized semantics of
-`Real.log` and real division. In particular, empty log-sum-exp is zero and
-relative entropy is zero when its denominator is zero. Exact conic rewrites
-therefore certify nonempty indexing and the intended domains separately.
+Log-sum-exp, softplus, and relative entropy use the total real logarithm and
+real division. Their conic representations impose the domains stated below.
 -/
 
 namespace Morew.Fn
@@ -26,9 +24,9 @@ noncomputable def logSumExp {n : Nat} (xs : Fin n → ℝ) : ℝ :=
 noncomputable def softplus (a : ℝ) : ℝ :=
   Real.log (1 + Real.exp a)
 
-/-- The real formula for relative entropy. Its usual finite domain is
-`0 ≤ a` and `0 < b`, including the zero boundary `a = 0`. This definition
-does not encode an infinite value outside that domain. -/
+/-- The total real formula for relative entropy. Its conic epigraph requires
+`0 ≤ a` and `0 < b`, including the boundary `a = 0`. The formula evaluates to
+zero when `b = 0`. -/
 noncomputable def relativeEntropy (a b : ℝ) : ℝ :=
   a * Real.log (a / b)
 

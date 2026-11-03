@@ -11,9 +11,8 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 # Symmetric matrices and positive-semidefinite cones
 
 The cone space consists of ordinary real symmetric matrices, with their exact
-entries and the inherited finite-coordinate supremum norm. Constructing a
-symmetric matrix requires a symmetry proof; no entries are packed, rescaled, or
-symmetrized.
+entries and the inherited finite-coordinate supremum norm. A symmetry proof
+constructs a `SymmetricMatrix` from those entries.
 
 The Schur-complement certificates use an explicitly positive-definite pivot.
 Block matrices use the first `m` and last `n` indices of `Fin (m + n)`.
@@ -26,8 +25,7 @@ Their rewrite records are available from `Morew.Conic.PSD.Representations`.
 namespace Morew.Conic
 
 /-- Symmetric real matrices form a submodule of the ordinary coordinate space.
-Writing the ambient space as a function type selects its existing supremum norm
-without introducing a global choice of matrix norm. -/
+The ambient function type supplies the finite-coordinate supremum norm. -/
 def symmetricMatrixSubmodule (n : Nat) : Submodule ℝ (Fin n → Fin n → ℝ) where
   carrier := {M | Matrix.IsSymm M}
   zero_mem' := Matrix.isSymm_zero
@@ -137,8 +135,8 @@ section Blocks
 
 variable {m n : Nat}
 
-/-- An ordinary block matrix with the first `m` and last `n` indices of
-`Fin (m + n)`. Only the canonical block index equivalence is applied. -/
+/-- An ordinary block matrix indexed by the first `m` and last `n` elements of
+`Fin (m + n)`. -/
 def fromBlocksFin
     (A : Matrix (Fin m) (Fin m) ℝ) (B : Matrix (Fin m) (Fin n) ℝ)
     (C : Matrix (Fin n) (Fin m) ℝ) (D : Matrix (Fin n) (Fin n) ℝ) :

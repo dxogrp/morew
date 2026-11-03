@@ -8,9 +8,8 @@ import Morew.Rewrite.Polyhedral.Lemmas
 /-!
 # Exact polyhedral bounds
 
-Compatibility theorem names for the shared identities in
-`Morew.Rewrite.Polyhedral`. This import remains independent of representation
-records and the modeling language.
+Polyhedral identities for absolute values, extrema, and finite vector norms,
+with proofs from `Morew.Rewrite.Polyhedral`.
 -/
 
 namespace Morew.Conic.Polyhedral

@@ -9,9 +9,8 @@ import Morew.Conic.PSD
 /-!
 # Exact matrix-fraction epigraph
 
-The positive-definite domain is explicit. The representation uses the original
-matrix and vector as affine block entries and does not introduce a generalized
-inverse or admit singular pivots.
+On the positive-definite domain, the representation uses the original matrix
+and vector as affine entries of a Schur-complement block matrix.
 -/
 
 namespace Morew.Conic.MatrixFraction

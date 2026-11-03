@@ -29,8 +29,8 @@ private theorem quadratic_outer {n : Nat} (v u : EuclideanSpace ℝ (Fin n)) :
   simp [Matrix.vecMulVec_mulVec, dotProduct_smul, EuclideanSpace.inner_eq_star_dotProduct,
     smul_eq_mul, pow_two, dotProduct_comm]
 
-/-- A positive quadratic form summed over an orthonormal family is bounded by
-its trace. Completeness of the family is unnecessary. -/
+/-- A positive quadratic form summed over a finite orthonormal family is bounded
+by its trace. -/
 theorem sum_quadratic_le_trace {n : Nat} {ι : Type*} [Fintype ι]
     {W : Matrix (Fin n) (Fin n) ℝ} (hW : W.PosSemidef)
     (u : ι → EuclideanSpace ℝ (Fin n)) (hu : Orthonormal ℝ u) :
@@ -50,7 +50,7 @@ theorem sum_quadratic_le_trace {n : Nat} {ι : Type*} [Fintype ι]
 
 variable {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ)
 
-/-- The attaining left symmetric matrix in the nuclear-norm lift. -/
+/-- The left symmetric matrix attaining the nuclear-norm epigraph bound. -/
 noncomputable def nuclearLeftWitness : SymmetricMatrix m :=
   SymmetricMatrix.ofMatrix
     (∑ i : PositiveSingularIndex A, singularValue A i.val •
@@ -60,7 +60,7 @@ noncomputable def nuclearLeftWitness : SymmetricMatrix m :=
       intro i j
       simp [Matrix.sum_apply, Matrix.vecMulVec_apply, mul_comm])
 
-/-- The attaining right symmetric matrix in the nuclear-norm lift. -/
+/-- The right symmetric matrix attaining the nuclear-norm epigraph bound. -/
 noncomputable def nuclearRightWitness : SymmetricMatrix n :=
   SymmetricMatrix.ofMatrix
     (∑ i : PositiveSingularIndex A, singularValue A i.val •
