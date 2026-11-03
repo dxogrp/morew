@@ -119,7 +119,7 @@ reformulation ready : source := by
   hypograph t as mean
   conic
 
--- Prefix means connect the coordinates in their original order.
+/-! Prefix means connect the coordinates in their original order. -/
 #printp ready
 example : GlobalEquivalence source ready := ready.equivalence
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents

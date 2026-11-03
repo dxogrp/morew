@@ -45,7 +45,7 @@ variable (center : ℝ)
 reformulation conicRows : (fitting center) := by
   conic at deviation
 
--- The bound is replaced by `x - center ≤ t` and `-(x - center) ≤ t`.
+/-! The bound is replaced by `x - center ≤ t` and `-(x - center) ≤ t`. -/
 #printp conicRows
 example : GlobalEquivalence (fitting center) (conicRows center) :=
   conicRows.equivalence center

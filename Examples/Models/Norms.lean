@@ -120,7 +120,7 @@ variable (n : ℕ)
 reformulation ready : (source n) := by
   conic
 
--- The exact cone exponent is 2/3, with one auxiliary coordinate per input.
+/-! The exact cone exponent is 2/3, with one auxiliary coordinate per input. -/
 #printp ready
 example : GlobalEquivalence (source n) (ready n) := ready.equivalence n
 example : (ready.conicForm n).data.toProblem = ready n := (ready.conicForm n).represents

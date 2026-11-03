@@ -46,6 +46,7 @@ example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
 -- ANCHOR_END: nonnegLSCertificate
 
 -- ANCHOR: printNonnegLS
+/-! Print the conic problem. -/
 #printp conicNonnegLS
 -- ANCHOR_END: printNonnegLS
 

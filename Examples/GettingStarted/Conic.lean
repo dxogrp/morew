@@ -59,7 +59,7 @@ def p :=
 reformulation conicProb : p := by
   conic
 
--- Printed objectives and constraints keep their original helper references.
+/-! Printed objectives and constraints keep their original helper references. -/
 #printp conicProb
 example : GlobalEquivalence p conicProb := conicProb.equivalence
 example : IsConic conicProb := conicProb.isConic

@@ -69,7 +69,7 @@ def p (a : ℝ) :=
     subject to
       lower : x ≥ a
 
--- Printing the family retains the parameter `a` symbolically.
+/-! Printing the family retains the parameter `a` symbolically. -/
 #printp p
 
 -- Reformulate a particular member of the problem family.
