@@ -5,7 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.EuclideanPrintingConic
-import MorewTest.Reformulation.EuclideanPrintingSupport
 
 /-! # Euclidean conic coordinate printing after import and continued reformulation. -/
 
