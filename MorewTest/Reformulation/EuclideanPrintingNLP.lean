@@ -7,13 +7,13 @@ import Morew.Reformulation.NLP
 import MorewTest.Reformulation.PrintSupport
 
 /-!
-# Euclidean coordinates in generated problem presentations
+# Euclidean coordinates in generated NLP problem presentations
 
 Print-only coordinate notation must leave source spelling, unapplied projections,
 and both stored reconstruction views intact.
 -/
 
-namespace MorewTest.Reformulation.EuclideanPrinting
+namespace MorewTest.Reformulation.EuclideanPrintingNLP
 
 open Lean Lean.Elab.Command Morew
 open MorewTest.Reformulation.PrintDetails (printed)
@@ -123,4 +123,4 @@ example : guarded = target := rfl
 end AlteredCoercion
 
 end
-end MorewTest.Reformulation.EuclideanPrinting
+end MorewTest.Reformulation.EuclideanPrintingNLP

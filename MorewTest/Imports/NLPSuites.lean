@@ -15,8 +15,8 @@ import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPSection
 import MorewTest.Reformulation.TerminalNLPEvidence
 import MorewTest.Reformulation.NegationNLP
-import MorewTest.Reformulation.EuclideanPrinting
-import MorewTest.ImportCompatibility.EuclideanPrinting
+import MorewTest.Reformulation.EuclideanPrintingNLP
+import MorewTest.ImportCompatibility.EuclideanPrintingNLP
 
 assert_not_imported Morew.Elab.Conic.Plan
 assert_not_imported Morew.Elab.Conic.Terminal

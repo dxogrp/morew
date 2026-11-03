@@ -4,14 +4,14 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.NLP
-import MorewTest.Reformulation.EuclideanPrinting
+import MorewTest.Reformulation.EuclideanPrintingNLP
 
-/-! # Euclidean coordinate printing after import and continued reformulation. -/
+/-! # Euclidean NLP coordinate printing after import and continued reformulation. -/
 
-namespace MorewTest.ImportCompatibility.EuclideanPrinting
+namespace MorewTest.ImportCompatibility.EuclideanPrintingNLP
 
 open Morew
-open MorewTest.Reformulation.EuclideanPrinting
+open MorewTest.Reformulation.EuclideanPrintingNLP
   (source target registeredDetailed checkReadable checkStoredProjections replayStored)
 
 noncomputable section
@@ -51,4 +51,4 @@ example : continuedDisplayReplay = continued := rfl
 end AlteredCoercion
 
 end
-end MorewTest.ImportCompatibility.EuclideanPrinting
+end MorewTest.ImportCompatibility.EuclideanPrintingNLP
