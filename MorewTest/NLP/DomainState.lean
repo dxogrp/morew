@@ -4,7 +4,6 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.NLP.DomainSupport
-import MorewTest.NLP
 import MorewTest.Environment
 
 /-!
@@ -181,13 +180,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
           (← ppExpr feasible).pretty == printedFeasible.pretty do
         throwError "certification changed the applied source presentation"
   let feasible ← elaborate (← `(fun x : ℝ => 1 ≤ x))
-  let imported ← elaborate (← `(MorewTest.NLP.logProblem.objective))
+  let imported ← elaborate (← `(MorewTest.NLP.Domain.closedLogProblem.objective))
   let printed ← ppExpr imported
-  let declaration ← getConstInfo ``MorewTest.NLP.logProblem
+  let declaration ← getConstInfo ``MorewTest.NLP.Domain.closedLogProblem
   discard <| isolatedSuccess feasible #[imported]
   unless (← ppExpr imported).pretty == printed.pretty do
     throwError "certification changed the imported objective presentation"
-  unless (← getConstInfo ``MorewTest.NLP.logProblem).value? == declaration.value? do
+  unless (← getConstInfo ``MorewTest.NLP.Domain.closedLogProblem).value? == declaration.value? do
     throwError "certification changed an imported model declaration"
 
 /-! Imported/applied feasibility fields expose exactly their admitted row facts.
