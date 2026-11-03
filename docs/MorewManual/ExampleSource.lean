@@ -38,7 +38,7 @@ private partial def normalizeBlock : MD4Lean.Block → MD4Lean.Block
   | .table head body => .table (head.map (·.map spaceBreaks)) (body.map (·.map (·.map spaceBreaks)))
   | other => other
 
--- Verso 4.33.0 drops Markdown line breaks; each page already supplies its module title.
+-- Verso 4.33.0 drops Markdown line breaks; each example already supplies its title.
 private def normalizeModule (source : LitMod) : LitMod := Id.run do
   let mut firstModuleDoc := true
   let mut contents := #[]

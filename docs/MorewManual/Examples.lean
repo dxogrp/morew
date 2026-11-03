@@ -7,9 +7,10 @@ open scoped MorewManual.ExampleSource
 %%%
 tag := "examples"
 file := "examples"
+htmlSplit := .never
 %%%
 
-Each page presents a complete Lean source file with its printed results.
+Each section presents a complete Lean source file with its printed results.
 Read Basic first, then Conic and NLP, followed by Epigraphs and hypographs.
 
 Each module is self-contained. From the repository root, build the collection
