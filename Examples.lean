@@ -1,5 +1,4 @@
 import Examples.Basic
-import Examples.BasicConic
 import Examples.Components
 import Examples.Conic
 import Examples.CustomRules
