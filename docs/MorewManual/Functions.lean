@@ -2,10 +2,10 @@ import VersoManual
 
 open Verso.Genre Manual
 
-#doc (Manual) "Mathematical models" =>
+#doc (Manual) "Supported functions" =>
 %%%
-tag := "models"
-file := "models"
+tag := "functions"
+file := "functions"
 htmlSplit := .never
 %%%
 
@@ -19,16 +19,16 @@ and scalar residuals on an open domain containing every feasible point.
   * Assumptions and representations
 *
   * Piecewise affine expressions
-  * Absolute values, positive parts, and finite minima or maxima. Conic inequalities use their convex or concave direction; smooth formulations can express their graphs.
+  * Absolute values, positive parts, and finite minima or maxima. Epigraphs of convex functions and hypographs of concave functions have conic and smooth representations.
 *
-  * Least squares; quadratic over linear
+  * Quadratic expressions
   * Second-order cones. The quotient requires a positive denominator.
 *
   * Vector norms
   * Linear, second-order, and power cones. Finite power-cone norms use $`1<p<\infty`. Euclidean bounds also have smooth squared formulations.
 *
   * Exponentials and logarithms
-  * Exponential cones represent log-sum-exp, softplus, and relative entropy. Log-sum-exp uses a nonempty index set; relative entropy requires $`a\geq0` and $`b>0`.
+  * Exponential cones represent log-sum-exp, softplus, and relative entropy. Logarithms require positive arguments; log-sum-exp uses a nonempty index set; relative entropy requires $`a\geq0` and $`b>0`.
 *
   * Powers and means
   * Power cones use $`0<\alpha<1`. Real powers above one use nonnegative bases. Geometric means use nonempty nonnegative vectors; inverse products use nonempty positive vectors. Negative powers use positive bases.
