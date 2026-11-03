@@ -17,7 +17,7 @@ open scoped Matrix
 
 noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
   problem (x : Fin n → ℝ)
-    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
+    minimize Fn.norm2 (A *ᵥ x - b)
     subject to
       nonneg : x ≥ 0
 

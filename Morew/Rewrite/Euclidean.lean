@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Basic
+import Morew.Fn.Norm
 import Mathlib.Analysis.InnerProductSpace.PiL2
 
 /-!
@@ -36,6 +37,11 @@ noncomputable def norm2Epigraph {n : Nat} :
   target v t _ := 0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2
   source_iff_exists v t := by
     simpa only [exists_const] using norm2_le_iff v t
+
+/-- The named Euclidean norm has the same two polynomial epigraph inequalities. -/
+noncomputable def fnNorm2Epigraph {n : Nat} :
+    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm2 v) :=
+  norm2Epigraph
 
 /-- Native Euclidean-space values use their ordinary coordinates in the target. -/
 noncomputable def euclideanNormEpigraph {n : Nat} :

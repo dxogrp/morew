@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Polyhedral.Lemmas
+import Morew.Fn.Norm
 
 /-!
 # Exact polyhedral representations
@@ -88,5 +89,15 @@ noncomputable def normInfToLpEpigraph {n : Nat} :
   target v t _ := 0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t)
   source_iff_exists v t := by
     simpa only [exists_const] using Polyhedral.norm_toLp_top_le_iff v t
+
+/-- The named one-norm uses the same auxiliary vector as the native one-norm. -/
+noncomputable def fnNorm1Epigraph {n : Nat} :
+    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm1 v) :=
+  norm1Epigraph
+
+/-- The named infinity norm retains its scalar bound, including for empty vectors. -/
+noncomputable def fnNormInfEpigraph {n : Nat} :
+    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.normInf v) :=
+  normInfEpigraph
 
 end Morew.Rewrite

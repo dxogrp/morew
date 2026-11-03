@@ -21,7 +21,7 @@ open scoped Matrix
 
 noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
   problem (x : Fin n → ℝ)
-    minimize ‖WithLp.toLp 2 (A *ᵥ x - b)‖
+    minimize Fn.norm2 (A *ᵥ x - b)
     subject to
       nonneg : x ≥ 0
 
@@ -47,7 +47,7 @@ def p :=
   problem (x : Fin 2 → ℝ)
     minimize (x 0 - 1) ^ 2 + (x 1 + 2) ^ 2
     subject to
-      radius : ‖WithLp.toLp 2 x‖ ≤ 5
+      radius : Fn.norm2 x ≤ 5
 
 reformulation coneBound : p := by
   conic at radius
