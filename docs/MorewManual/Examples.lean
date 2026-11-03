@@ -26,40 +26,16 @@ After building its dependencies, check a source file directly to see its output:
 lake env lean Examples/GettingStarted/Basic.lean
 ```
 
-# Getting started
-%%%
-tag := "examples-getting-started"
-file := "getting-started"
-%%%
-
-Define problems, construct equivalent formulations, and use their certificates.
-
 {includeExample Examples.GettingStarted.Basic "Basic"}
 {includeExample Examples.GettingStarted.Conic "Conic"}
 {includeExample Examples.GettingStarted.NLP "NLP"}
 {includeExample Examples.GettingStarted.GraphImpl "Epigraphs and hypographs"}
-
-# Transformations
-%%%
-tag := "examples-transformations"
-file := "transformations"
-%%%
-
-Select subexpressions, substitute variables, and derive, rename, or remove constraints.
 
 {includeExample Examples.Transformations.Subexpressions "Subexpressions"}
 {includeExample Examples.Transformations.Substitution "Substitution"}
 {includeExample Examples.Transformations.Rename "Rename"}
 {includeExample Examples.Transformations.Derive "Derive"}
 {includeExample Examples.Transformations.Remove "Remove"}
-
-# Models
-%%%
-tag := "examples-models"
-file := "models"
-%%%
-
-Compare formulations for norms, powers, exponential functions, and matrix functions.
 
 {includeExample Examples.Models.SecondOrder "SecondOrder"}
 {includeExample Examples.Models.Norms "Norms"}
@@ -68,14 +44,6 @@ Compare formulations for norms, powers, exponential functions, and matrix functi
 {includeExample Examples.Models.PSD "PSD"}
 {includeExample Examples.Models.Spectral "Spectral"}
 {includeExample Examples.Models.LogDet "LogDet"}
-
-# Advanced
-%%%
-tag := "examples-advanced"
-file := "advanced"
-%%%
-
-Prove custom rules, a Schur-complement equivalence, and restrictions preserving global optima.
 
 {includeExample Examples.Advanced.CustomRules "CustomRules"}
 {includeExample Examples.Advanced.Schur "Schur"}
