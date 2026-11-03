@@ -151,6 +151,12 @@ import MorewTest.Reformulation.LocalDefinitionRecovery
 import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
 import MorewTest.Reformulation.LocalDefinitionSubstitution
 import MorewTest.Reformulation.LogDet
+import MorewTest.Reformulation.LogDet.Defined
+import MorewTest.Reformulation.LogDet.Domains
+import MorewTest.Reformulation.LogDet.Objectives
+import MorewTest.Reformulation.LogDet.Ordering
+import MorewTest.Reformulation.LogDet.Printing
+import MorewTest.Reformulation.LogDet.Sources
 import MorewTest.Reformulation.LogDetFailures
 import MorewTest.Reformulation.MatrixFraction
 import MorewTest.Reformulation.MatrixFraction.Defined
