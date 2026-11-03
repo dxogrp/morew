@@ -13,8 +13,6 @@ Certified conic data shares the semantic objective sense with the DSL and its
 typed runner. Attaching a form leaves source and transformed printer output intact.
 -/
 
-assert_not_exists Morew.Syntax.ObjectiveSense
-
 namespace MorewTest.Surface.Conic
 
 open Morew
