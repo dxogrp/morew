@@ -302,5 +302,30 @@ reformulation target : source := by
 example (x : ℝ) : target.feasible x ↔ cap x := Iff.rfl
 end Hygiene
 
+run_cmd do
+  for (name, expected) in #[
+      (``ordered, #[`lower, `bounds.upper, `shifted]),
+      (``sameName, #[`first, `middle, `last]),
+      (``reused, #[`x, `middle, `last, `copied]),
+      (``restricted, #[`lower, `middle, `last, `tag]),
+      (``maximumBound, #[`domain, `lower_bound]),
+      (``removedLabelReused, #[`second, `third]),
+      (``renamedAliasRemoved, #[`first, `objective_bound]),
+      (``shiftedIdentities, #[`first, `final_domain]),
+      (``grouped, #[`retained, `bounds, `bound]),
+      (``zeroBoundRemoved, #[]),
+      (``renamedZeroBoundRemoved, #[]),
+      (``zeroContinued, #[`square_bound]),
+      (``principalBound, #[`kept, `nonnegative]),
+      (``lowerOccurrence, #[`floor, `square_bound]),
+      (``vectorRenamed, #[`coordinate_bounds]),
+      (``renamedFamily, #[`domain]),
+      (``Instances.target, #[`interval])] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) name
+      | Lean.throwError "missing renamed presentation for {name}"
+    let actual := view.constraints.map (·.name.eraseMacroScopes)
+    unless actual == expected do
+      Lean.throwError "unexpected labels for {name}: {actual}; expected {expected}"
+
 end
 end MorewTest.Reformulation.Rename

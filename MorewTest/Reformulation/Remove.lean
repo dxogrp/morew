@@ -390,5 +390,26 @@ example (x : ℝ) : (@target first second).feasible x ↔
     @Parameter.value second ≤ x ∧ x ≤ @Parameter.value first := Iff.rfl
 end Instances
 
+run_cmd do
+  for (name, expected) in #[
+      (``shortened, #[`copied, `upper]),
+      (``reused, #[`copied, `upper, `last]),
+      (``unconstrained, #[]),
+      (``aliasRemoved, #[`second, `grouped, `retained]),
+      (``explicitNamed, #[`lower, `upper]),
+      (``explicitProjection, #[`copy_grouped, `retained]),
+      (``infeasible, #[`contradiction]),
+      (``maximumBound, #[`cap, `bound]),
+      (``checkpointChain, #[`domain_x, `grouped, `objective_bound]),
+      (``zeroChain, #[`bound]),
+      (``afterRestriction, #[`lower, `upper]),
+      (``labelRemoval, #[`labels.cap]),
+      (``familyRemoved, #[`bound])] do
+    let some view := Syntax.getProblemView? (← Lean.getEnv) name
+      | Lean.throwError "missing removal presentation for {name}"
+    let actual := view.constraints.map (·.name.eraseMacroScopes)
+    unless actual == expected do
+      Lean.throwError "unexpected labels after removal for {name}: {actual}; expected {expected}"
+
 end
 end MorewTest.Reformulation.Remove

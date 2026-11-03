@@ -73,20 +73,7 @@ example : IsConic vectorRemoved := vectorRemoved.isConic
 
 run_cmd do
   for (name, expected) in #[
-      (``shortened, #[`copied, `upper]),
-      (``reused, #[`copied, `upper, `last]),
-      (``unconstrained, #[]),
-      (``aliasRemoved, #[`second, `grouped, `retained]),
-      (``explicitNamed, #[`lower, `upper]),
-      (``explicitProjection, #[`copy_grouped, `retained]),
-      (``infeasible, #[`contradiction]),
-      (``maximumBound, #[`cap, `bound]),
-      (``checkpointChain, #[`domain_x, `grouped, `objective_bound]),
-      (``zeroChain, #[`bound]),
-      (``afterRestriction, #[`lower, `upper]),
-      (``afterOccurrence, #[`magnitude, `bound_conic_1, `bound_conic_2]),
-      (``labelRemoval, #[`labels.cap]),
-      (``familyRemoved, #[`bound])] do
+      (``afterOccurrence, #[`magnitude, `bound_conic_1, `bound_conic_2])] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) name
       | Lean.throwError "missing removal presentation for {name}"
     let actual := view.constraints.map (·.name.eraseMacroScopes)

@@ -66,27 +66,10 @@ example : GlobalEquivalence vectorSource vectorConic := vectorConic.equivalence
 
 run_cmd do
   for (name, expected) in #[
-      (``ordered, #[`lower, `bounds.upper, `shifted]),
-      (``sameName, #[`first, `middle, `last]),
-      (``reused, #[`x, `middle, `last, `copied]),
-      (``restricted, #[`lower, `middle, `last, `tag]),
-      (``maximumBound, #[`domain, `lower_bound]),
-      (``removedLabelReused, #[`second, `third]),
-      (``renamedAliasRemoved, #[`first, `objective_bound]),
-      (``shiftedIdentities, #[`first, `final_domain]),
-      (``grouped, #[`retained, `bounds, `bound]),
-      (``zeroBoundRemoved, #[]),
-      (``renamedZeroBoundRemoved, #[]),
-      (``zeroContinued, #[`square_bound]),
-      (``principalBound, #[`kept, `nonnegative]),
       (``conicRows, #[`before, `upper, `cap_conic_2, `after]),
       (``nlpRows, #[`before, `upper, `cap_nlp_2, `after]),
       (``occurrenceRows, #[`before, `budget, `after, `positive_side, `lifted_conic_2]),
-      (``lowerOccurrence, #[`floor, `square_bound]),
-      (``vectorRenamed, #[`coordinate_bounds]),
-      (``vectorConic, #[`coordinate_bounds]),
-      (``renamedFamily, #[`domain]),
-      (``Instances.target, #[`interval])] do
+      (``vectorConic, #[`coordinate_bounds])] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) name
       | Lean.throwError "missing renamed presentation for {name}"
     let actual := view.constraints.map (·.name.eraseMacroScopes)
