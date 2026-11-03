@@ -6,12 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Substitution
 import Morew.Elab.Substitution.Registry
 
-/-!
-# Built-in coordinate parameterizations
-
-These declarations use the same public attribute as downstream rules. Explicit
-`via` selection also accepts records that have never been registered.
--/
+/-! Install built-in coordinate parameterizations. Explicit via also accepts unregistered records. -/
 
 attribute [morew_substitute]
   Morew.Substitution.identity

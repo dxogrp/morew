@@ -5,19 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Evidence.Sign
 
-/-!
-# Bounded coordinate-parameterization evidence
-
-Coverage may use every row of the supplied source-feasibility proof. Declaration
-premises use only independent ambient facts preceding the fresh source point;
-in particular, a temporary feasibility hypothesis cannot justify a parameter
-premise even when its proposition happens to be independent of that point.
-
-Besides typed facts and conjunctions, the search admits positive-to-nonnegative
-weakening, independently signed lower margins, and nonzero real coefficients
-from sign evidence. Numerical sign checking and margin inspection reuse the
-conic evidence helpers without changing their policy.
--/
+/-! Prove coverage from complete source feasibility. Declaration premises use only independent
+ambient facts preceding the source point. Search typed facts, conjunctions, sign weakening,
+independent lower margins, and bounded numerical evidence. -/
 
 namespace Morew.Elab.Substitution.Evidence
 
@@ -27,9 +17,7 @@ private def complete (expression : Expr) : MetaM Bool := do
   return !(← Expr.hasUnresolved expression) &&
     !(← Morew.Elab.Evidence.hasPlaceholders expression)
 
-/-- Expose bounded definitional predicate aliases and record projections while
-preserving typed comparison and membership heads. This is also the structural
-view used before independently proving a transformed row tautological. -/
+/-- Expose bounded predicate aliases and record fields while preserving comparison and membership heads. -/
 def predicateView (type : Expr) : Nat → MetaM Expr
   | 0 => pure type
   | fuel + 1 => do
@@ -59,9 +47,7 @@ private partial def leaves (proof : Expr) : MetaM (Array Expr) := do
       (← leaves (← mkAppM ``And.right #[proof]))
   return #[proof]
 
-/-- Hide temporary source facts and expose only checked projections of genuine
-ambient hypotheses. This supplies aliased conjunctions to the existing bounded
-sign helpers without changing those helpers' behavior for other consumers. -/
+/-- Hide source facts and project independent ambient conjunctions for sign search. -/
 private def withAmbientEvidence (point : Expr) (action : MetaM (Option Expr)) :
     MetaM (Option Expr) := do
   let original ← getLCtx
@@ -166,8 +152,7 @@ private partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
     return some (← mkAppM ``And.intro #[left, right])
   if let some (strict, left, right) ← realComparison? goal then
     if ← isDefEq left q((0 : ℝ)) then return ← sign? point right strict feasible?
-    -- Negative signs and other independent numerical comparisons need no
-    -- symbolic combination. The helper checks their actual order instances.
+    -- Check independent numerical comparisons with their actual order instances.
     return ← Morew.Elab.Evidence.proveIndependent? point goal
   if let some (value, reverse) ← nonzeroValue? goal then
     let value : Q(ℝ) := value
@@ -202,11 +187,9 @@ private def checked? (point goal : Expr) (feasible? : Option Expr) : MetaM (Opti
     catch _ => return .error ()
   return result.toOption
 
-/-- Prove a parameterization range from the complete supplied source-feasibility
-proof and independent ambient facts. Generated target rows are never searched.
-The fresh source point must follow genuine ambient declarations in the context.
-The returned proof is complete and kernel checked; caller metavariables and
-failed-attempt declarations are unchanged. -/
+/-- Prove parameterization range from source feasibility and independent ambient facts.
+The fresh source point follows ambient declarations. Kernel-check the result and
+preserve caller metavariables; restore declarations on failure. -/
 def proveRange? (point goal feasibleEvidence : Expr) : MetaM (Option Expr) :=
   checked? point goal (some feasibleEvidence)
 

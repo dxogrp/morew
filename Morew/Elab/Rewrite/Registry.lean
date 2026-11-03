@@ -7,89 +7,28 @@ import Morew.Rewrite.Basic
 import Morew.Elab.Rewrite.Comparison
 import Lean
 
-/-!
-# Registered exact representations
+/-! Register exact representations with morew_conic and morew_nlp attributes.
+Local, scoped, removed, and imported registrations follow Lean attribute scope.
+Records live in Type and are normally definitions. Reject malformed records and
+variable-headed source patterns during registration. Check candidate certificates on use.
 
-`@[morew_conic]` and `@[morew_nlp]` register proof-bearing representation
-definitions for automatic constraint rewriting. A definition may carry both
-attributes. Registration is scoped in the usual Lean sense: `attribute [local
-morew_nlp] rule`, `attribute [scoped morew_nlp] rule`, and `attribute
-[-morew_nlp] rule` have their ordinary activation and restoration behavior.
+Automatic discovery checks all matching rules. NLP requires one certified result;
+conic first applies the built-in SOC/power norm preference. Report ambiguous declaration
+names in sorted order. Explicit using selection needs no registration and has no fallback.
 
-The registry stores lookup information, never trusted certificates. Consumers
-instantiate and check every candidate, then select a fully certified result
-according to their documented ambiguity policy.
-An explicit `using` certificate does not need registration.
+Graph, epigraph, and hypograph matching adapts real outer negations through proved
+equivalences, retaining actual operation instances. Whole-predicate records use literal
+matching. Subtype inputs and proof parameters may require independent or retained
+evidence. First prove exactness under precisely the retained constraints; auxiliary
+types are decision-independent and targets cannot depend on feasibility proofs.
+Unit auxiliaries add no coordinate.
 
-Representation records live in `Type`, so rule authors normally use `def` or
-`noncomputable def`, rather than `theorem`. For example, a definition of type
-`EpigraphRepresentation f` may carry `@[morew_conic, morew_nlp]`; its target must
-then pass the respective conic or smooth certification whenever it is selected.
-Namespaces do not register rules. Malformed records and variable-headed source
-patterns are rejected when the attribute is applied, before any model uses them.
+Conic premises use direct margins. NLP premises use bounded reasoning over retained
+closed comparisons and compatible finite indices. After exactness, NLP may use generated
+guards for domain inclusion. Unsupported retained predicates supply no facts.
 
-For example, the following definition reuses the checked absolute-value rule
-for a named helper (a compiled version is in the command regression tests):
-
-```lean
-open Morew
-
-noncomputable def shiftedAbs (center x : ℝ) : ℝ := |x - center|
-
-@[morew_conic, morew_nlp]
-noncomputable def shiftedAbsEpigraph (center : ℝ) :
-    EpigraphRepresentation (shiftedAbs center) where
-  Auxiliary := Unit
-  target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
-  source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
-```
-
-Import `Morew.Reformulation` for the public commands and built-in registrations.
-Metaprograms can instead import `Morew.Elab.Conic.Rules` or
-`Morew.Elab.NLP.Rules`; these modules do not import the modeling DSL. This
-registry module alone defines the attributes without registering built-ins.
-The semantic `Morew.Rewrite`, `Morew.Conic`, and `Morew.NLP` entry points remain
-independent of registration and command elaboration.
-
-Automatic rewriting tries every matching registration. NLP requires exactly one
-fully certified result. Conic first prefers the built-in SOC norm rule over the
-built-in power-norm rule when both succeed, then requires one remaining result.
-Other successful rules retain their ambiguity. Ambiguity lists fully qualified
-declaration names in sorted order. `conic at bound using shiftedAbsEpigraph` and
-the corresponding `nlp` command infer `center` from the entire selected row. Applied certificate
-expressions use ordinary Lean elaboration. Explicit selection never falls back
-to another rule, and a namespace by itself gives a declaration no priority.
-
-Both consumers reuse real epigraph and hypograph rules through outer unary
-negations: `-f x ≤ t` uses a hypograph rule at `-t`, and `t ≤ -f x` uses an
-epigraph rule at `-t`. Nested negations and either comparison spelling are
-checked through exact equivalences. Discovery combines direct and adapted
-declarations; two distinct successful rules remain ambiguous. Domains, the
-actual order/negation/norm instances, and target admissibility are still checked.
-Real graph records similarly match signed equalities, such as `y = -f x`
-through `-y = f x`. Whole-predicate lifts retain literal matching. These
-adaptations do not normalize subtraction or negative coefficients.
-
-All four representation families may express rule premises through subtype
-inputs or declaration proof parameters, without changing the model's original
-decision type. For example, an epigraph representation of
-`fun x : {x : ℝ // 0 < x} => Real.log x.1` can use a real auxiliary and target
-`x.1 = Real.exp u ∧ u ≤ t`. The retained model constraint `1 ≤ x` establishes
-its input premise; the selected logarithm bound cannot establish that premise.
-
-Consumers first check `∀ x, C x → (P x ↔ ∃ u, Q x u)`, where `C` contains
-exactly the retained constraints. The auxiliary type is decision-independent,
-and the target cannot depend on the temporary proof of `C`. Original coordinates
-and retained rows are preserved. `Unit` auxiliaries introduce no coordinate.
-
-Conic uses its existing direct-margin evidence policy. NLP uses bounded
-arithmetic over checked retained closed comparisons and compatible finite
-coordinates; for example, it can combine `1 ≤ y` and `y ≤ x`. Unsupported
-retained predicates are not used as evidence. Only after exactness is checked
-may NLP use generated guards as well as retained rows to certify the evaluation
-domains of the resulting smooth residuals. Generated rows never prove their
-own replacement's premises.
--/
+This module defines attributes. Backend Rules modules install built-ins;
+Morew.Reformulation imports commands and both rule sets. -/
 
 namespace Morew.Elab.Rewrite.Registry
 
@@ -105,7 +44,7 @@ inductive Family where
   | exact | graph | epigraph | hypograph
   deriving BEq, Inhabited, Repr
 
-/-- Closed lookup data; actual types and certificates are checked on every use. -/
+/-- Lookup metadata; check types and certificates on every use. -/
 structure Entry where
   /-- The fully qualified declaration to instantiate and check. -/
   declaration : Name
@@ -115,9 +54,7 @@ structure Entry where
   head : Name
   /-- A fixed output-type head, or a wildcard for generic output types. -/
   outputHead? : Option Name := none
-  /-- Fixed type-valued operation arguments, indexed by their application position.
-  Generic type arguments remain wildcards; full types and instances are checked
-  by the matcher rather than trusted from this closed discovery metadata. -/
+  /-- Fixed type-valued arguments by application position; generic types remain wildcards. -/
   typeArgumentHeads : Array (Nat × Name) := #[]
   deriving BEq, Inhabited
 
@@ -190,8 +127,7 @@ def representation (type : Expr) : MetaM (Family × Expr × Expr) := do
 
 private def fixedTypeHead? (type : Expr) : MetaM (Option Name) := do
   let type ← whnf type
-  -- A stuck type family can reduce to a different head once declaration
-  -- parameters are inferred. Such types must remain lookup wildcards.
+  -- Keep parameter-dependent type heads as lookup wildcards.
   if type.hasFVar || type.hasMVar then return none
   return type.getAppFn.constName?
 
@@ -269,9 +205,8 @@ private def compatibleOperation (entry : Entry)
       | some (_, actual) => expected == actual
       | none => true
 
-/-- Discover only source-head, orientation, and fixed-type-compatible declarations.
-Generic type arguments remain candidates. Matching and target certification
-still run before a candidate can be accepted. -/
+/-- Discover declarations with compatible source heads, orientations, and fixed types.
+Generic types remain candidates for matching and certification. -/
 def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
   let type ← whnf (← inferType source)
   let .forallE _ domain _ _ := type | throwError "expected a constraint predicate"
@@ -304,8 +239,7 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
       else if view.predicate.isAppOfArity ``Eq 3 then
         graphs := graphs.push (← operation? args[1]!)
         graphs := graphs.push (← operation? args[2]!)
-    -- Filter the sorted declarations once: several views of the same rule are
-    -- one candidate, while direct-negative and derived declarations both stay.
+    -- Deduplicate sorted declarations across comparison views.
     return (← entries target).filterMap fun entry =>
       let compatible := match entry.family with
         | .exact => sourceHead == some entry.head

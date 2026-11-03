@@ -8,14 +8,9 @@ import Morew.Elab.Substitution.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked coordinate parameterization matching
-
-The complete coordinate map is matched under rigid retained and fresh binders.
-Declaration premises use independent evidence; source feasibility is available
-only for the record's range. A consumer checks its complete substitution inside
-each isolated attempt, before ambiguity is decided.
--/
+/-! Match complete coordinate maps under rigid retained and fresh binders.
+Use independent evidence for premises and source feasibility for range coverage.
+Certify each candidate in isolation before resolving ambiguity. -/
 
 namespace Morew.Elab.Substitution.Match
 
@@ -28,8 +23,7 @@ structure Result where
   /-- Proof of `rule.range retained selected` at the source point. -/
   rangeProof : Expr
 
--- Traverse newly exposed binding syntax too, but keep mathematical helpers
--- opaque. A wildcard may not gain independence by unfolding such a helper.
+-- Reduce binding syntax while keeping mathematical helpers closed.
 private def structuralTree (expression : Expr) : MetaM Expr :=
   Meta.transform expression (pre := fun expression => do
     let reduced ← Registry.structural expression
