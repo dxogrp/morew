@@ -8,15 +8,9 @@ import Morew.Elab.Conic
 import Morew.Elab.Conic.Symmetry
 import Morew.Conic.PSD.PositiveDefinite
 
-/-!
-# Checked positive-definite matrix domains
-
-Matrix-fraction premises come from independent hypotheses, retained positive
-definiteness, a retained positive scalar margin, or a retained identity-block
-PSD witness. Every consequence is a checked theorem. In particular, the
-selected row and its prospective replacement never establish their own domain.
-Global symmetry is certified separately when the generated rows are assembled.
--/
+/-! Prove positive definiteness from independent hypotheses, retained positive
+definiteness, positive scalar margins, or identity-block PSD witnesses.
+Exclude the selected row and its replacement. Certify global symmetry separately. -/
 
 namespace Morew.Elab.Conic.MatrixDomain
 
@@ -106,9 +100,7 @@ private theorem positiveDefiniteOfTransposedIdentity {n : Nat}
   apply Morew.Conic.posDef_of_fromBlocksFin_identity_posSemidef P W
   simpa only [Matrix.transpose_one] using h
 
--- Expose only canonical bundled constructors and arithmetic. Checking the
--- operation prefix before reducing it prevents a custom subtraction or scalar
--- action from masquerading as a positive margin at particular operands.
+-- Check canonical operation prefixes before exposing matrix arithmetic.
 private partial def bundledCoordinate? (value : Expr) (fuel := 32) : MetaM (Option Expr) := do
   if fuel == 0 then return none
   let value ← Expr.reduceStructure value
@@ -192,9 +184,8 @@ private partial def retainedEvidence? (point n matrix goal body proof : Expr) :
   if let some result ← directEvidence? goal body proof then return some result
   return ← fromSemidefinite? point n matrix body proof
 
-/-- Establish a canonical positive-definite premise from bounded independent
-or retained evidence. The caller supplies only constraints other than the
-selected row. Recognition cannot assign caller metavariables. -/
+/-- Prove positive definiteness from independent or retained evidence.
+The caller excludes the selected row; caller metavariables remain fixed. -/
 def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
     MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do

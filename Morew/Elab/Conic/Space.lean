@@ -9,13 +9,7 @@ import Morew.Elab.Expr
 import Lean.Meta.Basic
 import Qq
 
-/-!
-# Canonical decision and cone-coordinate spaces for affine rows
-
-Decision spaces use the affine reifier's algebraic structures. Cone coordinates
-retain their normed structures and coordinatewise real order. Both are fixed
-explicitly, independently of unrelated instances in the caller's context.
--/
+/-! Canonical algebra for decision spaces and normed structures for cone coordinates. -/
 
 namespace Morew.Elab.Conic.Space
 
@@ -136,8 +130,7 @@ noncomputable abbrev pi (ι : Type*) [Fintype ι] {Y : Type*} (a : Structure Y) 
 
 end Structure
 
--- Preserve aliases such as Matrix in local instance types, just as the affine
--- algebra builder does. Typeclass matching need not unfold those aliases.
+-- Preserve Matrix aliases in local instance types for typeclass matching.
 private def finishSpace (type data : Expr) : MetaM Expr := do
   let dataType ← mkAppM ``Structure #[type]
   mkAppOptM ``id #[some dataType, some data]
@@ -169,10 +162,7 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
   else
     throwError "unsupported affine row domain {type}"
 
-/-- Expose structural decision-space aliases in a persisted form's type.
-For example, instance synthesis recognizes `Fin m → Fin n → ℝ`, whereas it
-need not unfold the semireducible `Matrix` alias. This changes neither the
-represented problem nor its presentation's decision-domain spelling. -/
+/-- Expose decision-space aliases in persisted instance types for typeclass synthesis. -/
 partial def structuralDomain (type : Expr) : MetaM Expr := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
@@ -232,7 +222,7 @@ private def installInstances (remaining : List Expr)
           ← proof.replaceFVarsM #[binding] #[inst])
 
 /-- Construct a row with canonical decision algebra and normed, ordered targets.
-Substitute the temporary instances before either expression escapes. -/
+Substitute temporary instances into the result. -/
 def withCanonicalSpaces (domain target : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   let (group, module) ← Affine.Space.canonicalSpace domain
@@ -252,9 +242,7 @@ def withCanonicalConeSpaces (domain target : Expr)
     ← mkAppM ``Structure.finite #[targetData]]
   installInstances instances.toList action
 
-/-- Build a complete form with canonical finite-dimensional decision structures.
-The recursive finite-dimensional proof uses the same structures as the affine
-maps, even in the presence of unrelated ambient instances. -/
+/-- Build a form using the affine maps' canonical finite-dimensional structures. -/
 def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
   let data ← buildDomain domain
   let algebra ← mkAppM ``Domain.algebra #[data]

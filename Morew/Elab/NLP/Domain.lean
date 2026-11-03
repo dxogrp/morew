@@ -7,42 +7,19 @@ import Morew.Elab.NLP.Smooth
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Inferred open domains with certified feasible inclusion
+/-! Infer a common open domain, C² proofs for the supplied functions, and feasible inclusion.
+Admit native closed real comparisons, conjunctions, and True over real, product,
+and finite-vector decision spaces. Validate feasibility even for an empty source array.
 
-`certify feasible sources` checks the whole feasibility predicate, infers a
-common open evaluation domain, and returns C² proofs for the original functions
-and a proof that every feasible point belongs to that domain. The admitted rows
-are canonical real closed comparisons, conjunctions, and `True`. The original
-predicate and functions are never rewritten.
+Log, square root, and fixed real powers require positive arguments; inverse and
+division require nonzero denominators, including for constants. Constant helper
+arguments retain these requirements in supported value spaces; function and proof
+arguments remain opaque. Dependent value helpers expand under morew.smooth limits,
+with a fresh budget per source. Named predicates and independent helper bodies stay closed.
 
-Decision spaces are real scalars, products, and finite real vectors, as in the
-global certifier. This space validation also applies to empty source arrays.
-
-Native log, square root, and fixed real powers require positive arguments;
-inverse and division require nonzero denominators. These requirements also apply
-to constants. Unknown constant helper calls retain requirements from supported
-scalar, product, and finite-vector arguments, without unfolding helper bodies.
-Ordinary function arguments, proof arguments, and unsupported value spaces remain
-opaque. This policy is deliberately stricter than `Smooth.certifyGlobal`'s
-constant-function rule.
-
-Decision-dependent value helpers expand on demand under the shared source
-budget configured by `morew.smooth.*`. Native recognition and domain obligations
-still apply to their bodies. Independent helper bodies and whole predicates
-remain opaque, and each supplied source starts a fresh expansion session.
-
-Finite sums use precisely their supplied support. Nested restricted operations
-use continuity on their child domains. Inclusion proofs use admitted constraints,
-independent parameter evidence, and previously established domain conditions;
-no condition is added to feasibility. Failed attempts restore caller state.
-
-This internal API covers exactly the supplied functions, in input order. A caller
-building a complete NLP form must separately establish that these functions cover
-the objective and every residual. There is no modeling command or row normalization
-here. An empty source array still validates the entire predicate and returns the
-unrestricted domain. Smoothness asserts no convexity.
--/
+Finite sums use their supplied support. Inclusion uses admitted constraints,
+independent hypotheses, and established child domains. Results cover sources in input
+order; a form builder checks objective and residual coverage separately. -/
 
 namespace Morew.Elab.NLP.Domain
 
@@ -185,12 +162,8 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
     checkWithKernel proof
   return .ok result
 
-/-- Infer an open common domain and kernel-check smoothness and feasible inclusion.
-
-The result covers precisely `sources`, not an implicitly discovered whole model.
-Failures restore metavariables and auxiliary declarations. Existing source rows
-are evidence only: no new domain condition is added to their predicate.
--/
+/-- Infer an open domain and kernel-check smoothness and feasible inclusion for sources.
+Restore metavariables and auxiliary declarations on failure. -/
 def certify (feasible : Expr) (sources : Array Expr) :
     MetaM (Except DomainError DomainResult) :=
   State.withIsolatedMVars do
@@ -203,9 +176,8 @@ def certify (feasible : Expr) (sources : Array Expr) :
         reason := ← addMessageContext exception.toMessageData
       }
 
-/-- Internal certification using checked projections of a separately admitted row
-grammar. The provider receives the actual feasibility proof; all returned analytic
-and inclusion certificates are checked against that unchanged predicate. -/
+/-- Certify using a separately admitted row grammar. The provider receives the feasibility
+proof; check returned smoothness and inclusion against that predicate. -/
 def certifyWithEvidence (feasible : Expr) (sources : Array Expr)
     (facts : Evidence.FactsProvider) : MetaM (Except DomainError DomainResult) :=
   State.withIsolatedMVars do

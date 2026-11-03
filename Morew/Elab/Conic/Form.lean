@@ -7,16 +7,8 @@ import Morew.Elab.Conic.Plan
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Persistent certified conic forms
-
-Build affine cone data for the complete current typed problem. The stored
-representation proves equality of objective and feasibility, independently of
-the reformulation runner's source-to-target optimization certificate.
-
-For abstract function indices, certification and ordinary field notation require
-only `Finite` evidence. Decision-space norms and enumerations are unnecessary.
--/
+/-! Construct affine cone data proving the current objective and feasible set.
+Abstract function indices require Finite evidence. -/
 
 namespace Morew.Elab.Conic
 
@@ -55,8 +47,7 @@ private structure RowBlock where
   decomposition : Expr
   rows : Array RowResult
 
--- Build the finite table and its equivalence with the ordered leaf conjunction
--- together, so zero and singleton tables obey the presentation convention.
+-- Build the row table and its ordered conjunction equivalence together.
 private def assembleRows (domain : Expr) (predicates : Array Expr)
     (rows : Array RowResult) : MetaM (Expr × Expr) := do
   let rowType ← mkAppOptM ``Morew.Conic.Constraint #[some domain, none, none]
@@ -76,8 +67,7 @@ private def assembleRows (domain : Expr) (predicates : Array Expr)
       tailPredicates := head :: tailPredicates
     return (table, ← mkLambdaFVars #[point] proof)
 
--- Named presentation entries may themselves be conjunctions. Their original
--- boundaries remain in the represented problem, while data stores the leaves.
+-- Flatten conjunctions into data while retaining named presentation boundaries.
 private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
     MetaM Expr :=
   withLocalDeclD `point domain fun point => do
@@ -95,8 +85,7 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
       leaves := predicates ++ leaves
     mkLambdaFVars #[point] proof
 
--- Cached rows are untrusted inputs: retain their certificates only after checking
--- that they prove the exact decomposed predicate for the current domain.
+-- Check cached row certificates against the current domain and predicates.
 private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     MetaM RowResult := do
   for expression in #[row.constraint, row.pointwiseIff] do
@@ -188,10 +177,7 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
       throwError "conic form contains unresolved metavariables"
     checkWithKernel form
     return form
-  -- A declaration inferred directly from this expression must support ordinary
-  -- `.data` projections. Expose aliases in the domain and in every canonical
-  -- instance type: retaining Matrix aliases inside a product's group would
-  -- prevent later Module synthesis even after exposing the outer domain.
+  -- Expose domain aliases in canonical instance types so persisted forms support field notation.
   let domain ← Space.structuralDomain presentation.domainType
   let publicType ← Space.withCanonicalDomain domain do
     mkAppOptM ``Morew.Conic.Form #[some domain, none, none, none, some canonical]
@@ -199,13 +185,9 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
   checkWithKernel form
   return .ok form
 
-/-- Certify the complete current typed problem as persistent affine cone data.
-Conjunction leaves retain presentation order; literal `True` contributes no
-rows. The returned form represents `presentation.canonicalProblem` exactly and
-retains the explicit objective sense, including maximizing declarations.
-An optional nonempty cache has one slot per presentation entry. Each `some`
-contains checked rows in decomposed predicate order; `none` normalizes the entry.
-Cached constraints and proofs are checked against their current predicates. -/
+/-- Certify presentation.canonicalProblem, retaining objective sense and row order.
+True contributes no rows. A nonempty cache has one slot per presentation entry:
+some supplies rows in decomposed order; none normalizes the entry. Validate cached proofs. -/
 def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Expr.Error Expr) :=

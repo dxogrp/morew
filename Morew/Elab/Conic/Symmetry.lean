@@ -9,14 +9,8 @@ import Morew.Elab.Evidence
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Ring
 
-/-!
-# Checked global matrix symmetry
-
-PSD coordinates need symmetry at every decision point. This bounded checker
-uses structural matrix identities and independent hypotheses, including explicit
-universal witnesses. Feasibility hypotheses mentioning the decision point are
-never evidence. Every successful result is checked before it leaves isolation.
--/
+/-! Prove global matrix symmetry from structural identities and independent hypotheses.
+Feasibility evidence involving the decision point is excluded. -/
 
 namespace Morew.Elab.Conic.Symmetry
 
@@ -71,8 +65,7 @@ private def structuralRules (matrix : Expr) : Array Name := Id.run do
   if head == some ``Zero.zero then return #[``Matrix.isSymm_zero]
   return #[]
 
--- Concrete literals use a bounded number of coordinate goals. Symbolic sizes
--- remain symbolic and are handled by structural lemmas or explicit witnesses.
+-- Use bounded coordinate proofs for concrete sizes and structural proofs for symbolic sizes.
 private def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
   let .forallE _ index _ _ ← whnf (← inferType matrix) | failure
   let index ← whnf index
@@ -86,10 +79,8 @@ private def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
        fin_cases i <;> fin_cases j <;> norm_num [Matrix.of_apply] <;> ring)))
   unless goals.isEmpty do failure
 
--- Project independent conjunctions before proof search. Quantified variables
--- stay bound in each projected theorem, so applying a consequence cannot leave
--- scratch arguments in the returned certificate. The shared budget bounds the
--- total number of inspected conjunction and quantifier nodes per hypothesis.
+-- Project independent conjunctions while retaining quantifiers.
+-- Bound inspected conjunction and quantifier nodes per hypothesis.
 private partial def conjunctionConsequences (proof : Expr) (fuel : Nat) :
     MetaM (Array Expr × Nat) := do
   if fuel == 0 then return (#[], 0)
@@ -138,8 +129,7 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
     for name in structuralRules matrix do
       try
         let rule ← mkConstWithFreshMVarLevels name
-        -- Matching the repeated matrix in A + Aᵀ must not unfold unrelated
-        -- diagonals entry by entry before trying the next structural rule.
+        -- Match A + Aᵀ before expanding unrelated diagonal entries.
         let goals ← if name == ``Matrix.isSymm_add_transpose_self ||
             name == ``Matrix.isSymm_transpose_add_self then
             withTransparency .reducible (goal.apply rule)
@@ -198,15 +188,12 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
             break
           catch _ => saved.restore
         unless direct do
-          -- Affine certification already accepts transparent value helpers.
-          -- Expose the same bounded helper tree when the original expression
-          -- has no direct symmetry proof, including helpers below operations.
+          -- Retry symmetry with the affine certifier's bounded helper expansion.
           let expanded ← try
               Affine.Expansion.expand matrix fun expression preserveLets =>
                 Expr.reduceStructure expression (preserveLets := preserveLets)
             catch _ =>
-              -- Native identities and independent witnesses can establish
-              -- symmetry without expanding an opaque or over-budget helper.
+              -- Try native identities and independent witnesses before helper expansion.
               saved.restore
               pure matrix
           let expandedProof ← mkFreshExprMVar (← mkAppM ``Matrix.IsSymm #[expanded])

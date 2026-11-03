@@ -11,14 +11,8 @@ import Mathlib.Tactic.Positivity
 import Lean.Meta.Check
 import Morew.Elab.State
 
-/-!
-# Evidence admitted for open nonlinear evaluation domains
-
-Source feasibility consists only of native closed real comparisons, conjunctions,
-and `True`. Domain proof search sees those rows, already established child-domain
-facts, and decision-independent parameter hypotheses. Other local hypotheses are
-hidden from tactics, including positivity's local-context search.
--/
+/-! Domain evidence from native closed real comparisons, conjunctions, True,
+established child domains, and independent hypotheses. Hide other proofs from tactics. -/
 
 namespace Morew.Elab.NLP.Domain.Evidence
 
@@ -47,15 +41,12 @@ private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM
           if ← hasPlaceholders value then return true
   return false
 
-/-- Check for unresolved terms and placeholders, including those hidden in
-referenced local values and types. Unrelated local declarations do not affect
-completeness. Shared by smoothness, domain, and exact-replacement certification. -/
+/-- Detect unresolved terms and placeholders through referenced local types and values. -/
 def complete (expression : Expr) : MetaM Bool := do
   return !(← Expr.hasUnresolved expression) &&
     !(← (hasPlaceholders expression).run' {})
 
-/-- Internal source of checked facts projected from the supplied feasibility proof.
-The obligation allows finite families to be specialized only at relevant indices. -/
+/-- Project feasibility facts, specializing finite families at indices in the obligation. -/
 abbrev FactsProvider := (point feasibleProof obligation : Expr) → MetaM (Array Expr)
 
 private def admissionFailure (index : Nat) (expression : Expr) (reason : MessageData) :
@@ -91,11 +82,8 @@ private partial def admitBody (point expression : Expr) (index : Nat) :
   return .error (← admissionFailure index expression
     "expected canonical closed real ≤, ≥, or = comparisons joined by And, or True")
 
-/-- Validate the entire feasibility predicate, even when no expression sources are supplied.
-
-Named predicates stay opaque. Strict inequalities, disequalities, quantifiers,
-and altered order instances cannot serve as source rows.
--/
+/-- Validate all feasibility leaves as native closed real comparisons, conjunctions,
+or True. Keep named predicates closed. -/
 def admit (feasible : Expr) : MetaM (Except AdmissionError Unit) :=
   State.withIsolatedMVars do
     try
@@ -125,13 +113,10 @@ partial def rowFacts (point feasibleProof : Expr) : MetaM (Array Expr) := do
     let right ← rowFacts point (← mkAppM ``And.right #[feasibleProof])
     return left ++ right
   if type.isConstOf ``True then return #[]
-  -- Preserve the admitted structural view for tactics that do not unfold
-  -- named model containers when inspecting a proof's type.
+  -- Expose admitted structure to tactics.
   return #[← mkAppOptM ``id #[some type, some feasibleProof]]
 
--- Domain membership unfolds to conjunctions. Unlike row admission, these are
--- already proved facts supplied by the caller, so inspecting their definition
--- cannot add a premise to feasibility.
+-- Unfold proved domain-membership facts into conjunctions.
 private partial def splitFacts (proof : Expr) : MetaM (Array Expr) := do
   let type ← whnf (← inferType proof)
   if type.isAppOfArity ``And 2 then
@@ -169,9 +154,7 @@ private def simplifiedFact (context : Simp.Context) (fact : Expr) : MetaM Expr :
   | some equality => mkEqMP equality fact
   | none => mkAppOptM ``id #[some result.expr, some fact]
 
--- Specialize independent parameter families only at existing independent
--- locals, and discharge their premises only with already approved facts.
--- Source rows themselves never introduce universal hypotheses.
+-- Specialize independent parameter families at independent locals using approved premises.
 private def specialize (candidates pool : Array Expr) (proof : Expr) :
     Nat → MetaM (Array Expr)
   | 0 => pure #[]
@@ -269,24 +252,18 @@ private def proveCore (point target : Expr) (facts : Array Expr) : MetaM Expr :=
         return ← mkAppOptM ``Fin.elim0 #[some target, some candidate]
   for fact in parameterPool do
     approved := approved ++ (← specialize candidates parameterPool fact 4)
-  -- Clear ambient instance registrations as well as hiding unapproved proofs.
-  -- Original declarations remain available for the types of approved facts.
+  -- Hide unapproved proofs and ambient instance registrations; retain dependency declarations.
   withLCtx context #[] do
     withFacts canonicalInstances #[] fun _ => do
       Space.withCanonicalSpaces #[← inferType point] do
         let simple ← simpContext
         let simplified ← approved.mapM (simplifiedFact simple)
-        -- A known positivity fact may simplify to True but still supply the
-        -- strict margin needed to combine another row with arithmetic.
+        -- Retain strict margins even when their propositions simplify to True.
         withFacts (approved ++ simplified).toList #[] fun facts => search target facts
 
-/-- Try bounded, kernel-checked domain evidence from approved source-row and child facts.
-
-Independent parameter hypotheses and finite-index membership hypotheses are
-available. Unapproved decision-dependent hypotheses are never searched. The
-2,000,000 internal-heartbeat cap preserves any tighter caller limit, and failure
-restores state. No unresolved metavariables or placeholders can escape.
--/
+/-- Search approved source, child-domain, independent parameter, and finite-index facts.
+Kernel-check results and restore state on failure. Limit search to 2,000,000 internal
+heartbeats or the tighter caller limit. -/
 def prove? (point target : Expr) (facts : Array Expr := #[]) : MetaM (Option Expr) := do
   let saved ← saveState
   let result : Except Unit Expr ← tryCatchRuntimeEx
@@ -305,9 +282,7 @@ def prove? (point target : Expr) (facts : Array Expr := #[]) : MetaM (Option Exp
           return .ok proof
       catch _ => return .error ())
     fun exception => do
-      -- Ordinary catches propagate runtime limits, including through state
-      -- isolation. Restore before treating our local search cap as unavailable
-      -- evidence; caller exhaustion and recursion limits must still escape.
+      -- Restore state on local search exhaustion; propagate caller resource limits.
       saved.restore
       setEnv saved.core.env
       if exception.isMaxHeartbeat then

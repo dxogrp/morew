@@ -7,13 +7,8 @@ import Mathlib.Analysis.Normed.Module.FiniteDimension
 import Morew.Elab.Expr
 import Lean.Meta.Basic
 
-/-!
-# Canonical analytic structures for smoothness certification
-
-The supported real, Euclidean, product, and finite-function spaces use their standard
-normed structures. These structures and their finite-dimensionality evidence
-are assembled together, independently of unrelated ambient instances.
--/
+/-! Canonical normed structures and finite-dimensionality for real, Euclidean,
+product, and finite-function spaces. -/
 
 namespace Morew.Elab.NLP.Space
 
@@ -61,8 +56,7 @@ noncomputable abbrev pi (n : Nat) {Y : Type u} (target : Structure Y) :
 
 end Structure
 
--- Fix the scalar field at declaration time, just as Structure.real fixes its
--- analytic structures. Ambient field instances need not agree with those data.
+-- Fix the scalar field to the standard real field.
 private noncomputable abbrev realField : NontriviallyNormedField ℝ := inferInstance
 
 private structure BuiltSpace where
@@ -71,8 +65,7 @@ private structure BuiltSpace where
 
 private def finishSpace (type data : Expr) (components : Array Expr := #[]) :
     MetaM BuiltSpace := do
-  -- Preserve aliases in the local instance types, so typeclass matching need
-  -- not unfold their spelling merely to find an already constructed instance.
+  -- Preserve aliases in local instance types for typeclass matching.
   let dataType ← mkAppM ``Structure #[type]
   let data ← mkAppOptM ``id #[some dataType, some data]
   let group ← mkAppM ``Structure.group #[data]
@@ -103,9 +96,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
         throwError "smooth certification requires a nondependent finite function space, got {type}"
       let target ← buildSpace body
       let data ← mkAppM ``Structure.pi #[indexShape.getAppArgs[0]!, target.data]
-      -- Projection and componentwise calculus lemmas carry their own Fintype
-      -- argument. Keep it aligned with the enumeration chosen by Structure.pi;
-      -- source operations still retain their original explicit finite sets.
+      -- Use Structure.pi's Fin enumeration for componentwise calculus.
       let fintype ← mkAppM ``Fin.fintype #[indexShape.getAppArgs[0]!]
       let fintypeType ← mkAppM ``Fintype #[index]
       let fintype ← mkAppOptM ``id #[some fintypeType, some fintype]
@@ -120,14 +111,8 @@ private def installInstances (remaining : List Expr) (action : MetaM Expr) : Met
     mapLetDeclZeta `_smoothCanonical (← inferType inst) inst fun _ =>
       installInstances rest action
 
-/-- Construct a proof using canonical analytic structures on the supplied spaces.
-
-The scalar field is fixed to the standard real field. The real scalars and
-every component space receive canonical normed-group,
-normed-space, and finite-dimensionality instances. Finite-function calculus uses
-the matching standard Fin enumeration. Temporary instances are substituted into
-the returned expression before leaving their scopes.
--/
+/-- Use canonical analytic structures on supplied spaces, their components, and ℝ.
+Use the matching Fin enumeration and substitute temporary instances into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
   let mut instances := #[mkConst ``realField]
   for type in #[mkConst ``Real] ++ types do

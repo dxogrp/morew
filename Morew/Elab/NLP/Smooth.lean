@@ -12,51 +12,20 @@ import Morew.Elab.Expansion
 import Morew.Elab.Atom
 import Lean.Meta.Check
 
-/-!
-# Proof-producing recognition of globally smooth expressions
+/-! Certify C² smoothness on Set.univ for fully elaborated functions X → ℝ.
+Supported spaces are real scalars, finite Euclidean spaces, products, and finite vectors.
+Constants, projections, arithmetic, natural powers, finite sums, exponential,
+trigonometric, and hyperbolic operations compose structurally. Exponents and indices
+must be decision-independent. Independent expressions are constant functions.
 
-`certifyGlobal` is an internal metaprogramming interface. It proves C² smoothness
-on `Set.univ` for a native fragment, including nonconvex products and polynomials.
-It does not change model expressions or install a modeling command. Failure means
-that the fragment did not certify the function, not that the function is not smooth.
+Local lets and beta applications reduce for proof construction. Dependent transparent
+helpers expand under morew.smooth.maxExpansionDepth, maxExpansionSteps, and
+maxExpansionNodes, defaulting to 32, 1024, and 100000. Any zero limit disables
+expansion; each source has one budget. Named Problem containers and predicates stay closed.
 
-Real scalars, finite Euclidean spaces, products, and finite real vectors are
-supported decision spaces. Native Euclidean coordinates and `WithLp.toLp 2`
-construction use the canonical continuous linear equivalence.
-Constants, projections, arithmetic, natural powers, finite sums, and the native
-exponential, trigonometric, and hyperbolic functions compose structurally. Local
-lets and beta applications reduce only for proof construction. Safe transparent
-value helpers expand on demand with bounded depth, steps, and expression growth.
-A decision-independent expression is a constant even if its internal
-operations would require domain evidence when applied to decisions.
-
-The returned proof mentions the original function and is checked by the kernel.
-The companion `Morew.Elab.NLP.Domain` API shares this traversal and infers open
-domains for restricted operations. Its stricter constant policy leaves the
-global API unchanged. Nonsmooth rewrites remain separate, and affine
-helper-expansion options do not affect either smoothness certifier.
-
-`morew.smooth.maxExpansionDepth`, `morew.smooth.maxExpansionSteps`, and
-`morew.smooth.maxExpansionNodes` default to 32, 1024, and 100000 respectively.
-Zero in any option disables helper expansion. Each source has one shared budget;
-native recognition and independent helper bodies retain their existing policies.
-Helper expansion does not open named problem containers or whole constraint
-predicates; existing native presentation handling remains separate.
-
-Metaprograms pass a fully elaborated `Expr` representing a function `X → ℝ` to
-`Morew.Elab.NLP.Smooth.certifyGlobal`. On `.ok proof`, the ordinary Lean proof
-can fill an objective or residual smoothness field whose domain is `Set.univ`.
-On `.error error`, use `error.kind` for classification and `error.reason` for
-rendering: the latter captures the local context of `error.expression` and
-`error.type`, including any temporary decision or finite-sum binders.
-
-For example, `fun x : ℝ => x ^ 4 - 3 * x ^ 2 + Real.sin x` is supported.
-Both factors in `x * x` may depend on decisions. Natural exponents and finite
-indices must be fixed with respect to decisions. Real logarithms, division,
-inverse and square roots need the domain-aware API; absolute values and
-min/max need separate treatment. No convexity conclusion follows from C²
-smoothness, and no derivative expressions are generated.
--/
+Morew.Elab.NLP.Domain shares the traversal for restricted operations and uses stricter
+constant-domain checks. Diagnostics retain the failing expression's local context.
+Successful proofs refer to the original function and use canonical analytic structures. -/
 
 /-- Maximum nested helper expansions during smooth certification. -/
 register_option morew.smooth.maxExpansionDepth : Nat := {
@@ -80,7 +49,7 @@ namespace Morew.Elab.NLP.Smooth
 
 open Lean Lean.Meta Qq
 
-/-- Failure categories for consumers of this internal certifier's diagnostics. -/
+/-- Smoothness certification failure categories. -/
 inductive SmoothFailureKind where
   /-- The input or an intermediate value has an unsupported analytic space. -/
   | unsupportedSpace
@@ -149,8 +118,7 @@ private structure Context where
   helpers : Array Expr := #[]
   aliases : Array FVarId := #[]
 
--- A helper can duplicate a native outer alias before that alias is closed.
--- Retain only its model value, never the surrounding native expression/proof.
+-- Retain only model values when helpers duplicate outer aliases.
 private structure PendingHelperModel where
   expression : Expr
   helper : Expr
@@ -174,9 +142,7 @@ private def expansionConfig : MetaM Expansion.Config := do
     label := "smooth"
   }
 
--- Smooth certification follows only the selected product field or pending
--- application. Keep its named-Problem boundary here, outside the shared engine;
--- affine certification has its own policy for inspecting problem containers.
+-- Follow selected fields and applications while keeping named Problem containers closed.
 private partial def unfoldValueHead? (config : Expansion.Config) (expression : Expr)
     (depth : Nat) : Expansion.ExpandM (Option Expansion.Step) := do
   unless Expansion.enabled config do return none
@@ -252,7 +218,7 @@ private partial def supportedSpaceShape (euclidean : Bool) (type : Expr) : MetaM
 private def supportedSpace (type : Expr) : MetaM Bool :=
   supportedSpaceShape true type
 
--- Extending analytic spaces must not expose formerly opaque helper arguments.
+-- Preserve the set of helper argument spaces inspected for domains.
 private def helperArgumentSpace (type : Expr) : MetaM Bool :=
   supportedSpaceShape false type
 
@@ -265,8 +231,7 @@ private def certificateFunction (proof : Expr) : MetaM Expr := do
     throwError "internal smooth constructor returned an unexpected proposition"
   return type.getAppArgs[type.getAppNumArgs - 2]!
 
--- Bind parameters whose scopes may end before an outer alias closes. The
--- active aliases stay free so their later substitutions can be checked.
+-- Abstract expiring parameters; keep active aliases free for later substitution.
 private def closeModelParameters (aliases : Array FVarId) (expression : Expr) : MetaM Expr := do
   let parameters := (← getLCtx).getFVars.filter fun parameter =>
     !aliases.contains parameter.fvarId!
@@ -284,9 +249,7 @@ private def rememberHelperModel (point helper : Expr) (result : Certificate) : C
   modify fun state => { state with
     pendingModels := state.pendingModels.push { expression, helper, helperMessage } }
 
--- Only helper-origin values pay for closing native outer aliases. Updating
--- each retained value here makes chained aliases account for inner duplication;
--- records disappear as soon as no active outer alias remains in their value.
+-- Charge outer-alias substitutions only in helper-origin values, including chained duplication.
 private def closePendingModels (name : Name) (type binding value : Expr) : CertifyM Unit := do
   let aliases := (← read).aliases
   let bounds := (← read).expansion
@@ -302,15 +265,12 @@ private def closePendingModels (name : Name) (type binding value : Expr) : Certi
       pending := pending.push { model with expression }
   modify fun state => { state with pendingModels := pending }
 
--- Reuse the body already certified for an operand. This carries selective
--- expansion through native compositions into domain proof search without a
--- second unfolding pass or opening independent constant-helper bodies.
+-- Reuse certified operand bodies for domain evidence and selective expansion.
 private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
   if (← get).steps == 0 then return ← functionOf point operand
   return ← certificateFunction proof
 
--- Check the operation independently of its operands: an altered instance may
--- accidentally agree with standard arithmetic on a particular input.
+-- Check operation instances independently of operands.
 private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
@@ -323,9 +283,7 @@ private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Uni
     unless ← isDefEq actualArgs[i]! expectedArgs[i]! do
       reject source .invalidInstance "expected canonical real arithmetic instances"
 
--- Fixed product/vector coefficients need no multiplication calculus rule, but
--- their operation instances and visible operand domains must still be checked.
--- Fix these instances at declaration time, independently of ambient instances.
+-- Check canonical operation instances and operand domains for fixed product/vector coefficients.
 private structure PointwiseArithmetic (X : Type*) where
   mul : Mul X
   pow : Pow X ℕ
@@ -379,8 +337,7 @@ private def checkPointwisePrefix (expression type : Expr) (power : Bool) : Certi
         #[type, type, type, inst, args[4]!, args[5]!]
   checkPrefix expression expected 2
 
--- Structural substitutions inside a helper's lexical subtree share its budget;
--- native siblings retain the original structural-reduction behavior.
+-- Charge helper-origin structural substitutions to the shared budget.
 private def chargeSubstitution (value : Expr) (arguments : Array Expr) : CertifyM Unit := do
   unless (← read).helpers.isEmpty do
     expansionAction <| Expansion.chargeBeta value arguments (← read).expansion
@@ -398,16 +355,12 @@ private partial def reduceStructure (point expression : Expr)
       return ← reduceStructure point (body.instantiate1 value) false
   return reduced
 
--- Reduce local forms wherever they can hide decision independence. Independent
--- terms retain their spelling; this pass does not unfold named helpers. Use the
--- result in constructors and dependency checks so erased decision references
--- cannot escape through a fixed argument or type.
+-- Reduce local structure for dependency checks; preserve independent spelling and named helpers.
 private def reduceLocalStructure (point expression : Expr)
     (preserveEvidence : Bool := false) : CertifyM Expr := do
   let step (value : Expr) : CertifyM TransformStep := do
     if !(← Expr.depends point value) then return .done value
-    -- A helper-local proof or instance belongs to the child being certified,
-    -- not to a preliminary normalization pass over its surrounding operation.
+    -- Keep helper-local evidence scoped to the child being certified.
     if preserveEvidence && !(← read).helpers.isEmpty then
       if let .letE _ type evidence _ _ := value then
         if ((← isProp type) || (← isClass? type).isSome) &&
@@ -430,8 +383,7 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
     let valueType ← reduceLocalStructure point (← inferType expression)
     let intermediateSpaces ←
       (intermediateSpaces.mapM (reduceLocalStructure point ·) : CertifyM (Array Expr))
-    -- Projections also need the operand's structures, even when its finite
-    -- index or unused product component is absent from the decision/result.
+    -- Install operand structures for projections, including unused component and index types.
     Space.withCanonicalSpaces (#[← inferType point, valueType] ++ intermediateSpaces) <|
       mkAppM name args
   catch exception =>
@@ -498,8 +450,7 @@ private def constant (point expression : Expr) (info : DomainInfo) : CertifyM Ce
   return { info with
     smooth := ← construct point expression ``Morew.NLP.Smooth.const #[info.domain, expression] }
 
--- Only the inclusion proof uses feasibility. The domain and its analytic proofs
--- are built without any assumption that the current domain condition holds.
+-- Use feasibility only in inclusion proofs.
 private def restrictDomain (point expression value : Expr) (positive : Bool)
     (info : DomainInfo) (proofs : Array Expr) (valueProof : Expr) :
     CertifyM (DomainInfo × Array Expr × Expr) := do
@@ -536,8 +487,7 @@ private def restrictDomain (point expression value : Expr) (positive : Bool)
   let proofs ← proofs.mapM fun proof => restrictProof point proof domain subset
   return ({ domain, isOpen, included }, proofs, holds)
 
--- Bring structural bindings in a projection operand into the traversal's
--- scope. Unlike zeta reduction, this retains independent proof lets/instances.
+-- Expose projection-operand bindings while retaining independent evidence lets.
 private def hoistProjectionLets : Expr → Expr
   | .proj name index value =>
     match hoistProjectionLets value with
@@ -552,18 +502,14 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if (← Expr.depends point type) || (← Expr.depends point value) then
       chargeSubstitution (.lam name type body .default) #[value]
       return ← certifyBody point (body.instantiate1 value)
-    -- Compiled helpers may mark lets as nondependent, making their local values
-    -- opaque to definitional equality. Their checked reductions use those values,
-    -- so keep them transparent until every returned field is closed below.
+    -- Keep helper lets transparent until returned expressions have been closed.
     let nondep := nondep && (← read).helpers.isEmpty
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
       let result ← withReader (fun context =>
         if context.helpers.isEmpty then { context with aliases := context.aliases.push binding.fvarId! }
         else context) <| certifyBody point (body.instantiate1 binding)
       unless (← read).helpers.isEmpty do
-        -- Inner lets may already have multiplied this binding's occurrences.
-        -- Charge its substitution in the actual certified value before closing
-        -- the local scope, without counting duplication in proof bookkeeping.
+        -- Charge substitutions in the certified value, excluding proof bookkeeping.
         let certified := (← certificateFunction result.smooth).beta #[point]
         if certified.containsFVar binding.fvarId! then
           chargeSubstitution (.lam name type (certified.abstract #[binding]) .default) #[value]
@@ -582,9 +528,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let independent := !(← Expr.depends point expression)
   if independent && !inferDomains then
     return ← constant point expression (← univInfo point)
-  -- Selecting a helper-produced tuple/function must not require certifying its
-  -- unused fields. Only the pending decision-dependent selection is exposed;
-  -- native operations and independent coefficients keep their own boundaries.
+  -- Certify only selected fields of helper-produced tuples and functions.
   if !independent && Expansion.enabled (← read).expansion then
     let head := expression.getAppFn
     let structural := match head with
@@ -610,9 +554,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
           #[← operandFunction point value child.smooth, child.smooth] (intermediateSpaces := #[← inferType value]) }
   if let .proj ``Prod index value := expression then
-    -- A fixed scalar/vector component need not give the whole parameter an
-    -- analytic structure. Unsupported value spaces remain opaque, after the
-    -- structural reductions above have exposed any selected tuple component.
+    -- Inspect supported fixed components; leave unsupported value spaces opaque.
     if independent && !(← supportedSpace (← inferType value)) then
       return ← constant point expression (← univInfo point)
     let child ← certifyBody point value
@@ -746,8 +688,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         #[indices, family, proof] (some 2) }
   if let some atom ← Atom.recognizeAtom? expression then
     if atom.kind == .rpow && !inferDomains then
-      -- Explicit Real.rpow was previously an unknown application. Retain its
-      -- operand diagnostics in global mode; HPow's old boundary is above.
+      -- Report explicit Real.rpow operand failures in global mode.
       for argument in args do
         if (← Expr.depends point argument) && (← supportedSpace (← inferType argument)) then
           discard <| certifyBody point argument
@@ -816,9 +757,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         reject expression .invalidInstance "unsupported real-power instance"
     if !independent then
       reject expression .unknownHead "unsupported power type or instance"
-  -- After structural dependency normalization, open eligible heads before
-  -- certifying their arguments: the body may discard an argument that would
-  -- otherwise fail native certification.
+  -- Expand eligible dependent heads before certifying arguments their bodies may discard.
   if !independent && Expansion.enabled (← read).expansion then
     if let some step ← expansionAction <| unfoldValueHead?
         (← read).expansion expression (← read).helpers.size then
@@ -836,8 +775,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
       return { child with
         smooth := ← construct point expression ``Morew.NLP.Smooth.apply
           #[← operandFunction point vector child.smooth, index, child.smooth] (intermediateSpaces := #[vectorType]) }
-  -- Constant helper bodies remain opaque, but supported value arguments retain
-  -- their native evaluation requirements. Function and proof arguments do not.
+  -- Keep constant helper bodies closed; inspect supported value arguments for domain requirements.
   let mut children : Array Certificate := #[]
   for argument in args do
     if (independent || (← Expr.depends point argument)) &&
@@ -877,7 +815,7 @@ private def certifyCore (source : Expr) : CertifyM Certificate := do
   let function ← certificateFunction proof
   unless ← isDefEq function source do
     reject source .invalidInstance "certificate does not prove smoothness of the original function"
-  -- Construct the full target independently, fixing order, domain and instances.
+  -- Construct the target with fixed order, domain, and instances.
   let expected ← Space.withCanonicalSpaces #[decision] <|
     mkAppM ``ContDiffOn #[q(ℝ), q((2 : WithTop ℕ∞)), source, domain]
   unless ← isDefEq (← inferType proof) expected do
@@ -892,15 +830,9 @@ private def certifyCore (source : Expr) : CertifyM Certificate := do
   return { result with
     smooth := proof }
 
-/-- Certify a native function without modifying caller metavariables.
-
-The proof establishes `ContDiffOn ℝ 2 source Set.univ` for the original function.
-Canonical real, product, and finite-vector analytic instances are fixed and
-retained in the checked proof. Local lets and beta applications may reduce;
-safe dependent value helpers expand within the locally configured limits.
-Rejection restores the environment as well as metavariables, and carries the
-failing typed term.
--/
+/-- Prove ContDiffOn ℝ 2 source Set.univ using canonical analytic structures.
+Reduce local structure and expand dependent helpers within configured limits.
+Preserve caller metavariables; restore the environment on failure. -/
 def certifyGlobal (source : Expr) : MetaM (Except SmoothError Expr) :=
   State.withIsolatedMVars do
     try
@@ -921,9 +853,8 @@ def certifyGlobal (source : Expr) : MetaM (Except SmoothError Expr) :=
         reason := ← addMessageContext exception.toMessageData
       }
 
-/-- Internal shared traversal in domain-inference mode. The caller validates the
-feasibility grammar and checks that its decision space agrees with the source.
-Previously proved inclusion certificates may supply earlier domain facts. -/
+/-- Infer domains after the caller validates feasibility grammar and decision-space agreement.
+Previously proved inclusion certificates may supply domain facts. -/
 def certifyOnFeasible (feasible source : Expr) (prior : Array Expr := #[])
     (facts? : Option Domain.Evidence.FactsProvider := none) :
     MetaM (Except SmoothError Certificate) :=

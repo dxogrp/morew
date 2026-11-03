@@ -7,13 +7,7 @@ import Morew.Conic.Cone
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked nonnegative-cone coordinates
-
-Retained sign evidence needs only scalar and finite-vector nonnegative cones.
-This recognizer checks their actual membership instances without loading the
-general conic row certifier or certifying affinity.
--/
+/-! Recognize scalar and finite-vector nonnegative-cone coordinates for sign evidence. -/
 
 namespace Morew.Elab.Conic
 
@@ -23,8 +17,7 @@ private def canonicalNonnegativeMembership
     (cone : Morew.Conic.Cone) (value : cone.Space) : Prop :=
   value ∈ cone.carrier
 
-/-- Recover native scalar or finite-vector nonnegative-cone coordinates after checking the
-membership instance. This does not unfold wrappers or certify affinity. -/
+/-- Recover nonnegative-cone coordinates after checking the membership instance. -/
 def nonnegativeValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     if !(body.isAppOfArity ``Membership.mem 5) || (← Expr.hasUnresolved body) then

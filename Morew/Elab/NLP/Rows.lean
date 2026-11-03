@@ -8,15 +8,9 @@ import Morew.Elab.NLP.Domain
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Certification of generated smooth constraint rows
-
-The caller supplies the exact proposed feasibility after checking its independent
-exact-lift certificate. Only generated predicates are required to have smooth
-residuals. Domain inclusion may use checked projections of any admitted retained
-or generated row. Unsupported retained leaves stay opaque and supply no facts.
-Symbolic finite rows remain grouped; their domains are finite intersections.
--/
+/-! Certify generated residuals after the caller proves replacement exactness.
+Domain inclusion uses admitted retained and generated rows; unsupported leaves
+supply no facts. Finite families stay grouped with intersected domains. -/
 
 namespace Morew.Elab.NLP.Rows
 
@@ -65,9 +59,8 @@ private theorem openProjection {X Y : Type*}
     (s : Set X) (opened : IsOpen s) : IsOpen ((Prod.fst : X × Y → X) ⁻¹' s) :=
   opened.preimage continuous_fst
 
-/-- Preserve checked residuals when a later exact step strengthens feasibility or
-adds an auxiliary product component. `backward` must recover the old feasibility;
-the existing smoothness and finite-index evidence are never rediscovered. -/
+/-- Transport certified residuals through stronger feasibility or an auxiliary product.
+backward must recover the old feasibility. -/
 def Result.transport (result : Result) (newFeasible backward : Expr)
     (auxiliary? : Option Expr := none) : MetaM Result := do
   let .forallE _ nextDomain _ _ ← whnf (← inferType newFeasible)
@@ -154,8 +147,7 @@ private def structural (point body : Expr) : MetaM Expr :=
 private def addUnique (values : Array Expr) (value : Expr) : Array Expr :=
   if values.contains value then values else values.push value
 
--- Inspect the typed membership head before reduction erases it. Both its
--- finite carrier and its native membership instance must match.
+-- Check finite carrier and membership instance before reducing the membership head.
 private def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) := do
   let proposition ← structural point proposition
   unless proposition.isAppOfArity ``Membership.mem 5 do return none
@@ -167,8 +159,7 @@ private def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) :
   unless ← isDefEq args[2]! expected.getAppArgs[2]! do return none
   return some args[4]!
 
--- Indices come from the actual obligation or the active finite scopes. A finite
--- subtype also supplies its checked membership proof after reindexing a Finset.
+-- Use obligation indices and active finite scopes, retaining subtype membership proofs.
 private partial def collectIndices (point expression : Expr)
     (values facts : Array Expr) : MetaM (Array Expr × Array Expr) := do
   if values.size ≥ 64 then return (values, facts)
@@ -212,8 +203,7 @@ private def indexContext (point obligation : Expr) : MetaM (Array Expr × Array 
       facts := nextFacts
   collectIndices point obligation values facts
 
--- Independent parameter families may be applied to finite-support coordinates,
--- including the original index hidden beneath an equivFin reindexing.
+-- Specialize independent parameter families at finite-support coordinates.
 private partial def specializeParameters (proof : Expr) (indices facts : Array Expr)
     (fuel : Nat) : MetaM (Array Expr) := do
   if fuel == 0 then return #[]
@@ -260,8 +250,7 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
       if result.size ≥ 128 then break
       if ← isDefEq (← inferType candidate) index then
         unless isFinite || isSupport do
-          -- An arbitrary ambient index is admitted only with an immediately
-          -- following native finite-support premise, discharged in the next step.
+          -- Admit ambient indices only with a native finite-support premise.
           let .forallE _ premise _ _ ← structural point (rest.instantiate1 candidate)
             | continue
           unless (← finiteMembership? point premise).isSome do continue
@@ -327,8 +316,7 @@ private def intersect (left right : RowCertificate) :
   return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
--- Keep independent proof lets in a projected predicate available while checking
--- its residuals, including when the binding is scoped to a finite-family index.
+-- Keep independent evidence lets scoped to their predicates and finite-family indices.
 private def hoistProjectionLets : Expr → Expr
   | .proj name index value =>
     match hoistProjectionLets value with
@@ -519,11 +507,9 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
     checkWithKernel proof
   return .ok result
 
-/-- Certify precisely the supplied generated rows using checked evidence from the
-exact proposed feasibility. The caller first checks exactness, using only retained
-constraints when that exactness is conditional.
-Unsupported retained leaves contribute no facts. Public `Domain.certify` keeps
-its stricter whole-predicate grammar. Caller state is restored on every outcome. -/
+/-- Certify generated rows against the proposed feasibility after exactness is proved.
+Conditional exactness uses only retained constraints. Ignore unsupported retained leaves
+and restore caller state on every outcome. -/
 def certifyRows (feasible : Expr) (rows : Array Expr) :
     MetaM (Except Domain.DomainError Result) :=
   State.withIsolatedMVars do

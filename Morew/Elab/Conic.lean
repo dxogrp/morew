@@ -18,17 +18,9 @@ import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 
-/-!
-# Checked affine row normalization
-
-This internal API recognizes elaborated scalar and finite-vector equality and
-inequality predicates, native second-order, exponential, power and PSD cone membership,
-and ordinary real matrix positive semidefiniteness with global symmetry evidence.
-A finite family of exponential or power memberships remains one quantified presentation
-row and is certified against the finite product cone. The API returns a semantic
-cone row and a checked pointwise equivalence, without changing a problem or its
-presentation.
--/
+/-! Certify affine scalar/vector comparisons and native cone memberships, including
+PSD predicates with global symmetry. Finite exponential and power families use
+product cones. Return a cone row and pointwise equivalence. -/
 
 namespace Morew.Elab.Conic
 
@@ -64,9 +56,7 @@ def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : Ro
     pointwiseIff := normalized.pointwiseIff.replaceFVars oldVars newVars }
 }
 
--- Fix the real algebraic instances before subtracting. The certified maps
--- can use definitionally equal instance aliases that typeclass search alone
--- does not unfold when asked to infer a heterogeneous subtraction operation.
+-- Fix real algebra instances before subtracting certified affine maps.
 private def subtractMaps
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
@@ -95,9 +85,7 @@ private theorem normalizeLE
   change 0 ≤ g x - f x ↔ lhs x ≤ rhs x
   rw [hf, hg, sub_nonneg]
 
--- This fixed-context template retains the actual canonical membership
--- instance. Comparing only the resulting propositions would also accept a
--- custom membership relation that happens to agree at the selected tuple.
+-- Check the canonical membership instance independently of tuple values.
 private def canonicalMembership (cone : Morew.Conic.Cone) (value : cone.Space) : Prop :=
   value ∈ cone.carrier
 
@@ -166,8 +154,7 @@ private theorem normalizePowerFamily
   rw [h x]
   exact Morew.Conic.Cone.mem_powerProduct α hα (source x)
 
-/-- Return the canonical real or coordinatewise real order, rather than using
-an arbitrary local `LE` instance that happens to have the same operand type. -/
+/-- Return the canonical real or coordinatewise real order. -/
 private def realOrder? (type : Expr) : MetaM (Option Expr) := do
   let type ← whnf type
   if type.isConstOf ``Real then
@@ -189,9 +176,7 @@ private def rowError (expression : Expr) (reason : MessageData)
     | some label => m!"constraint `{label}`: {reason}"
   return { expression, reason := ← addMessageContext reason }
 
--- Relation instances and local aliases can hide metavariables in their local
--- declarations. Reject those before a definitional-equality check can solve
--- them and thereby certify only one possible completion of the input.
+-- Reject metavariables in relation instances and local declarations before matching.
 private partial def hasUnresolved (expression : Expr)
     (seen : FVarIdSet := {}) : MetaM Bool := do
   let expression ← instantiateMVars expression
@@ -206,9 +191,7 @@ private partial def hasUnresolved (expression : Expr)
           if ← hasUnresolved value seen then return true
   return false
 
--- Keep decision-independent lets available, including denominator proofs and
--- instances. Dependent lets must be substituted before abstracting the point;
--- independent values are substituted into both results before leaving scope.
+-- Substitute decision-dependent lets before abstraction; retain independent evidence lets.
 private partial def withPredicateLets (point body : Expr)
     (action : Expr → MetaM (Except Expr.Error RowResult)) :
     MetaM (Except Expr.Error RowResult) := do
@@ -284,9 +267,8 @@ private def membershipData (point body : Expr) (label? : Option Name)
     return .error (← rowError body "membership does not match the canonical cone" label?)
   return .ok (cone, value)
 
-/-- Recover ordinary matrix coordinates of a native PSD predicate or canonical
-PSD membership. This validates the scalar and membership instances without
-inferring symmetry, affinity, or any domain consequence. -/
+/-- Recover matrix coordinates of native PSD predicates or canonical PSD membership.
+Check scalar and membership instances. -/
 def positiveSemidefiniteValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     if (← hasUnresolved body) || (← Evidence.hasPlaceholders body) then return .error ()
@@ -507,10 +489,7 @@ private structure FamilyMember where
   /-- A power parameter and its range proof; `none` denotes the exponential cone. -/
   power? : Option (Expr × Expr) := none
 
--- Keep evidence lets inside the coordinate function where the affine reifier
--- can use them. Cone parameters retain only their own dependencies, so unused
--- coordinate lets cannot capture the decision point in the bundled cone.
--- Quantifiers, conjunctions, and arbitrary predicate helpers are not opened.
+-- Retain coordinate evidence lets; cone parameters keep only their own dependencies.
 private partial def familyMember (point index body : Expr)
     (label? : Option Name) : MetaM (Except Expr.Error FamilyMember) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
@@ -599,8 +578,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
   unless codomain == mkSort Level.zero do
     return .error (← rowError predicate "expected a predicate on the decision space" label?)
   withLocalDeclD `point domain fun point =>
-    -- Preserve the typed relation head while eliminating language-level
-    -- wrappers, including the product patterns used by the surface DSL.
+    -- Preserve the typed relation head while reducing language wrappers.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOf ``Matrix.PosSemidef then
         return ← normalizePositiveSemidefiniteRow predicate domain point body provider label?
@@ -624,8 +602,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
       let lhs := args[args.size - 2]!
       let rhs := args[args.size - 1]!
       unless equality do
-        -- Compare the instance itself: a custom relation can agree with the
-        -- standard order on these particular operands without being that order.
+        -- Check the relation instance independently of its operands.
         unless ← isDefEq args[1]! order do
           return .error (← rowError body m!"unsupported order instance {args[1]!}" label?)
       let lhs ← mkLambdaFVars #[point] lhs
@@ -685,12 +662,9 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
   withFiniteInstances (← Expr.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate provider label?
 
-/-- Normalize an elaborated scalar or vector `=`, `≤`, or `≥` row, a canonical
-zero singleton, native nonnegative, zero, second-order, exponential, power or PSD cone
-membership, ordinary matrix PSD, or one finite quantified family of exponential or power memberships.
-Every cone coordinate must be affine.
-The optional label supplies diagnostic context without depending on source
-syntax or presentation metadata. -/
+/-- Certify affine comparisons, zero singletons, native cone memberships, matrix PSD,
+and finite exponential or power families. All coordinates must be affine.
+The optional label supplies diagnostic context. -/
 def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
     (label? : Option Name := none) : MetaM (Except Expr.Error RowResult) :=
   State.withIsolatedMVars do

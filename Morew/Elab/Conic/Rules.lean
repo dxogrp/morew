@@ -12,17 +12,9 @@ import Morew.Conic.Power.GeometricMean
 import Morew.Conic.PSD.Representations
 import Morew.Elab.Rewrite.Registry
 
-/-!
-# Registered built-in conic rules
-
-Built-in records use the same public attribute as downstream extensions. Import
-this module to make these rules available; ordinary local attribute removal can
-exclude an individual rule from automatic discovery.
-
-The conic consumer prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
-when both fully certify the selected constraint. Other successful rules retain
-their ambiguity, and explicit `using` selection bypasses this preference.
--/
+/-! Install built-in conic rules via morew_conic. Local attribute removal excludes a rule.
+Automatic selection prefers SecondOrder.normEpigraph over Power.normEpigraph
+when both certify; explicit selection bypasses this preference. -/
 
 attribute [morew_conic]
   Morew.Conic.positiveDefiniteLift

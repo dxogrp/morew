@@ -8,12 +8,7 @@ import Morew.Elab.Rewrite.Plan
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Shared exact conic replacement planning
-
-Adapt explicit representations, split ordered target rows, and certify each row.
-Registered-rule selection and explicit certificates share these finishing checks.
--/
+/-! Adapt exact representations, split ordered target rows, and certify each row. -/
 
 namespace Morew.Elab.Conic.Plan
 
@@ -30,9 +25,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
   { toResult := result.toResult.replaceFVars oldVars newVars
     certifiedRows := result.certifiedRows.map fun row => row.replaceFVars oldVars newVars }
 
-/-- Retry a failed certificate with safe finite evidence exposed by helpers.
-Direct recognition keeps its original fast path; speculative declarations and
-metavariables are discarded before retrying the unchanged source predicates. -/
+/-- Retry with finite evidence exposed by helpers; restore state before retrying original predicates. -/
 def withHelperFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (sources : Array Expr)
@@ -57,10 +50,8 @@ def withHelperFiniteInstances {α : Type}
     withScopedFiniteInstances replaceResult additional.toList action
   catch error => failure error
 
-/-- Retain finite-index evidence from the entire presentation while constructing
-certificates. A row can carry the only explicit indexing instance needed by the
-objective or another row. Duplicate proofs are scoped once, and all temporary
-bindings are substituted through the completed result before leaving scope. -/
+/-- Collect finite-index evidence from the presentation and substitute temporary bindings
+into the completed certificate. -/
 def withPresentationFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (presentation : Reformulation.PresentationState)
@@ -77,19 +68,17 @@ def withPresentationFiniteInstances {α : Type}
       (fun result oldVars newVars => result.map (fun value => replace value oldVars newVars))
       instances.toList action
 
-/-- Retain source indexing evidence while constructing an exact lift. -/
+/-- Retain source indexing evidence while constructing a replacement. -/
 def withFiniteInstances (instances : List Expr) (action : MetaM Result) :
     MetaM Result :=
   withScopedFiniteInstances Result.replaceFVars instances action
 
-/-- Retain independent source lets while constructing an exact lift. -/
+/-- Retain independent source lets while constructing a replacement. -/
 def withPredicateEvidence (point body : Expr)
     (action : MetaM Result) : MetaM Result :=
   withScopedEvidence Result.replaceFVars point body action
 
--- Adapters can leave another representation's target projection at the head.
--- Expose only these record fields, stopping before arbitrary predicate helpers
--- or arithmetic operands are unfolded.
+-- Expose representation target fields; leave predicate helpers and operands closed.
 /-- Reduce checked representation target fields without unfolding predicate helpers. -/
 partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Expr.reduceStructure body (preserveLets := true)
@@ -113,7 +102,7 @@ partial def exposeTarget (body : Expr) : MetaM Expr := do
 def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
   Decomposition.split body fun body => do
     let body ← exposeTarget body
-    -- Keep exact-lift diagnostics stable while sharing conjunction proof assembly.
+    -- Use shared conjunction proofs with conic diagnostics.
     unless body.isLet || body.isConstOf ``True || body.isAppOfArity ``And 2 ||
         body.isForall || body.isAppOfArity ``Eq 3 || body.isAppOfArity ``LE.le 4 ||
         body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``Membership.mem 5 ||
@@ -143,8 +132,7 @@ private theorem powerMembershipCongr (α β : ℝ)
   subst β
   rfl
 
--- Check operation instances separately from their operands: an altered
--- operation can agree with canonical arithmetic at a particular numeral.
+-- Check operation instances independently of their operands.
 private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
     MetaM Bool := do
   let sourceArgs := source.getAppArgs
@@ -156,8 +144,7 @@ private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
     unless ← isDefEq sourceArgs[index]! canonicalArgs[index]! do return false
   return true
 
--- Only native extended-real numeral, inverse and quotient syntax can be
--- reduced inside `toReal`. Symbolic parameters and named operands stay intact.
+-- Reduce native extended-real numerals, inverses, and quotients inside toReal.
 private partial def literalENNReal (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
@@ -177,9 +164,7 @@ private partial def literalENNReal (expression : Expr) : MetaM Bool := do
   return (← sameOperationPrefix expression q($left / $right) 2) &&
     (← literalENNReal left) && (← literalENNReal right)
 
--- Deliberately inspect syntax before invoking numerical evaluation. Named
--- constants, model-local definitions, and symbolic parameters retain their
--- identities even when their values happen to be rational.
+-- Preserve named constants, local definitions, and symbolic parameters.
 private partial def literalRational (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
@@ -242,8 +227,7 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
         let normalizedExponent : Q(ℝ) := normalized.expr
         let evaluated ← Mathlib.Meta.NormNum.Result.toSimpResult (u := .zero)
           (← Mathlib.Meta.NormNum.derive (u := .zero) normalizedExponent)
-        -- Definitional equality alone would leave visible scaffolding such as
-        -- `ENNReal.toReal 2` in an otherwise literal generated parameter.
+        -- Simplify literal ENNReal.toReal parameters.
         if exponent == evaluated.expr then return .error ()
         let equality ← mkEqTrans (← normalized.getProof) (← evaluated.getProof)
         unless ← isDefEq (← inferType equality) (← mkEq exponent evaluated.expr) do
@@ -327,7 +311,7 @@ private def finishCore (source domain : Expr) (certificate : Certificate)
   let certifiedRows ← certifyRows rowPredicates provider
   return { toResult := prepared, certifiedRows }
 
-/-- Split and certify every row of an exact lift. -/
+/-- Split and certify every replacement row. -/
 def finish (source domain : Expr) (certificate : Certificate)
     (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let target ← whnf (← certificate.targetFunction)
@@ -339,8 +323,8 @@ def finish (source domain : Expr) (certificate : Certificate)
   | .ok result => return result
   | .error error => throwError error.reason
 
-/-- Adapt an explicit record for the entire selected predicate and certify its rows.
-Caller metavariables and the environment are restored on failure. -/
+/-- Adapt a record for the selected predicate and certify its rows.
+Restore caller metavariables and the environment on failure. -/
 private def planDirect (sourcePredicate rule : Expr)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
@@ -360,8 +344,7 @@ private def planDirect (sourcePredicate rule : Expr)
         reason := ← addMessageContext error.toMessageData
       }
 
-/-- Certify an explicit record, exposing finite evidence from helpers only if
-the direct attempt fails. Adaptation always uses the original predicate. -/
+/-- Certify a record against the original predicate; retry with helper-derived finite evidence. -/
 def plan (sourcePredicate rule : Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do

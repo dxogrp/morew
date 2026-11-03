@@ -8,14 +8,8 @@ import Morew.Elab.State
 import Morew.Elab.Conic.Space
 import Morew.Elab.Expr
 
-/-!
-# Checked final cone-membership normalization
-
-Rewrite native affine comparisons to cone membership, simplifying literal zero
-and explicit negation in the generated margins without expanding operands. This
-pass preserves conjunction trees and local lets; a caller supplies the already
-checked affine maps and transports their evidence.
--/
+/-! Convert affine comparisons to cone membership using supplied affine certificates.
+Preserve conjunctions, local lets, and operands; simplify literal zero and negation. -/
 
 namespace Morew.Elab.Conic
 
@@ -59,8 +53,7 @@ private def coneMembership (cone : Morew.Conic.Cone) (value : cone.Space) : Prop
 private def zeroMembership {Y : Type} [NormedAddCommGroup Y] (value : Y) : Prop :=
   value ∈ ({0} : Set Y)
 
--- Fix primitive operations where these templates are declared, so unrelated
--- local `HSub`, `HAdd`, `Neg`, or `Zero` instances cannot affect the generated margin.
+-- Use fixed arithmetic instances for generated margins.
 private def nativeDifference {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) : Y :=
   lhs - rhs
 
@@ -88,8 +81,7 @@ private def exposeTemplate (value : Expr) : MetaM Expr := do
     | throwError "could not construct a native normalization expression"
   return result
 
--- Match a literal zero before checking its native instance. In particular, a
--- local definition or helper whose value is zero keeps its named reference.
+-- Recognize literal zero; preserve named operands.
 private def literalZero (value zero : Expr) : MetaM Bool := do
   let value := value.consumeMData
   let args := value.getAppArgs
@@ -104,8 +96,7 @@ private def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
   let zero ← exposeTemplate (← mkAppOptM ``nativeZero #[some type, none])
   if ← literalZero rhs zero then
     return (lhs, ← mkAppM ``nativeSubZero #[lhs])
-  -- Only explicit native negation is eligible: do not unfold a named operand,
-  -- or accept a different Neg instance that happens to agree at this value.
+  -- Recognize explicit native negation without unfolding operands.
   let negated := rhs.consumeMData
   if negated.isAppOfArity ``Neg.neg 3 then
     let args := negated.getAppArgs
@@ -139,8 +130,7 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
   let equality := body.isAppOfArity ``Eq 3
   let greaterEqual := body.isAppOfArity ``GE.ge 4
   let type := args[0]!
-  -- Constructing the native cone checks the supported scalar/vector shape even
-  -- for equality, where the resulting presentation uses a singleton set.
+  -- Validate scalar/vector shape for equality as well as inequality.
   let cone ← nonnegativeCone type
   let lhs := args[args.size - 2]!
   let rhs := args[args.size - 1]!
@@ -218,10 +208,8 @@ private def isolated (action : MetaM α) : MetaM α := do
   | .ok result => return result
   | .error impossible => nomatch impossible
 
-/-- Normalize native scalar/vector comparisons while retaining each operand,
-local let and conjunction boundary. The result proves the actual proposition,
-not merely its printed representation. Non-comparison leaves remain intact.
-Unresolved inputs are rejected without changing caller metavariables. -/
+/-- Normalize native comparisons, preserving operands, local lets, and conjunctions.
+Leave other leaves intact; reject unresolved inputs in isolation. -/
 def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   if ← unresolved original then
     throwError "membership normalization requires fully elaborated expressions"
@@ -237,10 +225,8 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   checkWithKernel result.iff
   return result
 
-/-- Normalize a whole constraint predicate and check its pointwise equivalence.
-The decision space and all operand expressions remain unchanged. A nonempty
-certificate array follows the exact leaf order of `decomposePredicate`, excluding
-`True` leaves. Definitionally equal leaves still have distinct occurrences. -/
+/-- Normalize a predicate with pointwise equivalence. Nonempty certificates follow
+decomposePredicate leaf order, excluding True and retaining repeated occurrences. -/
 def normalizePredicate (predicate : Expr)
     (certificates : Array PredicateNormalization := #[]) :
     MetaM PredicateNormalization := isolated do

@@ -12,17 +12,10 @@ import Morew.Elab.Rewrite.Match
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked exact conic rewriting
-
-Automatic discovery and explicit certificate selection share checked matching and
-conic target certification. Every automatic candidate comes from `@[morew_conic]`, including built-ins.
-Both targeted and terminal callers require one fully certified replacement after
-preferring the direct SOC norm representation over the general power-norm lift.
-Other successful rules remain ambiguous; explicit selection bypasses this preference.
-Retained evidence can discharge rule premises before generated rows are certified.
-Conditional replacements preserve the retained constraints and may introduce auxiliaries.
--/
+/-! Select and certify exact conic replacements.
+Automatic selection requires a unique success after preferring the built-in SOC
+norm rule over the power-norm rule. Explicit selection bypasses that preference.
+Retained constraints supply rule premises. -/
 
 namespace Morew.Elab.Conic.Rewrite
 
@@ -73,8 +66,7 @@ private partial def canonicalRealRange (goal : Expr) : MetaM Bool := do
     else q($left ≤ $right)
   isDefEq goal canonical
 
-/-- Evidence for registered records uses the established bounded conic policy.
-The selected row is never among the supplied retained predicates. -/
+/-- Use bounded conic evidence from predicates other than the selected row. -/
 private def proveObligation (point : Expr) (retained : Array Expr)
     (evidence goal : Expr) : MetaM (Option Expr) := do
   let goal ← instantiateMVars goal
@@ -129,8 +121,7 @@ private def proveObligation (point : Expr) (retained : Array Expr)
     throwError "registered conic rewrite was not certified: missing independent real-parameter evidence; required {goal}"
   return none
 
--- Preserve the conic consumer's structural policy without teaching the neutral
--- registry about model containers or compiler-generated product matchers.
+-- Apply conic structural reduction before registry matching.
 private def matchingBody (expression : Expr) : MetaM Expr := do
   Meta.transform expression (pre := fun value => do
     let reduced ← Expr.reduceStructure value (preserveLets := true)
@@ -182,8 +173,7 @@ private def attempt (source : Expr) (retained : Array Expr)
     catch error =>
       return .error { expression := source, reason := ← addMessageContext error.toMessageData }
 
-/-- Select an explicitly named declaration, registered or not. There is no
-fallback to any other rule when matching, exactness, or affine checking fails. -/
+/-- Certify an explicitly named declaration without fallback. -/
 def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
@@ -192,10 +182,8 @@ def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
         (fun point body prove accept =>
           Match.declaration point body name accept prove) provider
 
-/-- Concrete graph and bound records use typed matching, including their actual
-operation instances. Whole-predicate certificates retain their checked direct
-adapter, with a typed retry for subtype guards. Registered rules are never
-searched when a record is supplied. -/
+/-- Match graph and bound records with their operation instances.
+Adapt whole-predicate certificates directly, retrying subtype guards by typed matching. -/
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
@@ -212,19 +200,16 @@ private structure CertifiedCandidate where
   result : Plan.Result
   environment : Environment
 
-/-- Prefer the direct SOC norm representation only when it has fully certified.
-This relationship applies to these two built-in declarations, not their aliases
-or other custom rules. It neither restricts symbolic power exponents nor changes
-explicit selection, and it never removes a different successful candidate. -/
+/-- Prefer the built-in SOC norm rule when both built-in norm rules certify.
+Leave explicit selection and other candidates unchanged. -/
 private def preferSecondOrderNorm (successes : Array CertifiedCandidate) :
     Array CertifiedCandidate :=
   if successes.any (·.name == ``Morew.Conic.SecondOrder.normEpigraph) then
     successes.filter (·.name != ``Morew.Conic.Power.normEpigraph)
   else successes
 
-/-- Certify all registered candidates from the same environment, apply the
-SOC/power norm preference, and require a unique remaining success. Only the
-selected candidate's auxiliary declarations survive selection. -/
+/-- Certify candidates from the same environment, apply the norm preference, and require
+one success. Retain only the selected candidate's auxiliary declarations. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do

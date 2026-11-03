@@ -6,17 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Rewrite
 import Morew.Elab.Rewrite.Registry
 
-/-!
-# Registered exact NLP rules
-
-These ordinary registrations make the shared semantic representations available
-for automatic selected-row rewriting. The same checked matching and smoothness
-certification applies to user registrations. Importing `Morew.NLP` alone does not
-activate attributes or import elaboration infrastructure.
-
-The native `norm2Epigraph` record covers both Euclidean-space values and explicit
-`toLp 2` inputs. The separate `fnNorm2Epigraph` record matches the named function.
--/
+/-! Install exact NLP rules for automatic rewriting.
+norm2Epigraph covers Euclidean values and explicit toLp 2 inputs;
+fnNorm2Epigraph matches the named function. -/
 
 attribute [morew_nlp]
   Morew.Rewrite.absEpigraph

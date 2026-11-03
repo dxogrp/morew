@@ -11,19 +11,10 @@ import Morew.Elab.NLP.Rows
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Exact replacement planning for selected nonlinear constraints
-
-Registered rules match a complete selected predicate. Every candidate first supplies an
-exact lift, possibly conditional on retained constraints, and then certifies its residuals on an
-open domain containing the proposed feasible set. Retained predicates remain
-unchanged, including predicates outside the generated-row grammar.
-
-Automatic selection requires one fully certified registered rule. Explicit records
-and declaration names bypass that search, but undergo the same exactness and
-generated-row checks. Declaration names need not be registered.
-No named arithmetic helper is unfolded and no affine certificate is required.
--/
+/-! Plan exact replacements of selected predicates, then certify generated residuals
+on an open domain containing the proposed feasible set. Retained constraints supply
+conditional premises. Automatic selection requires one certified rule; explicit records
+or declaration names bypass discovery and undergo the same checks. -/
 
 namespace Morew.Elab.NLP.Rewrite
 
@@ -44,10 +35,8 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 
--- Model fields are structural only when their named container is independent
--- of the decision point. Keep the same helper boundary as smooth certification.
--- Normalize nested structural forms before deciding that independence; retained
--- lets are opened by target decomposition so their evidence stays scoped.
+-- Reduce model fields only for decision-independent named containers.
+-- Normalize structure before checking independence; preserve evidence lets during decomposition.
 private partial def structural (point expression : Expr) (preserveLets : Bool := false) :
     MetaM Expr := do
   let step (value : Expr) : MetaM TransformStep := do
@@ -83,16 +72,13 @@ private partial def exposeTarget (point body : Expr) : MetaM Expr := do
   if let some prefixSize := prefixSize? then
     let args := body.getAppArgs
     if args.size >= prefixSize then
-      -- Normalize only the record container. Normalizing the whole projection
-      -- would also unfold a named predicate stored in its target field.
+      -- Normalize the record container while preserving its target predicate head.
       let record ← whnf args[prefixSize - 1]!
       if let some field ← projectCore? record 1 then
         return ← exposeTarget point (mkAppN field (args.extract prefixSize args.size))
   return body
 
--- Native rules expose a bound's operands and can thereby discard unused source
--- evidence. Keep independent proof lets in each emitted predicate as well as in
--- its current certificate, so later reformulations can certify it again.
+-- Retain independent proof lets in emitted predicates for later certification.
 private partial def retainSourceEvidence (point source body : Expr) : MetaM Expr := do
   let source ← structural point source (preserveLets := true)
   if let .letE name type value rest nondep := source then
@@ -188,9 +174,7 @@ private def planCore (source : Expr) (retained : Array Expr)
     if let some name := declaration? then
       return .ok (← finishDeclaration name finishCertificate)
     if let some rule := rule? then
-      -- Concrete graph and bound records use the same typed matcher as named
-      -- registrations. Definitional equality alone could erase a custom source
-      -- operation before its actual instance has been checked.
+      -- Use typed matching to check graph and bound records' operation instances.
       unless (← whnf (← inferType rule)).isAppOfArity ``Morew.ExactConstraintLift 2 do
         return .ok (← matchAndFinish source domain retained
           (fun point body prove accept =>
@@ -202,8 +186,7 @@ private def planCore (source : Expr) (retained : Array Expr)
       match direct with
       | .ok result => return .ok result
       | .error original =>
-        -- A supplied exact lift retains its whole-input interpretation; the
-        -- checked retry can discharge subtype guards from retained evidence.
+        -- Adapt the whole predicate; retry subtype guards with retained evidence.
         let reachedTarget ← IO.mkRef false
         let reachedPremise ← IO.mkRef false
         try
@@ -244,10 +227,9 @@ private def planCore (source : Expr) (retained : Array Expr)
     throwError "no supported exact NLP rule for the entire selected predicate; no registered certificate matches; register an exact representation or use an explicit exact record\nselected predicate: {source}\npredicate type: {← inferType source}{detail}"
   catch exception => return .error (← failure source exception)
 
-/-- Plan one complete selected predicate. The retained rows are in their original
-order with the selected row removed; generated rows are inserted at `insertionIndex`.
-Only supplied records/declarations or registered whole-predicate rules are tried. Failed attempts and
-ambiguous selection restore caller metavariables and environment declarations. -/
+/-- Plan a selected predicate using retained rows in original order and insert generated
+rows at insertionIndex. Try explicit or registered whole-predicate rules.
+Restore metavariables and declarations on failure or ambiguity. -/
 def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
     (insertionIndex : Nat := 0) (declaration? : Option Name := none) :
     MetaM (Except Error Result) :=
