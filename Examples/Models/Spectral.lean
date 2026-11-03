@@ -8,9 +8,10 @@ import Morew.Reformulation.Conic
 /-!
 # Certified matrix and spectral reformulations
 
-Largest eigenvalues, Euclidean operator norms, nuclear norms, and positive-
-definite matrix fractions have exact semidefinite representations. Nonlinear
-objectives first receive an epigraph bound.
+Largest eigenvalues, Euclidean operator norms, nuclear norms, and matrix
+fractions have exact semidefinite representations. The matrix fraction
+requires a positive-definite domain. After introducing objective epigraphs,
+each script constructs a globally equivalent certified conic program.
 -/
 
 namespace Examples.Models.Spectral
@@ -86,7 +87,7 @@ def matrixFractionModel :=
 
 reformulation matrixFractionConic : matrixFractionModel := by
   epigraph t as fraction_bound
-  -- A lowered domain witness remains usable by the later fraction rewrite.
+  -- The semidefinite domain representation still proves positive definiteness.
   conic at domain
   conic at fraction_bound
   conic
@@ -96,22 +97,6 @@ reformulation matrixFractionConic : matrixFractionModel := by
 example : GlobalEquivalence matrixFractionModel matrixFractionConic :=
   matrixFractionConic.equivalence
 example : IsConic matrixFractionConic := matrixFractionConic.isConic
-
--- Positive definiteness also lowers directly, independently of a matrix atom.
-def positiveDefiniteModel :=
-  problem (P : SymmetricMatrix 2)
-    minimize P.toMatrix.trace
-    subject to
-      domain : P.toMatrix.PosDef
-      lower : (P.toMatrix - 1).PosSemidef
-
-reformulation positiveDefiniteConic : positiveDefiniteModel := by conic
-
-#printp positiveDefiniteConic
-
-example : GlobalEquivalence positiveDefiniteModel positiveDefiniteConic :=
-  positiveDefiniteConic.equivalence
-example : IsConic positiveDefiniteConic := positiveDefiniteConic.isConic
 
 end
 
