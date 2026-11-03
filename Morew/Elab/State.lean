@@ -5,28 +5,16 @@ SPDX-License-Identifier: Apache-2.0
 
 import Lean.Meta.Basic
 
-/-!
-# State isolation for proof-producing elaborators
-
-Recognition must not assign caller metavariables. Successful proof terms may,
-however, depend on auxiliary declarations produced by an evidence callback.
--/
+/-! Isolate caller metavariables and retain successful certificates' auxiliary declarations. -/
 
 namespace Morew.Elab.State
 
 open Lean Lean.Meta
 
-/-- Run recognition without changing caller metavariables, preserving auxiliary
-declarations only when it succeeds. Failed recognition also rolls back the
-environment. Name generators remain advanced, as in Lean's standard state
-restoration, so retained auxiliary declarations cannot collide with later ones.
-
-Already assigned metavariables in local declarations are instantiated in a
-temporary context, allowing kernel checking without modifying the caller's
-declarations.
-
-Restoring the environment through `setEnv` clears both core and meta caches:
-their entries may refer to discarded metavariables or declarations. -/
+/-- Run recognition with fixed caller metavariables and retain declarations only on success.
+Keep name generators advanced to avoid collisions. Instantiate assigned metavariables
+in temporary local types for kernel checking. Restore failed environments through
+setEnv to clear core and meta caches. -/
 def withIsolatedMVars {ε α : Type} (action : MetaM (Except ε α)) :
     MetaM (Except ε α) := do
   let saved ← saveState

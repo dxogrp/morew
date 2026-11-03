@@ -15,54 +15,28 @@ import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 import Lean.Meta.Match.MatcherInfo
 
-/-!
-# Typed, proof-producing affine reification
+/-! Affine reification with pointwise proofs.
 
-This internal API recognizes a bounded fragment of elaborated real arithmetic.
-It builds ordinary affine maps and pointwise proofs without rewriting models.
-When direct recognition fails, bounded expansion of transparent helper definitions
-can expose supported arithmetic. Failure means that this fragment did not certify
-the expression, not that the function is mathematically non-affine.
+Transparent, nonrecursive def and abbrev helpers expand only for certification.
+Source expressions and printing retain their helper references.
 
-Transparent, nonrecursive `def` and `abbrev` helpers may contain scalar,
-vector, and matrix operations already supported by this certifier. Imported
-helpers and their actual parameters are supported. Expansion affects proof
-construction only: models and `#printp` retain their original helper references.
+Expansion limits apply per source expression, including evidence discovery:
+* morew.affine.maxExpansionDepth: 32 nested expansions.
+* morew.affine.maxExpansionSteps: 1024 unfoldings across branches.
+* morew.affine.maxExpansionNodes: 100000 expanded nodes, including duplication.
 
-Helper expansion reads three locally scoped Lean options:
-
-* `morew.affine.maxExpansionDepth` defaults to `32` nested helper expansions.
-* `morew.affine.maxExpansionSteps` defaults to `1024` helper unfoldings, shared
-  across branches of one source expression.
-* `morew.affine.maxExpansionNodes` defaults to `100000` cumulative expanded
-  expression nodes, counting duplicated arguments and intermediate expansions.
-
-Setting any limit to zero disables helper expansion; direct affine recognition
-remains available. Limits apply separately to each source expression, including
-its evidence discovery. An exhausted limit reports the helper and option name.
-For example, raise the depth for just one reformulation with:
-
-```lean
-set_option morew.affine.maxExpansionDepth 64 in
-reformulation conicProb : p := by
-  conic
-```
-
-Expansion does not open opaque, irreducible, or recursive helpers, unfold custom
-constraint predicates, or add nonlinear rules. Native operations keep their
-existing instance and evidence requirements, including nonzero denominators.
--/
+A zero limit disables expansion; direct recognition remains available.
+Opaque, irreducible, and recursive helpers and custom predicates stay closed.
+Native operations require their canonical instances and domain evidence. -/
 
 namespace Morew.Elab.Affine
 
 open Lean Lean.Meta Qq
 
-/-- Optional proof provision for metaprogram authors using the restricted division
-rule. The default provider relies on local hypotheses and bounded evaluation. -/
+/-- Optional nonzero evidence for division. -/
 structure EvidenceProvider where
-  /-- Given the proposition `c ≠ 0`, optionally return a proof term. The certifier
-  checks its type, decision independence, and absence of unresolved metavariables.
-  Returning `none` leaves bounded numeral/rational evaluation available. -/
+  /-- Supply a proof of c ≠ 0. The certifier checks its type, independence, and completeness.
+Returning none allows bounded numeral/rational evaluation. -/
   nonzeroEvidence? : Option (Expr → MetaM (Option Expr)) := none
 
 /-- A real affine map and its pointwise agreement with the supplied function. -/
@@ -81,9 +55,7 @@ private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
       m!"cannot certify affine expression {expression}: {reason}"
   }
 
-/-- Discover additional finite-index evidence hidden in transparent value helpers.
-This is used only after a direct certification attempt fails. It never changes
-the predicate or objective retained by the caller. -/
+/-- Discover finite-index evidence in transparent helpers after direct certification fails. -/
 def helperFiniteInstances (source : Expr) : MetaM (Array Expr) := do
   unless ← Expansion.enabled do return #[]
   let prepared ← Expansion.prepare source
@@ -123,8 +95,7 @@ private def certifiedFunction (certificate : Expr) : MetaM Expr := do
     throwError "internal affine constructor returned an unexpected type"
   return type.getAppArgs.back!
 
--- Compare the operation prefix independently of the actual operands. A
--- nonstandard operation could coincide with the standard one on these operands.
+-- Check operation instances independently of their operands.
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
@@ -152,9 +123,7 @@ private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : Reify
     reject inst "the finite indexing instance depends on a decision variable"
   mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
 
--- Matrix multiplication stores its finite enumeration inside the HMul instance.
--- Look through instance aliases only; the arithmetic prefix is checked again
--- against the canonical constructor before a certificate can escape.
+-- Expose finite enumeration through HMul instance aliases, then check the canonical prefix.
 private partial def matrixIndexInstance? (instanceExpr : Expr) (fuel : Nat := 32) :
     MetaM (Option Expr) := do
   if fuel == 0 then return none
@@ -211,9 +180,7 @@ private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : 
         reject divisor "nonzero evidence contains unresolved metavariables"
       return proof
   try
-    -- Keep automatic numeral/rational evidence generation bounded even if the
-    -- surrounding command has disabled its global heartbeat limit. Preserve a
-    -- tighter caller limit and the caller's original heartbeat origin.
+    -- Bound numeral/rational evidence search, preserving any tighter caller limit and heartbeat origin.
     let context ← readThe Core.Context
     let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
     let limit := if context.maxHeartbeats == 0 then localLimit
@@ -230,8 +197,7 @@ private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : 
 private partial def reifyBody (point expression : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
   let expression ← Expr.reduceStructure expression (preserveLets := true)
   if let .letE name type value body nondep := expression then
-    -- A local alias of the decision point must be substituted before building
-    -- a new function binder. Independent lets retain useful proof/instance scope.
+    -- Substitute decision-dependent aliases before abstraction; retain independent proof and instance lets.
     if (← Expr.depends point type) || (← Expr.depends point value) then
       return ← reifyBody point (body.instantiate1 value) provider
     return ← mapLetDeclZeta name type value (nondep := nondep) fun binding =>
@@ -468,9 +434,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
           #[matrix, vectorMap] (some 2)
       return ← construct point expression ``Morew.Affine.Certified.vecMul
         #[vectorMap, matrix] (some 2)
-  -- A finite vector can be evaluated at a fixed index. This is deliberately
-  -- checked after recognized operation heads so it cannot swallow a nonlinear
-  -- function application under the guise of a projection.
+  -- Recognize fixed vector indices after operation heads.
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← Expr.isSupportedSpace vectorType) then
@@ -519,24 +483,16 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
   checkWithKernel equality
   return { map, pointwiseEquality := equality }
 
-/-- Reify a typed function without modifying caller metavariables.
-
-All success results contain ordinary proof terms checked against the original
-function. Transparent helpers are expanded only in a temporary expression after
-direct recognition fails. Metaprograms can use
-`reifyAffine source (provider := evidence)` to supply nonzero proofs. Matching
-local hypotheses take precedence over the provider, which is consulted before
-bounded numeral/rational evaluation. Supplied evidence is checked against
-`c ≠ 0`; it does not weaken the global pointwise correctness obligation.
--/
+/-- Reify a typed function in an isolated metavariable context.
+Try direct recognition before bounded helper expansion. Nonzero evidence uses local
+hypotheses, then the optional provider, then bounded numeral/rational evaluation. -/
 def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
     MetaM (Except Expr.Error AffineResult) := State.withIsolatedMVars do
   try
     let direct ← State.withIsolatedMVars <| (reifyCore source provider).run
     if let .ok result := direct then return .ok result
     unless ← Expansion.enabled do return direct
-    -- Do not expand an incompletely elaborated term or allow expansion to
-    -- discard an unresolved argument before the original input is checked.
+    -- Reject unresolved inputs before expansion can discard their arguments.
     if (← Expr.inspectLocals source none).2 || (← hasPlaceholders source) then return direct
     let prepared ← Expansion.prepare source
       (fun expression preserve => Expr.reduceStructure expression preserve)

@@ -11,13 +11,8 @@ import Morew.Core
 import Lean.Meta.Match.MatcherInfo
 import Lean.Meta.RecExt
 
-/-!
-# Bounded expansion of transparent value helpers
-
-Certifiers share one-head unfolding, resource accounting, and checked
-structural reduction. Each consumer chooses when to unfold and which operands
-to visit; this module never traverses a source expression eagerly.
--/
+/-! Shared helper unfolding, resource accounting, and structural reduction.
+Consumers choose traversal and unfolding points. -/
 
 namespace Morew.Elab.Expansion
 
@@ -59,8 +54,7 @@ structure LimitError where
 def LimitError.toMessageData (error : LimitError) (label : String) : MessageData :=
   m!"{label} helper expansion of {error.expressionMessage} exhausted {error.option} (limit {error.limit})"
 
-/-- Shared accounting for one source expression. Cached occurrences still pay
-for each expansion and its substituted expression size. -/
+/-- Accounting per source expression; cached expansions still incur occurrence and size costs. -/
 structure Session where
   /-- Number of helper occurrences already unfolded, including cache hits. -/
   steps : Nat := 0
@@ -86,8 +80,7 @@ structure Step where
   /-- Original helper application, retained for lexical depth and diagnostics. -/
   helper : Expr
 
--- Saturating arithmetic makes preflight costs independent of large argument
--- duplication. Counting stops as soon as the available budget is exceeded.
+-- Saturate cost estimates once they exceed the remaining budget.
 private def cappedAdd (cap a b : Nat) : Nat := min (cap + 1) (a + b)
 
 private partial def expressionSize (expression : Expr) (cap : Nat)
@@ -117,8 +110,7 @@ private partial def expressionSize (expression : Expr) (cap : Nat)
     1 + expressionSize value (cap - 1) arguments offset
   | _ => 1
 
--- Estimate the complete beta result before instantiating any arguments. Each
--- occurrence of a parameter pays for its argument, even if the DAG shares it.
+-- Charge each substituted argument occurrence before constructing the beta result.
 private def applicationSize (value : Expr) (arguments : Array Expr) (cap : Nat) : Nat := Id.run do
   if arguments.isEmpty then return expressionSize value cap
   let mut body := value.consumeMData
@@ -168,14 +160,13 @@ private def helperValue? (expression : Expr) : MetaM (Option Helper) := do
   if (← getMatcherInfo? name).isSome then return none
   if ← isRecursiveDefinition name then return none
   if (← getReducibilityStatus name) == .irreducible then return none
-  -- Transcendental primitive implementations are recognition boundaries, even
-  -- when implemented by transparent definitions rather than opaque constants.
+  -- Treat native transcendental operations as recognition boundaries.
   if let some index := environment.getModuleIdxFor? name then
     let moduleName := environment.header.modules[index.toNat]!.module
     if (`Mathlib.Analysis.SpecialFunctions).isPrefixOf moduleName then return none
   let .defnInfo declaration ← getConstInfo name | return none
   unless declaration.safety == .safe do return none
-  -- Do not discover a hidden constraint by unfolding a predicate or a proof.
+  -- Leave predicates and proofs closed.
   let type ← inferType expression
   if ← isProp type then return none
   let returnsType ← forallTelescopeReducing type fun _ result => do
@@ -187,9 +178,7 @@ private def exhausted (source : Expr) (option : Name) (limit : Nat) : ExpandM α
   let expressionMessage ← addMessageContext m!"{source}"
   throwThe LimitError { expression := source, option, limit, expressionMessage }
 
-/-- Charge a structural substitution exposed by an earlier helper unfolding.
-The caller supplies its lexical helper in `Session.helper?` when traversing
-multiple branches, so any exhaustion identifies the responsible application. -/
+/-- Charge structural substitutions to Session.helper? for exhaustion diagnostics. -/
 def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Config) :
     ExpandM Unit := do
   let state ← get
@@ -198,8 +187,7 @@ def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Config) :
     exhausted (state.helper?.getD value) bounds.nodesOption bounds.nodes
   modify fun state => { state with nodes := state.nodes + cost }
 
--- Ordinary helpers and helpers exposing a problem container use the same
--- eligibility, cache, and pre-substitution accounting.
+-- Use the same eligibility, cache, and accounting for ordinary and container helpers.
 private def unfoldHelper (expression : Expr) (helper : Helper) (bounds : Config)
     (depth : Nat) : ExpandM Expr := do
   if depth ≥ bounds.depth then
@@ -223,9 +211,8 @@ private def unfoldHelper (expression : Expr) (helper : Helper) (bounds : Config)
     helper? := some expression }
   return expanded
 
-/-- Open one eligible ordinary value-helper head, with pre-substitution
-accounting. This includes data-container definitions; consumers choose which
-result shapes to admit. Arguments and resulting children are not visited. -/
+/-- Unfold one eligible value-helper head after charging substitution cost.
+Leave argument and result traversal to the caller. -/
 def unfoldHead? (config : Config) (expression : Expr) (depth : Nat) :
     ExpandM (Option Step) := do
   unless enabled config do return none
@@ -233,15 +220,10 @@ def unfoldHead? (config : Config) (expression : Expr) (depth : Nat) :
   let expanded ← unfoldHelper expression helper config depth
   return some { expression := expanded, helper := expression }
 
--- A helper can expose a higher-order beta redex, for example
--- `apply (fun x => x + x) largeArgument`. Check that substitution as well as
--- the initial delta-beta step; otherwise its duplicated arguments evade the
--- node budget. Original helper-free structural reduction stays unchanged.
-/-- Reduce a helper-origin head while charging substitutions before constructing
-their results. Lets remain intact for evidence scoping; named Problem containers
-are never unfolded. Before any helper step, use the supplied structural reducer.
-Consumers with mixed native/helper branches call this only on helper-origin
-subtrees and use their original reducer on untouched native siblings. -/
+-- Charge higher-order beta substitutions exposed by helper unfolding.
+/-- Reduce helper-origin heads, charging substitutions before construction.
+Preserve lets and named Problem containers. Use the supplied structural reducer
+before helper expansion; callers keep native siblings outside this traversal. -/
 partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr)
     (bounds : Config) : ExpandM Expr := do
   if (← get).steps == 0 then return ← reduce source true
@@ -249,8 +231,7 @@ partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr
   match expression with
   | .fvar id =>
     if let some value := (← id.getDecl).value? (allowNondep := true) then
-      -- Repeated local aliases duplicate their bodies in the temporary tree,
-      -- even though the original let expression stored that body only once.
+      -- Charge duplicated local-alias bodies.
       chargeBeta value #[] bounds
       return ← reduceChecked value reduce bounds
     return expression
@@ -299,11 +280,10 @@ partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr
         reduce bounds
     if (function.isConstOf ``Morew.Problem.objective ||
         function.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
-      -- Select only an exposed constructor. Named container definitions must
-      -- go through bounded helper unfolding, never unrestricted whnf.
+      -- Select exposed constructors; unfold named containers only within the helper budget.
       let problem ← reduceChecked arguments[2]! reduce bounds
       if let .letE name type value body nondep := problem then
-        -- Keep container-local proofs and instances in scope around the field.
+        -- Keep container proofs and instances in scope around the selected field.
         let inner := (arguments.map (·.liftLooseBVars 0 1)).set! 2 body
         return .letE name type value (mkAppN function inner) nondep
       if problem.isAppOfArity ``Morew.Problem.mk 4 then
