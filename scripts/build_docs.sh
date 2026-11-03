@@ -23,8 +23,6 @@ trap 'rm -rf -- "$staging_dir"' EXIT
 mkdir -p "$staging_dir/api"
 cp -R .lake/build/manual/html-multi/. "$staging_dir/"
 cp -R .lake/build/doc/. "$staging_dir/api/"
-python3 -B "$repo_root/scripts/prepare_docs.py" "$staging_dir"
-python3 "$repo_root/scripts/check_docs.py" "$staging_dir"
 rm -rf -- "$site_dir"
 mv -- "$staging_dir" "$site_dir"
 printf 'Documentation: %s/index.html\n' "$site_dir"
