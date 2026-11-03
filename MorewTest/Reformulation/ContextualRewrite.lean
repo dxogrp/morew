@@ -278,7 +278,7 @@ def retainedGuard :=
       retained : 1 ≤ x
       bound : 0 ≤ x
 
--- Parentheses select a concrete exact-lift value rather than declaration lookup.
+-- Parentheses select a concrete exact representation.
 reformulation concreteConic : retainedGuard := by
   conic at bound using (selectedGuardLift)
 

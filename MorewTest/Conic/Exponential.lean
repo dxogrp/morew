@@ -9,9 +9,9 @@ import Mathlib.Tactic.NormNum
 /-!
 # Exponential cones and exact finite representations
 
-These semantic tests use the public conic entry point without installing the
-surface language. Domain counterexamples record why totalized real formulas
-must not be rewritten without the stated evidence.
+The public semantic API certifies finite representations independently of the
+surface language. Counterexamples distinguish totalized real formulas from
+their logarithm and entropy domains.
 -/
 
 assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
@@ -38,7 +38,7 @@ example (b t : ℝ) (hb : 0 ≤ b) :
 example (t : ℝ) : Fn.relativeEntropy 0 0 ≤ t ↔ (-t, 0, 0) ∈ EXP :=
   relativeEntropy_zero_le_iff 0 t le_rfl
 
-/-! Native totalization is not the usual logarithm/entropy domain. -/
+/-! Totalized logarithm and entropy values extend beyond their modeling domains. -/
 
 example : (0 : ℝ) ≤ Real.log 0 := by simp
 example : ¬ ((0 : ℝ), 1, 0) ∈ EXP := by norm_num

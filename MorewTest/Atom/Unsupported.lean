@@ -14,7 +14,7 @@ namespace MorewTest.Atom.Unsupported
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.Elab.Atom
 
-/-! Recognition is intentionally bounded by typed heads and canonical instances. -/
+/-! Recognition uses typed heads and canonical instances. -/
 
 noncomputable def equivalentExponential (x : ℝ) : ℝ := Real.exp (x + 0)
 

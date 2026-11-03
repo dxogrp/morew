@@ -9,9 +9,7 @@ import MorewTest.DiagnosticsSupport
 /-!
 # Substitution diagnostics and failed-command rollback
 
-These tests exercise localized failures in typed substitution steps.  Every
-failed command requests a certificate alias and is followed by an environment
-check, so a regression that commits any part of the command is caught.
+Check localized failures and declaration rollback, including certificate aliases.
 -/
 
 namespace MorewTest.Reformulation.SubstitutionFailures
@@ -120,8 +118,7 @@ run_cmd do
 
 end ShadowedReal
 
-/-! A manual certificate is checked against the semantic problem and map at
-its actual script position, rather than against the original source. -/
+/-! A manual certificate is checked against the current semantic problem and map. -/
 
 def quadraticSource :=
   problem (x : ℝ)

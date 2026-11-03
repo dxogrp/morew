@@ -164,7 +164,7 @@ def missing :=
     minimize t
     subject to bound : -Real.log x ≤ t
 
--- The prospective exponential row cannot supply its own positive domain.
+-- The generated exponential row cannot establish its own positive-domain premise.
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
 reformulation rejectedMissing : missing := by nlp at bound
 

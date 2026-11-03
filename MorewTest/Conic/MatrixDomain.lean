@@ -7,11 +7,11 @@ import Morew.Elab.Conic.MatrixDomain
 import MorewTest.ElabSupport
 
 /-!
-# Adversarial positive-definite domain recognition
+# Positive-definite domain recognition
 
-Every accepted premise proves the original proposition under exactly the
-supplied retained rows. Invalid instances, pivots, margins, incomplete evidence,
-and unavailable selected-row facts must not change caller metavariables.
+Accepted premises prove the original proposition from the retained rows.
+Rejected instances, pivots, margins, and incomplete evidence leave caller
+metavariables unchanged.
 -/
 
 namespace MorewTest.Conic.MatrixDomain
@@ -170,7 +170,7 @@ run_cmd liftTermElabM do
   assertDomain (← `(fun p : Σ n : Nat, Matrix (Fin n) (Fin n) ℝ =>
     (p.2.PosDef, #[p.2.PosDef]))) 0 false
 
-/-! Custom relations and operations cannot masquerade as canonical domains. -/
+/-! Domain recognition requires canonical relations and operations. -/
 
 run_cmd liftTermElabM do
   assertDomain (← `(fun n : Nat => fun p : SymmetricMatrix n × SymmetricMatrix n =>

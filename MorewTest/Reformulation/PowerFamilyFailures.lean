@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
-/-! # Finite power-lift boundaries and atomic failures -/
+/-! # Finite power-cone representation boundaries and atomic failures -/
 
 namespace MorewTest.Reformulation.PowerFamilyFailures
 

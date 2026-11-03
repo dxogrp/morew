@@ -92,8 +92,8 @@ reformulation allTrueTarget : allTrue := by
   nlp
 example : allTrueTarget.nlpForm.data.rowCount = 0 := rfl
 
--- Only groups needing exact lowering are split. Unaffected definitions and
--- repeated bodies retain their original identities rather than being guessed.
+-- Only groups requiring exact rewrites are split. Unaffected definitions
+-- and repeated bodies retain their binding identities.
 def localDefinitions :=
   problem (x y : ℝ)
     let first := x ^ 2

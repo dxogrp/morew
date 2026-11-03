@@ -193,7 +193,7 @@ example (x t : ℝ) : (target center).feasible (x, t) ↔
 example : selected center = target center := rfl
 example : applied center = target center := rfl
 
--- Distinct direct-negative and derived rules remain genuinely ambiguous.
+-- Distinct direct-negative and derived rules produce ambiguity.
 def negativeRewardEpigraph (center : ℝ) :
     EpigraphRepresentation (fun x => -reward center x) where
   Auxiliary := Unit

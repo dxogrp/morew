@@ -11,7 +11,7 @@ import MorewTest.Conic.Form.Defined
 /-!
 # Imported spectral and matrix-fraction certificates
 
-An imported positive-definite domain lift remains evidence for a subsequent
+An imported positive-definite domain certificate supports a subsequent
 matrix-fraction rewrite. Spectral witnesses and the source operator-norm
 instance survive continued transformations and presentation replay.
 -/
@@ -69,7 +69,7 @@ namespace FiniteOnly
 
 open MorewTest.Conic.Form
 
--- In particular, compiled form types do not require Fintype at the use site.
+-- Compiled form types require no Fintype at the use site.
 def importedForm (ι : Type) [Finite ι] (i : ι) : Conic.Form (finiteSource ι i) :=
   inferredFiniteForm ι i
 
@@ -167,8 +167,7 @@ def normDependentTypeSource :=
     let index := normSized A
     minimize (index.val : ℝ)
 
--- The macro splices identical norm syntax into two different local instances.
--- Replacing only norm subterms would accidentally retain the first instance twice.
+-- Identical norm syntax in two local instances retains each source instance.
 def splicedNormSource :=
   problem (A : Matrix (Fin 1) (Fin 1) ℝ) (t : ℝ)
     minimize twiceNorm% ‖A‖
@@ -196,8 +195,8 @@ namespace ChangedNorm
 -- when a different matrix norm is in scope at the replay site.
 local instance (m n : Nat) : Norm (Matrix (Fin m) (Fin n) ℝ) := ⟨fun _ => 37⟩
 
--- The unrelated norm also cannot obstruct imported certificates or subsequent
--- conic rewriting of a source whose operator norm was already fixed.
+-- Imported certificates and conic rewrites retain the source operator norm
+-- under an unrelated ambient norm instance.
 example : IsConic (MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n)) :=
   MorewTest.Reformulation.Spectral.normTarget.isConic (m := m) (n := n)
 example : IsConic (MorewTest.Reformulation.Spectral.nuclearTarget (m := m) (n := n)) :=

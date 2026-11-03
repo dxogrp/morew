@@ -7,10 +7,10 @@ import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
 
 /-!
-# Power endpoints, ambiguity, and explicit lifting workflows
+# Power endpoints, ambiguity, and explicit auxiliary variables
 
 Terminal affine certification preserves endpoint expressions. Targeted commands
-continue to require a unique registered replacement, even for affine endpoints.
+require a unique registered replacement, including for affine endpoints.
 -/
 
 namespace MorewTest.Reformulation.PowerWorkflow
@@ -85,7 +85,7 @@ def source :=
       budget : cost + y ≤ 10
       untouched : sameCost ≤ 20
 
--- Lift the nested occurrence first; the generated whole bound is selectable.
+-- Introduce a bound for the nested occurrence, then select the generated row.
 reformulation lifted : source := by
   epigraph a at cost in budget as powerBound
   conic at powerBound

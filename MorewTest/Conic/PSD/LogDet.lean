@@ -10,9 +10,9 @@ import Mathlib.Tactic.NormNum
 /-!
 # Log-determinant semantics and exact certificates
 
-The scalar and diagonal tests distinguish the totalized real logarithm from
-its positive-definite modeling domain. A non-diagonal positive-definite matrix
-exercises the triangular factorization needed for an attaining lift.
+Scalar and diagonal tests distinguish the totalized real logarithm from its
+positive-definite domain. A non-diagonal positive-definite matrix exercises
+triangular factorization and attainment.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView
@@ -92,7 +92,7 @@ private theorem offDiagonal_posDef :
 example : Fn.logDet (!![2, 1; 1, 2] : Matrix (Fin 2) (Fin 2) ℝ) = Real.log 3 := by
   norm_num [Fn.logDet, Matrix.det_fin_two]
 
--- The scalar lift keeps exactly the positive domain and logarithmic bound.
+-- The scalar representation retains the positive domain and logarithmic bound.
 example (p t : ℝ) :
     HasLift (Matrix.diagonal (fun _ : Fin 1 => p)) t ↔ 0 < p ∧ t ≤ Real.log p := by
   rw [hasLift_iff _ _ (by decide)]

@@ -11,9 +11,8 @@ import Mathlib.Data.Real.Basic
 /-!
 # Semantic occurrence-bound certificates
 
-These examples exercise distinct selected/objective types, dual objective
-orders, assumptions available only on feasible points, and the forbidden
-polarities for constraint lifting.
+Check distinct selected and objective types, dual objective orders,
+feasibility-dependent assumptions, and permitted constraint polarities.
 -/
 
 namespace MorewTest.ObjectiveContext
@@ -107,7 +106,7 @@ example (point : ℝ × ℝ) :
         (fun point a => point.1 * a ≤ 10) .upper).feasible (point, a) :=
   weightedConstraintContext.toExactConstraintLift.source_iff_exists point
 
-/-- An upper-bound constraint lift also works when the objective is maximized. -/
+/-- An upper-bound constraint representation also supports maximization. -/
 def maximumDecomposition : ConstraintDecomposition maximumSource (fun n => n ≤ 7) where
   remainder _ := True
   feasible_iff _ := ⟨fun h => ⟨trivial, h⟩, fun h => h.2⟩

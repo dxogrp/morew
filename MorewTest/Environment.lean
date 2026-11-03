@@ -8,14 +8,9 @@ import Lean.Environment
 /-!
 # Local declaration rollback checks
 
-These helpers compare snapshots from the same module with the same imports.
-Imported constants cannot change during the operations under test, so only the
-current module's declarations need scanning. Accessing `Environment.constants`
-still waits for kernel checking; querying asynchronous declaration information
-instead would change that synchronization.
-
-The checks compare names only. Callers must keep their separate assertions about
-metavariables, presentation metadata, and other state.
+Compare declaration names within one module and fixed imports.
+`Environment.constants` waits for kernel checking. Metavariables, presentation
+metadata, and other state require separate assertions.
 -/
 
 namespace MorewTest
@@ -28,8 +23,7 @@ def newLocalDeclaration? (before after : Lean.Environment) : Option Lean.Name :=
     unless original.contains name do return some name
   return none
 
-/-- Check both directions so rolling back too far, or exchanging declarations
-without changing their count, is also rejected. -/
+/-- Check both directions to detect removals and replacements as well as additions. -/
 def sameLocalDeclarationNames (before after : Lean.Environment) : Bool :=
   (newLocalDeclaration? before after).isNone &&
     (newLocalDeclaration? after before).isNone

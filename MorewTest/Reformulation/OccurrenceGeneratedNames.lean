@@ -8,8 +8,8 @@ import Morew.Reformulation.Basic
 /-!
 # Occurrence selectors referencing generated decisions
 
-Selectors use the current visible decision names after lifts and substitution.
-Nested lexical binders and macro scopes still retain their own identities.
+Selectors use the current decision names after auxiliary introductions and
+substitution. Lexical binders and macro scopes retain their own identities.
 -/
 
 namespace MorewTest.Reformulation.OccurrenceGeneratedNames

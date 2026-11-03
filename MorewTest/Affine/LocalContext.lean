@@ -96,7 +96,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless (← instantiateMVars assignedType) == real do
       throwError "recognition changed the caller's type assignment"
 
-/-! Genuinely unresolved coefficient values still fail without assignment. -/
+/-! Unresolved coefficient values fail without assignment. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let real := Lean.mkConst ``Real
@@ -165,8 +165,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
           throwError "reification assigned the hidden nonzero evidence metavariable"
 
 
-/-! Metavariables hidden inside local relation instances must not be solved
-temporarily while manufacturing a certificate for an incomplete predicate. -/
+/-! Recognition rejects unresolved metavariables in local relation instances. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let real := Lean.mkConst ``Real

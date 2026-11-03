@@ -19,8 +19,7 @@ namespace MorewTest.Reformulation.RenameFailures
 open Morew
 noncomputable section
 
--- Only the step-leading word is newly reserved. `constraint` remains an
--- ordinary identifier, while `to` was already reserved by existing imports.
+-- `rename` and `to` are reserved; `constraint` remains an ordinary identifier.
 def keywordBinders (constraint «rename» «to» : Nat) : Nat :=
   constraint + «rename» + «to»
 

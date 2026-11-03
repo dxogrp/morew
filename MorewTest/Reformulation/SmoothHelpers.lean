@@ -10,10 +10,9 @@ import MorewTest.Environment
 /-!
 # Smooth helper certification across reformulation commands
 
-Expansion is temporary proof-construction work. Semantic expressions, printed
-helper references, local binding identities, and exported artifact signatures
-must continue to describe the original source. A later failure must roll back
-an earlier successful helper-based rewrite.
+Helper expansion preserves source expressions, printed references, binding
+identities, and artifact signatures. A later failure removes declarations
+from earlier successful rewrites.
 -/
 
 namespace MorewTest.Reformulation.SmoothHelpers

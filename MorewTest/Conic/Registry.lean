@@ -144,8 +144,8 @@ run_cmd liftTermElabM do
     (expected := #[← `(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
       ← `(fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)])
 
--- Concrete exact lifts certify their entire source. A named declaration may
--- infer an input map, while a concrete record keeps its original decision space.
+-- Concrete exact representations certify the entire source. A named declaration
+-- may infer an input map; a concrete record retains its decision space.
 run_cmd liftTermElabM do
   let concreteRule ← elaborate (← `(boundedRule))
   check (← `(fun x : ℝ => bounded x)) 2

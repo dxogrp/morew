@@ -11,9 +11,8 @@ import MorewTest.Environment
 /-!
 # Registered NLP rules
 
-Declarations from user namespaces enter the same exactness and generated-domain
-checks as built-ins. Scoped activation, explicit selection, and removal exercise
-observable planning behavior rather than registry implementation details.
+User rules undergo the same exactness and domain checks as built-ins. Tests
+cover scoped activation, explicit selection, removal, and ambiguity.
 -/
 
 namespace MorewTest.NLP.Registry
@@ -168,8 +167,8 @@ run_cmd liftTermElabM do
   check (← `(fun c : ℝ => input (fun x : ℝ => shiftedAbs c (x * x) ≤ 3) #[]))
     2 none 1
 
--- Product inputs must match intact values, their eta expansions, and nested
--- projections without changing the selected predicate checked by the lift.
+-- Product inputs match intact values, eta expansions, and nested projections
+-- while the certificate retains the selected predicate.
 noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
 
 @[morew_nlp] noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
@@ -220,8 +219,8 @@ run_cmd liftTermElabM do
     #[(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
       (fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)]))
 
--- Concrete exact lifts certify their entire source; named declarations infer
--- an input map, but concrete records retain the original full-source check.
+-- Concrete exact representations certify the entire source; named declarations
+-- infer an input map.
 run_cmd liftTermElabM do
   let concreteRule ← Domain.elaborate (← `(boundedRule))
   exactRows (← `(input (fun x : ℝ => bounded x)
@@ -299,10 +298,9 @@ run_cmd liftTermElabM do
   check (← `(input (fun p : ℝ × ℝ => p.2 = userSquare p.1) #[])) 1
   check (← `(input (fun p : ℝ × ℝ => userSquare p.1 = p.2) #[])) 1
 
--- A graph orientation is usable only after its generated rows are certified.
--- With expansion disabled, the first source initially matches the constant
--- input, leaving the unsupported decision-dependent helper `shift x` in the
--- target. Retrying the other orientation must discard the failed attempt's state.
+-- With expansion disabled, the first graph orientation leaves an unsupported
+-- helper in the target. The other orientation succeeds after the first attempt
+-- restores caller state.
 noncomputable def shift (x : ℝ) : ℝ := x + 1
 
 @[morew_nlp] noncomputable def shiftGraph : GraphRepresentation shift where
@@ -331,8 +329,8 @@ run_cmd liftTermElabM do
   check (← `(input (fun x : ℝ => shift x = shift 3) #[])) 1
   check (← `(input (fun x : ℝ => shift 3 = shift x) #[])) 1
 
--- One general Euclidean registration handles both carrier spellings. Adding a
--- test-only alias is a real second success, not an implicit priority choice.
+-- Both Euclidean carriers share one registration. A test alias introduces
+-- a second successful candidate and therefore ambiguity.
 run_cmd liftTermElabM do
   check (← `(input (fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 3) #[])) 2
   check (← `(input (fun v : EuclideanSpace ℝ (Fin 2) => ‖v‖ ≤ 3) #[])) 2

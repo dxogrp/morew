@@ -10,9 +10,8 @@ import MorewTest.Environment
 /-!
 # Complete finite power-cone workflows
 
-Automatic L2 conversion uses the existing SOC representation. Explicit selection
-can request the power representation, while custom overlapping registrations
-continue to produce ambiguity diagnostics.
+Automatic L2 conversion uses SOC. Explicit selection can request the power
+representation; overlapping custom registrations produce ambiguity.
 -/
 
 namespace MorewTest.Reformulation.PowerFamilies

@@ -101,8 +101,8 @@ reformulation groupedAgain : (groupedTarget c) := by
   nlp
 example : NLP.Form (groupedAgain c) := groupedAgain.nlpForm c
 
--- Structural projections retain the same proof scope as a head let, through
--- direct lowering, selected lowering, and replay of their generated predicates.
+-- Structural projections retain proof scope through direct and selected
+-- rewrites and replay of generated predicates.
 def projected :=
   problem (x : ℝ)
     minimize x ^ 2
@@ -121,8 +121,8 @@ reformulation projectedSelectedAgain : (projectedSelected c) := by
   nlp
 example : NLP.Form (projectedSelectedAgain c) := projectedSelectedAgain.nlpForm c
 
--- Projected groups must expose their conjunction before deciding which leaves
--- need lowering; the later norm auxiliary also transports the accepted evidence.
+-- Projected groups expose their conjunction before leaf rewriting;
+-- subsequent norm auxiliaries preserve the accepted evidence.
 def projectedGroup :=
   problem (x : ℝ) (v : Fin 1 → ℝ) (t : ℝ)
     minimize x ^ 2

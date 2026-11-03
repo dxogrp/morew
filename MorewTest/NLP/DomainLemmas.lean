@@ -7,11 +7,11 @@ import Morew.NLP.Basic
 import Morew.NLP.Domain
 
 /-!
-# Semantic evaluation-domain regression examples
+# Evaluation-domain semantics
 
-These examples exercise nested restricted functions, finite families, and
-membership-sensitive sums without the expression certifier or command DSL.
-The final representation keeps the objective and its sole closed-bound row.
+Nested restricted functions, finite families, and membership-sensitive sums
+compose independently of expression certification and the DSL. The final
+representation preserves the objective and its closed-bound row.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView Morew.Elab.Reformulation.RunnerState

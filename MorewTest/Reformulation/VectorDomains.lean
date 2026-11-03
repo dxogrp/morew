@@ -237,9 +237,8 @@ run_cmd liftTermElabM do
     let ε : Fin 2 → ℝ := fun _ => 1
     True ∧ ε ≤ p.1))
   checkPlan source #[vector] true
-  -- These fake instances even agree with native operations on the particular
-  -- operands below. Checking only the complete proposition would therefore
-  -- miss the unsupported vector order, subtraction, or membership instance.
+  -- Altered instances agree with native operations on these operands.
+  -- Certification checks the vector order, subtraction, and membership instances.
   let fakeLE ← elaborate (← `(fun p : (Fin 2 → ℝ) × ℝ =>
     @LE.le (Fin 2 → ℝ) ⟨fun _ x => (fun _ => (1 : ℝ)) ≤ x⟩ (fun _ => 1) p.1))
   checkPlan source #[fakeLE] false "coordinatewise positive"

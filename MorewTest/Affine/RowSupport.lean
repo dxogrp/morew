@@ -28,8 +28,7 @@ def assertRow (term : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Uni
     let .forallE _ domain _ _ ← whnf (← inferType source)
       | throwError "row test source is not a function"
     let expected ← withLocalDeclD `x domain fun x => do
-      -- Reuse the row's explicit structures, so the test does not accidentally
-      -- synthesize the unrelated ambient normed-space instances it is testing.
+      -- Reuse the row's explicit structures, independently of ambient instances.
       let holds := mkAppN
         (mkConst ``Morew.Conic.Constraint.Holds constraintType.getAppFn.constLevels!)
         (constraintType.getAppArgs ++ #[result.constraint, x])

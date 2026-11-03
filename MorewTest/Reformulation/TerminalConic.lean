@@ -8,8 +8,8 @@ import Morew.Reformulation.Conic
 /-!
 # Complete conic reformulations
 
-Terminal conversion preserves conic groups, lowers nonlinear leaves in place,
-and writes affine memberships with exact structural data for the final target.
+Terminal conversion preserves conic groups, replaces nonlinear leaves in place,
+and certifies the final target with affine cone memberships.
 -/
 
 namespace MorewTest.Reformulation.TerminalConic
@@ -248,9 +248,9 @@ class Parameter where
 
 variable [Parameter]
 
-/- The only finite-index evidence occurs inside the constraint's dot product.
-Terminal planning must retain it while validating the constant objective,
-lowering the nonlinear row, and emitting reusable form artifacts. -/
+/- The constraint's dot product supplies the only finite-index evidence.
+Terminal planning retains it when certifying the objective, rewriting the
+nonlinear row, and constructing reusable forms. -/
 def source :=
   problem (x : Parameter.Index → ℝ)
     minimize (0 : ℝ)

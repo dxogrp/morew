@@ -9,8 +9,7 @@ import Lean.Elab.GuardMsgs
 /-!
 # Shared problem-printing assertions
 
-Helpers only: importing these assertions does not compile a reformulation test
-suite. Existing declaration namespaces remain stable for their consumers.
+Reusable assertions independent of the reformulation test suites.
 -/
 
 namespace MorewTest.Reformulation.PrintDetails

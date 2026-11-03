@@ -8,9 +8,9 @@ import MorewTest.NLP.DomainSupport
 /-!
 # Native Euclidean smoothness and domain certificates
 
-Coordinate extraction and construction preserve the exact original function,
-including symbolic and empty dimensions. Bounded smooth helper expansion keeps
-the existing independent-helper argument policy and native-operation checks.
+Coordinate extraction and construction preserve the original function at
+symbolic and empty dimensions. Helper expansion retains argument obligations
+and checks native operations.
 -/
 
 namespace MorewTest.NLP.Euclidean

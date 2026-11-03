@@ -226,8 +226,7 @@ def uncertifiedTarget : ExactConstraintLift
   ExactConstraintLift.ofIff (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2)
     (fun _ => Iff.rfl)
 
--- This certificate is mathematically valid, but its unlowered target is not
--- affine. The explicit request must fail instead of running the automatic atom.
+-- The exact certificate has a non-affine target, so explicit selection fails.
 #guard_error_fragments ["constraint `exponential`: generated row:"] in
 assert_exp_atomic%
 reformulation explicitCannotFallback : scalarSource certificate explicitCannotFallbackAlias := by

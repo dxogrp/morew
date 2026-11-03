@@ -11,9 +11,9 @@ import MorewTest.Environment
 /-!
 # Certified exact-rule selection
 
-Direct selection deliberately tests affine constant overlaps before the
-terminal caller's affine-first shortcut. Other cases distinguish failed
-candidate heads from fully certified registered rules.
+Direct selection checks affine constant overlaps and distinguishes candidate
+head matches from fully certified rules. Terminal conversion accepts affine
+rows before selecting nonlinear rules.
 -/
 
 namespace MorewTest.Conic.Rewrite

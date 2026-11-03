@@ -105,8 +105,7 @@ example (x y u : ℝ) : target.feasible ((x, y), u) ↔
     Real.exp x ≤ 100 ∧
       u = x ∧ (y, 1 / 2, ![u]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧ y ≤ 10 := Iff.rfl
 
--- Keep the complete chain at the default heartbeat limit: serializing each
--- primitive's proof data inline used to exceed that limit at declaration time.
+-- The complete chain fits Lean's default heartbeat budget.
 def combinedSource :=
   problem (x y : ℝ)
     minimize x + y

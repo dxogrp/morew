@@ -18,7 +18,7 @@ namespace MorewTest.Surface
 open Morew
 noncomputable section
 
-/-! Expected failures are local diagnostics, not claims of non-equivalence. -/
+/-! Each rejection checks the local diagnostic. -/
 
 def negativeSource :=
   problem (x : ℝ)

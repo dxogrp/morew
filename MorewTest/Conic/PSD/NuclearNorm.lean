@@ -11,8 +11,8 @@ import Mathlib.Tactic.NormNum
 /-!
 # Nuclear-norm semantics and exact completion certificates
 
-The tests exercise the standard singular-value definition, both directions of
-the lift, half-trace normalization, and degenerate dimensions.
+Check the singular-value definition, both directions of the representation,
+half-trace normalization, and degenerate dimensions.
 -/
 
 namespace MorewTest.Conic.Nuclear
@@ -66,8 +66,7 @@ example : Fn.nuclearNorm (Matrix.diagonal ![3, 4]) = 7 := by
   change Fn.nuclearNorm A = 7
   linarith
 
--- This 2 × 3 matrix has a zero row and two zero columns. The lift must admit
--- rank deficiency while retaining its nonzero singular value.
+-- This rank-deficient 2 × 3 matrix has one nonzero singular value.
 example : Fn.nuclearNorm (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3 := by
   let A : Matrix (Fin 2) (Fin 3) ℝ := !![3, 0, 0; 0, 0, 0]
   let W : Matrix (Fin 2) (Fin 2) ℝ := Matrix.diagonal ![3, 0]

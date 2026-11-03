@@ -6,10 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Basic
 
 /-!
-# Selected objective and constraint bound lifts
+# Bounds on selected objective and constraint occurrences
 
-These examples check the generated semantics, preserved local bindings and row
-order, explicit context evidence, and composition with conic conversion.
+Check generated semantics, local bindings, row order, explicit context evidence,
+and composition with conic conversion.
 -/
 
 namespace MorewTest.Reformulation.OccurrenceBounds

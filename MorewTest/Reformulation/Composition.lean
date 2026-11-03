@@ -8,9 +8,7 @@ import Morew.Reformulation.Basic
 /-!
 # Compositional reformulation runner
 
-These end-to-end tests exercise exact reformulation steps after the runner has
-already changed the semantic problem.  They intentionally use the public DSL
-and generated certificates rather than the runner's internal representation.
+Check successive reformulation steps through the public DSL and generated certificates.
 -/
 
 namespace MorewTest.Reformulation.Composition
@@ -63,9 +61,8 @@ example (u t : ℝ) :
 
 end AutomaticAfterObjectiveBound
 
-/-! The automatic rule can replace a selected middle coordinate.  The map
-assertions also ensure that coordinates on both sides of it are retained by
-the generated certificate in both directions. -/
+/-! Substituting a middle coordinate preserves both surrounding coordinates
+in both equivalence maps. -/
 
 namespace MiddleCoordinate
 
@@ -110,8 +107,7 @@ example (point : FeasiblePoint target) :
 
 end MiddleCoordinate
 
-/-! An explicit coverage certificate is checked against the semantic problem
-at its actual script position rather than against the original source. -/
+/-! Explicit coverage is checked against the current problem at that script step. -/
 
 namespace ManualAfterObjectiveBound
 

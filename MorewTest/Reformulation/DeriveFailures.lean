@@ -216,10 +216,8 @@ end MorewTest.Reformulation.DeriveFailures
 /-!
 # Incomplete derived-constraint expressions
 
-The command elaborates each step through `runTermElabM`, which starts a fresh
-metavariable context rather than accepting caller metavariables. These tests
-exercise unresolved expressions inside that boundary and check that rejecting
-them also rolls back the command's declarations and presentation metadata.
+`runTermElabM` gives each step a fresh metavariable context. Rejecting unresolved
+expressions also removes generated declarations and presentation metadata.
 -/
 
 namespace MorewTest.Reformulation.DeriveIsolation

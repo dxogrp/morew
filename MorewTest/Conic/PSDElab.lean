@@ -168,8 +168,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertRow (← `(fun (m n : Nat) (f : Fin m → Fin n) =>
     fun x : Fin n → ℝ => ((Matrix.diagonal x).submatrix f f).PosSemidef)) 3
 
-/-! A native PSD predicate cannot silently impose symmetry on an arbitrary
-matrix, and non-affine symmetric expressions remain unsupported rows. -/
+/-! Native PSD rows require global symmetry and affine entries. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertSymmetry (← `(fun n : Nat => fun x : Matrix (Fin n) (Fin n) ℝ => x)) 1 false

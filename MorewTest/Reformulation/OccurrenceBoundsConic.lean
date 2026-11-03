@@ -41,8 +41,7 @@ reformulation continued : namedSplit := by
 example : GlobalEquivalence namedSplit continued := continued.equivalence
 example : IsConic continued := continued.isConic
 
--- Keep this chain within Lean's default heartbeat budget. Re-elaborating each
--- complete occurrence certificate used to exhaust that budget for this chain.
+-- The complete chain fits Lean's default heartbeat budget.
 reformulation budgetedConic : budgeted := by
   epigraph a at (x ^ 2) as epi_sq_x
   epigraph b at (|x|) in budget as magnitude_bound

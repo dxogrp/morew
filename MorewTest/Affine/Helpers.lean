@@ -208,7 +208,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless (← error.reason.toString).contains "hiddenProduct" do
       throwError "helper diagnostic lost the original application"
 
-/-! The atom recognizer still sees the original application, without expansion. -/
+/-! Atom recognition uses the original application. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun x : ℝ => hiddenExponential x))
