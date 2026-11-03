@@ -45,9 +45,7 @@ problem (x : Fin n → ℝ) (t : ℝ)
     residualCone : (t, A *ᵥ x - b) ∈ SOC m
 ```
 
-Follow the [examples guide](Examples/README.md) for a reading order and examples
-by mathematical topic. The [second-order cone examples](Examples/Models/SecondOrder.lean)
-include the nonnegative least-squares model above.
+More examples can be found in the [Examples](Examples) directory.
 
 ## License
 
