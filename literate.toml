@@ -1,0 +1,19 @@
+show_output = ["#printp", "#check"]
+docstrings_as_text = true
+
+[[targets]]
+library = "Examples"
+
+[metadata]
+title = "Morew examples"
+description = "Optimization problems and certified reformulations in Lean."
+
+[order_children]
+"Examples" = ["Examples.GettingStarted", "Examples.Transformations", "Examples.Models", "Examples.Advanced"]
+"Examples.GettingStarted" = ["Examples.GettingStarted.Basic", "Examples.GettingStarted.Conic", "Examples.GettingStarted.NLP", "Examples.GettingStarted.GraphImpl"]
+"Examples.Transformations" = ["Examples.Transformations.Subexpressions", "Examples.Transformations.Substitution", "Examples.Transformations.Rename", "Examples.Transformations.Derive", "Examples.Transformations.Remove"]
+"Examples.Models" = ["Examples.Models.SecondOrder", "Examples.Models.Norms", "Examples.Models.Exponential", "Examples.Models.Power", "Examples.Models.PSD", "Examples.Models.Spectral", "Examples.Models.LogDet"]
+"Examples.Advanced" = ["Examples.Advanced.CustomRules", "Examples.Advanced.Schur", "Examples.Advanced.Restrict"]
+
+[modules."Examples.GettingStarted.GraphImpl"]
+title = "Epigraphs and hypographs"

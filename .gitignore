@@ -1,3 +1,4 @@
 /.lake/
+/docs/.lake/
 /build/
 __pycache__/
