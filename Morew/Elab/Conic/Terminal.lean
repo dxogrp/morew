@@ -31,9 +31,9 @@ structure Result where
   form : Expr
   /-- Original presentation-entry index for every final constraint entry. -/
   rowOrigins : Array Nat
-  /-- Original entries replaced by splitting or exact automatic lowering. -/
+  /-- Original entries replaced by splitting or automatic constraint replacement. -/
   replacedIndices : Array Nat
-  /-- Entries changed only by membership normalization; their labels remain unchanged. -/
+  /-- Original entries changed by membership normalization. Normalization alone preserves labels. -/
   changedBodies : Array Nat
   /-- Original entry and auxiliary type, in decision-binder append order. -/
   auxiliaries : Array (Nat × Expr)

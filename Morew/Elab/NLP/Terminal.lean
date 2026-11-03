@@ -32,7 +32,7 @@ structure Result where
   form : Expr
   /-- Original presentation index of each final entry. -/
   rowOrigins : Array Nat
-  /-- Original entries split or replaced by exact lowering. -/
+  /-- Original entries split or replaced by equivalent constraints. -/
   replacedIndices : Array Nat
   /-- Origin and type of each appended auxiliary, in binder order. -/
   auxiliaries : Array (Nat × Expr)

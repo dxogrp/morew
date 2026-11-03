@@ -193,7 +193,8 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
               Affine.Expansion.expand matrix fun expression preserveLets =>
                 Expr.reduceStructure expression (preserveLets := preserveLets)
             catch _ =>
-              -- Try native identities and independent witnesses before helper expansion.
+              -- On expansion failure, use native identities and independent hypotheses
+              -- on the original matrix.
               saved.restore
               pure matrix
           let expandedProof ← mkFreshExprMVar (← mkAppM ``Matrix.IsSymm #[expanded])

@@ -227,8 +227,9 @@ private def planCore (source : Expr) (retained : Array Expr)
     throwError "no supported exact NLP rule for the entire selected predicate; no registered certificate matches; register an exact representation or use an explicit exact record\nselected predicate: {source}\npredicate type: {← inferType source}{detail}"
   catch exception => return .error (← failure source exception)
 
-/-- Plan a selected predicate using retained rows in original order and insert generated
-rows at insertionIndex. Try explicit or registered whole-predicate rules.
+/-- Plan a selected predicate using retained rows in original order, excluding the
+selected row. Insert generated rows at `insertionIndex`.
+Try explicit or registered whole-predicate rules.
 Restore metavariables and declarations on failure or ambiguity. -/
 def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
     (insertionIndex : Nat := 0) (declaration? : Option Name := none) :

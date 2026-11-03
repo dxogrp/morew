@@ -162,7 +162,7 @@ private def buildFormCore (presentation : PresentationState)
   return .ok form
 
 /-- Build smooth-NLP data for the complete presentation, retaining objective sense.
-An optional cache has one certified block per row. Preserve caller metavariables. -/
+An optional cache has one optional certified block per row. Preserve caller metavariables. -/
 def buildForm (presentation : PresentationState) (cached : Array (Option Rows.Result) := #[]) :
     MetaM (Except Domain.DomainError Expr) :=
   State.withIsolatedMVars do

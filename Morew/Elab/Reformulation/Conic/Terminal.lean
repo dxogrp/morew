@@ -10,7 +10,7 @@ import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Reduction
 
 /-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
-Preserve named groups and local definitions. Allocate generated names together and
+Preserve named affine groups and local definitions. Allocate generated names together and
 emit a structural form beside the target. -/
 
 namespace Morew.Elab.Reformulation

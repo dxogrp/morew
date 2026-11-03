@@ -341,9 +341,10 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
   | .ok value => pure value
   | .error (_, error) => throw error
 
-/-- Match and certify the supplied record in isolated attempts including accept.
-Retain successful proof dependencies. Concrete records use the whole decision point;
-subtype guards may wrap it. Graph orientations and sign views form one candidate.
+/-- Match and certify the supplied record in isolated attempts including `accept`.
+Retain successful proof dependencies. Concrete `ExactConstraintLift` records use
+the whole decision point; subtype guards may wrap it.
+Graph orientations and sign views form one candidate.
 Whole-predicate records keep literal matching. -/
 def rule {α : Type} (point sourceBody expression : Expr)
     (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=

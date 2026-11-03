@@ -229,8 +229,8 @@ def proveInequality (point lower upper boundProof : Expr) : MetaM (Except Messag
   checked #[point, lower, upper, boundProof] q($lower ≤ $upper) <|
     inequality point lower upper boundProof
 
-/-- Prove target from sourceProof : source and a scalar bound through native real
-comparisons and conjunctions. For constraints, source is the rewritten predicate. -/
+/-- Prove `target` from `sourceProof : source` and a scalar bound through native
+non-strict real comparisons and conjunctions. For constraints, `source` is the rewritten predicate. -/
 def provePredicate (point source target boundProof sourceProof : Expr) :
     MetaM (Except MessageData Expr) :=
   checked #[point, source, target, boundProof, sourceProof] target <|

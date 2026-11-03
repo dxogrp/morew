@@ -178,7 +178,7 @@ private def exhausted (source : Expr) (option : Name) (limit : Nat) : ExpandM α
   let expressionMessage ← addMessageContext m!"{source}"
   throwThe LimitError { expression := source, option, limit, expressionMessage }
 
-/-- Charge structural substitutions to Session.helper? for exhaustion diagnostics. -/
+/-- Attribute structural substitutions to `Session.helper?` in limit diagnostics. -/
 def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Config) :
     ExpandM Unit := do
   let state ← get

@@ -130,7 +130,7 @@ structure Block (domain : Set X) (predicate : X → Prop) where
   rowCount : Nat
   /-- The actual residuals and bounds, with smoothness on the shared domain. -/
   rows : Fin rowCount → Row X domain
-/-- Satisfaction of all rows is equivalent to the original predicate. -/
+  /-- Satisfaction of all rows is equivalent to the original predicate. -/
   holds_iff : ∀ x, (∀ i, (rows i).Holds x) ↔ predicate x
 
 namespace Block

@@ -188,7 +188,7 @@ private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
     let typed := state.typed.replaceFVars state.sectionFVars sectionVars
     let type ← mkAppM ``Morew.Problem
       #[typed.presentation.domainType, typed.semanticValueType]
-    -- Retain definitions and occurrences in the emitted declaration telescope.
+    -- Retain definitions and occurrences in the emitted declaration value.
     let term ← liftMacroM state.view.toTermSyntax
     let carrier ← elabTerm term (some type)
     synthesizeSyntheticMVarsNoPostponing

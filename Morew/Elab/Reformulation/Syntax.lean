@@ -12,10 +12,10 @@ namespace Morew
 /-- Syntax category for a reformulation step. -/
 declare_syntax_cat reformulationStep
 
-/-- Substitute a decision using a registered parameterization or explicit coverage certificate. -/
+/-- Substitute a decision variable using a map whose range contains every feasible source point. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
-/-- Select a coordinate parameterization without registry fallback. -/
+/-- Select an explicit coordinate parameterization. -/
 syntax (name := substituteViaStep)
   "substitute " ident " := " term " via " term : reformulationStep
 /-- Append a named consequence of the complete current feasible predicate. -/
@@ -44,11 +44,11 @@ syntax (name := namedBoundOccurrence) ident : boundOccurrence
 /-- Parentheses distinguish expression matching from named selection. -/
 syntax (name := expressionBoundOccurrence) "(" term ")" : boundOccurrence
 
-/-- Bound an occurrence in the objective or a named constraint. -/
+/-- Introduce an upper bound `f(x) ≤ t` for a selected expression. -/
 syntax (name := epigraphAtStep)
   "epigraph " ident " at " boundOccurrence (" in " ident)?
     (" as " ident)? (" using " term)? : reformulationStep
-/-- Bound an occurrence from below. -/
+/-- Introduce a lower bound `t ≤ f(x)` for a selected expression. -/
 syntax (name := hypographAtStep)
   "hypograph " ident " at " boundOccurrence (" in " ident)?
     (" as " ident)? (" using " term)? : reformulationStep
