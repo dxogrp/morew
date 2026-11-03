@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic
+import Morew.Conic.Basic
+import Morew.Conic.SecondOrder
+import Morew.Conic.Exponential.Cone
+import Morew.Conic.PSD
 import Morew.Elab.Affine
 import Morew.Elab.State
 import Morew.Elab.Conic.Space
-import Morew.Elab.Conic.Evidence
+import Morew.Elab.Evidence
+import Morew.Elab.Conic.Nonnegative
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Symmetry
 import Morew.Conic.Power.Cone
@@ -279,19 +283,6 @@ private def membershipData (point body : Expr) (label? : Option Name)
   unless ← isDefEq body canonical do
     return .error (← rowError body "membership does not match the canonical cone" label?)
   return .ok (cone, value)
-
-/-- Recover native scalar or finite-vector nonnegative-cone coordinates after checking the
-membership instance. This does not unfold wrappers or certify affinity. -/
-def nonnegativeValue? (point body : Expr) : MetaM (Option Expr) := do
-  let result : Except Unit Expr ← State.withIsolatedMVars do
-    if !(body.isAppOfArity ``Membership.mem 5) || (← hasUnresolved body) then
-      return .error ()
-    match ← membershipData point body none with
-    | .ok (cone, value) =>
-        return if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
-            cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 then .ok value else .error ()
-    | .error _ => return .error ()
-  return result.toOption
 
 /-- Recover ordinary matrix coordinates of a native PSD predicate or canonical
 PSD membership. This validates the scalar and membership instances without

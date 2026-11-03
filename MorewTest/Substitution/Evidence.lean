@@ -5,8 +5,12 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Substitution.Evidence
 import Morew.Substitution
-import MorewTest.Affine.Support
+import MorewTest.ElabSupport
 import MorewTest.Environment
+
+assert_not_exists Morew.Elab.Conic.normalizeRow Morew.Elab.Conic.Plan.Result
+  Morew.Elab.Conic.Rewrite.planUnique Morew.Conic.Spectral.nuclearNorm_le_iff
+  Morew.Conic.LogDet.hypograph_iff
 
 /-! # Bounded range evidence and independent declaration premises -/
 
@@ -29,7 +33,7 @@ private def verify (point goal : Expr) (action : MetaM (Option Expr)) (success :
     checkWithKernel proof
     unless ← isDefEq (← inferType proof) goal do throwError "wrong coverage evidence type"
     unless !(← Morew.Elab.Expr.hasUnresolved proof) &&
-        !(← Morew.Elab.Conic.Evidence.hasPlaceholders proof) do
+        !(← Morew.Elab.Evidence.hasPlaceholders proof) do
       throwError "coverage evidence contains placeholders"
     discard <| Morew.Elab.Expr.depends point proof
   else if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then

@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Domain
+import Morew.Elab.Evidence.Sign
+import Morew.Elab.Conic
 
 /-!
 # Native affine cone memberships
@@ -148,7 +149,7 @@ private def expectSign (source : TSyntax `term) (strict accepted : Bool) : TermE
   let predicate ← instantiateMVars predicate
   lambdaTelescope predicate fun points body => do
     withLocalDeclD `retained body fun evidence => do
-      let result ← Morew.Elab.Conic.Domain.signFromRetained? points[0]! points[0]!
+      let result ← Morew.Elab.Evidence.Sign.signFromRetained? points[0]! points[0]!
         #[body] evidence strict
       unless result.isSome == accepted do
         throwError "unexpected retained membership sign result for {body}"

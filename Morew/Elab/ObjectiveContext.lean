@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Atom
-import Morew.Elab.Conic.Domain
+import Morew.Elab.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
@@ -126,18 +126,18 @@ private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :=
   return some (args[if ge then 3 else 2]!, args[if ge then 2 else 3]!)
 
 private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
-  if (← Expr.depends point value) || (← Morew.Elab.Rewrite.Plan.unresolved value) then return none
+  if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value
   for declaration in ← getLCtx do
     unless declaration.isImplementationDetail do
       if !(← Expr.depends point declaration.toExpr) &&
-          !(← Morew.Elab.Rewrite.Plan.unresolved declaration.toExpr) then
+          !(← Expr.hasUnresolved declaration.toExpr) then
         if ← isDefEq declaration.type q($value ≤ 0) then
           checkWithKernel declaration.toExpr
           return some declaration.toExpr
         if ← isDefEq declaration.type q($value < 0) then
           return some (← mkAppM ``nonpositiveOfNegative #[declaration.toExpr])
-  if let some proof ← Conic.Domain.constantSign? point q(-$value) false then
+  if let some proof ← Evidence.constantSign? point q(-$value) false then
     return some (← mkAppM ``nonpositiveOfNegNonnegative #[proof])
   return none
 
@@ -185,7 +185,7 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
       let coefficient := lhs[i]!
       if (← same coefficient rhs[i]!) && !(← Expr.depends point coefficient) then
         let j := 1 - i
-        if let some sign ← Conic.Domain.constantSign? point coefficient false then
+        if let some sign ← Evidence.constantSign? point coefficient false then
           let attempt : Except MessageData Expr ← liftM (inequality point lhs[j]! rhs[j]! bound).run
           if let .ok proof := attempt then
             return ← mkAppM (if i == 0 then ``mulLeft else ``mulRight) #[proof, sign]
@@ -219,7 +219,7 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
     MetaM (Except MessageData Expr) :=
   State.withIsolatedMVars do
     for input in inputs do
-      if ← Morew.Elab.Rewrite.Plan.unresolved input then
+      if ← Expr.hasUnresolved input then
         return .error m!"cannot certify an unresolved bound context"
     let result ← try action.run catch exception => pure (.error exception.toMessageData)
     match result with

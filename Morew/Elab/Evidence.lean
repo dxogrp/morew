@@ -10,17 +10,18 @@ import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 
 /-!
-# Independent conic parameter evidence
+# Independent parameter and sign evidence
 
 Exponent ranges use independent local hypotheses, their conjunction projections,
 one supplied finite-index specialization, and bounded exact numeral/rational
 evaluation. The `ofReal` bridge transports a checked real exponent greater than
 one. This does not combine symbolic inequalities or obtain decision-dependent
 premises from selected/generated rows.
-The same policy serves registered rules and direct parameterized-cone membership.
+The same policy serves registered rules, direct parameterized-cone membership,
+coordinate coverage, and objective-context recognition without importing a planner.
 -/
 
-namespace Morew.Elab.Conic.Evidence
+namespace Morew.Elab.Evidence
 
 open Lean Lean.Meta Qq
 
@@ -144,4 +145,23 @@ def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     return .ok proof
   return result.toOption
 
-end Morew.Elab.Conic.Evidence
+private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
+  le_of_lt h
+
+/-- Prove the sign of an independent real constant from an independent local
+hypothesis or bounded numeral/rational evaluation, using canonical real order. -/
+def constantSign? (point value : Expr) (strict : Bool)
+    (index? : Option Expr := none) : MetaM (Option Expr) := do
+  if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
+  let value : Q(ℝ) := value
+  let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
+  -- A coordinate of the canonical zero vector reduces to `Real.zero` rather
+  -- than numeral syntax; reflexivity supplies its sign without arithmetic search.
+  if !strict && (← isDefEq value q((0 : ℝ))) then return some q(le_refl (0 : ℝ))
+  if let some proof ← proveIndependent? point obligation index? then return some proof
+  if !strict then
+    if let some positive ← proveIndependent? point q(0 < $value) index? then
+      return some (← mkAppM ``nonnegativeOfPositive #[positive])
+  return none
+
+end Morew.Elab.Evidence

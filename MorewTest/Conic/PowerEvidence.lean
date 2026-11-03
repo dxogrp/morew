@@ -3,8 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Evidence
-import MorewTest.Affine.Support
+import Morew.Elab.Evidence
+import MorewTest.ElabSupport
 import MorewTest.Environment
 
 /-! # Independent exponent evidence and its deliberately bounded policy -/
@@ -22,7 +22,7 @@ private def check (term : TSyntax `term) (parameters : Nat) (success : Bool) :
       unless points.size == 1 do throwError "expected one decision point"
       let before ← getMCtx
       let environment ← getEnv
-      let result ← Morew.Elab.Conic.Evidence.proveIndependent? points[0]! goal
+      let result ← Morew.Elab.Evidence.proveIndependent? points[0]! goal
       unless result.isSome == success do
         throwError "unexpected independent exponent evidence result for {goal}"
       unless before.mvarCounter == (← getMCtx).mvarCounter &&

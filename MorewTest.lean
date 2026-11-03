@@ -55,6 +55,7 @@ import MorewTest.Conic.Terminal
 import MorewTest.Core
 import MorewTest.DerivedConstraint
 import MorewTest.Diagnostics
+import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
 import MorewTest.ExactConstraintLift

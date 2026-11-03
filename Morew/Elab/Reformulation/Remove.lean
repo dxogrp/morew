@@ -21,7 +21,7 @@ open Morew.Elab.Rewrite.Decomposition
 
 private def complete (expression : Expr) : MetaM Bool := do
   return !(← Expr.hasUnresolved expression) &&
-    !(← Conic.Evidence.hasPlaceholders expression)
+    !(← Evidence.hasPlaceholders expression)
 
 private def retainedRows (presentation : PresentationState) (index : Nat) : Array Expr :=
   (presentation.constraints.extract 0 index ++

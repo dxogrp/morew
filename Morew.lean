@@ -35,10 +35,9 @@ import Morew.Elab.Affine.Expansion
 import Morew.Elab.Affine.Space
 import Morew.Elab.Atom
 import Morew.Elab.Conic
-import Morew.Elab.Conic.Domain
-import Morew.Elab.Conic.Evidence
 import Morew.Elab.Conic.Form
 import Morew.Elab.Conic.MatrixDomain
+import Morew.Elab.Conic.Nonnegative
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite
@@ -46,6 +45,8 @@ import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Symmetry
 import Morew.Elab.Conic.Terminal
+import Morew.Elab.Evidence
+import Morew.Elab.Evidence.Sign
 import Morew.Elab.Expansion
 import Morew.Elab.Expr
 import Morew.Elab.NLP.Domain

@@ -40,7 +40,7 @@ private def materializeRemove (state : ReformState) (selector : TSyntax `ident)
           if (← getThe Core.State).messages.hasErrors then throwAbortTerm
           let proof ← instantiateMVars proof
           if (← Morew.Elab.Expr.hasUnresolved proof) ||
-              (← Morew.Elab.Conic.Evidence.hasPlaceholders proof) then
+              (← Morew.Elab.Evidence.hasPlaceholders proof) then
             throwError "constraint removal proof contains unresolved metavariables or placeholders"
           withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
             checkWithKernel proof
