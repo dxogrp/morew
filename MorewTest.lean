@@ -29,6 +29,7 @@ import MorewTest.Conic.Form.Support
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.Negation
+import MorewTest.Conic.Nonnegative
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
