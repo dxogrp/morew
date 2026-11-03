@@ -8,6 +8,7 @@ import MorewTest.Affine.LocalContext
 import MorewTest.Affine.Matrix
 import MorewTest.Affine.RealPower
 import MorewTest.Affine.Reification
+import MorewTest.Affine.RowSupport
 import MorewTest.Affine.StateIsolation
 import MorewTest.Affine.Support
 import MorewTest.Affine.TypedPresentation
