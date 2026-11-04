@@ -11,7 +11,7 @@ import Lean.Elab.Command
 
 Elaborate source terms and check recognition results without changing their heads,
 operands, or metadata. This module also supplies the named-helper fixture shared
-by recognition-boundary and surface tests.
+by recognition-boundary and command tests.
 -/
 
 namespace MorewTest.Atom

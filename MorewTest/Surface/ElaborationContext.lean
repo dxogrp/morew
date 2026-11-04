@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Basic
 
 /-!
-# Surface elaboration contexts
+# Problem elaboration contexts
 
 Exercise ambient instances, coercions, section parameters, and macro hygiene.
 -/

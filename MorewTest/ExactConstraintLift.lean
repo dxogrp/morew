@@ -138,7 +138,7 @@ example : ExactConstraintLift
     (fun point : ℤ × ℤ => point.2 ≤ point.1 ^ 2) :=
   squareHypographRepresentation.toExactConstraintLift Prod.fst Prod.snd
 
-/-! Exactness requires existence, not a unique auxiliary witness. -/
+/-! Auxiliary values need not be unique. -/
 
 def nonuniqueProductLift : ExactConstraintLift (fun x : ℤ => x = 0) where
   Auxiliary := ℤ × Bool

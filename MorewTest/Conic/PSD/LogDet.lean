@@ -98,7 +98,7 @@ example (p t : ℝ) :
   rw [hasLift_iff _ _ (by decide)]
   simp [Matrix.posDef_diagonal_iff, Fn.logDet]
 
--- This directly checks the scalar witness, including the exponential order.
+-- Check the auxiliary scalar values and the order of exponential-cone coordinates.
 example (p : ℝ) (hp : 0 < p) :
     HasLift (Matrix.diagonal (fun _ : Fin 1 => p)) (Real.log p) := by
   refine ⟨fun _ => p, fun _ => Real.log p, ?_, ?_, by simp⟩

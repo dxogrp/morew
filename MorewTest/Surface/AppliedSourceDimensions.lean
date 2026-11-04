@@ -255,7 +255,7 @@ end
 namespace ShadowedParameters
 
 -- Proof irrelevance can make a certificate with the wrong argument typecheck.
--- Inspect the applications structurally, including the conic theorem's witness.
+-- Inspect the applications structurally, including the conic theorem's proof term.
 private def checkParameterApplication (declaration : Lean.Name) (parameter body : Lean.Expr)
     (applicationName : Lean.Name) (nested : Bool := false) : Lean.MetaM Unit := do
   let some application := body.find? (·.isAppOfArity applicationName 1)

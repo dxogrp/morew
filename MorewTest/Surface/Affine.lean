@@ -8,7 +8,7 @@ import Morew.Elab.Conic
 import MorewTest.Surface.Conic
 
 /-!
-# Affine recognition from surface presentations
+# Affine recognition from problem presentations
 
 Check the typed objective projections and predicates used by the reformulation runner.
 -/

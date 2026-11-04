@@ -9,7 +9,7 @@ import Morew.Conic
 # Manual conic representations
 
 The narrow semantic import provides conic certificates without loading the
-surface language or the typed reformulation runner.
+modeling language or the typed reformulation runner.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView Morew.Elab.Reformulation.RunnerState

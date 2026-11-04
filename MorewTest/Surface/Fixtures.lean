@@ -7,7 +7,7 @@ import Morew.Syntax
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
-# Shared surface problem fixtures
+# Shared problem declarations
 
 Source declarations for reformulation and diagnostic tests.
 -/

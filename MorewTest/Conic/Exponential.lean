@@ -10,7 +10,7 @@ import Mathlib.Tactic.NormNum
 # Exponential cones and exact finite representations
 
 The public semantic API certifies finite representations independently of the
-surface language. Counterexamples distinguish totalized real formulas from
+modeling language. Counterexamples distinguish totalized real formulas from
 their logarithm and entropy domains.
 -/
 

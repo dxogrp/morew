@@ -11,7 +11,7 @@ import Morew.Elab.Reformulation.Presentation
 
 Objective and constraint adapters consume typed entries, preserve both
 optimization senses and the explicit order-dual type, and report objective
-context without importing the surface syntax.
+context without importing the modeling syntax.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView Morew.elabProblem Morew.elabPrintProblem

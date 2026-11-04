@@ -10,7 +10,7 @@ import MorewTest.ElabSupport
 # Checked final membership normalization
 
 Exercise actual typed predicates, their exact equivalences, preserved binding
-identities and native operations before surface printing is involved.
+identities and native operations before problem printing is involved.
 -/
 
 namespace MorewTest.Conic.Normalize
@@ -154,7 +154,7 @@ run_cmd liftTermElabM do
     (← `(fun p : ℝ × ℝ => -helper p.1 ≤ p.2))
     (← `(fun p : ℝ × ℝ => p.2 + helper p.1 ∈ ℝ₊))
 
--- In a surface model, local definitions are free let variables until the row
+-- In a model, local definitions are free let variables until the row
 -- is rendered. Equal definition bodies must not merge their binding identities.
 run_cmd liftTermElabM do
   withLocalDeclD `x (mkConst ``Real) fun x => do

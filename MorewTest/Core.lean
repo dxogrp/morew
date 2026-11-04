@@ -10,7 +10,7 @@ import Mathlib.Data.Real.Basic
 # Tests for the semantic core
 
 These compile-time examples exercise the order-generic definitions directly,
-without depending on the surface syntax or transformation framework.
+without depending on the modeling syntax or transformation framework.
 -/
 
 namespace MorewTest.Core

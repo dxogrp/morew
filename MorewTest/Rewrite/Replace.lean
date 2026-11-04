@@ -10,7 +10,7 @@ import Mathlib.Data.Real.Basic
 # Exact ordered constraint rewrites
 
 These tests check the target problem and the full equivalence type, including
-the order instance for maximization, without relying on surface planning.
+the order instance for maximization, without relying on command elaboration.
 -/
 
 namespace MorewTest.Rewrite.Replace

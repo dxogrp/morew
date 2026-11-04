@@ -183,8 +183,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertRowUnsupported (← `(fun (n : Nat) => fun x : Matrix (Fin n) (Fin n) ℝ =>
     (x.transpose * x).PosSemidef)) 1
 
-/-! Neither a feasibility-local assumption nor an unresolved/placeholder
-independent witness may become a global symmetry certificate. -/
+/-! A proof of global symmetry must be complete and independent of feasibility. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun (n : Nat) (F : ℝ → Matrix (Fin n) (Fin n) ℝ) =>

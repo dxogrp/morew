@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Substitution.Rules
 
-/-! Imported downstream coordinate rules for registry and replay tests. -/
+/-! Imported downstream coordinate rules for registry and reconstruction tests. -/
 
 namespace MorewTest.Substitution.Registry.Source
 

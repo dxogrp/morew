@@ -8,7 +8,7 @@ import MorewTest.Surface.Fixtures
 import MorewTest.DiagnosticsSupport
 
 /-!
-# Surface diagnostics and rollback
+# Command diagnostics and rollback
 
 Exercise parser rejection, name collisions, certificate errors, and atomic rollback.
 -/

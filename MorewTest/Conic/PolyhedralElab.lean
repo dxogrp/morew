@@ -12,7 +12,7 @@ import Mathlib.Analysis.SpecialFunctions.Exp
 
 These tests check exactness, ordered row decomposition, native instance
 recognition, local evidence, caller metavariable state, and custom whole-predicate
-certificate adapters independently of the surface reformulation command.
+certificate adapters independently of the reformulation command.
 -/
 
 namespace MorewTest.Conic.PolyhedralElab
