@@ -10,8 +10,8 @@ htmlSplit := .never
 %%%
 
 A conic formulation has an affine objective and affine maps into cones.
-A smooth nonlinear formulation has a twice continuously differentiable objective
-and scalar residuals on an open domain containing every feasible point.
+A smooth nonlinear formulation has an objective and scalar residuals that are
+twice continuously differentiable on an open domain containing the feasible set.
 
 :::table +header
 *
@@ -21,8 +21,8 @@ and scalar residuals on an open domain containing every feasible point.
   * Piecewise affine expressions
   * Absolute values, positive parts, and finite minima or maxima. Epigraphs of convex functions and hypographs of concave functions have conic and smooth representations.
 *
-  * Quadratic expressions
-  * Second-order cones. The quotient requires a positive denominator.
+  * Quadratic and quadratic-over-linear expressions
+  * Second-order cones. Quadratic-over-linear expressions require a positive denominator.
 *
   * Vector norms
   * Linear, second-order, and power cones. Finite power-cone norms use $`1<p<\infty`. Euclidean bounds also have smooth squared formulations.
@@ -48,14 +48,15 @@ and scalar residuals on an open domain containing every feasible point.
 
 # Conventions
 
-`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the one-norm, Euclidean norm,
-and infinity norm. The native norm of `Fin n → ℝ` is the infinity norm;
+`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote $`\lVert x\rVert_1`,
+$`\lVert x\rVert_2`, and $`\lVert x\rVert_\infty`.
+The native norm of `Fin n → ℝ` is the infinity norm;
 `EuclideanSpace` and `WithLp` specify other norms through their types.
 
-Lean's real logarithm, division, and matrix inverse are total functions.
-The assumptions of each representation state where its mathematical equivalence
-holds. For example, `Fn.relativeEntropy a b` is $`a\log(a/b)`, with value zero
-when $`a=0`; its conic representation uses $`a\geq0` and $`b>0`.
+Lean defines logarithms, division, and matrix inverses at all inputs; each
+representation specifies its domain assumptions. For example,
+`Fn.relativeEntropy a b` represents $`a\log(a/b)` for $`a>0` and $`b>0`,
+extended to zero at $`a=0`.
 The [function API](api/Morew/Fn.html) gives the formulas and dimension conventions.
 The [smoothness API](api/Morew/NLP/Smooth.html) and [domain API](api/Morew/NLP/Domain.html)
 describe the smooth nonlinear representations.

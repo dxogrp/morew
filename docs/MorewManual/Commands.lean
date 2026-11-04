@@ -33,8 +33,7 @@ proofs.
   * Replace a selected expression $`f(x)` by $`t` and add $`t\leq f(x)`.
 :::
 
-For a selected expression, Morew proves that the replacement preserves global
-equivalence. The selectors and optional clauses are:
+The selectors and optional clauses are:
 
 - `at name` selects a direct reference to a model-local `let` expression.
 - `at (term)` selects an explicit subexpression. Exactly one match is required.
@@ -95,8 +94,7 @@ Without either clause, Morew selects a registered rule automatically.
 representation. Append `using rule` to choose its representation explicitly.
 These steps may introduce variables and multiple constraints.
 
-A script may stop at any intermediate formulation and still supplies its
-equivalence certificate. A final `conic` or `nlp` command rewrites the remaining
-constraints as needed, certifies the entire target problem, and ends the script.
-For a reformulation named `q`, it also supplies `q.isConic` or `q.isSmoothNLP`,
-respectively.
+A final `conic` or `nlp` command rewrites the remaining constraints, certifies
+the target problem, and ends the script. For a reformulation named `q`, it
+supplies `q.isConic` or `q.isSmoothNLP`, respectively. These commands are optional;
+every reformulation supplies an equivalence certificate.
