@@ -110,7 +110,7 @@ example : GlobalEquivalence (Problem.mk objective (fun _ => True))
   removeConstraintEquivalence _ _ (fun _ _ => True.intro)
 
 -- Contradictory retained constraints can justify any selected row, without
--- inventing a feasible source point or requiring an inhabitant of X.
+-- inventing a feasible source point or requiring an inhabitant of `X`.
 private def infeasibleDecomposition (selected : X → Prop) :
     ConstraintDecomposition (Problem.mk objective (fun _ => False)) selected where
   remainder _ := False
@@ -123,7 +123,7 @@ example (selected : X → Prop) :
   removeConstraintEquivalence _ _ (fun _ impossible => False.elim impossible)
 
 -- Merely being infeasible is insufficient to discard the contradictory row
--- itself: the proposed retained predicate here is True.
+-- itself: the proposed retained predicate here is `True`.
 private def necessaryDecomposition :
     ConstraintDecomposition (Problem.mk (fun _ : Unit => ()) (fun _ => False))
       (fun _ => False) where

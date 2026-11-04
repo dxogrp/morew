@@ -223,7 +223,7 @@ reformulation unrelatedIndexTarget : (unrelatedIndex c) := by
   nlp
 end IndexScope
 
--- The helper expands to x² + 1, whose positivity can be proved independently
+-- The helper expands to `x² + 1`, whose positivity can be proved independently
 -- of the decision-dependent proof let. Disabling expansion retains opacity.
 def helperSource :=
   problem (x : ℝ)

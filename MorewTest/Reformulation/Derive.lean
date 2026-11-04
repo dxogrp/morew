@@ -141,7 +141,7 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- Explicit True rows remain visible through later normalization, and a
+-- Explicit `True` rows remain visible through later normalization, and a
 -- conjunction stays a single named row rather than splitting its labels.
 reformulation explicitRowsRetained : interval := by
   derive tag : True using (by intro _ _; trivial)

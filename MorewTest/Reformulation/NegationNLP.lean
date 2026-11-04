@@ -95,7 +95,7 @@ example : minimumReady.nlpForm.data.sense = .minimize := rfl
 example (x t : ℝ) : minimumReady.feasible (x, t) ↔
     -t ≤ x ^ 2 ∧ -t ≤ Real.sin x := Iff.rfl
 
--- Both endpoints, nested signs, and ≥ retain their original semantics.
+-- Both endpoints, nested signs, and `≥` retain their original semantics.
 def comparisons :=
   problem (x t : ℝ)
     minimize t

@@ -30,7 +30,7 @@ def macroCoverage : FeasibleSurjection macroSource
   preimage point := (point.1.1 - (point.1.2 + 1), point.1.2)
   rightInverse point := by simp
 
--- The inserted expression must retain y's macro scope after expanding shift.
+-- The inserted expression must retain `y`'s macro scope after expanding `shift`.
 reformulation macroTarget : macroSource := by
   substitute x := u + shift using macroCoverage
 
@@ -68,7 +68,7 @@ def generatedCoverage : FeasibleSurjection squareLift
   preimage point := (point.1.1 - point.1.2, point.1.2)
   rightInverse point := by simp
 
--- No model-local definitions are present: a's identity must still be preserved.
+-- No model-local definitions are present: `a`'s identity must still be preserved.
 reformulation generatedTarget : squareLift := by
   substitute x := u + a using generatedCoverage
 
@@ -126,7 +126,7 @@ def capturedCoverage : FeasibleSurjection macroSource
   preimage point := (point.1.1 - 7, point.1.2)
   rightInverse point := by simp
 
--- A macro's captured global shift is not the model-local shift := y + 1.
+-- A macro's captured global `shift` is not the model-local `shift := y + 1`.
 reformulation captured : macroSource := by
   substitute x := withCapturedShift u using capturedCoverage
 

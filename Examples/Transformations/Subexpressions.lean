@@ -66,7 +66,7 @@ def nonlinear :=
       error : |x ^ 2 - y| ≤ t
       budget : |x| + y ^ 2 ≤ 10
 
--- Introduce a direct bound on |x| before rewriting the budget constraint.
+-- Introduce a direct bound on `|x|` before rewriting the budget constraint.
 reformulation smoothConstraints : nonlinear := by
   nlp at error using Rewrite.absEpigraph
   epigraph a at (|x|) in budget as magnitude

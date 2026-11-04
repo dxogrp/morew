@@ -12,7 +12,7 @@ open scoped Matrix
 /-!
 # Second-order cone models
 
-For a given m × n matrix A and vector b ∈ ℝᵐ, nonnegative least squares
+For a given `m × n` matrix `A` and vector `b ∈ ℝᵐ`, nonnegative least squares
 in norm form is
 
 ```math
@@ -22,7 +22,7 @@ in norm form is
 \end{array}
 ```
 
-with variable x ∈ ℝⁿ and componentwise inequality.
+with variable `x ∈ ℝⁿ` and componentwise inequality.
 -/
 
 namespace Examples.Models.SecondOrder
@@ -63,7 +63,7 @@ namespace QuadraticOverLinear
 noncomputable section
 
 /-!
-The quadratic-over-linear model has scalar variables x and y:
+The quadratic-over-linear model has scalar variables `x` and `y`:
 
 ```math
 \begin{array}{ll}

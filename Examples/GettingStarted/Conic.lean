@@ -52,7 +52,7 @@ def p :=
     subject to
       budget : residual x ≤ 0
 
--- Affine certification expands transparent def/abbrev helpers automatically.
+-- Affine certification expands transparent `def`/`abbrev` helpers automatically.
 reformulation conicProb : p := by
   conic
 

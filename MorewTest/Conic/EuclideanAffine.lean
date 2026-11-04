@@ -9,7 +9,7 @@ import Morew.Elab.Conic.Space
 /-!
 # Affine coordinates of Euclidean decision spaces
 
-The L2 wrapper preserves affine structure and differs from the L∞ norm on
+The `L2` wrapper preserves affine structure and differs from the `L∞` norm on
 function spaces. Certificates retain canonical operations under unrelated
 local instances.
 -/

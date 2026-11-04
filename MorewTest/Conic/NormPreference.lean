@@ -9,7 +9,7 @@ import MorewTest.Environment
 import Lean.Meta.Tactic.AuxLemma
 
 /-!
-# Automatic SOC preference for native L2 bounds
+# Automatic SOC preference for native `L2` bounds
 
 Automatic selection prefers SOC to the built-in power representation. Explicit
 selection and custom-rule ambiguity retain their behavior. Certificates check
@@ -91,7 +91,7 @@ private def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `te
     ← `(fun z : ((Fin 2 → ℝ) × ℝ) × (Fin 2 → ℝ) =>
       ∀ i, (z.2 i, z.1.2, z.1.1 i) ∈ POW $exponent)]
 
--- Both built-in L2 candidates need an evidence-generated declaration. The
+-- Both built-in `L2` candidates need an evidence-generated declaration. The
 -- preferred SOC certificate must retain its own declaration while discarding
 -- the power candidate's declaration; ambiguity must discard every candidate.
 private def checkCandidateEvidence (ambiguous : Bool := false)
@@ -192,7 +192,7 @@ noncomputable def customSOC {n : Nat} :
 section
 attribute [local morew_conic] customSOC
 
--- The preference removes Power.normEpigraph, not the independent custom success.
+-- The preference removes `Power.normEpigraph`, not the independent custom success.
 run_cmd liftTermElabM do
   let source ← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2)
   reject source
@@ -217,7 +217,7 @@ run_cmd liftTermElabM do
   reject source
     "ambiguous exact conic rules: Morew.Conic.Power.normEpigraph, MorewTest.Conic.NormPreference.customPower; select one with `using`"
   check source (← powerRows (← `((1 / 3 : ℝ)))) true (some ``customPower)
-  -- At L2 the preference removes only the built-in power declaration, not its alias.
+  -- At `L2` the preference removes only the built-in power declaration, not its alias.
   reject (← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2))
     "ambiguous exact conic rules: Morew.Conic.SecondOrder.normEpigraph, MorewTest.Conic.NormPreference.customPower; select one with `using`"
 end

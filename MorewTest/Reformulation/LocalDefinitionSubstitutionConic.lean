@@ -13,8 +13,8 @@ namespace MorewTest.Reformulation.LocalDefinitionSubstitution
 open Morew
 noncomputable section
 
--- A preserved proof block keeps log(exp u) in the source presentation, while
--- terminal conic certification recognizes the checked affine objective u.
+-- A preserved proof block keeps `log(exp u)` in the source presentation, while
+-- terminal conic certification recognizes the checked affine objective `u`.
 reformulation proofConic : proofSource := by
   substitute x := Real.exp u
   conic

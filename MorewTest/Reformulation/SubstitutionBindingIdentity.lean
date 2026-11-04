@@ -62,7 +62,7 @@ reformulation inlineTarget : inlineSource := by
 example : GlobalEquivalence inlineSource inlineTarget := inlineTarget.equivalence
 example (u : ℝ) : inlineTarget.objective u = u := by simp [inlineTarget]
 
--- A preexisting inner u must not capture the newly introduced decision u.
+-- A preexisting inner `u` must not capture the newly introduced decision `u`.
 def captureSource :=
   problem (x : ℝ)
     let fn := fun (u : ℝ) => x + u
@@ -80,7 +80,7 @@ example (u : ℝ) : captureTarget.objective u =
 private def x : ℝ := 3
 macro "capturedX" : term => `(x)
 
--- The decision x and the global x captured by the macro are distinct bindings.
+-- The decision `x` and the global `x` captured by the macro are distinct bindings.
 def globalSource :=
   problem (x : ℝ)
     let offset := capturedX

@@ -81,7 +81,7 @@ run_cmd liftTermElabM do
   -- Definitionally equal dimensions may select different instance entries.
   checkReplay (← `((⟨0, by decide⟩ : Fin (3 - 1)))) #["3 - 1", "⟨"]
   checkReplay (← `(fun i : Fin (3 - 1) => i + i)) #["3 - 1"]
-  -- Replacing either constructor by castSucc/succ can change the Add instance.
+  -- Replacing either constructor by `castSucc`/`succ` can change the `Add` instance.
   checkReplay (← `(fun j : Fin 1 =>
     (⟨j.val, by omega⟩ : Fin 2) + (⟨j.val, by omega⟩ : Fin 2)))
   checkReplay (← `(fun j : Fin 1 =>
@@ -99,7 +99,7 @@ local instance (priority := high) : Add (Indexed (⟨0, Nat.zero_lt_two⟩ : Fin
   ⟨fun _ _ => ⟨1⟩⟩
 
 run_cmd liftTermElabM do
-  -- A numeral's Fin type alone does not preserve dependent instance lookup.
+  -- A numeral's `Fin` type alone does not preserve dependent instance lookup.
   checkReplay (← `(fun u : ((i : Fin 2) → Indexed i) =>
     (u (⟨0, Nat.zero_lt_two⟩ : Fin 2) + u (⟨0, Nat.zero_lt_two⟩ : Fin 2)).value))
   checkReplay (← `(let index : Fin 2 := ⟨0, Nat.zero_lt_two⟩
@@ -141,7 +141,7 @@ noncomputable section
 
 local instance (priority := high) (j : Fin 2) : CoeDep Nat j.val ℝ := ⟨7⟩
 
--- Ordinary coercion notation can itself resynthesize CoeDep; retain the
+-- Ordinary coercion notation can itself resynthesize `CoeDep`; retain the
 -- explicit cast when testing readable reconstruction under these altered instances.
 set_option pp.coercions false
 

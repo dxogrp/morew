@@ -182,7 +182,7 @@ def Cone.powerSet (_ : ℝ) : Set (ℝ × ℝ × ℝ) := Set.univ
 variable (n : ℕ) (hn : 0 < n)
 
 -- Captured references and original proofs must survive exact re-elaboration.
--- Readable source reconstruction includes the Fin.mk proofs omitted by mathematical chain views.
+-- Readable source reconstruction includes the `Fin.mk` proofs omitted by mathematical chain views.
 -- Checking the declaration also rules out unresolved proofs.
 run_cmd do
   let readable := #[``GeometricMean.source, ``InverseProduct.source]

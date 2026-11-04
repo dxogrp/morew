@@ -18,7 +18,7 @@ namespace Examples.Advanced.Restrict
 open Morew
 noncomputable section
 
--- Restrict to nonnegative points by replacing x with |x|.
+-- Restrict to nonnegative points by replacing `x` with `|x|`.
 def maximum :=
   problem (x : ℝ)
     maximize x
@@ -31,7 +31,7 @@ def absoluteRepair : GlobalImprovement maximum
   map point := ⟨|point.1|,
     ⟨⟨(by norm_num : (-1 : ℝ) ≤ 0).trans (abs_nonneg _), abs_le.mpr point.2⟩,
       abs_nonneg _⟩⟩
-  -- OrderDual makes objective_le require x ≤ |x| for this maximization problem.
+  -- `OrderDual` makes `objective_le` require `x ≤ |x|` for this maximization problem.
   objective_le point := le_abs_self point.1
 
 reformulation nonnegativeMaximum : maximum := by
@@ -63,8 +63,8 @@ reformulation ordered : symmetric := by
 #printp ordered
 example : GlobalEquivalence symmetric ordered := ordered.equivalence
 
--- After x := u², choose u ≥ 0 using the square-root preimage.
--- This preserves u² and retains the optimum u = 2 from u = ±2.
+-- After `x := u²`, choose `u ≥ 0` using the square-root preimage.
+-- This preserves `u²` and retains the optimum `u = 2` from `u = ±2`.
 def nonnegativeSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2

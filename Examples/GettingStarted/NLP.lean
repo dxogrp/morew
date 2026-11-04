@@ -12,7 +12,7 @@ import Morew.Reformulation.NLP
 Bare `nlp` applies supported rewrites and certifies a smooth NLP, recording its
 form and equivalence certificate.
 
-The first problem has scalar variables x, y, and t:
+The first problem has scalar variables `x`, `y`, and `t`:
 
 ```math
 \begin{array}{ll}
@@ -47,7 +47,7 @@ def negativeMinimum :=
   problem (x : ℝ)
     minimize -min (x ^ 2) (Real.sin x)
 
--- The bound -min(f, g) ≤ t becomes -f ≤ t and -g ≤ t, both smooth here.
+-- The bound `-min(f, g) ≤ t` becomes `-f ≤ t` and `-g ≤ t`, both smooth here.
 reformulation negativeMinimumNLP : negativeMinimum := by
   epigraph t
   nlp

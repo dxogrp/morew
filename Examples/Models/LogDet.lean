@@ -8,7 +8,7 @@ import Morew.Reformulation.Conic
 /-!
 # Log-determinant optimization
 
-We maximize the log-determinant over symmetric 2 × 2 matrices X:
+We maximize the log-determinant over symmetric 2 × 2 matrices `X`:
 
 ```math
 \begin{array}{ll}
@@ -44,7 +44,7 @@ example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
 example : maximumConic.conicForm.data.rowCount = 5 := rfl
 
--- The conic log-determinant constraints imply X ≻ 0, so the domain row is redundant.
+-- The conic log-determinant constraints imply `X ≻ 0`, so the domain row is redundant.
 reformulation maximumWithoutDomainConic : maximum := by
   hypograph t as logDet_bound
   conic at logDet_bound
@@ -71,7 +71,7 @@ def nativeMaximum :=
       domain : X.toMatrix.PosDef
       normalization : X.toMatrix.trace = 2
 
--- The log-determinant rule also accepts the semidefinite representation of X ≻ 0.
+-- The log-determinant rule also accepts the semidefinite representation of `X ≻ 0`.
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound
   conic at domain

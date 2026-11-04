@@ -191,7 +191,7 @@ def delayedNumeralSource :=
 
 namespace ChangedNorm
 
--- Re-elaboration must preserve the imported L2 operator norm when another
+-- Re-elaboration must preserve the imported `L2` operator norm when another
 -- matrix norm is in scope.
 local instance (m n : Nat) : Norm (Matrix (Fin m) (Fin n) ℝ) := ⟨fun _ => 37⟩
 
@@ -305,7 +305,7 @@ def mixed (E : Type v) [Norm E] :=
   problem (x : E) minimize ‖x‖ + mixedValue.{_, u} E
 
 -- A universe appearing in a constant's type can still be unconstrained by
--- the enclosing term: Nonempty discards the sort level from its result.
+-- the enclosing term: `Nonempty` discards the sort level from its result.
 def hidden :=
   problem (x : ℝ) minimize ‖x‖ + if Nonempty levelType.{u} then 1 else 0
 
@@ -362,8 +362,8 @@ def real :=
   letI : Norm ℝ := ⟨fun _ => ExplicitUniverseSource.levelValue.{w}⟩
   problem (x : ℝ) minimize ‖x‖
 
--- The instance's value refers to the universe of E even though the reference
--- itself has type ℝ. Re-elaborating under another universe name must preserve that link.
+-- The instance's value refers to the universe of `E` even though the reference
+-- itself has type `ℝ`. Re-elaborating under another universe name must preserve that link.
 def anchored (E : Type u) :=
   letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{u}⟩
   problem (x : E) minimize ‖x‖

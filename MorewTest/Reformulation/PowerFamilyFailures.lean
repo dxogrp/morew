@@ -136,7 +136,7 @@ assert_power_family_atomic%
 reformulation alteredNormExplicitRejected : alteredNorm := by
   conic at bound using Conic.Power.normEpigraph
 
--- The same source succeeds with L1; selecting the inapplicable power rule must
+-- The same source succeeds with `L1`; selecting the inapplicable power rule must
 -- fail instead of falling back to that registered representation.
 #guard_error_fragments ["bound", "required"] in
 assert_power_family_atomic%

@@ -191,7 +191,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  -- L2 prefers the direct one-row SOC representation. Selecting L1 still
+  -- `L2` prefers the direct one-row SOC representation. Selecting `L1` still
   -- rejects the incompatible norm carrier.
   expectPlan (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) 1 false
   expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "instance"

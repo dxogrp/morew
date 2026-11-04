@@ -317,7 +317,7 @@ reformulation noCustomMembership : customMembership := by
   conic
 
 -- The problem checkpoint already reduces an explicit constant relation to
--- True. Terminal conversion certifies that exact normalized predicate without
+-- `True`. Terminal conversion certifies that exact normalized predicate without
 -- applying a native rule to the discarded operation instance.
 def reducibleConstantRelations :=
   problem (x : ℝ)
@@ -335,7 +335,7 @@ example : GlobalEquivalence reducibleConstantRelations constantRelationsTarget :
   constantRelationsTarget.equivalence
 
 -- Normalizing an affine sibling must not reinterpret a constant relation that
--- the semantic checkpoint already reduced to True. Keep its original leaf,
+-- the semantic checkpoint already reduced to `True`. Keep its original leaf,
 -- the nested conjunctions, and the separate model-local binding identities.
 structure PropositionHolder where
   proposition : Prop

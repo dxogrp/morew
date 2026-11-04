@@ -299,7 +299,7 @@ reformulation latePlaceholder : source := by
   derive first : True using derive_completed%
   derive second : x = x using derive_synthetic_sorry%
 
--- Reuse a rejected name to check recovery, and retain an explicit True row.
+-- Reuse a rejected name to check recovery, and retain an explicit `True` row.
 reformulation latePlaceholder : source := by
   derive first : True using derive_completed%
 

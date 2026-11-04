@@ -8,8 +8,8 @@ import Morew.Reformulation.Conic
 /-!
 # Schur-complement reformulation
 
-For a positive definite 2 × 2 matrix A, the variables are a 2 × 2 matrix B
-and a scalar t:
+For a positive definite 2 × 2 matrix `A`, the variables are a 2 × 2 matrix `B`
+and a scalar `t`:
 
 ```math
 \begin{array}{ll}
@@ -50,7 +50,7 @@ def schurModel (A : SymmetricMatrix 2) :=
 
 variable (A : SymmetricMatrix 2) (hA : A.toMatrix.PosDef)
 
--- The Schur-complement rule uses the positive definiteness hypothesis hA.
+-- The Schur-complement rule uses the positive definiteness hypothesis `hA`.
 reformulation schurConic : (schurModel A) := by
   conic at schur using schurCertificate
   conic

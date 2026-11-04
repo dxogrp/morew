@@ -272,7 +272,7 @@ run_cmd liftTermElabM do
 private def hiddenPositive (c : ℝ) : Prop := 0 < c
 
 -- A retained row about parameters still belongs to the controlled row policy;
--- it cannot become an independent local hypothesis merely by ignoring x.
+-- it cannot become an independent local hypothesis merely by ignoring `x`.
 run_cmd liftTermElabM do
   for row in #[← `(fun c : ℝ => fun _x : ℝ => 0 < c),
       ← `(fun c : ℝ => fun _x : ℝ => hiddenPositive c)] do

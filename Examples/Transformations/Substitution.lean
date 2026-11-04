@@ -65,8 +65,8 @@ def scaled :=
       slope : 0 < a
       budget : x ≤ 4
 
--- The coefficient a is another optimization variable. Its constraint 0 < a
--- gives the preimage u = x / a; substitution and its preimage both preserve a.
+-- The coefficient `a` is another optimization variable. Its constraint `0 < a`
+-- gives the preimage `u = x / a`; substitution and its preimage both preserve `a`.
 reformulation retainedCoefficient : scaled := by
   substitute x := a * u
 
@@ -83,8 +83,8 @@ def p :=
 
 #printp p
 
--- Positivity makes x = exp u a surjective parameterization of feasible x.
--- The objective becomes u², whose epigraph is the intermediate problem.
+-- Positivity makes `x = exp u` a surjective parameterization of feasible `x`.
+-- The objective becomes `u²`, whose epigraph is the intermediate problem.
 reformulation exponentialEpigraph : p := by
   substitute x := Real.exp u
   epigraph t

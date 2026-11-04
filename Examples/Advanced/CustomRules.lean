@@ -71,7 +71,7 @@ example : IsConic (selected center) := selected.isConic center
 
 end
 
--- The equation y = |x| is equivalent to 0 ≤ y and y² = x².
+-- The equation `y = |x|` is equivalent to `0 ≤ y` and `y² = x²`.
 -- Register this graph formula for smooth NLP reformulations.
 @[morew_nlp]
 def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
@@ -90,7 +90,7 @@ def signedGraph :=
     minimize y
     subject to graph : y = -|x ^ 2 - 1|
 
--- Negation changes the graph equation to -y = |x² - 1|. The registered
+-- Negation changes the graph equation to `-y = |x² - 1|`. The registered
 -- formula expresses this equation using smooth polynomial constraints.
 reformulation signedGraphNLP : signedGraph := by nlp
 
@@ -118,7 +118,7 @@ def logarithmicBound :=
       positive : 1 ≤ x
       bound : Real.log x ≤ t
 
--- `positive` supplies 0 < x; the rewrite adds x = exp u and u ≤ t.
+-- `positive` supplies `0 < x`; the rewrite adds `x = exp u` and `u ≤ t`.
 reformulation logarithmicNLP : logarithmicBound := by
   nlp at bound using positiveLogEpigraph
   nlp

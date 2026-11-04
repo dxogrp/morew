@@ -213,7 +213,7 @@ reformulation continued : targetedNLP := by
 example : GlobalEquivalence targetedNLP continued := continued.equivalence
 example : IsConic continued := continued.isConic
 
--- Unit remains the representation of an absent auxiliary optimization variable.
+-- `Unit` remains the representation of an absent auxiliary optimization variable.
 def nonnegativeAbsUnit :
     EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := Unit

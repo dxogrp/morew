@@ -11,7 +11,7 @@ open Morew
 # Exponential-cone examples
 
 Relative entropy and softplus have exponential-cone representations.
-The relative entropy model has scalar variables a and b:
+The relative entropy model has scalar variables `a` and `b`:
 
 ```math
 \begin{array}{ll}
@@ -20,7 +20,7 @@ The relative entropy model has scalar variables a and b:
 \end{array}
 ```
 
-The objective is defined by continuity as zero at a = 0.
+The objective is defined by continuity as zero at `a = 0`.
 -/
 
 namespace Examples.Models.Exponential
@@ -49,7 +49,7 @@ end
 end RelativeEntropy
 
 /-!
-The softplus model has scalar variable x:
+The softplus model has scalar variable `x`:
 
 ```math
 \begin{array}{ll}

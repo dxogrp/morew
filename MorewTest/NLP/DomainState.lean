@@ -120,7 +120,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     throwError "domain certification solved an unknown arithmetic instance"
 
 /-! Placeholders remain incomplete when hidden by local aliases or by a type
-that reduces to Nat. Complete controls exercise the same local structures. -/
+that reduces to `Nat`. Complete controls exercise the same local structures. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let nat := Lean.mkConst ``Nat
@@ -230,7 +230,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       fun feasible sources => do
     discard <| isolatedFailure feasible sources .unsupportedRow
 
--- An approved strict margin can simplify to True and still be needed for an
+-- An approved strict margin can simplify to `True` and still be needed for an
 -- ordered-ring deduction. Retaining it must not expose unsupplied row proofs.
 open Lean.Elab Lean.Elab.Tactic in
 example (x c : ℝ) (h : 0 < Real.exp c) (hx : Real.exp c ≤ x) : 0 < x := by

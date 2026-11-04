@@ -10,7 +10,7 @@ import Morew.Reformulation.Conic
 
 Largest eigenvalues, Euclidean operator norms, nuclear norms, and matrix
 fractions have semidefinite representations. The first model has a symmetric
-2 × 2 matrix variable A:
+2 × 2 matrix variable `A`:
 
 ```math
 \begin{array}{ll}
@@ -43,7 +43,7 @@ example : GlobalEquivalence largestEigenvalueModel largestEigenvalueConic :=
 example : IsConic largestEigenvalueConic := largestEigenvalueConic.isConic
 
 /-!
-The operator-norm model has a 2 × 3 matrix variable A:
+The operator-norm model has a 2 × 3 matrix variable `A`:
 
 ```math
 \begin{array}{ll}
@@ -74,7 +74,7 @@ example : GlobalEquivalence operatorNormModel operatorNormConic :=
 example : IsConic operatorNormConic := operatorNormConic.isConic
 
 /-!
-For a 2 × 3 matrix variable A, nuclear-norm completion is
+For a 2 × 3 matrix variable `A`, nuclear-norm completion is
 
 ```math
 \begin{array}{ll}
@@ -102,8 +102,8 @@ example : GlobalEquivalence nuclearNormModel nuclearNormConic := nuclearNormConi
 example : IsConic nuclearNormConic := nuclearNormConic.isConic
 
 /-!
-The matrix-fraction model has a vector variable x ∈ ℝ² and a symmetric
-2 × 2 matrix variable P:
+The matrix-fraction model has a vector variable `x ∈ ℝ²` and a symmetric
+2 × 2 matrix variable `P`:
 
 ```math
 \begin{array}{ll}
@@ -125,7 +125,7 @@ def matrixFractionModel :=
 
 reformulation matrixFractionConic : matrixFractionModel := by
   epigraph t as fraction_bound
-  -- The matrix-fraction rule accepts the semidefinite representation of P ≻ 0.
+  -- The matrix-fraction rule accepts the semidefinite representation of `P ≻ 0`.
   conic at domain
   conic at fraction_bound
   conic

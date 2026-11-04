@@ -42,7 +42,7 @@ reformulation logarithmicConic : logarithmic := by
 example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equivalence
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
--- The same bound allows exponential coordinates; 1 ≤ exp u remains a constraint.
+-- The same bound allows exponential coordinates; `1 ≤ exp u` remains a constraint.
 reformulation exponentialCoordinates : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   substitute x := Real.exp u
@@ -60,8 +60,8 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- Derive |x| ≤ 1 and split it into two bounds. Remove the duplicate x ≤ 1
--- automatically and prove -x ≤ 1 from the remaining lower bound.
+-- Derive `|x| ≤ 1` and split it into two bounds. Remove the duplicate `x ≤ 1`
+-- automatically and prove `-x ≤ 1` from the remaining lower bound.
 reformulation absoluteNLP : interval := by
   derive abs_bound : |x| ≤ 1 using (by
     intro point hp

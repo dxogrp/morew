@@ -20,7 +20,7 @@ namespace Examples.Models.Power
 noncomputable section
 
 /-!
-A convex power of a scalar variable x:
+A convex power of a scalar variable `x`:
 
 ```math
 \begin{array}{ll}
@@ -51,7 +51,7 @@ example : IsConic ready := ready.isConic
 end ConvexPower
 
 /-!
-A weighted geometric mean with scalar variables x, y, and t:
+A weighted geometric mean with scalar variables `x`, `y`, and `t`:
 
 ```math
 \begin{array}{ll}
@@ -75,7 +75,7 @@ def source :=
       gain : t ≤ x ^ (1 / 3 : ℝ) * y ^ (1 - (1 / 3 : ℝ))
 
 reformulation ready : source := by
-  -- A nonnegative auxiliary preserves this bound even when t is negative.
+  -- A nonnegative auxiliary preserves this bound even when `t` is negative.
   conic at gain
   conic
 
@@ -87,7 +87,7 @@ example : IsConic ready := ready.isConic
 end WeightedMean
 
 /-!
-A negative power with scalar variables x and t:
+A negative power with scalar variables `x` and `t`:
 
 ```math
 \begin{array}{ll}
@@ -104,7 +104,7 @@ def source :=
   problem (x t : ℝ)
     minimize t
     subject to
-      -- The negative power requires x > 0.
+      -- The negative power requires `x > 0`.
       domain : 1 ≤ x
       bound : x ^ (-1 / 2 : ℝ) ≤ t
 
@@ -118,7 +118,7 @@ example : IsConic ready := ready.isConic
 end NegativePower
 
 /-!
-For 0 < α < 1, direct power-cone membership gives the scalar problem
+For `0 < α < 1`, direct power-cone membership gives the scalar problem
 
 ```math
 \begin{array}{ll}
@@ -155,7 +155,7 @@ example : IsConic (ready α) := ready.isConic α hα
 end DirectMembership
 
 /-!
-The geometric-mean model has variable x ∈ ℝ³:
+The geometric-mean model has variable `x ∈ ℝ³`:
 
 ```math
 \begin{array}{ll}
@@ -188,7 +188,7 @@ example : IsConic ready := ready.isConic
 end GeometricMean
 
 /-!
-The inverse-product model has variable x ∈ ℝ³:
+The inverse-product model has variable `x ∈ ℝ³`:
 
 ```math
 \begin{array}{ll}

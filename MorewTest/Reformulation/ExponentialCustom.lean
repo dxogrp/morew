@@ -11,7 +11,7 @@ import MorewTest.Environment
 # Custom exact exponential representations
 
 All four certificate families may emit single or grouped exponential rows.
-Unit auxiliaries disappear; scalar and vector auxiliaries extend the original
+`Unit` auxiliaries disappear; scalar and vector auxiliaries extend the original
 domain once. Invalid explicit certificates never fall back to automatic rules.
 -/
 

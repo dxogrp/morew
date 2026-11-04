@@ -9,9 +9,9 @@ import Morew.Reformulation.NLP
 /-!
 # Vector norm models
 
-`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the ℓ₁, ℓ₂, and ℓ∞ norms;
-`‖WithLp.toLp p x‖` denotes the ℓₚ norm. For given b ∈ ℝⁿ, the first model
-has variable x ∈ ℝⁿ:
+`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the `ℓ₁`, `ℓ₂`, and `ℓ∞` norms;
+`‖WithLp.toLp p x‖` denotes the `ℓₚ` norm. For given `b ∈ ℝⁿ`, the first model
+has variable `x ∈ ℝⁿ`:
 
 ```math
 \begin{array}{ll}
@@ -79,7 +79,7 @@ def source (n : ℕ) :=
 
 variable (n : ℕ)
 
--- Automatic conic rewriting uses one SOC constraint on (t, x).
+-- Automatic conic rewriting uses one SOC constraint on `(t, x)`.
 reformulation soc : (source n) := by
   conic
 
@@ -89,8 +89,8 @@ example : Conic.Form (soc n) := soc.conicForm n
 example : (soc.conicForm n).data.toProblem = soc n := (soc.conicForm n).represents
 example : IsConic (soc n) := soc.isConic n
 
--- Selecting the power rule adds r, with 0 ≤ t, ∑ i, r i ≤ t, and
--- (r i, t, x i) ∈ POW (1/2) for each coordinate.
+-- Selecting the power rule adds `r`, with `0 ≤ t`, `∑ i, r i ≤ t`, and
+-- `(r i, t, x i) ∈ POW (1/2)` for each coordinate.
 reformulation power : (source n) := by
   conic at bound using Morew.Conic.Power.normEpigraph
   conic
@@ -101,7 +101,7 @@ example : Conic.Form (power n) := power.conicForm n
 example : (power.conicForm n).data.toProblem = power n := (power.conicForm n).represents
 example : IsConic (power n) := power.isConic n
 
--- The smooth representation is t ≥ 0 and ∑ᵢ xᵢ² ≤ t².
+-- The smooth representation is `t ≥ 0` and `∑ᵢ xᵢ² ≤ t²`.
 reformulation squaredNorm : (source n) := by
   nlp
 

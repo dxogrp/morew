@@ -109,7 +109,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       rejectHiddenPlaceholder (mkApp builder exponent)
       withLetDecl `exponentAlias nat exponent fun binding =>
         rejectHiddenPlaceholder (mkApp builder binding)
-    -- This type reduces to Nat, so only inspecting its normal form would
+    -- This type reduces to `Nat`, so only inspecting its normal form would
     -- erase the placeholder before the local declaration is checked.
     let hiddenType := mkApp typeBuilder placeholder
     withLocalDeclD `exponent hiddenType fun exponent =>

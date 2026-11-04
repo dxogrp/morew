@@ -10,7 +10,7 @@ import MorewTest.Environment
 /-!
 # Complete finite power-cone workflows
 
-Automatic L2 conversion uses SOC. Explicit selection can request the power
+Automatic `L2` conversion uses SOC. Explicit selection can request the power
 representation; overlapping custom registrations produce ambiguity.
 -/
 

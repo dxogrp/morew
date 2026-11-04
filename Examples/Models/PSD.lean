@@ -8,7 +8,7 @@ import Morew.Reformulation.Conic
 /-!
 # Positive semidefinite and positive definite matrix constraints
 
-The first problem has a scalar variable x:
+The first problem has a scalar variable `x`:
 
 ```math
 \begin{array}{ll}
@@ -37,7 +37,7 @@ example : GlobalEquivalence diagonalModel diagonalConic := diagonalConic.equival
 example : IsConic diagonalConic := diagonalConic.isConic
 
 /-!
-For a symmetric 2 × 2 matrix variable P, the trace problem is
+For a symmetric 2 × 2 matrix variable `P`, the trace problem is
 
 ```math
 \begin{array}{ll}

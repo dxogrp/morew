@@ -158,7 +158,7 @@ run_cmd liftTermElabM do
   count result 1
 
 -- Independent nonzero evidence is scoped inside the accepted original row.
--- Both later L1 auxiliaries must retain the accepted residual and proof data.
+-- Both later `L1` auxiliaries must retain the accepted residual and proof data.
 run_cmd liftTermElabM do
   let expressions ← Domain.elaborate (← `(fun (c : ℝ) (h : c ≠ 0 ∧ True) =>
     ((fun v : Fin 1 → ℝ => let nonzero : c ≠ 0 := h.1; v 0 / c ≤ 10),

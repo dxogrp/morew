@@ -413,7 +413,7 @@ example : localLetReplay = localLetTarget := rfl
 example : localLetGroupReplay = localLetGroupTarget := rfl
 
 -- Native membership and an ordinary predicate can be definitionally equal.
--- Their cached conversions must still follow each occurrence through True
+-- Their cached conversions must still follow each occurrence through `True`
 -- leaves, local lets and retained group boundaries.
 def mixedMembershipSource :=
   problem (x : ℝ)
