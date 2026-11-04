@@ -14,12 +14,17 @@ These tables give the mathematical properties of the supported functions on
 the stated domains. All inputs are real, and parameters are fixed. Convexity is
 joint in the arguments; monotonicity is coordinatewise unless specified otherwise.
 
-Convexity: {functionSymbol convex}[] convex; {functionSymbol concave}[] concave;
+We use the following symbols for convexity and monotonicity.
+
+- Convexity: {functionSymbol convex}[] convex; {functionSymbol concave}[] concave;
 {functionSymbol affine}[] affine; {functionSymbol neither}[] neither.
-Monotonicity: {functionSymbol increasing}[] nondecreasing;
+- Monotonicity: {functionSymbol increasing}[] nondecreasing;
 {functionSymbol decreasing}[] nonincreasing; {functionSymbol notMonotone}[] neither.
 
 # Scalar functions
+
+The sets $`\mathbf{R}_+` and $`\mathbf{R}_{++}` contain the nonnegative and
+positive real numbers, respectively.
 
 :::table (tag := "functions-scalar") +header
 *
@@ -31,67 +36,67 @@ Monotonicity: {functionSymbol increasing}[] nondecreasing;
 *
   * `abs x`
   * $`|x|`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`
 *
   * `x⁺`
   * $`\max(x,0)`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * `max x y`
   * $`\max(x,y)`
-  * $`x,y\in\mathbb R`
+  * $`x,y\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * `min x y`
   * $`\min(x,y)`
-  * $`x,y\in\mathbb R`
+  * $`x,y\in\mathbf{R}`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
   * `x ^ 2`
   * $`x^2`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`
 *
   * `x ^ 2 / y`
   * $`x^2/y`
-  * $`x\in\mathbb R`, $`y>0`
+  * $`x\in\mathbf{R}`, $`y\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`; {functionSymbol decreasing}[] in $`y`
 *
   * `Real.exp x`
   * $`e^x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * `Real.log x`
   * $`\log x`
-  * $`x>0`
+  * $`x\in\mathbf{R}_{++}`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
   * `Real.sqrt x`
   * $`\sqrt{x}`
-  * $`x\geq0`
+  * $`x\in\mathbf{R}_+`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
   * [`Fn.softplus x`](api/Morew/Fn/Exponential.html#Morew.Fn.softplus)
   * $`\log(1+e^x)`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * [`Fn.relativeEntropy x y`](api/Morew/Fn/Exponential.html#Morew.Fn.relativeEntropy)
   * $`x\log(x/y)`
-  * $`x\geq0`, $`y>0`
+  * $`x\in\mathbf{R}_+`, $`y\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[] in $`y`; {functionSymbol notMonotone}[] in $`x`
 :::
@@ -112,25 +117,25 @@ Here `p` and `α` are real parameters. `Real.rpow x p` can also be written `x ^ 
 *
   * `Real.rpow x p`
   * $`x^p`, $`p<0`
-  * $`x>0`
+  * $`x\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[]
 *
   * `Real.rpow x p`
   * $`x^p`, $`0<p<1`
-  * $`x\geq0`
+  * $`x\in\mathbf{R}_+`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
   * `Real.rpow x p`
   * $`x^p`, $`p>1`
-  * $`x\geq0`
+  * $`x\in\mathbf{R}_+`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * `x ^ α * y ^ (1 - α)`
   * $`x^\alpha y^{1-\alpha}`, $`0<\alpha<1`
-  * $`x,y\geq0`
+  * $`x,y\in\mathbf{R}_+`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 :::
@@ -139,7 +144,7 @@ The cases $`p=0` and $`p=1` give the affine functions $`1` and $`x`.
 
 # Vector functions
 
-In this table $`x\in\mathbb R^n` with $`n>0`.
+In this table $`x\in\mathbf{R}^n` with $`n>0`.
 The three named norms also accept empty vectors, with value zero.
 
 :::table (tag := "functions-vector") +header
@@ -152,37 +157,37 @@ The three named norms also accept empty vectors, with value zero.
 *
   * [`Fn.norm1 x`](api/Morew/Fn/Norm.html#Morew.Fn.norm1)
   * $`\sum_i |x_i|`
-  * $`x\in\mathbb R^n`
+  * $`x\in\mathbf{R}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`
 *
   * [`Fn.norm2 x`](api/Morew/Fn/Norm.html#Morew.Fn.norm2)
   * $`\sqrt{\sum_i x_i^2}`
-  * $`x\in\mathbb R^n`
+  * $`x\in\mathbf{R}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`
 *
   * [`Fn.normInf x`](api/Morew/Fn/Norm.html#Morew.Fn.normInf)
   * $`\max_i |x_i|`
-  * $`x\in\mathbb R^n`
+  * $`x\in\mathbf{R}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`
 *
   * `‖WithLp.toLp p x‖`
   * $`(\sum_i |x_i|^p)^{1/p}`
-  * $`x\in\mathbb R^n`, $`1<p<\infty`
+  * $`x\in\mathbf{R}^n`, $`1<p<\infty`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`
 *
   * `∑ i, x i ^ 2`
   * $`\sum_i x_i^2`
-  * $`x\in\mathbb R^n`
+  * $`x\in\mathbf{R}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`
 *
   * `(∑ i, x i ^ 2) / y`
   * $`\lVert x\rVert_2^2/y`
-  * $`x\in\mathbb R^n`, $`y>0`
+  * $`x\in\mathbf{R}^n`, $`y\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x_i|`; {functionSymbol decreasing}[] in $`y`
 *
@@ -200,19 +205,19 @@ The three named norms also accept empty vectors, with value zero.
 *
   * [`Fn.logSumExp x`](api/Morew/Fn/Exponential.html#Morew.Fn.logSumExp)
   * $`\log\sum_i e^{x_i}`
-  * $`x\in\mathbb R^n`
+  * $`x\in\mathbf{R}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
   * [`Fn.geoMean x`](api/Morew/Fn/Power.html#Morew.Fn.geoMean)
   * $`(\prod_i x_i)^{1/n}`
-  * $`x_i\geq0`
+  * $`x\in\mathbf{R}_+^n`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
   * [`Fn.invProd x`](api/Morew/Fn/Power.html#Morew.Fn.invProd)
   * $`1/\prod_i x_i`
-  * $`x_i>0`
+  * $`x\in\mathbf{R}_{++}^n`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[]
 :::
@@ -224,9 +229,10 @@ For finite extrema, `s` is a `Finset` and `hs : s.Nonempty`.
 
 # Matrix functions
 
-Here $`A` is a real matrix, $`P\succ0` means positive definite, and
-$`A\preceq B` means $`B-A` is positive semidefinite.
-$`\mathbb S^n` denotes the symmetric $`n\times n` matrices, with $`n>0`.
+The sets $`\mathbf{S}^n`, $`\mathbf{S}_+^n`, and $`\mathbf{S}_{++}^n` contain
+the symmetric, positive semidefinite, and positive definite $`n\times n`
+matrices, respectively, with $`n>0`. The order $`A\preceq B` means
+$`B-A\in\mathbf{S}_+^n`.
 
 :::table (tag := "functions-matrix") +header
 *
@@ -238,31 +244,31 @@ $`\mathbb S^n` denotes the symmetric $`n\times n` matrices, with $`n>0`.
 *
   * [`Fn.lambdaMax A`](api/Morew/Fn/Matrix.html#Morew.Fn.lambdaMax)
   * $`\lambda_{\max}(A)`
-  * $`A\in\mathbb S^n`
+  * $`A\in\mathbf{S}^n`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] under $`\preceq`
 *
   * `‖A‖`
   * $`\sup_{\lVert u\rVert_2\leq1}\lVert Au\rVert_2`
-  * $`A\in\mathbb R^{m\times n}`
+  * $`A\in\mathbf{R}^{m\times n}`
   * {functionSymbol convex}[]
   * {functionSymbol notMonotone}[]
 *
   * [`Fn.nuclearNorm A`](api/Morew/Fn/Matrix.html#Morew.Fn.nuclearNorm)
   * $`\sum_i\sigma_i(A)`
-  * $`A\in\mathbb R^{m\times n}`
+  * $`A\in\mathbf{R}^{m\times n}`
   * {functionSymbol convex}[]
   * {functionSymbol notMonotone}[]
 *
   * [`Fn.matrixFrac x P`](api/Morew/Fn/Matrix.html#Morew.Fn.matrixFrac)
   * $`x^{\mathsf T}P^{-1}x`
-  * $`x\in\mathbb R^n`, $`P\succ0`
+  * $`x\in\mathbf{R}^n`, $`P\in\mathbf{S}_{++}^n`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[] in $`P` under $`\preceq`; {functionSymbol notMonotone}[] in $`x`
 *
   * [`Fn.logDet P`](api/Morew/Fn/Matrix.html#Morew.Fn.logDet)
   * $`\log\det P`
-  * $`P\succ0`
+  * $`P\in\mathbf{S}_{++}^n`
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[] under $`\preceq`
 :::
@@ -271,8 +277,8 @@ For the matrix norm, use `open scoped Matrix.Norms.L2Operator`.
 The numbers $`\sigma_i(A)` are the singular values of $`A`.
 `Fn.logDet P` may also be written `Real.log P.det`.
 
-The constraints `P.PosSemidef` and `P.PosDef` express positive semidefiniteness
-and positive definiteness. Both define convex sets; see the
+The constraints `P.PosSemidef` and `P.PosDef` express membership in
+$`\mathbf{S}_+^n` and $`\mathbf{S}_{++}^n`. Both sets are convex; see the
 [matrix constraint API](api/Morew/Conic/PSD.html).
 
 # Other smooth functions
@@ -293,31 +299,31 @@ and positive definiteness. Both define convex sets; see the
 *
   * `Real.sin x`
   * $`\sin x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol neither}[]
   * {functionSymbol notMonotone}[]
 *
   * `Real.cos x`
   * $`\cos x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol neither}[]
   * {functionSymbol notMonotone}[]
 *
   * `Real.sinh x`
   * $`\sinh x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol neither}[]
   * {functionSymbol increasing}[]
 *
   * `Real.cosh x`
   * $`\cosh x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`
 *
   * `Real.tanh x`
   * $`\tanh x`
-  * $`x\in\mathbb R`
+  * $`x\in\mathbf{R}`
   * {functionSymbol neither}[]
   * {functionSymbol increasing}[]
 :::
