@@ -8,12 +8,18 @@ import Morew.Reformulation.NLP
 /-!
 # Smooth NLP reformulations
 
-`nlp at label` performs an exact rewrite of a direct nonsmooth bound; optional
-`using` selects its rule.
+`nlp at label` rewrites a direct nonsmooth bound; `using` selects a rule explicitly.
+Bare `nlp` applies supported rewrites and certifies a smooth NLP, recording its
+form and equivalence certificate.
 
-Bare `nlp` finishes the script by applying supported exact rewrites to direct
-bounds and certifying the complete objective and constraints as a smooth NLP.
-It records a concrete NLP form and certificates alongside the final problem.
+The first problem has scalar variables x, y, and t:
+
+```math
+\begin{array}{ll}
+\text{minimize} & (xy-1)^2+t \\
+\text{subject to} & |x^2-y| \leq t.
+\end{array}
+```
 -/
 
 namespace Examples.GettingStarted.NLP
@@ -41,8 +47,7 @@ def negativeMinimum :=
   problem (x : ℝ)
     minimize -min (x ^ 2) (Real.sin x)
 
--- An epigraph of -min f g is described by the two bounds -f ≤ t and -g ≤ t.
--- These two bounds use smooth expressions.
+-- The bound -min(f, g) ≤ t becomes -f ≤ t and -g ≤ t, both smooth here.
 reformulation negativeMinimumNLP : negativeMinimum := by
   epigraph t
   nlp

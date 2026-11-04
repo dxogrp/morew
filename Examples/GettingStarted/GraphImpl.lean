@@ -9,13 +9,15 @@ import Morew.Reformulation.NLP
 /-!
 # Epigraphs and hypographs
 
-Negation exchanges epigraph and hypograph inequalities: `-f x ≤ t` means
-`-t ≤ f x`, and `t ≤ -f x` means `f x ≤ -t`. The same identities produce
-conic and smooth NLP reformulations of the two problems below.
+Negation exchanges epigraph and hypograph inequalities:
 
-The bound `1 ≤ x` proves positivity for both the logarithm's exponential-cone
-representation and its smooth NLP certificate. The norm representation holds
-on the whole Euclidean space.
+```math
+-f(x) \leq t \iff f(x) \geq -t, \qquad
+-f(x) \geq t \iff f(x) \leq -t.
+```
+
+The following problems have conic and smooth NLP reformulations. The bound
+`1 ≤ x` supplies the logarithm's positive domain.
 -/
 
 namespace Examples.GettingStarted.GraphImpl

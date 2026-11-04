@@ -8,13 +8,10 @@ import Morew.Reformulation.Conic
 /-!
 # Conic reformulations
 
-`conic at label` performs an exact rewrite of a selected constraint; optional
-`using` selects its rule.
-
-Bare `conic` finishes the script by rewriting supported constraints as cone
-memberships and certifying the complete problem as an affine cone program.
-It records a concrete conic form and certificates alongside the final problem.
-Objective bounds and coordinate substitutions remain explicit steps.
+`conic at label` rewrites a selected constraint; `using` selects a rule explicitly.
+Bare `conic` rewrites supported constraints and certifies an affine cone program,
+recording its conic form and equivalence certificate. Introduce objective bounds
+and coordinate substitutions as separate steps.
 -/
 
 namespace Examples.GettingStarted.Conic
@@ -75,7 +72,7 @@ def p :=
       magnitude : |x| ≤ 5
       nonnegative : 0 ≤ x
 
--- These selected rewrites expose linear bounds and record equivalence.
+-- Rewrite the absolute-value bounds as linear inequalities.
 -- ANCHOR: linearBounds
 reformulation linearBounds : p := by
   conic at magnitude

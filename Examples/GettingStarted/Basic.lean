@@ -8,10 +8,16 @@ import Morew.Reformulation.Basic
 /-!
 # Problems, epigraphs, and optimality certificates
 
-A `problem` names its variables, objective, and constraints. A `reformulation`
-records an equivalent problem and maps feasible points and global optima
-between the two. The examples introduce an objective epigraph, name its bound,
-and apply the same construction to problems with parameters.
+A `problem` specifies its variables, objective, and constraints. A `reformulation`
+constructs an equivalent problem and maps feasible points and global optima
+between the two. We begin with the scalar problem:
+
+```math
+\begin{array}{ll}
+\text{minimize} & x^2 \\
+\text{subject to} & x \geq 0.
+\end{array}
+```
 -/
 
 open Morew
@@ -51,7 +57,7 @@ example : p.IsGlobalOptimum ⟨0, le_rfl⟩ := by
   -- The certificate's backward map recovers x and transfers optimality.
   exact epigraphForm.equivalence.map_isGlobalOptimum_backward hz
 
--- Epigraph rewriting with explicit label
+-- Name the epigraph constraint.
 reformulation labeledEpigraphForm : p := by
   epigraph t as objectiveBound
 
