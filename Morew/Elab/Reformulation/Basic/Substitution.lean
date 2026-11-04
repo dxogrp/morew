@@ -11,7 +11,7 @@ import Morew.Elab.Substitution.Match
 import Morew.Elab.Substitution.Rules
 import Morew.Elab.Reformulation.View
 
-/-! Infer, select, and materialize certified coordinate substitutions. -/
+/-! Infer, select, and construct certified coordinate substitutions. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -243,7 +243,7 @@ private def independentTrueNormalization (state : ReformState)
           (mkSort Level.zero)
         synthesizeSyntheticMVarsNoPostponing
         let proposition ← instantiateMVars proposition
-        -- Expose predicate wrappers before applying operation-checked rewrite theorems.
+        -- Expand predicate definitions before applying rewrite theorems with checked operation instances.
         let body ← Morew.Elab.Substitution.Evidence.predicateView proposition 32
         let mut theorems : SimpTheorems := {}
         for name in #[``Real.exp_pos, ``sq_nonneg, ``true_and, ``and_true] do
@@ -275,7 +275,7 @@ private def preserveDefinitionExpressions (state : ReformState)
             (← Morew.Elab.Expr.depends binders[binderIndex]! (← inferType definition))
 
 /-- Check the complete proposed presentation before retaining simplifications of dependent
-expressions. Restore declarations, messages, and elaboration state after the probe. -/
+expressions. Restore declarations, messages, and elaboration state after the check. -/
 private def simplifiedPresentationCheck (state : ReformState)
     (view : Morew.Syntax.ProblemView) :
     CommandElabM Bool :=
@@ -522,7 +522,7 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     normalizationLemmas
   }
 
-/-- Plan a substitution and defer materialization until name preflight succeeds. -/
+/-- Prepare a substitution and construct it after checking the requested names. -/
 def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
     (oldIdent : TSyntax `ident) (replacement : TSyntax `term)
     (providedCertificate? : Option (TSyntax `term))

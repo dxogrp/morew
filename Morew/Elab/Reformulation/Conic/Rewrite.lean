@@ -50,7 +50,7 @@ private def materializeConic (state : ReformState) (index : Nat)
       replacement
     } allocation
 
-/-- Certify the selected constraint before allocating and materializing generated names. -/
+/-- Certify the selected constraint before allocating its names and constructing its replacement. -/
 def prepareConic (state : ReformState) (step : Syntax)
     (selector : TSyntax `ident) (rule? : Option (TSyntax `term)) :
     CommandElabM SurfaceStepDraft := withRef step do

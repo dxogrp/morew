@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.View
 
-/-! Plan and materialize objective epigraph and hypograph steps. -/
+/-! Prepare and construct objective epigraph and hypograph reformulations. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -72,7 +72,7 @@ private def materializeObjectiveBound (state : ReformState)
 
   let primitive ← liftMacroM <|
     liftCertificateEquivalence state.runner primitiveEquivalence
-  -- Checkpoint the new bound and retain the semantic epigraph/hypograph certificate.
+  -- Retain the new bound and the epigraph or hypograph equivalence certificate.
   let canonical ← runTermElabM fun _ => do
     let canonical ← canonicalTargetExpression state.sourceName state.checkpoint.semantic
       state.checkpoint.semanticAnchor state.checkpoint.view state.removedCheckpointRows

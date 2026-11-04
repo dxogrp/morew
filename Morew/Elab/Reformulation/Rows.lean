@@ -7,7 +7,8 @@ import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.View
 import Lean.Meta.Closure
 
-/-! Materialize replacement and appended rows with names, stored certificates, and checkpoints. -/
+/-! Construct replacement and added constraints, storing their names, certificates,
+and reference problems. -/
 
 namespace Morew.Elab.Reformulation.Rows
 
@@ -219,7 +220,7 @@ def elaboratePredicate (style : Style) (state : ReformState)
         mkLambdaFVars #[point] (body.replaceFVars binders components)
       return (predicate, propositionSyntax)
 
-/-- Append a certified row and establish a checkpoint preserving row boundaries and labels. -/
+/-- Add a certified constraint and retain the resulting problem, constraint order, and labels. -/
 def finish (style : Style) (state : ReformState)
     (typed : Morew.Elab.Reformulation.RunnerState) (name : Name)
     (proposition : TSyntax `term) (predicate : Expr) (propositionSyntax : Syntax)

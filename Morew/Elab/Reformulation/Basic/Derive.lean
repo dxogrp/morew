@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Rows
 
-/-! Append a consequence proved from current feasibility, then start a canonical checkpoint. -/
+/-! Add a consequence of the current constraints and retain the result for normalization. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -28,7 +28,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let (predicate, propositionSyntax) ←
       Rows.Append.elaboratePredicate deriveStyle state typed proposition
-    -- Only the contract's quantified source point supplies decision-dependent facts.
+    -- Decision-dependent facts come only from the source point quantified in the proof type.
     let expected ← withLocalDeclD `point typed.semanticDomainType fun point => do
       let feasible ← mkAppM ``Morew.Problem.feasible #[typed.semantic, point]
       mkForallFVars #[point] (← mkArrow feasible (mkApp predicate point))
@@ -46,7 +46,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
       #[typed.semantic, predicate, implied]
     Rows.Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition
 
-/-- Preflight the explicit label before elaborating a derived row or its proof. -/
+/-- Check the requested label before elaborating a derived constraint or its proof. -/
 def prepareDerive (state : ReformState) (label : TSyntax `ident)
     (proposition provided : TSyntax `term) : CommandElabM SurfaceStepDraft :=
   pure {

@@ -7,7 +7,7 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Remove
 import Morew.Elab.Reformulation.Rows
 
-/-! Remove a constraint implied by the retained constraints, then start a canonical checkpoint. -/
+/-! Remove an implied constraint and retain the resulting problem for normalization. -/
 
 namespace Morew.Elab.Reformulation
 

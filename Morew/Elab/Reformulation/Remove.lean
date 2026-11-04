@@ -22,7 +22,7 @@ private def retainedRows (presentation : PresentationState) (index : Nat) : Arra
   (presentation.constraints.extract 0 index ++
     presentation.constraints.extract (index + 1) presentation.constraints.size).map (·.predicate)
 
-/-- The exact proof contract, formed from current rows with the selected row excluded. -/
+/-- The required proof type, formed from the constraints remaining after removal. -/
 def implicationType (presentation : PresentationState) (index : Nat) : MetaM Expr := do
   unless index < presentation.constraints.size do
     throwError "constraint removal index is out of bounds"

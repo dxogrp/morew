@@ -9,7 +9,7 @@ import Morew.Elab.Rewrite.Plan
 import Morew.Transform
 
 /-! Assemble exact replacements in ordered constraints, preserving unselected row boundaries.
-Rows handles surface names and presentation updates. -/
+`Rows` updates names and displayed constraints. -/
 
 namespace Morew.Elab.Reformulation.Replace
 

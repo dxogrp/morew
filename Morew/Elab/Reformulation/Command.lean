@@ -87,12 +87,12 @@ private def emitDefinitionWithParameters (target : TSyntax `ident)
     throwErrorAt target "emitted definition contains unresolved universe parameters"
   pure application
 
-/-- Freeze the retained application before leaving its section-variable context. -/
+/-- Fix references in the retained application before leaving its section-variable context. -/
 private def emitDefinition (target : TSyntax `ident)
     (elaborate : Array Expr → TermElabM (Expr × Expr)) :
     CommandElabM (TSyntax `term) := do
   let scope ← getScope
-  -- Lean's quotation-context wrapper returns Unit.
+  -- `withInitQuotContext` returns `Unit`.
   let result ← IO.mkRef (none : Option (TSyntax `term))
   withExporting (isExporting := scope.isPublic) do
   withInitQuotContext (some (hash #[target.getId])) do
@@ -481,7 +481,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       unless (← get).messages.hasErrors do
         refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
 
-/-- Elaborate steps and emit the target, equivalence, companions, and metadata in one transaction. -/
+/-- Elaborate steps and generate the target, certificates, and metadata in one transaction. -/
 @[command_elab reformulationCmd, command_elab appliedReformulationCmd]
 def elabReformulation : CommandElab := fun stx =>
   withDeclarationTransaction (elabReformulationCore stx)

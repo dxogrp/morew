@@ -47,7 +47,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
     Rows.Append.finish restrictStyle state typed name proposition
       predicate propositionSyntax addition
 
-/-- Preflight the explicit label before elaborating a restriction or its certificate. -/
+/-- Check the requested label before elaborating a restriction or its certificate. -/
 def prepareRestrict (state : ReformState) (label : TSyntax `ident)
     (proposition provided : TSyntax `term) : CommandElabM SurfaceStepDraft :=
   pure {

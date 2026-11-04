@@ -17,7 +17,7 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- Keep section expressions in artifacts; adapter functions carry no local context.
+-- Store section-dependent expressions with the certificate.
 private def validateTerminalConic (form expected : Expr)
     (sense : Morew.ObjectiveSense) : TermElabM Expr := do
   let type ← whnf (← inferType form)
