@@ -6,6 +6,11 @@ LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest Examples
 
 .DEFAULT_GOAL := help
 
+.PHONY: cache
+cache: ## download precompiled Mathlib files for the current dependencies
+	@printf "$(BLUE)Downloading Mathlib build cache...$(RESET)\n"
+	@lake exe cache get
+
 .PHONY: update
 update: ## update Lean dependencies and the package manifest
 	@printf "$(BLUE)Updating Lean dependencies...$(RESET)\n"
