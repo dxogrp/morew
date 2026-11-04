@@ -8,8 +8,14 @@ import Morew.Reformulation.Conic
 /-!
 # Positive semidefinite and positive definite matrix constraints
 
-A native diagonal matrix constraint and a symmetric positive-definite domain
-become conic programs with global equivalence and conic certificates.
+The first problem has a scalar variable x:
+
+```math
+\begin{array}{ll}
+\text{minimize} & x \\
+\text{subject to} & \operatorname{diag}(x,1) \succeq 0.
+\end{array}
+```
 -/
 
 namespace Examples.Models.PSD
@@ -30,7 +36,18 @@ reformulation diagonalConic : diagonalModel := by conic
 example : GlobalEquivalence diagonalModel diagonalConic := diagonalConic.equivalence
 example : IsConic diagonalConic := diagonalConic.isConic
 
--- Positive definiteness can be reformulated directly as a cone constraint.
+/-!
+For a symmetric 2 × 2 matrix variable P, the trace problem is
+
+```math
+\begin{array}{ll}
+\text{minimize} & \operatorname{tr}P \\
+\text{subject to} & P \succ 0, \\
+ & P \succeq I.
+\end{array}
+```
+-/
+
 def positiveDefiniteModel :=
   problem (P : SymmetricMatrix 2)
     minimize P.toMatrix.trace

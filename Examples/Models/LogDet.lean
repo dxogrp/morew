@@ -8,10 +8,17 @@ import Morew.Reformulation.Conic
 /-!
 # Log-determinant optimization
 
-`Fn.logDet X` means the total real function `Real.log X.det`.
-Its conic representation requires a positive-definite matrix. Three variants
-maximize it at a fixed trace using PSD and exponential cones. Removing a
-redundant domain constraint reduces the row count from five to four.
+We maximize the log-determinant over symmetric 2 × 2 matrices X:
+
+```math
+\begin{array}{ll}
+\text{maximize} & \log\det X \\
+\text{subject to} & \operatorname{tr}X=2, \\
+ & X \succ 0.
+\end{array}
+```
+
+The reformulation uses positive semidefinite and exponential cones.
 -/
 
 namespace Examples.Models.LogDet
@@ -37,8 +44,7 @@ example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
 example : maximumConic.conicForm.data.rowCount = 5 := rfl
 
--- The log-det bound's PSD and EXP rows imply positive definiteness. Removing
--- the redundant domain row saves its separate PSD block and auxiliary.
+-- The conic log-determinant constraints imply X ≻ 0, so the domain row is redundant.
 reformulation maximumWithoutDomainConic : maximum := by
   hypograph t as logDet_bound
   conic at logDet_bound
@@ -65,10 +71,7 @@ def nativeMaximum :=
       domain : X.toMatrix.PosDef
       normalization : X.toMatrix.trace = 2
 
-/-
-Rewrite the domain first. The log-det rule can use either the original
-`PosDef` constraint or its semidefinite representation to prove positive definiteness.
--/
+-- The log-determinant rule also accepts the semidefinite representation of X ≻ 0.
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound
   conic at domain
