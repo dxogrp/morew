@@ -3,7 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+-- ANCHOR: nonnegLSSetup
 import Morew.Reformulation.Conic
+open Morew
+open scoped Matrix
+-- ANCHOR_END: nonnegLSSetup
 
 /-!
 # Second-order cone models
@@ -13,13 +17,9 @@ second-order cone formulations. The quotient model retains a positive lower
 bound on its denominator; both scripts finish with conic certification.
 -/
 
-open Morew
-
 namespace Examples.Models.SecondOrder
 
 namespace NonnegLS
-
-open scoped Matrix
 
 -- ANCHOR: nonnegLS
 noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
@@ -29,9 +29,9 @@ noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) 
       nonneg : x ≥ 0
 -- ANCHOR_END: nonnegLS
 
+-- ANCHOR: conicNonnegLS
 variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 
--- ANCHOR: conicNonnegLS
 reformulation conicNonnegLS : (nonnegLS A b) := by
   epigraph t as residualBound
   conic at residualBound
@@ -46,7 +46,6 @@ example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
 -- ANCHOR_END: nonnegLSCertificate
 
 -- ANCHOR: printNonnegLS
-/-! Print the conic problem. -/
 #printp conicNonnegLS
 -- ANCHOR_END: printNonnegLS
 
