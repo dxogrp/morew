@@ -9,8 +9,8 @@ file := "installation"
 htmlSplit := .never
 %%%
 
-Install [Lean through elan](https://lean-lang.org/install/).
-Morew uses the Lean version in its `lean-toolchain` file, currently 4.33.0.
+You need to install [Lean through elan](https://lean-lang.org/install/) to build Morew.
+The Lean version used by Morew is specified in the `lean-toolchain` file.
 
 # Use Morew in a project
 
@@ -23,28 +23,77 @@ git = "https://github.com/dxogrp/morew.git"
 rev = "main"
 ```
 
-Run `lake update`, then `lake exe cache get` to download compiled Mathlib files.
+Then run `lake update` to update the dependency.
 
 # Build the repository
+
+With Make installed, run:
 
 ```
 git clone https://github.com/dxogrp/morew.git
 cd morew
-lake exe cache get
-lake build --wfail
+make cache  # Download precompiled Mathlib files.
+make build  # Build the library, tests, and examples.
 ```
+
+Run `make help` to see all available commands.
 
 # Imports
 
-Use `import Morew` for the complete package. The mathematical modules
-`Morew.Core`, `Morew.Transform`, `Morew.Conic`, `Morew.NLP`, and `Morew.Fn`
-provide problems and equivalence, transformations, target forms, and modeling
-functions. They make definitions and proofs available without installing
-modeling commands or automatic rule registrations. Selective imports reduce
-the dependencies that can trigger a rebuild.
+To import the whole Morew package, use
 
-For modeling commands, use `Morew.Reformulation.Basic`. Add
-`Morew.Reformulation.Conic` or `Morew.Reformulation.NLP` for the corresponding
-target commands and default automatic rules; each includes Basic. Import both
-to use both target forms. Custom conic and NLP rules enter automatic selection through
-`@[morew_conic]` or `@[morew_nlp]`; `using` selects a rule directly.
+```imports
+import Morew
+```
+
+For basic modeling commands, use
+
+```imports
+import Morew.Reformulation.Basic
+```
+
+For conic target commands and default automatic rules, use
+
+```imports
+import Morew.Reformulation.Conic
+```
+
+which includes Basic.
+
+For NLP target commands and default automatic rules, use
+
+```imports
+import Morew.Reformulation.NLP
+```
+
+which includes Basic.
+Import both target modules to use both target forms.
+
+To use predefined atomic functions, use
+
+```imports
+import Morew.Fn
+```
+
+For mathematical definitions and proofs, use
+
+```imports
+import Morew.Core
+import Morew.Transform
+import Morew.Conic
+import Morew.NLP
+```
+
+These cover problems and equivalence, transformations, and target forms.
+
+Custom conic and NLP rules can be registered for automatic selection by tagging them with
+
+```
+@[morew_conic]
+```
+
+or
+
+```
+@[morew_nlp]
+```
