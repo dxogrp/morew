@@ -41,6 +41,9 @@ annotation, as in `let name : ℝ := expression`.
 
 # Printing
 
+`#print p` displays the type and Lean definition of `p`. The `Problem` structure
+contains the fields `objective` and `feasible`.
+
 `#printp p` displays a registered problem's variables, objective, and constraints.
 For a problem family, it retains its parameters symbolically. The same command
 prints the result of a reformulation.
