@@ -10,11 +10,9 @@ file := "examples"
 htmlSplit := .never
 %%%
 
+This chapter presents several examples of applying Morew to rewrite optimization problems.
+The examples are ordered according to the learning curve for Morew's features.
 Each example includes its Lean source and printed results.
-Read Basic first, then Conic and NLP, followed by Epigraphs and hypographs.
-
-Notation follows [Boyd and Vandenberghe's _Convex Optimization_](https://web.stanford.edu/~boyd/cvxbook/).
-Vector inequalities are componentwise; symmetric-matrix inequalities use the semidefinite order.
 
 From the repository root, build all examples or one module:
 
