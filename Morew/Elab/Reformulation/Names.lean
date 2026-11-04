@@ -113,11 +113,11 @@ inductive NamePreflightError where
   | duplicateRequestId (request : NameRequest)
   | collision (request : NameRequest) (occupied : Name)
 
-/-- The source location associated with a name preflight failure. -/
+/-- The source location of a name validation error. -/
 def NamePreflightError.ref : NamePreflightError → Syntax
   | .duplicateRequestId request | .collision request _ => request.ref
 
-/-- A concise diagnostic for a name preflight failure. -/
+/-- A diagnostic for a name validation error. -/
 def NamePreflightError.message : NamePreflightError → MessageData
   | .duplicateRequestId request =>
       m!"duplicate internal name-request id `{request.id}`"
@@ -195,7 +195,7 @@ inductive DeclarationPreflightError where
   | duplicate (request : DeclarationNameRequest)
   | alreadyDeclared (request : DeclarationNameRequest)
 
-/-- Preflight exact global names against both the current environment and the
+/-- Check requested global names against both the current environment and the
 rest of the batch. -/
 def preflightDeclarationNames (env : Environment)
     (requests : Array DeclarationNameRequest) :

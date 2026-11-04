@@ -65,21 +65,21 @@ structure PointwiseNormalization where
   /-- Global-equivalence certificate induced by the pointwise proofs. -/
   equivalence : Expr
 
-/-- A step's complete name requests and deferred materializer. -/
+/-- A step's requested names and construction procedure. -/
 structure StepPlan (m : Type → Type) where
   /-- Complete presentation-name batch required by the step. -/
   nameRequests : Array NameRequest
   /-- Construct the typed result from the allocated names. -/
   materialize : NameAllocation → m StepResult
 
-/-- Allocate the complete name batch before materialization. -/
+/-- Allocate all requested names before constructing the step. -/
 def StepPlan.run [Monad m] (plan : StepPlan m) (active : NameInventory) :
     ExceptT NamePreflightError m StepResult := do
   let allocation ← ExceptT.mk <| pure <|
     preflightNameRequests active plan.nameRequests
   plan.materialize allocation
 
-/-- Typed state threaded by the command runner. -/
+/-- Typed state maintained across commands. -/
 structure RunnerState where
   /-- Current natural semantic problem. -/
   semantic : Expr
@@ -100,7 +100,7 @@ structure RunnerState where
   /-- Whether the runner accepts another step. -/
   status : StepStatus := .continue
 
-/-- Rebase a companion declaration onto a new section-variable context. -/
+/-- Replace section variables in an additional declaration. -/
 def CompanionRequest.replaceFVars (request : CompanionRequest)
     (oldFVars newFVars : Array Expr) : CompanionRequest := {
   request with
@@ -108,7 +108,7 @@ def CompanionRequest.replaceFVars (request : CompanionRequest)
   value := request.value.replaceFVars oldFVars newFVars
 }
 
-/-- Rebase a typed step result onto a new section-variable context. -/
+/-- Replace section variables in a typed step result. -/
 def StepResult.replaceFVars (result : StepResult)
     (oldFVars newFVars : Array Expr) : StepResult := {
   result with
@@ -118,7 +118,7 @@ def StepResult.replaceFVars (result : StepResult)
   companions := result.companions.map (·.replaceFVars oldFVars newFVars)
 }
 
-/-- Rebase a pointwise normalization onto a new section-variable context. -/
+/-- Replace section variables in a pointwise normalization proof. -/
 def PointwiseNormalization.replaceFVars (normalization : PointwiseNormalization)
     (oldFVars newFVars : Array Expr) : PointwiseNormalization := {
   semantic := normalization.semantic.replaceFVars oldFVars newFVars
@@ -128,7 +128,7 @@ def PointwiseNormalization.replaceFVars (normalization : PointwiseNormalization)
   equivalence := normalization.equivalence.replaceFVars oldFVars newFVars
 }
 
-/-- Rebase retained expressions onto a later runTermElabM section context. -/
+/-- Replace section variables in retained expressions with those from a later `runTermElabM` context. -/
 def RunnerState.replaceFVars (state : RunnerState)
     (oldFVars newFVars : Array Expr) : RunnerState := {
   semantic := state.semantic.replaceFVars oldFVars newFVars
@@ -192,8 +192,7 @@ private def ensureHasType (value expected : Expr) (description : String) : MetaM
   unless ← isDefEq actual expected do
     throwError "{description} has type{indentExpr actual}\nbut expected{indentExpr expected}"
 
-/-- Validate the semantic, pointwise, and global-equivalence parts of a
-normalization witness. -/
+/-- Check the problems, pointwise proofs, and global equivalence in a normalization certificate. -/
 def PointwiseNormalization.check (normalization : PointwiseNormalization) :
     MetaM Unit := do
   let (semanticDomain, semanticValue) ← problemTypeParts normalization.semantic

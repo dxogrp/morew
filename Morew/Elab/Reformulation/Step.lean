@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.View
 
-/-! Validate materialized steps through the typed runner before committing surface state. -/
+/-! Validate constructed steps before updating the problem syntax and certificates. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -155,7 +155,7 @@ private def reportNamePreflightError {α}
           throwErrorAt request.ref
             "internal error: generated name `{name}` was not freshened"
 
-/-- Preflight and validate a surface step, retaining its checked materialization. -/
+/-- Check requested names and validate a proposed step, retaining the checked result. -/
 def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     CommandElabM (Morew.Elab.Reformulation.StepResult ×
       SurfaceMaterialization) := do
@@ -177,7 +177,7 @@ def runTypedStepPlan (state : ReformState) (draft : SurfaceStepDraft) :
     | throwError "internal error: typed step produced no surface materialization"
   pure (result, materialization)
 
-/-- Commit a validated typed step and update its surface representation. -/
+/-- Apply a validated step and update its stored syntax. -/
 def commitSurfaceStep (state : ReformState)
     (result : Morew.Elab.Reformulation.StepResult)
     (materialization : SurfaceMaterialization) : CommandElabM ReformState := do

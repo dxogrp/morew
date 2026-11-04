@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.Runner
 
-/-! Surface state and certificate syntax for reformulation commands. -/
+/-! Problem syntax and certificates retained by reformulation commands. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -14,19 +14,19 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 private def namedTerm (name : Name) : TSyntax `term :=
   ⟨mkIdent name⟩
 
-/-- Build the surface syntax for a certificate relation. -/
+/-- Construct the syntax for a certificate relation. -/
 def certificateRelationTerm (runner : CertificateRunner)
     (source target : TSyntax `term) : MacroM (TSyntax `term) := do
   let relation := namedTerm runner.relation
   `($relation $source $target)
 
-/-- Build the surface syntax for a reflexive certificate. -/
+/-- Construct the syntax for a reflexive certificate. -/
 def certificateReflTerm (runner : CertificateRunner)
     (optimizationProblem : TSyntax `term) : MacroM (TSyntax `term) := do
   let refl := namedTerm runner.refl
   `($refl $optimizationProblem)
 
-/-- Build the surface syntax composing two certificates. -/
+/-- Construct the syntax composing two certificates. -/
 def certificateTransTerm (runner : CertificateRunner)
     (left right : TSyntax `term) : MacroM (TSyntax `term) := do
   let trans := namedTerm runner.trans
@@ -45,13 +45,13 @@ def liftCertificateEquivalence (runner : CertificateRunner)
 structure CanonicalCheckpoint where
   /-- Checked row source supplying the protected objective and ordered rows. -/
   semantic : TSyntax `term
-  /-- Semantic problem replaced by the checkpoint during normalization. -/
+  /-- Problem expression replaced by the stored reference problem during normalization. -/
   semanticAnchor : TSyntax `term
-  /-- The checkpoint's ordered binder and constraint presentation. -/
+  /-- The stored problem description, with variables and constraints in order. -/
   view : Morew.Syntax.ProblemView
 
-/-- Check that the internal row inventory is an ordered partition of the
-checkpoint, with one live identity for each displayed row. -/
+/-- Check that retained and removed constraints partition the stored problem,
+with one retained index per displayed constraint in the original order. -/
 def validateCheckpointRows (checkpointCount rowCount : Nat)
     (live : Array Nat) (removed : Std.HashSet Nat) : Except String Unit := do
   unless live.size == rowCount do
@@ -81,11 +81,12 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
-/-- Static backend operations; section-dependent expressions reside in CheckedTerminalArtifact. -/
+/-- Operations for the selected conic or NLP representation.
+Section-dependent expressions are stored in `CheckedTerminalArtifact`. -/
 structure TerminalAdapter where
   /-- User-facing representation name. -/
   description : String
-  /-- Suffix of the concrete form declaration. -/
+  /-- Suffix of the representation declaration. -/
   formSuffix : Name
   /-- Suffix of the representability theorem. -/
   propertySuffix : Name
@@ -99,7 +100,7 @@ structure TerminalAdapter where
 
 /-- Terminal evidence in the containing state's section-variable context. -/
 structure CheckedTerminalArtifact where
-  /-- Static operations supplied by the selected backend. -/
+  /-- Operations for the selected conic or NLP representation. -/
   adapter : TerminalAdapter
   /-- A kernel-checked form of the final canonical problem. -/
   form : Expr
@@ -148,9 +149,9 @@ Certificate-only dependencies do not reserve names. -/
   simplifyExpLogTerms : Bool := false
   /-- Whether the script has committed a substitution step. -/
   hasSubstitution : Bool := false
-  /-- Original checkpoint positions, aligned with the current displayed rows. -/
+  /-- Original positions of the currently displayed constraints in the stored problem. -/
   liveCheckpointRows : Array Nat
-  /-- Checkpoint positions whose rows have been proved removable. -/
+  /-- Original positions of constraints proved redundant. -/
   removedCheckpointRows : Std.HashSet Nat := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
@@ -171,13 +172,13 @@ structure SurfaceStepResult where
   simplifyExpLogTerms : Bool
   /-- Whether the proposed state includes a substitution. -/
   hasSubstitution : Bool
-  /-- Original checkpoint positions, aligned with the proposed displayed rows. -/
+  /-- Original positions of the proposed constraints in the stored problem. -/
   liveCheckpointRows : Array Nat
-  /-- Checkpoint positions removed by the proposed state. -/
+  /-- Original positions of constraints removed in the proposed state. -/
   removedCheckpointRows : Std.HashSet Nat
   /-- Accumulated checked predicate equivalences. -/
   normalizationLemmas : Array (TSyntax `term)
-  /-- A new normalization checkpoint with an initially empty removal inventory. -/
+  /-- A new reference problem for normalization, initially with no removed constraints. -/
   checkpoint? : Option CanonicalCheckpoint := none
   /-- Ordered replacements indexed by entries at step entry. -/
   constraintSplices : Array ConstraintSplice := #[]
@@ -188,9 +189,9 @@ structure SurfaceStepResult where
   /-- Additional declarations requested by the step. -/
   companions : Array Morew.Elab.Reformulation.CompanionRequest := #[]
 
-/-- Surface preparation with materialization deferred until name allocation succeeds. -/
+/-- A proposed step whose construction waits until its names have been allocated. -/
 structure SurfaceStepDraft where
-  /-- Complete presentation-name batch to preflight before materialization. -/
+  /-- Names to check and allocate before constructing the step. -/
   nameRequests : Array Morew.Elab.Reformulation.NameRequest
   /-- Build the step using its successfully allocated names. -/
   materialize : Morew.Elab.Reformulation.NameAllocation →
@@ -198,7 +199,7 @@ structure SurfaceStepDraft where
 
 /-- The syntax needed to emit a checked typed result. -/
 structure SurfaceMaterialization where
-  /-- Surface result corresponding to the checked typed result. -/
+  /-- Problem syntax corresponding to the checked result. -/
   surface : SurfaceStepResult
   /-- Section variables used while validating the typed result. -/
   sectionFVars : Array Expr

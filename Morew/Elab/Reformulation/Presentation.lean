@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Core
 import Morew.Elab.Reformulation.Names
 
-/-! Typed presentation entries, ordered edits, validation, and rebasing. -/
+/-! Typed problem descriptions, ordered edits, validation, and changes of variable context. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -94,7 +94,7 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
   mkAppOptM ``Morew.Problem.mk
     #[some state.domainType, some state.valueType, some state.objective, some feasible]
 
-/-- Build the active-name inventory for a typed presentation. -/
+/-- Collect the names used by a typed problem description. -/
 def PresentationState.nameInventory (state : PresentationState) : NameInventory :=
   let decisionBinders := state.binders.foldl
     (fun inventory binder => inventory.insert .decisionBinder binder.name) {}
@@ -193,7 +193,7 @@ private def validateConstraintReplacements (state : PresentationState)
       throw (.duplicateConstraintReplacement replacement.index)
     seen := seen.push replacement.index
 
-/-- Apply ordered edits atomically, splicing constraints at their original positions. -/
+/-- Apply ordered edits atomically, replacing constraints at their original positions. -/
 def PresentationState.applyDelta (state : PresentationState)
     (delta : PresentationDelta) : Except PresentationError PresentationState := do
   validateBinderReplacements state delta
@@ -234,8 +234,8 @@ private def ConstraintEntry.replaceFVars (entry : ConstraintEntry)
     (oldFVars newFVars : Array Expr) : ConstraintEntry :=
   { entry with predicate := entry.predicate.replaceFVars oldFVars newFVars }
 
-/-- Rebase all expressions in a presentation onto a new set of section free
-variables created by `runTermElabM`. -/
+/-- Replace section variables in all presentation expressions with those created by
+`runTermElabM`. -/
 def PresentationState.replaceFVars (state : PresentationState)
     (oldFVars newFVars : Array Expr) : PresentationState := {
   state with
@@ -246,7 +246,7 @@ def PresentationState.replaceFVars (state : PresentationState)
   constraints := state.constraints.map (·.replaceFVars oldFVars newFVars)
 }
 
-/-- Rebase all proof and type expressions in a presentation delta. -/
+/-- Replace section variables throughout the proposed changes. -/
 def PresentationDelta.replaceFVars (delta : PresentationDelta)
     (oldFVars newFVars : Array Expr) : PresentationDelta := {
   domainType? := delta.domainType?.map (·.replaceFVars oldFVars newFVars)
