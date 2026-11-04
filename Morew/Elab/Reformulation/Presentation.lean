@@ -68,7 +68,7 @@ private def leftAssociatedDomain (binders : Array BinderEntry) : MetaM Expr := d
     domain ← mkAppM ``Prod #[domain, binders[index]!.type]
   pure domain
 
-/-- Build the canonical problem with True, a single predicate, or right-associated conjunction. -/
+/-- Build the canonical problem with `True`, a single predicate, or right-associated conjunction. -/
 def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr := do
   ensureIsType state.domainType "presentation decision domain"
   ensureIsType state.valueType "presentation objective-value type"
@@ -90,7 +90,7 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
     let propositions := state.constraints.map fun constraint =>
       mkApp constraint.predicate point
     mkLambdaFVars #[point] <| rightAssociatedConjunction propositions.toList
-  -- Retain the declared OrderDual value type for maximization.
+  -- Retain the declared `OrderDual` value type for maximization.
   mkAppOptM ``Morew.Problem.mk
     #[some state.domainType, some state.valueType, some state.objective, some feasible]
 

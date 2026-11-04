@@ -41,7 +41,7 @@ private def materializeObjectiveBound (state : ReformState)
         let next := equivalenceType.getAppArgs.back!
         unless next.isAppOfArity transformName 4 do
           throwError "internal error: objective-bound certificate has an unexpected target"
-        -- Remove exactly one outer OrderDual for maximization.
+        -- Remove exactly one outer `OrderDual` for maximization.
         let auxiliaryType := next.getArg! 1
         let order := next.getArg! 2
         let nextType ← whnf (← inferType next)

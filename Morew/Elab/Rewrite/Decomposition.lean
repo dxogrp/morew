@@ -19,7 +19,7 @@ def conjunction : List Expr → Expr
   | [p] => p
   | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
 
-/-- Assemble ordered conjunction proofs; empty input gives True and one entry retains its structure. -/
+/-- Assemble ordered conjunction proofs; empty input gives `True` and one entry retains its structure. -/
 def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
   if proofs.isEmpty then return mkConst ``True.intro
   let mut result := proofs.back!

@@ -60,7 +60,7 @@ private theorem openProjection {X Y : Type*}
   opened.preimage continuous_fst
 
 /-- Transport certified residuals through stronger feasibility or an auxiliary product.
-backward must recover the old feasibility. -/
+`backward` must recover the old feasibility. -/
 def Result.transport (result : Result) (newFeasible backward : Expr)
     (auxiliary? : Option Expr := none) : MetaM Result := do
   let .forallE _ nextDomain _ _ ← whnf (← inferType newFeasible)

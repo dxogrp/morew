@@ -7,7 +7,7 @@ import Morew.Transform.Parameterization
 import Lean.Meta
 
 /-! Separate a selected coordinate from retained coordinates in original order.
-Use left-associated products, with Unit for no retained coordinates. -/
+Use left-associated products, with `Unit` for no retained coordinates. -/
 
 namespace Morew.Elab.Substitution.Coordinates
 

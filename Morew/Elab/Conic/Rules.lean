@@ -12,8 +12,8 @@ import Morew.Conic.Power.GeometricMean
 import Morew.Conic.PSD.Representations
 import Morew.Elab.Rewrite.Registry
 
-/-! Install built-in conic rules via morew_conic. Local attribute removal excludes a rule.
-Automatic selection prefers SecondOrder.normEpigraph over Power.normEpigraph
+/-! Install built-in conic rules via `morew_conic`. Local attribute removal excludes a rule.
+Automatic selection prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
 when both certify; explicit selection bypasses this preference. -/
 
 attribute [morew_conic]

@@ -35,8 +35,8 @@ open Lean Lean.Meta Qq
 
 /-- Optional nonzero evidence for division. -/
 structure EvidenceProvider where
-  /-- Supply a proof of c ≠ 0. The certifier checks its type, independence, and completeness.
-Returning none allows bounded numeral/rational evaluation. -/
+  /-- Supply a proof of `c ≠ 0`. The certifier checks its type, independence, and completeness.
+Returning `none` allows bounded numeral/rational evaluation. -/
   nonzeroEvidence? : Option (Expr → MetaM (Option Expr)) := none
 
 /-- A real affine map and its pointwise agreement with the supplied function. -/
@@ -123,14 +123,14 @@ private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : Reify
     reject inst "the finite indexing instance depends on an optimization variable"
   mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
 
--- Expose finite enumeration through HMul instance aliases, then check the canonical prefix.
+-- Expose finite enumeration through `HMul` instance aliases, then check the canonical prefix.
 private partial def matrixIndexInstance? (instanceExpr : Expr) (fuel : Nat := 32) :
     MetaM (Option Expr) := do
   if fuel == 0 then return none
   let instanceExpr ← Expr.reduceStructure instanceExpr
   if instanceExpr.isAppOfArity ``Matrix.instHMulOfFintypeOfMulOfAddCommMonoid 7 then
     return some instanceExpr.getAppArgs[4]!
-  -- Square multiplication can arrive through the ordinary Mul-to-HMul bridge.
+  -- Square multiplication can arrive through the ordinary `Mul`-to-`HMul` bridge.
   if instanceExpr.isAppOfArity ``instHMul 2 then
     return ← matrixIndexInstance? instanceExpr.getAppArgs[1]! (fuel - 1)
   if instanceExpr.isAppOfArity ``Matrix.instMulOfFintypeOfAddCommMonoid 5 then

@@ -14,7 +14,7 @@ open Lean Lean.Meta
 /-- Run recognition with fixed caller metavariables and retain declarations only on success.
 Keep name generators advanced to avoid collisions. Instantiate assigned metavariables
 in temporary local types for kernel checking. Restore failed environments through
-setEnv to clear core and meta caches. -/
+`setEnv` to clear core and meta caches. -/
 def withIsolatedMVars {ε α : Type} (action : MetaM (Except ε α)) :
     MetaM (Except ε α) := do
   let saved ← saveState

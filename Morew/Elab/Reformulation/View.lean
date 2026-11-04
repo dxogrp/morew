@@ -370,7 +370,7 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
   pure <| mkAppN expression.getAppFn (arguments.set! 3 base)
 
 /-- Construct the canonical target while preserving the stored source constraints.
-Use sourceName only to unfold the original problem container. -/
+Use `sourceName` only to unfold the original problem container. -/
 def canonicalTargetExpressionFromExpressions (sourceName : Name)
     (source semanticAnchor : Expr) (sourceView : Morew.Syntax.ProblemView)
     (removedCheckpointRows : Std.HashSet Nat) (semanticExpression : Expr)
@@ -418,7 +418,7 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
             let removedSourceConstraint := partIndex > 0 &&
               removedCheckpointRows.contains (partIndex - 1)
             if removedSourceConstraint then
-              -- Replace removed rows by True using the step's normalization evidence.
+              -- Replace removed rows by `True` using the step's normalization evidence.
               pure (.done (mkConst ``True))
             else
               let placeholder ← mkFreshExprMVar (some (← inferType exact))
@@ -769,7 +769,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
       targetType.getAppNumArgs == 2 do
     throwError "reformulation target does not have type `Morew.Problem _ _`"
-  -- Reduce the source container to Problem.mk while preserving field bodies and bindings.
+  -- Reduce the source container to `Problem.mk` while preserving field bodies and bindings.
   let target ← if recoverDefinitions then
       withTransparency .all <| whnf target
     else pure target

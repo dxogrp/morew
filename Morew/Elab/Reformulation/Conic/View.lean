@@ -34,7 +34,7 @@ private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat)
   if dimension.isAppOfArity ``Nat.succ 1 then
     return (← psdDimensionLiteral? dimension.getAppArgs[0]!).map (· + 1)
   let some n ← getNatValue? dimension | return none
-  -- Check OfNat instances before interpreting numeral indices.
+  -- Check `OfNat` instances before interpreting numeral indices.
   if ← isDefEq dimension (mkNatLit n) then return some n
   return none
 

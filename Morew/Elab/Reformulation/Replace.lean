@@ -91,7 +91,7 @@ structure RewriteResult where
   /-- `GlobalEquivalence` from the old canonical problem to `targetProblem`. -/
   equivalence : Expr
 
-/-- Assemble a selected-row replacement; targetIff equates the representation target
+/-- Assemble a selected-row replacement; `targetIff` equates the representation target
 with the ordered replacement conjunction. -/
 private def rewriteConstraintCore (presentation : PresentationState) (index : Nat)
     (certificate : Rewrite.Plan.Certificate) (auxiliary? : Option Expr) (nextDomain : Expr)

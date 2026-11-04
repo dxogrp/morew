@@ -96,7 +96,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
         throwError "smooth certification requires a nondependent finite function space, got {type}"
       let target ← buildSpace body
       let data ← mkAppM ``Structure.pi #[indexShape.getAppArgs[0]!, target.data]
-      -- Use Structure.pi's Fin enumeration for componentwise calculus.
+      -- Use `Structure.pi`'s `Fin` enumeration for componentwise calculus.
       let fintype ← mkAppM ``Fin.fintype #[indexShape.getAppArgs[0]!]
       let fintypeType ← mkAppM ``Fintype #[index]
       let fintype ← mkAppOptM ``id #[some fintypeType, some fintype]
@@ -111,8 +111,8 @@ private def installInstances (remaining : List Expr) (action : MetaM Expr) : Met
     mapLetDeclZeta `_smoothCanonical (← inferType inst) inst fun _ =>
       installInstances rest action
 
-/-- Use canonical analytic structures on supplied spaces, their components, and ℝ.
-Use the matching Fin enumeration and substitute temporary instances into the result. -/
+/-- Use canonical analytic structures on supplied spaces, their components, and `ℝ`.
+Use the matching `Fin` enumeration and substitute temporary instances into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
   let mut instances := #[mkConst ``realField]
   for type in #[mkConst ``Real] ++ types do

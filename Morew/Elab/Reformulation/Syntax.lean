@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Syntax
 
-/-! Reformulation grammar with parser names in Morew. -/
+/-! Reformulation grammar with parser names in `Morew`. -/
 
 namespace Morew
 

@@ -142,7 +142,7 @@ private def expansionConfig : MetaM Expansion.Config := do
     label := "smooth"
   }
 
--- Follow selected fields and applications without unfolding named Problem definitions.
+-- Follow selected fields and applications without unfolding named `Problem` definitions.
 private partial def unfoldValueHead? (config : Expansion.Config) (expression : Expr)
     (depth : Nat) : Expansion.ExpandM (Option Expansion.Step) := do
   unless Expansion.enabled config do return none
@@ -688,7 +688,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         #[indices, family, proof] (some 2) }
   if let some atom ← Atom.recognizeAtom? expression then
     if atom.kind == .rpow && !inferDomains then
-      -- Report explicit Real.rpow operand failures in global mode.
+      -- Report explicit `Real.rpow` operand failures in global mode.
       for argument in args do
         if (← Expr.depends point argument) && (← supportedSpace (← inferType argument)) then
           discard <| certifyBody point argument
@@ -830,7 +830,7 @@ private def certifyCore (source : Expr) : CertifyM Certificate := do
   return { result with
     smooth := proof }
 
-/-- Prove ContDiffOn ℝ 2 source Set.univ using canonical analytic structures.
+/-- Prove `ContDiffOn ℝ 2 source Set.univ` using canonical analytic structures.
 Reduce local structure and expand dependent helpers within configured limits.
 Preserve caller metavariables; restore the environment on failure. -/
 def certifyGlobal (source : Expr) : MetaM (Except SmoothError Expr) :=

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Substitution
 import Morew.Elab.Substitution.Registry
 
-/-! Install built-in coordinate parameterizations. Explicit via also accepts unregistered records. -/
+/-! Install built-in coordinate parameterizations. Explicit `via` also accepts unregistered records. -/
 
 attribute [morew_substitute]
   Morew.Substitution.identity

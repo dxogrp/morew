@@ -154,7 +154,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   | _ => pure ()
   let head := expression.getAppFn
   let arguments := expression.getAppArgs
-  -- Preserve Matrix.of and Matrix.reindex coercions; expand their matrix operands and aliases within budget.
+  -- Preserve `Matrix.of` and `Matrix.reindex` coercions; expand their matrix operands and aliases within budget.
   if head.isConstOf ``DFunLike.coe && arguments.size >= 6 then
     let operation ← reduceChecked arguments[4]! reduce bounds
     if operation.isAppOf ``Matrix.of || operation.isAppOf ``Matrix.reindex then

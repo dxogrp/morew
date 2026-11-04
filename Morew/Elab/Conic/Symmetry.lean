@@ -129,7 +129,7 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
     for name in structuralRules matrix do
       try
         let rule ← mkConstWithFreshMVarLevels name
-        -- Match A + Aᵀ before expanding unrelated diagonal entries.
+        -- Match `A + Aᵀ` before expanding unrelated diagonal entries.
         let goals ← if name == ``Matrix.isSymm_add_transpose_self ||
             name == ``Matrix.isSymm_transpose_add_self then
             withTransparency .reducible (goal.apply rule)
@@ -147,7 +147,7 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
       literalProof goal matrix
       return
     catch _ => saved.restore
-    -- Entrywise universal witnesses need not be phrased with IsSymm.
+    -- Entrywise universal witnesses need not be phrased with `IsSymm`.
     try
       let goals ← goal.apply (← mkConstWithFreshMVarLevels ``Matrix.IsSymm.ext)
       for subgoal in goals do solve subgoal hypotheses (fuel - 1)

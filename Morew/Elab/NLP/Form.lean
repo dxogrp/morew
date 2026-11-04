@@ -18,7 +18,7 @@ namespace Morew.Elab.NLP
 open Lean Lean.Meta Qq
 open Reformulation
 
--- Expose structural types for field notation on Matrix and finite-index aliases.
+-- Expose structural types for field notation on `Matrix` and finite-index aliases.
 private partial def structuralDomain (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then return shape
@@ -98,7 +98,7 @@ private def buildFormCore (presentation : PresentationState)
         rowIndex? := some index
         reason := ← addMessageContext m!"constraint `{entry.name}`: {error.reason}" }
     | .ok result => certificates := certificates.push result
-  -- Use a real analytic codomain while retaining the OrderDual-valued objective.
+  -- Use a real analytic codomain while retaining the `OrderDual`-valued objective.
   let realObjective ← mkAppOptM ``Morew.Problem.objective
     #[some presentation.domainType, some q(ℝ), some canonical]
   let objective ← Domain.certifyWithEvidence feasible #[realObjective] Rows.factsProvider

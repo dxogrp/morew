@@ -7,8 +7,8 @@ import Morew.Rewrite
 import Morew.Elab.Rewrite.Registry
 
 /-! Install exact NLP rules for automatic rewriting.
-norm2Epigraph covers Euclidean values and explicit toLp 2 inputs;
-fnNorm2Epigraph matches the named function. -/
+`norm2Epigraph` covers Euclidean values and explicit `toLp 2` inputs;
+`fnNorm2Epigraph` matches the named function. -/
 
 attribute [morew_nlp]
   Morew.Rewrite.absEpigraph

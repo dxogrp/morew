@@ -259,7 +259,7 @@ private def proveCore (point target : Expr) (facts : Array Expr) : MetaM Expr :=
       Space.withCanonicalSpaces #[← inferType point] do
         let simple ← simpContext
         let simplified ← approved.mapM (simplifiedFact simple)
-        -- Retain strict margins even when their propositions simplify to True.
+        -- Retain strict margins even when their propositions simplify to `True`.
         withFacts (approved ++ simplified).toList #[] fun facts => search target facts
 
 /-- Search approved source, operand-domain, independent parameter, and finite-index facts.

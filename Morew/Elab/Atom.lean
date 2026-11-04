@@ -129,7 +129,7 @@ private def recognizeApplication? (original : Expr) : MetaM (Option AtomApplicat
   return some { original, kind := head.kind, operands }
 
 /-- Recognize a supported, fully applied real operation by constant head and canonical
-instances. Return none for unsupported or unresolved inputs. Preserve caller metavariables. -/
+instances. Return `none` for unsupported or unresolved inputs. Preserve caller metavariables. -/
 def recognizeAtom? (expression : Expr) : MetaM (Option AtomApplication) := do
   let saved ← saveState
   try

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Transform.Parameterization
 import Morew.Elab.Rewrite.Registry
 
-/-! Register coordinate parameterizations through morew_substitute with Lean attribute scope.
+/-! Register coordinate parameterizations through `morew_substitute` with Lean attribute scope.
 Store discovery metadata; matching checks complete maps and operation instances. -/
 
 namespace Morew.Elab.Substitution.Registry

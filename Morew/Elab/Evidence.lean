@@ -11,7 +11,7 @@ import Lean.Meta.Check
 
 /-! Parameter and sign evidence from independent hypotheses, conjunction projections,
 one finite-index specialization, and bounded numeral/rational evaluation.
-Transport real exponents through ofReal; exclude decision-dependent premises. -/
+Transport real exponents through `ofReal`; exclude decision-dependent premises. -/
 
 namespace Morew.Elab.Evidence
 
@@ -115,8 +115,8 @@ private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
     return some proof
   catch _ => return none
 
-/-- Prove parameter conditions from independent hypotheses, one supplied Fin index,
-the ofReal bridge, or bounded numerical evaluation. Reject unresolved inputs. -/
+/-- Prove parameter conditions from independent hypotheses, one supplied `Fin` index,
+the `ofReal` bridge, or bounded numerical evaluation. Reject unresolved inputs. -/
 def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
@@ -143,7 +143,7 @@ def constantSign? (point value : Expr) (strict : Bool)
   if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value
   let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
-  -- Prove the sign of canonical Real.zero by reflexivity.
+  -- Prove the sign of canonical `Real.zero` by reflexivity.
   if !strict && (← isDefEq value q((0 : ℝ))) then return some q(le_refl (0 : ℝ))
   if let some proof ← proveIndependent? point obligation index? then return some proof
   if !strict then

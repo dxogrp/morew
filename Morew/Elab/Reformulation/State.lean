@@ -158,7 +158,7 @@ Certificate-only dependencies do not reserve names. -/
   /-- Structural evidence produced by terminal validation. -/
   terminalArtifact? : Option CheckedTerminalArtifact := none
 
-/-- An uncommitted primitive step; commitSurfaceStep composes certificates and updates state. -/
+/-- An uncommitted primitive step; `commitSurfaceStep` composes certificates and updates state. -/
 structure SurfaceStepResult where
   /-- Proposed presentation retaining source binding structure. -/
   view : Morew.Syntax.ProblemView

@@ -7,8 +7,8 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Step
 import Lean.Elab.MutualDef
 
-/-! Declare a transformed problem and its GlobalEquivalence certificate.
-Terminal conic and nlp steps also emit structural forms and representability proofs. -/
+/-! Declare a transformed problem and its `GlobalEquivalence` certificate.
+Terminal `conic` and `nlp` steps also emit structural forms and representability proofs. -/
 
 namespace Morew
 
@@ -181,7 +181,7 @@ private def emitCompanionDeclaration
     noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
   elabCommand command
 
--- Preserve occurrence structure and OrderDual after checking canonical agreement.
+-- Preserve occurrence structure and `OrderDual` after checking canonical agreement.
 private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
     CommandElabM (TSyntax `term) :=
   emitDefinition target fun sectionVars => do

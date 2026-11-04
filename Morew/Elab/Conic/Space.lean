@@ -130,7 +130,7 @@ noncomputable abbrev pi (ι : Type*) [Fintype ι] {Y : Type*} (a : Structure Y) 
 
 end Structure
 
--- Preserve Matrix aliases in local instance types for typeclass matching.
+-- Preserve `Matrix` aliases in local instance types for typeclass matching.
 private def finishSpace (type data : Expr) : MetaM Expr := do
   let dataType ← mkAppM ``Structure #[type]
   mkAppOptM ``id #[some dataType, some data]

@@ -171,13 +171,13 @@ partial def isSupportedSpace (type : Expr) : MetaM Bool := do
   if let .forallE _ index body _ := type then
     let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then return false
-    -- Require finite indices; retain each operation's own Fintype instance.
+    -- Require finite indices; retain each operation's own `Fintype` instance.
     let finiteType ← mkAppM ``Finite #[index]
     unless (← synthInstance? finiteType).isSome do return false
     return ← isSupportedSpace body
   return false
 
-/-- Collect independent Finite proofs from source Finite and Fintype instances.
+/-- Collect independent `Finite` proofs from source `Finite` and `Fintype` instances.
 Substitute local lets and keep named helpers closed. Preserve operation enumerations. -/
 def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
   let mut pending := [source]

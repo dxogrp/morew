@@ -144,7 +144,7 @@ private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
     unless ← isDefEq sourceArgs[index]! canonicalArgs[index]! do return false
   return true
 
--- Reduce standard extended-real numerals, inverses, and quotients inside toReal.
+-- Reduce standard extended-real numerals, inverses, and quotients inside `toReal`.
 private partial def literalENNReal (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
@@ -227,7 +227,7 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
         let normalizedExponent : Q(ℝ) := normalized.expr
         let evaluated ← Mathlib.Meta.NormNum.Result.toSimpResult (u := .zero)
           (← Mathlib.Meta.NormNum.derive (u := .zero) normalizedExponent)
-        -- Simplify literal ENNReal.toReal parameters.
+        -- Simplify literal `ENNReal.toReal` parameters.
         if exponent == evaluated.expr then return .error ()
         let equality ← mkEqTrans (← normalized.getProof) (← evaluated.getProof)
         unless ← isDefEq (← inferType equality) (← mkEq exponent evaluated.expr) do

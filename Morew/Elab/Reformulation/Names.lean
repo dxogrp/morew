@@ -49,7 +49,7 @@ def NameRequestKind.isGenerated : NameRequestKind → Bool
   | .generatedBinderFamily | .generatedRowFamily => true
   | _ => false
 
-/-- A presentation-name request whose id is unique within its batch. -/
+/-- A presentation-name request whose `id` is unique within its batch. -/
 structure NameRequest where
   /-- Key used to recover this request's allocation. -/
   id : Nat
@@ -132,7 +132,7 @@ def NamePreflightError.message : NamePreflightError → MessageData
       | .generatedBinderFamily | .generatedRowFamily =>
           m!"internal error: generated name `{visibleName occupied}` was not freshened"
 
-/-- Use the qualified stem, then suffixes _1, _2, and so on. -/
+/-- Use the qualified stem, then suffixes `_1`, `_2`, and so on. -/
 def generatedCandidate (stem : Name) (index : Nat) : Name :=
   let stem := visibleName stem
   if index == 0 then stem else stem.appendIndexAfter index

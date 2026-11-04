@@ -43,7 +43,7 @@ private def reject (left right : Expr) (reason : MessageData) : ContextM α := d
     m!"cannot certify bound context from {left} to {right}: {reason}; use `using` with an explicit context certificate")
 
 /-- Compare typed expressions structurally with proof irrelevance and fixed function heads.
-Preserve local-definition identities unless reduceStructure requests let, projection,
+Preserve local-definition identities unless `reduceStructure` requests `let`, projection,
 and tuple-match reduction after occurrence selection. -/
 partial def sameExpression (left right : Expr) (reduceStructure : Bool := false) : MetaM Bool := do
   let left ← if reduceStructure then Expr.reduceStructure left else pure left.consumeMData

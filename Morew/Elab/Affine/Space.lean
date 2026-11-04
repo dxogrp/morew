@@ -64,7 +64,7 @@ private structure BuiltSpace where
 
 private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
     MetaM BuiltSpace := do
-  -- Preserve aliases such as Matrix in local instance types for typeclass matching.
+  -- Preserve aliases such as `Matrix` in local instance types for typeclass matching.
   let dataType ← mkAppM ``Structure #[type]
   let data ← mkAppOptM ``id #[some dataType, some data]
   let group ← mkAppM ``Structure.group #[data]
@@ -95,7 +95,7 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   else
     throwError "unsupported affine vector-space type {type}; expected ℝ, a finite Euclidean space, a product, or a function space over these"
 
-/-- Construct canonical AddCommGroup and Module ℝ instances for real, Euclidean,
+/-- Construct canonical `AddCommGroup` and `Module ℝ` instances for real, Euclidean,
 product, and nondependent function spaces. Callers check finite-index requirements. -/
 def canonicalSpace (type : Expr) : MetaM (Expr × Expr) := do
   let result ← buildSpace type
@@ -110,7 +110,7 @@ private def installInstances (remaining : List Expr) (action : MetaM Expr) : Met
       mapLetDeclZeta `_affineCanonical (← inferType inst) inst fun _ =>
         installInstances rest action
 
-/-- Use canonical instances for the supplied spaces, their components, and ℝ.
+/-- Use canonical instances for the supplied spaces, their components, and `ℝ`.
 Keep other local instances available and substitute temporary bindings into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
   let mut instances := #[]
