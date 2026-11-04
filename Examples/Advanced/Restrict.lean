@@ -9,9 +9,8 @@ import Morew.Reformulation.Basic
 # Selecting feasible representatives
 
 `restrict label : proposition using repair` adds a constraint and proves global
-equivalence using a feasible representative with an objective at least as good.
-The examples choose nonnegative points, order interchangeable variables, and
-select the nonnegative square-root branch after a square substitution.
+equivalence by mapping each feasible point to one with an objective at least
+as good.
 -/
 
 namespace Examples.Advanced.Restrict
@@ -64,9 +63,8 @@ reformulation ordered : symmetric := by
 #printp ordered
 example : GlobalEquivalence symmetric ordered := ordered.equivalence
 
--- After x := u², use the square-root preimage in `squareCoverage` to replace
--- u by √(u²) = |u|. This satisfies 0 ≤ u and preserves its square and objective.
--- The substitution has optima u = ±2; the restriction retains u = 2.
+-- After x := u², choose u ≥ 0 using the square-root preimage.
+-- This preserves u² and retains the optimum u = 2 from u = ±2.
 def nonnegativeSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2

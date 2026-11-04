@@ -8,10 +8,21 @@ import Morew.Reformulation.Conic
 /-!
 # Schur-complement reformulation
 
-For a positive-definite matrix `A`, the Schur complement `tI - Bᵀ A⁻¹ B`
-is positive semidefinite exactly when the block matrix `[A B; Bᵀ tI]` is
-positive semidefinite. We package this equivalence as a custom constraint rule
-and use it to obtain a conic problem.
+For a positive definite 2 × 2 matrix A, the variables are a 2 × 2 matrix B
+and a scalar t:
+
+```math
+\begin{array}{ll}
+\text{minimize} & t \\
+\text{subject to} & tI-B^T A^{-1}B \succeq 0.
+\end{array}
+```
+
+The Schur complement gives the equivalent linear matrix inequality:
+
+```math
+\begin{bmatrix} A & B \\ B^T & tI \end{bmatrix} \succeq 0.
+```
 -/
 
 namespace Examples.Advanced.Schur
@@ -39,8 +50,7 @@ def schurModel (A : SymmetricMatrix 2) :=
 
 variable (A : SymmetricMatrix 2) (hA : A.toMatrix.PosDef)
 
--- Select the proved equivalence for the Schur constraint, then certify the
--- complete problem. The equivalence proof retains the hypothesis hA.
+-- The Schur-complement rule uses the positive definiteness hypothesis hA.
 reformulation schurConic : (schurModel A) := by
   conic at schur using schurCertificate
   conic

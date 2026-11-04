@@ -10,9 +10,9 @@ import Morew.Reformulation.NLP
 # Registering custom rewrite rules
 
 `@[morew_conic]` and `@[morew_nlp]` register representations for automatic
-discovery. Define representation records with `def`; a definition may carry
-both attributes. The examples use an absolute-deviation epigraph, an
-absolute-value graph, and a logarithm representation on positive inputs.
+selection. A representation is a `def` and may carry both attributes.
+The examples cover absolute deviation, an absolute-value graph, and a
+logarithm on positive inputs.
 -/
 
 namespace Examples.Advanced.CustomRules
@@ -27,7 +27,6 @@ def absoluteDeviationEpigraph (center : ℝ) :
     EpigraphRepresentation (absoluteDeviation center) where
   Auxiliary := Unit -- No auxiliary decision variable.
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
-  -- Certify the original bound iff an auxiliary satisfying the target exists.
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
 
 def fitting (center : ℝ) :=
@@ -40,8 +39,7 @@ section
 
 variable (center : ℝ)
 
--- The attribute lets `conic at` discover the rule for this named helper and
--- infer its `center` parameter from the selected constraint.
+-- `conic at` selects the registered rule and infers `center`.
 reformulation conicRows : (fitting center) := by
   conic at deviation
 
@@ -50,8 +48,7 @@ reformulation conicRows : (fitting center) := by
 example : GlobalEquivalence (fitting center) (conicRows center) :=
   conicRows.equivalence center
 
--- Terminal commands also discover registered rules. Here `nlp` rewrites the
--- bound and certifies the complete problem, producing its NLP form.
+-- `nlp` applies the registered rule and certifies smoothness.
 reformulation smooth : (fitting center) := by
   nlp
 
@@ -61,8 +58,7 @@ example : (smooth.nlpForm center).data.toProblem = smooth center :=
   (smooth.nlpForm center).represents
 example : IsSmoothNLP (smooth center) := smooth.isSmoothNLP center
 
--- `using` selects a rule, including an unregistered one, and infers `center`.
--- Automatic selection requires exactly one match passing target certification.
+-- `using` selects a rule explicitly and infers its parameters.
 reformulation selected : (fitting center) := by
   conic at deviation using absoluteDeviationEpigraph
   conic
@@ -122,8 +118,7 @@ def logarithmicBound :=
       positive : 1 ≤ x
       bound : Real.log x ≤ t
 
--- `positive` supplies 0 < x. The rewrite adds a real auxiliary u with
--- x = exp u and u ≤ t; the retained positivity constraint stays in place.
+-- `positive` supplies 0 < x; the rewrite adds x = exp u and u ≤ t.
 reformulation logarithmicNLP : logarithmicBound := by
   nlp at bound using positiveLogEpigraph
   nlp
