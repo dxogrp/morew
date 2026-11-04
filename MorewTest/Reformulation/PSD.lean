@@ -289,7 +289,7 @@ reformulation schurRegistered : (schurSource A) := by
 example : (schurRegistered.conicForm A).data.rowCount = 3 := rfl
 end Registered
 
--- A retained certified PSD row must keep its global symmetry witness when an
+-- A retained certified PSD row must keep its proof of global symmetry when an
 -- unrelated logarithmic sum introduces an auxiliary decision vector.
 def auxiliarySource :=
   problem (x t : ℝ)

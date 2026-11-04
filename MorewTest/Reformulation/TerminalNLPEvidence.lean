@@ -9,7 +9,7 @@ import MorewTest.Reformulation.NLPCustom
 /-!
 # Scoped evidence across smooth-NLP commands
 
-Proof lets remain in semantic and replay expressions, including after importing
+Proof lets remain in semantic and reconstruction expressions, including after importing
 a targeted output. Their evidence stays under its original decision/index scope;
 displaying a model does not require printing unused proof terms.
 -/
@@ -67,7 +67,7 @@ info: problem (x y : ℝ)
 #guard_msgs in
 #printp directTarget
 
--- A `have` may depend on an earlier proof let; replay preserves both scopes.
+-- A `have` may depend on an earlier proof let; reconstruction preserves both scopes.
 def chained :=
   problem (x : ℝ)
     minimize (let hp := coefficient_pos c
@@ -102,7 +102,7 @@ reformulation groupedAgain : (groupedTarget c) := by
 example : NLP.Form (groupedAgain c) := groupedAgain.nlpForm c
 
 -- Structural projections retain proof scope through direct and selected
--- rewrites and replay of generated predicates.
+-- rewrites and reconstruction of generated predicates.
 def projected :=
   problem (x : ℝ)
     minimize x ^ 2

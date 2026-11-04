@@ -12,7 +12,7 @@ import MorewTest.Environment
 
 A synthetic equality relation makes a hard-coded global-equivalence primitive
 fail. Scoped selectors also exercise visible-name no-ops independently of the
-surface command's fixed public runner.
+reformulation command's fixed public runner.
 -/
 
 namespace MorewTest.Reformulation.RenameIsolation

@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.ConeMembership.Defined
 
 /-!
-# Exact replay independently of the later elaboration context
+# Exact reconstruction independently of the later elaboration context
 
 Generated metadata keeps its checked operations when new local instances become
 available. Imported and applied views retain helper references and distinct
@@ -58,7 +58,7 @@ run_cmd do
 section ChangedInstances
 
 -- These instances did not exist when either target was registered. Arbitrary
--- replacements make each equality below check that replay uses the old checked
+-- replacements make each equality below check that reconstruction uses the old checked
 -- instances, including operations retained inside local definitions.
 variable [changedSub : HSub ℝ ℝ ℝ] [changedAdd : HAdd ℝ ℝ ℝ]
   [changedNeg : Neg ℝ] [changedZero : Zero ℝ]
@@ -117,8 +117,7 @@ info: problem (x y : ℝ)
 
 end ChangedInstances
 
--- A view remains an editable syntax value. Replacing fields after lookup must
--- affect reconstruction; no cached replay of the old complete problem may win.
+-- Reconstruct the problem from the current fields, including edits after lookup.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
     | Lean.throwError "missing editable replay metadata"
@@ -186,7 +185,7 @@ end ImportedNamedParameters
 
 namespace NamedInstances
 
--- Distinct parameters of the same class are intentional in this replay test.
+-- Distinct parameters of the same class are intentional in this reconstruction test.
 set_option linter.overlappingInstances false
 
 class Parameter where
@@ -239,7 +238,7 @@ reformulation target : source := by
   conic
 
 -- The decision name forces the declaration's instance parameter to be renamed
--- while rendering. That fresh display name is unavailable to the replay caller.
+-- while rendering. That fresh display name is unavailable to the re-elaboration context.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
     | Lean.throwError "missing collision-safe instance replay metadata"
@@ -309,8 +308,8 @@ namespace RenamedInstanceCollision
 
 variable [replacement : InstanceNameCollision.Coeff]
 
--- The replay decision is hygienically scoped because it originally collided
--- with the producer's instance. It must still replay after that section ends.
+-- The decision variable's macro scope distinguishes it from an instance of the
+-- same name. Reconstruction must preserve this scope after the section ends.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``InstanceNameCollision.target
     | Lean.throwError "missing renamed collision replay metadata"

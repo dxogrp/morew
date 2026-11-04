@@ -8,7 +8,7 @@ import Morew.Reformulation.Conic
 /-!
 # Targeted polyhedral reformulations
 
-These surface tests exercise ordered row replacement, auxiliary decisions,
+These command tests exercise ordered row replacement, auxiliary decisions,
 native operation spellings, user certificates, and composition with other
 reformulation steps.
 -/

@@ -46,7 +46,7 @@ example : (nativeContinuedNLP.nlpForm n).data.toProblem = nativeContinuedNLP n :
 example : GlobalEquivalence (nativeSource n) (nativeContinuedNLP n) :=
   (nativeSelectedNLP.equivalence n).trans (nativeContinuedNLP.equivalence n)
 
--- Replay under unrelated caller norms must keep the imported mathematical
+-- Reconstruction under unrelated caller norms must keep the imported mathematical
 -- functions and certificates intact.
 section Shadow
 local instance : Norm (Fin 2 → ℝ) := ⟨fun _ => 101⟩

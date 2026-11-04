@@ -12,7 +12,7 @@ import MorewTest.Reformulation.PowerSource
 # Power-cone command integration
 
 These examples check ordered targets, auxiliary coordinates, terminal forms,
-readable power-set notation, exact presentation replay, and imported models.
+readable power-set notation, exact presentation reconstruction, and imported models.
 -/
 
 namespace MorewTest.Reformulation.Power
@@ -121,7 +121,7 @@ example : terminal.conicForm.data.sense = .maximize := rfl
 example : terminal.conicForm.data.rowCount = 4 := rfl
 example (x t u : ℝ) : target.feasible ((x, t), u) ↔
     0 ≤ x ∧ 0 ≤ u ∧ t ≤ u ∧ (x, 1, u) ∈ POW (1 / 2) := Iff.rfl
--- The added nonnegative coordinate can witness a negative original bound.
+-- The auxiliary nonnegative coordinate also represents negative lower bounds.
 example : target.feasible ((0, -1), 0) := by
   change 0 ≤ (0 : ℝ) ∧ 0 ≤ (0 : ℝ) ∧ (-1 : ℝ) ≤ 0 ∧ (0, 1, 0) ∈ POW (1 / 2)
   norm_num [Cone.mem_powerSet]
@@ -231,7 +231,7 @@ run_cmd do
 example : exactCopy offset = target offset := rfl
 example : displayCopy offset = target offset := rfl
 
--- The proof-sharing replay scaffold must remain native after a module import.
+-- The stored syntax with shared proofs must remain native after a module import.
 reformulation importedContinuation : (PowerSource.rewritten offset) := by
   conic
 
@@ -346,7 +346,7 @@ example : negativeFractionCopy = Scalar.negativeFractionTarget := rfl
 example : hypographCopy = Hypograph.target := rfl
 example : directCopy = Direct.target := rfl
 
--- The readable Set notation also re-elaborates, independently of exact replay.
+-- The readable Set notation also re-elaborates, independently of exact reconstruction.
 run_cmd do
   for (original, copy) in [(``Scalar.targeted, `scalarDisplayCopy),
       (``Scalar.negativeFractionTarget, `negativeFractionDisplayCopy),

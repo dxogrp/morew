@@ -85,7 +85,7 @@ run_cmd replayStored ``target `exactReplay `displayReplay
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
 
--- Generating a new payload here cannot use coordinate notation with the
+-- The new printed representation cannot use coordinate notation with the
 -- currently selected, noncanonical function coercion.
 reformulation guarded : target := by nlp
 

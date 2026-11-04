@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 
-/-! # Native matrix norms and spectral certificates for imported replay -/
+/-! # Native matrix norms and spectral certificates for imported reconstruction -/
 
 namespace MorewTest.Reformulation.Spectral
 

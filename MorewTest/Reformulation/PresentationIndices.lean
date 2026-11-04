@@ -8,7 +8,7 @@ import Morew.Reformulation.Conic
 /-!
 # Finite-index presentation boundaries
 
-Preserve constructor and dimension syntax, and replay its meaning even when
+Preserve constructor and dimension syntax, and reconstruct the same expression even when
 numerals, arithmetic, coercions, or dependent types have specialized instances.
 -/
 
@@ -29,7 +29,7 @@ private def elaborate (term : TSyntax `term) (expectedType? : Option Expr := non
 private def checkReplay (term : TSyntax `term) (required : Array String := #[]) :
     TermElabM Unit := do
   let expression ← elaborate term
-  -- Complete ordinary printing supplies the proofs and types needed to replay
+  -- Complete ordinary printing supplies the proofs and types needed to reconstruct
   -- readable constructors; generic presentation does not abbreviate them.
   withOptions (·.setBool `pp.proofs true |>.setBool `pp.structureInstanceTypes true
       |>.setBool `pp.funBinderTypes true) do
@@ -142,7 +142,7 @@ noncomputable section
 local instance (priority := high) (j : Fin 2) : CoeDep Nat j.val ℝ := ⟨7⟩
 
 -- Ordinary coercion notation can itself resynthesize CoeDep; retain the
--- explicit cast when testing readable replay under these altered instances.
+-- explicit cast when testing readable reconstruction under these altered instances.
 set_option pp.coercions false
 
 run_cmd liftTermElabM do

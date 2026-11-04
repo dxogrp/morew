@@ -316,7 +316,7 @@ assert_terminal_atomic%
 reformulation noCustomMembership : customMembership := by
   conic
 
--- The surface checkpoint already reduces an explicit constant relation to
+-- The problem checkpoint already reduces an explicit constant relation to
 -- True. Terminal conversion certifies that exact normalized predicate without
 -- applying a native rule to the discarded operation instance.
 def reducibleConstantRelations :=

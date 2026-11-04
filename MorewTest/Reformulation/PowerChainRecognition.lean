@@ -143,7 +143,7 @@ run_cmd liftTermElabM do
       checkRows duplicated (ordinary duplicated)
     let unrelated := rows.push (mkConst ``True)
     checkRows unrelated (geometricRoles.push "ordinary")
-    -- Planner templates and replay can leave several literal applications.
+    -- Planner templates and reconstruction can leave several literal applications.
     checkRows (rows.set! 1 (wrapMembership rows[1]! 2)) geometricRoles
     -- Exhausting the bounded template inspection must preserve ordinary output.
     let deeplyWrapped := rows.set! 1 (wrapMembership rows[1]! 40)

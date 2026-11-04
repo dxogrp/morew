@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LogDet.Sources
 
-/-! Log-det producers with certified domains for imported presentation replay. -/
+/-! Log-det producers with certified domains for imported presentation reconstruction. -/
 
 namespace MorewTest.Reformulation.LogDet
 

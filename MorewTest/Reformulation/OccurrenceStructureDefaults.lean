@@ -8,7 +8,7 @@ import Morew.Reformulation.Basic
 /-!
 # Structure defaults preserve explicit occurrences
 
-Replay must retain explicitly supplied fields even when they reduce to a
+Reconstruction must retain explicitly supplied fields even when they reduce to a
 structure default. Ambient pretty-printing options cannot change selection.
 -/
 

@@ -10,7 +10,7 @@ import MorewTest.Reformulation.PrintSupport
 # Proof detail selected when a registered problem is printed
 
 Printing the same declaration under different options must recover its proof
-arguments without changing the stored replay views or its mathematical terms.
+arguments without changing the stored reconstruction views or its mathematical terms.
 These ordinary finite coordinates do not depend on power-chain formatting.
 -/
 
@@ -63,7 +63,7 @@ run_cmd do
     let some display := Syntax.getProblemDisplayView? environment original
       | throwError "printing lost the ordinary display view"
     -- The ordinary display retains its registration-time policy: the default
-    -- view omits the shifted-index proof, while the detailed one can replay.
+    -- view omits the shifted-index proof, while the detailed one can be re-elaborated.
     let views := if original == ``registeredDetailed then
       #[(exact, exactName), (display, displayName)] else #[(exact, exactName)]
     for (view, name) in views do
@@ -120,7 +120,7 @@ reformulation registeredDetailed : (source 0) := by conic at bound
 
 run_cmd do
   -- The ordinary refresh API retains template binder spelling for bare names.
-  -- Its compact payload must still inspect the checked binder types.
+  -- Its compact printed representation must still inspect the checked binder types.
   let some template := Syntax.getProblemDisplayView? (← getEnv) ``bare
     | throwError "missing bare-name binder presentation"
   Morew.Elab.Reformulation.refreshProblemView ``bare template

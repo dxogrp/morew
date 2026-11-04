@@ -251,7 +251,7 @@ example (x t : ℝ) (v : Fin 0 → ℝ) : nativeTarget.feasible ((x, t), v) ↔
     (t, v) ∈ SOC 0 ∧ (t, 1, v) ∈ RSOC 0 ∧ (x, 1, t) ∈ EXP ∧
       (∀ i : Fin 0, (v i, 1, t) ∈ EXP) ∧ t - x ∈ ℝ₊ := Iff.rfl
 
--- This name must not capture imported helper references during replay.
+-- This name must not capture imported helper references during reconstruction.
 def shifted (_offset x : ℝ) : ℝ := x - 100
 
 reformulation applied : (Defined.source 2) := by
@@ -314,7 +314,7 @@ example (x y : ℝ) : replayedNegativeAlias.feasible (x, y) ↔
 
 -- Generated zero and subtraction use canonical instances even if an unrelated
 -- local definition retains a custom instance parameter. Stored presentation
--- replay must keep those exact instances as well as the readable binding names.
+-- reconstruction must keep those exact instances as well as the readable binding names.
 namespace AmbientZero
 section
 variable [customZero : Zero ℝ]
@@ -396,7 +396,7 @@ def source :=
 reformulation target : source := by
   conic
 
--- The unused definition retains the custom addition parameter. Exact replay
+-- The unused definition retains the custom addition parameter. Exact reconstruction
 -- must keep the generated native addition independently of the readable display.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``target

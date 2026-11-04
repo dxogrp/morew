@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Basic
 import MorewTest.Reformulation.PrintSupport
 
-/-! Scalar and vector singleton sets retain their types without a backend import. -/
+/-! Scalar and vector singleton sets retain their types without importing conic or NLP commands. -/
 
 namespace MorewTest.Reformulation.SingletonReplay
 

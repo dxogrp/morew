@@ -75,8 +75,8 @@ run_cmd replayStored ``target `exactReplay `displayReplay
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
 
--- New print payloads cannot use coordinate shorthand with the caller's
--- conflicting coercion; the previously stored payload remains unchanged.
+-- New printed representations cannot use coordinate shorthand with the caller's
+-- conflicting coercion; the previously stored representation remains unchanged.
 reformulation guarded : target := by conic
 
 run_cmd do

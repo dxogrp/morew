@@ -12,7 +12,7 @@ import MorewTest.Reformulation.PrintSupport
 # Mathematical chain output and detailed inspection
 
 Check terminal output for concrete, singleton, and symbolic dimensions.
-Print-time options preserve both stored replay views.
+Print-time options preserve both stored reconstruction views.
 -/
 
 namespace MorewTest.Reformulation.PowerChainPrinting

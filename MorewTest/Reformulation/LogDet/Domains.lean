@@ -6,7 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LogDet.Sources
 
-/-! Log-det rewriting preserves grouped, margin, witness, fixed, and affine domain evidence. -/
+/-! Log-det rewriting uses domain conditions from grouped constraints, positive
+margins, auxiliary matrices, and fixed or affine arguments. -/
 
 namespace MorewTest.Reformulation.LogDet
 

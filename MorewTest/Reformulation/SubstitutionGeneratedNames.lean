@@ -68,7 +68,7 @@ def generatedCoverage : FeasibleSurjection squareLift
   preimage point := (point.1.1 - point.1.2, point.1.2)
   rightInverse point := by simp
 
--- No model-local definitions are present: a's identity must still be replayed.
+-- No model-local definitions are present: a's identity must still be preserved.
 reformulation generatedTarget : squareLift := by
   substitute x := u + a using generatedCoverage
 

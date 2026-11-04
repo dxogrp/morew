@@ -93,7 +93,7 @@ info: problem (x y t : ℝ)
 end
 
 -- Certification must not add proof-only parameters or instances to the source
--- or to its emitted problem, equivalence, form, and representability witnesses.
+-- or to its emitted problem, equivalence, form, and representability certificates.
 example : ℝ → Problem (ℝ × ℝ) ℝ := source
 example : ℝ → Problem (ℝ × ℝ) ℝ := target
 example : ∀ offset, GlobalEquivalence (source offset) (target offset) := target.equivalence
