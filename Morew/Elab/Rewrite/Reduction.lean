@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Retain surface reductions only after direct certification succeeds. -/
+/-! Replace expressions by reduced forms only after direct certification succeeds. -/
 
 namespace Morew.Elab.Rewrite.Reduction
 
@@ -46,8 +46,8 @@ private partial def normalizeBody (point body : Expr) (reduce : Expr → MetaM E
       (usedLetOnly := false) (generalizeNondepLet := false)
     certify (← mkLambdaFVars #[point] scopedBody)
 
-/-- Check conjunction leaves independently, retaining their original grouping
-and scoped proof lets. An unsuccessful leaf stays unchanged for exact matching. -/
+/-- Check conjuncts independently, retaining their original grouping and scoped proof lets.
+An unsuccessful conjunct stays unchanged for exact matching. -/
 def normalizePredicate (predicate : Expr) (reduce : Expr → MetaM Expr)
     (certify : Expr → MetaM Bool) (opaqueProblemDependencies : Bool := false) : MetaM Expr := do
   let .forallE _ domain _ _ ← whnf (← inferType predicate)

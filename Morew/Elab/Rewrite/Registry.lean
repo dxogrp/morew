@@ -17,21 +17,21 @@ Explicit `using` selects a single declaration or certificate, registered or othe
 
 Graph and bound matching adapts outer real negations by equivalence while retaining
 operation instances; whole-predicate records match literally. Independent or retained
-evidence discharges subtype guards and proof parameters. Exactness uses the retained
+evidence discharges subtype conditions and proof parameters. Exactness uses the retained
 constraints; auxiliary types are decision-independent and targets are proof-independent.
 `Unit` auxiliaries add no coordinate.
 
-Conic premises use direct margins; NLP uses bounded reasoning over retained closed
-comparisons and compatible finite indices. Once exactness is proved, NLP may use
-generated guards for domain inclusion. Unsupported retained predicates supply no facts.
+Conic premises use direct lower bounds; NLP uses bounded reasoning over retained real
+equalities, non-strict inequalities, and compatible finite indices. Once exactness is proved,
+NLP may use generated constraints for domain inclusion. Unsupported retained predicates supply no facts.
 
-Backend `Rules` modules install built-ins; `Morew.Reformulation` imports both rule sets. -/
+Conic and NLP `Rules` modules install built-ins; `Morew.Reformulation` imports both rule sets. -/
 
 namespace Morew.Elab.Rewrite.Registry
 
 open Lean Lean.Meta
 
-/-- The two consumers of exact representation declarations. -/
+/-- The two target forms supported by exact representation declarations. -/
 inductive Target where
   | conic | nlp
   deriving BEq, Inhabited
@@ -156,11 +156,11 @@ private def makeExtension (name : Name) : IO (SimpleScopedEnvExtension Entry (Ar
     addEntry := fun entries value =>
       if entries.any (·.declaration == value.declaration) then entries else entries.push value }
 
-/-- Scoped persistent registrations for the conic consumer. -/
+/-- Scoped persistent registrations for conic rewriting. -/
 initialize conicExtension : SimpleScopedEnvExtension Entry (Array Entry) ←
   makeExtension `morewConicRegistry
 
-/-- Scoped persistent registrations for the smooth-NLP consumer. -/
+/-- Scoped persistent registrations for smooth-NLP rewriting. -/
 initialize nlpExtension : SimpleScopedEnvExtension Entry (Array Entry) ←
   makeExtension `morewNLPRegistry
 

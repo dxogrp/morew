@@ -9,7 +9,7 @@ import Morew.Elab.Expr
 import Morew.Elab.State
 
 /-! Match exact representations while preserving mathematical operation heads.
-Reconstruct product and subtype inputs from operands, using consumer evidence for guards. -/
+Reconstruct product and subtype inputs from operands, using caller evidence for subtype conditions. -/
 
 namespace Morew.Elab.Rewrite.Match
 
@@ -23,10 +23,10 @@ structure Result where
   target : Expr
   /-- Exactness for the complete original predicate at the current point. -/
   sourceIff : Expr
-  /-- Whether the consumer's controlled evidence callback supplied a proof. -/
+  /-- Whether the caller's evidence callback supplied a proof. -/
   usedEvidence : Bool := false
 
-/-- Consumer-controlled proof search; no retained assumptions are used by default. -/
+/-- Caller-supplied proof search; no retained assumptions are used by default. -/
 abbrev Prove := Expr → MetaM (Option Expr)
 
 private partial def inputValue (type : Expr) (depth : Nat := 0) :
@@ -45,7 +45,7 @@ private partial def inputValue (type : Expr) (depth : Nat := 0) :
     return (input, proofs.push proof)
   return (← mkFreshExprMVar type, #[])
 
--- Match concrete records to the whole decision point; collect subtype guards from inside out.
+-- Match concrete records to the whole decision point; collect subtype conditions from inside out.
 private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
     MetaM (Expr × Array Expr) := do
   if depth > 32 then throwError "representation input structure is too deeply nested"
@@ -177,7 +177,7 @@ private def checkIndependent (point : Expr) (arguments : Array Expr) : MetaM Uni
     let argument ← instantiateMVars argument
     let type ← instantiateMVars (← inferType argument)
     -- Require decision-independent instances. Obtain proof parameters from source evidence,
-    -- independent hypotheses, or the recorded consumer callback.
+    -- independent hypotheses, or the caller's evidence callback.
     if (← isClass? type).isSome then
       if (← Expr.depends point type) || (← Expr.depends point argument) then
         throwError "representation instance depends on the decision variable: {argument}"
@@ -326,10 +326,10 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
           !(← isDefEq inputType (← inferType point))
       if exactInput == .whole && subtypeWhole then
-        -- Retry subtype guards around the same complete decision point.
+        -- Retry subtype conditions on the same complete decision point.
         return ← tryAttempt false .subtypeWhole none
       if family == .exact && exactInput == .infer then
-        -- Retain whole-input matching for unused coordinates and subtype guards.
+        -- Retain whole-input matching for unused coordinates and subtype conditions.
         match ← tryAttempt false
             (if subtypeWhole then .subtypeWhole else .whole) none with
         | .ok value => return .ok value
@@ -343,7 +343,7 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
 
 /-- Match and certify the supplied record in isolated attempts including `accept`.
 Retain successful proof dependencies. Concrete `ExactConstraintLift` records use
-the whole decision point; subtype guards may wrap it.
+the whole decision point, possibly as a subtype.
 Graph orientations and sign views form one candidate.
 Whole-predicate records keep literal matching. -/
 def rule {α : Type} (point sourceBody expression : Expr)

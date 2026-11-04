@@ -8,7 +8,7 @@ import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Decomposition
 
 /-! Shared exact replacement data, scoped evidence, and ordered target equivalence.
-Backend planners provide target reduction, space checks, and row certification. -/
+Conic and NLP planners provide target reduction, space checks, and row certification. -/
 
 namespace Morew.Elab.Rewrite.Plan
 
@@ -90,7 +90,7 @@ partial def withScopedEvidence {α : Type}
       return replace result #[binding] #[value]
   else action
 
--- Keep caller metavariables in local declarations rigid.
+-- Keep caller metavariables in local declarations unassigned.
 /-- Detect unresolved expressions, including evidence hidden in local declarations. -/
 partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
     MetaM Bool := do

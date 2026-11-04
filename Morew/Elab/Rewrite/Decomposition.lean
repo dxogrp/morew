@@ -59,7 +59,7 @@ partial def appendIff (left right : List Expr) : MetaM Expr := do
         conjunction (rest ++ right), ← appendIff rest right]
 
 /-- Split a proposition using only the supplied structural reduction. Local
-lets remain attached to every leaf and to the decomposition proof. -/
+lets remain attached to every conjunct and to the decomposition proof. -/
 partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (List Expr × Expr) := do
   let body ← reduce body
@@ -85,7 +85,7 @@ partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
 end Decomposition
 
 /-- Decompose into ordered atomic predicates with conjunction equivalence.
-True contributes no leaves; retain unsupported atomic heads. -/
+`True` contributes no conjuncts; retain unsupported atomic predicates. -/
 def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type

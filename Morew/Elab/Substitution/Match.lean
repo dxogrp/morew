@@ -8,7 +8,7 @@ import Morew.Elab.Substitution.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Match complete coordinate maps under rigid retained and fresh binders.
+/-! Match complete coordinate maps while keeping retained and new binders fixed.
 Use independent evidence for premises and source feasibility for range coverage.
 Certify each candidate in isolation before resolving ambiguity. -/
 
@@ -147,7 +147,7 @@ private def checked {α : Type} (map point retained selected feasibleEvidence : 
   | .error error => throw error
 
 /-- Match only the supplied parameterization, without registry fallback. The
-complete consumer certificate is included in the isolated attempt. -/
+caller's complete certificate is checked within the isolated attempt. -/
 def rule {α : Type} (map point retained selected feasibleEvidence expression : Expr)
     (accept : Result → MetaM α) : MetaM α :=
   checked map point retained selected feasibleEvidence (pure expression) accept
