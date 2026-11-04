@@ -12,9 +12,17 @@ open scoped Matrix
 /-!
 # Second-order cone models
 
-Nonnegative least squares and a quadratic-over-linear objective admit exact
-second-order cone formulations. The quotient model retains a positive lower
-bound on its denominator; both scripts finish with conic certification.
+For a given m × n matrix A and vector b ∈ ℝᵐ, nonnegative least squares
+in norm form is
+
+```math
+\begin{array}{ll}
+\text{minimize} & \lVert Ax-b\rVert_2 \\
+\text{subject to} & x \succeq 0,
+\end{array}
+```
+
+with variable x ∈ ℝⁿ and componentwise inequality.
 -/
 
 namespace Examples.Models.SecondOrder
@@ -54,11 +62,21 @@ end NonnegLS
 namespace QuadraticOverLinear
 noncomputable section
 
+/-!
+The quadratic-over-linear model has scalar variables x and y:
+
+```math
+\begin{array}{ll}
+\text{minimize} & x^2/y \\
+\text{subject to} & y \geq 1.
+\end{array}
+```
+-/
+
 def p :=
   problem (x y : ℝ)
     minimize x ^ 2 / y
     subject to
-      -- Denominator bound certifies positivity for the quotient rewrite.
       denominator : 1 ≤ y
 
 reformulation quotientConic : p := by

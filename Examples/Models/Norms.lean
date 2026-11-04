@@ -9,13 +9,20 @@ import Morew.Reformulation.NLP
 /-!
 # Vector norm models
 
-`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the sum of absolute coordinates,
-Euclidean norm, and maximum absolute coordinate of a real vector.
-`‖WithLp.toLp p x‖` selects the `PiLp` p-norm.
+`Fn.norm1`, `Fn.norm2`, and `Fn.normInf` denote the ℓ₁, ℓ₂, and ℓ∞ norms;
+`‖WithLp.toLp p x‖` denotes the ℓₚ norm. For given b ∈ ℝⁿ, the first model
+has variable x ∈ ℝⁿ:
 
-The models fit data under norm bounds, compare three Euclidean
-representations at a symbolic dimension, and express a finite p-norm with
-power cones.
+```math
+\begin{array}{ll}
+\text{minimize} & \lVert x-b\rVert_1 \\
+\text{subject to} & \lVert x\rVert_2 \leq 2, \\
+ & \lVert x\rVert_\infty \leq 1.
+\end{array}
+```
+
+The remaining models compare second-order cone, power-cone, and smooth
+representations of norm bounds.
 -/
 
 namespace Examples.Models.Norms
@@ -47,7 +54,7 @@ example : (normConic.conicForm b).data.toProblem = normConic b :=
   (normConic.conicForm b).represents
 example : IsConic (normConic b) := normConic.isConic b
 
--- The same source model can instead use the smooth polynomial representation.
+-- Use polynomial inequalities for a smooth NLP formulation.
 reformulation normNLP : (normBudget b) := by
   epigraph t as residualBound
   nlp at radius
@@ -94,8 +101,7 @@ example : Conic.Form (power n) := power.conicForm n
 example : (power.conicForm n).data.toProblem = power n := (power.conicForm n).represents
 example : IsConic (power n) := power.isConic n
 
--- Smooth NLP rewriting yields 0 ≤ t and ∑ i, x i ^ 2 ≤ t ^ 2,
--- preserving the symbolic dimension n.
+-- The smooth representation is t ≥ 0 and ∑ᵢ xᵢ² ≤ t².
 reformulation squaredNorm : (source n) := by
   nlp
 
@@ -120,7 +126,7 @@ variable (n : ℕ)
 reformulation ready : (source n) := by
   conic
 
-/-! The exact cone exponent is 2/3, with one auxiliary coordinate per input. -/
+/-! The power-cone exponent is 2/3, with one auxiliary variable per coordinate. -/
 #printp ready
 example : GlobalEquivalence (source n) (ready n) := ready.equivalence n
 example : (ready.conicForm n).data.toProblem = ready n := (ready.conicForm n).represents
