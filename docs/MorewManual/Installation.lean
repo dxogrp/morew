@@ -36,6 +36,15 @@ lake build --wfail
 
 # Imports
 
-Use `import Morew` for the complete package. The smaller command entry points are
-`Morew.Reformulation.Basic`, `Morew.Reformulation.Conic`, and
-`Morew.Reformulation.NLP`. Import both Conic and NLP to use both target forms.
+Use `import Morew` for the complete package. The mathematical modules
+`Morew.Core`, `Morew.Transform`, `Morew.Conic`, `Morew.NLP`, and `Morew.Fn`
+provide problems and equivalence, transformations, target forms, and modeling
+functions. They make definitions and proofs available without installing
+modeling commands or automatic rule registrations. Selective imports reduce
+the dependencies that can trigger a rebuild.
+
+For modeling commands, use `Morew.Reformulation.Basic`. Add
+`Morew.Reformulation.Conic` or `Morew.Reformulation.NLP` for the corresponding
+target commands and default automatic rules; each includes Basic. Import both
+to use both target forms. Custom conic and NLP rules enter automatic selection through
+`@[morew_conic]` or `@[morew_nlp]`; `using` selects a rule directly.
