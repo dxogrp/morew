@@ -15,7 +15,7 @@ import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 import Lean.Meta.Match.MatcherInfo
 
-/-! Affine reification with pointwise proofs.
+/-! Construct affine maps and prove pointwise agreement with the source expressions.
 
 Transparent, nonrecursive `def` and `abbrev` helpers expand for certification;
 source expressions and printing retain their names.
@@ -26,7 +26,7 @@ Expansion limits apply per source expression, including evidence discovery:
 * `morew.affine.maxExpansionNodes`: 100000 expanded nodes, including duplication.
 
 A zero limit leaves only direct recognition. Opaque, irreducible, and recursive
-helpers and custom predicates stay closed. Native operations require canonical
+helpers and custom predicates remain unexpanded. Standard operations require canonical
 instances and domain evidence. -/
 
 namespace Morew.Elab.Affine
@@ -483,7 +483,7 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
   checkWithKernel equality
   return { map, pointwiseEquality := equality }
 
-/-- Reify a typed function in an isolated metavariable context.
+/-- Construct an affine map for a typed function in an isolated metavariable context.
 Try direct recognition before bounded helper expansion. Nonzero evidence uses local
 hypotheses, then the optional provider, then bounded numeral/rational evaluation. -/
 def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :

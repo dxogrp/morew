@@ -104,7 +104,7 @@ private partial def rawProblemProjections (source : Expr) : Expr :=
         ((arguments.extract 3 arguments.size).map rawProblemProjections))
     else none
 
--- Open one helper at the container head; visit only the selected field at the increased depth.
+-- Unfold one helper defining a structure; visit its selected field at the increased depth.
 private partial def unfoldContainer? (expression : Expr) (bounds : Morew.Elab.Expansion.Config)
     (depth : Nat) : ExpandM (Option Expr) := do
   if let some step ← unfoldHead? bounds expression depth then
@@ -138,7 +138,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       let body ← visit (body.instantiate1 binding) reduce bounds depth
       return .forallE name type (body.abstract #[binding]) info
   | .letE name type value body nondep =>
-    -- Keep proof and instance lets in scope; count the container helper toward field expansion depth.
+    -- Keep proof and instance lets in scope; count the structure's helper toward expansion depth.
     let isContainer := (← whnf type).isAppOfArity ``Morew.Problem 2
     let value ← if (← isProp type) || (← isClass? type).isSome || isContainer then pure value
       else visit value reduce bounds depth
@@ -179,7 +179,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   if (head.isConstOf ``Morew.Problem.objective ||
       head.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
     if let some expanded ← unfoldContainer? arguments[2]! bounds depth then
-      -- Visit the selected field at the container helper's increased depth.
+      -- Visit the selected field at the structure's increased expansion depth.
       return ← visit (mkAppN head (arguments.set! 2 expanded)) reduce bounds (depth + 1)
     -- Retain blocked projections as coefficients; expand value arguments within budget.
     let mut expanded := arguments
@@ -188,7 +188,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
     return rawProblemProjections (mkAppN head expanded)
   if let some step ← unfoldHead? bounds expression depth then
     return ← visit step.expression reduce bounds (depth + 1)
-  -- Visit applied local functions; stop at unknown constants, predicates, and native atoms.
+  -- Visit applied local functions; stop at unknown constants, predicates, and standard mathematical operations.
   if !head.isConst then
     if let .app function argument := expression then
       let rebuilt := mkApp (← visit function reduce bounds depth)

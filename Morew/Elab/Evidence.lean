@@ -50,7 +50,7 @@ private theorem one_lt_toReal_ofReal {q : ℝ} (h : 1 < q) :
   rw [ENNReal.toReal_ofReal (le_trans zero_le_one h.le)]
   exact h
 
-/-- Normalize native ENNReal.toReal numerals, inverses, and divisions by proved equalities. -/
+/-- Normalize standard `ENNReal.toReal` numerals, inverses, and divisions by proved equalities. -/
 def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
   let mut theorems : SimpTheorems := {}
   for declaration in #[``ENNReal.toReal_zero, ``ENNReal.toReal_one,

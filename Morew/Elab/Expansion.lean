@@ -12,7 +12,7 @@ import Lean.Meta.Match.MatcherInfo
 import Lean.Meta.RecExt
 
 /-! Shared helper unfolding, resource accounting, and structural reduction.
-Consumers choose traversal and unfolding points. -/
+Callers choose traversal and unfolding points. -/
 
 namespace Morew.Elab.Expansion
 
@@ -160,7 +160,7 @@ private def helperValue? (expression : Expr) : MetaM (Option Helper) := do
   if (← getMatcherInfo? name).isSome then return none
   if ← isRecursiveDefinition name then return none
   if (← getReducibilityStatus name) == .irreducible then return none
-  -- Treat native transcendental operations as recognition boundaries.
+  -- Recognize standard transcendental operations without unfolding their definitions.
   if let some index := environment.getModuleIdxFor? name then
     let moduleName := environment.header.modules[index.toNat]!.module
     if (`Mathlib.Analysis.SpecialFunctions).isPrefixOf moduleName then return none
@@ -187,7 +187,7 @@ def chargeBeta (value : Expr) (arguments : Array Expr) (bounds : Config) :
     exhausted (state.helper?.getD value) bounds.nodesOption bounds.nodes
   modify fun state => { state with nodes := state.nodes + cost }
 
--- Use the same eligibility, cache, and accounting for ordinary and container helpers.
+-- Use the same eligibility checks, limits, and cache for helpers defining values or structures.
 private def unfoldHelper (expression : Expr) (helper : Helper) (bounds : Config)
     (depth : Nat) : ExpandM Expr := do
   if depth ≥ bounds.depth then
@@ -221,9 +221,9 @@ def unfoldHead? (config : Config) (expression : Expr) (depth : Nat) :
   return some { expression := expanded, helper := expression }
 
 -- Charge higher-order beta substitutions exposed by helper unfolding.
-/-- Reduce helper-origin heads, charging substitutions before construction.
-Preserve lets and named Problem containers. Use the supplied structural reducer
-before helper expansion; callers keep native siblings outside this traversal. -/
+/-- Reduce expressions exposed by helper expansion, charging substitutions before construction.
+Preserve lets and named `Problem` definitions. Apply the supplied structural reduction
+first; callers visit operands of standard operations separately. -/
 partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr)
     (bounds : Config) : ExpandM Expr := do
   if (← get).steps == 0 then return ← reduce source true
@@ -280,10 +280,10 @@ partial def reduceChecked (source : Expr) (reduce : Expr → Bool → MetaM Expr
         reduce bounds
     if (function.isConstOf ``Morew.Problem.objective ||
         function.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
-      -- Select exposed constructors; unfold named containers only within the helper budget.
+      -- Select fields of constructors; unfold named structures within the helper expansion limits.
       let problem ← reduceChecked arguments[2]! reduce bounds
       if let .letE name type value body nondep := problem then
-        -- Keep container proofs and instances in scope around the selected field.
+        -- Keep the structure's proofs and instances in scope around the selected field.
         let inner := (arguments.map (·.liftLooseBVars 0 1)).set! 2 body
         return .letE name type value (mkAppN function inner) nondep
       if problem.isAppOfArity ``Morew.Problem.mk 4 then

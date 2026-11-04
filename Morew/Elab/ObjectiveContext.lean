@@ -8,7 +8,7 @@ import Morew.Elab.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Transport scalar bounds through native real arithmetic using independent sign evidence.
+/-! Transport scalar bounds through standard real arithmetic using independent sign evidence.
 Unrecognized contexts require an explicit certificate. -/
 
 namespace Morew.Elab.ObjectiveContext
@@ -133,7 +133,7 @@ private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
 
 private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
   let mut expression := expression
-  -- Unfold one relation wrapper at a time to retain operation and instance identity.
+  -- Unfold one relation definition at a time to retain operation and instance identity.
   for _ in [:8] do
     if expression.isAppOf ``LE.le || expression.isAppOf ``GE.ge then
       return ← realRelation? expression
@@ -147,7 +147,7 @@ private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :
 private partial def inequality (point left right bound : Expr) : ContextM Expr := do
   let left ← Expr.reduceStructure left
   let right ← Expr.reduceStructure right
-  -- Unfold the bound proposition wrapper while preserving its endpoints.
+  -- Unfold the bound's definition while preserving its endpoints.
   if let some (lower, upper) ← boundRelation? (← inferType bound) then
     if (← same lower left) && (← same upper right) then return bound
   unless (← isDefEq (← inferType left) q(ℝ)) &&
@@ -221,7 +221,7 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
       checkWithKernel proof
       return .ok proof
 
-/-- Prove lower ≤ upper by transporting the supplied bound through native arithmetic.
+/-- Prove `lower ≤ upper` by transporting the supplied bound through standard arithmetic.
 Isolate caller metavariables and failed environment changes. -/
 def proveInequality (point lower upper boundProof : Expr) : MetaM (Except MessageData Expr) := do
   let lower : Q(ℝ) := lower
@@ -229,7 +229,7 @@ def proveInequality (point lower upper boundProof : Expr) : MetaM (Except Messag
   checked #[point, lower, upper, boundProof] q($lower ≤ $upper) <|
     inequality point lower upper boundProof
 
-/-- Prove `target` from `sourceProof : source` and a scalar bound through native
+/-- Prove `target` from `sourceProof : source` and a scalar bound through standard
 non-strict real comparisons and conjunctions. For constraints, `source` is the rewritten predicate. -/
 def provePredicate (point source target boundProof sourceProof : Expr) :
     MetaM (Except MessageData Expr) :=

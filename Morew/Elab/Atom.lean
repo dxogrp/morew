@@ -8,14 +8,14 @@ import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Algebra.Order.Group.PosPart
 import Lean.Meta.Basic
 
-/-! Recognize native mathlib operations by their elaborated heads and instances.
-Consumers supply domain evidence and transformation certificates. -/
+/-! Recognize standard mathlib operations by their elaborated heads and instances.
+Callers supply domain evidence and transformation certificates. -/
 
 namespace Morew.Elab.Atom
 
 open Lean Lean.Meta
 
-/-- An operation recognized by the native-operation table. -/
+/-- A recognized mathlib operation. -/
 inductive AtomKind where
   /-- The real exponential function. -/
   | exp
@@ -80,7 +80,7 @@ private def atomHeads : Array AtomHead := #[
   ⟨``HPow.hPow, .rpow, 6, 2⟩
 ]
 
--- Ignore application-spine metadata; retain operand metadata and the original expression.
+-- Ignore metadata on function applications; retain operand metadata and the original expression.
 private def applicationParts (expression : Expr) : Expr × Array Expr :=
   let rec visit (expression : Expr) (reversed : Array Expr) : Expr × Array Expr :=
     match expression with
@@ -133,7 +133,7 @@ instances. Return none for unsupported or unresolved inputs. Preserve caller met
 def recognizeAtom? (expression : Expr) : MetaM (Option AtomApplication) := do
   let saved ← saveState
   try
-    -- Treat metavariables in local declaration types and values as rigid.
+    -- Keep metavariables in local declaration types and values unassigned.
     withNewMCtxDepth <| recognizeApplication? expression
   finally
     saved.restore

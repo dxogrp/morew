@@ -58,9 +58,9 @@ def hasUnresolved (expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression none).2
 
 /-- Reduce local lets, applications, projections, and tuple matches.
-Named unfolding is limited to problem-container fields and single-alternative product
-matchers. preserveLets stops at head lets. opaqueProblemDependencies? keeps named
-containers depending on that variable closed; inline containers still reduce. -/
+Named unfolding is limited to fields of problem definitions and single-alternative
+product matchers. `preserveLets` stops at outer lets. `opaqueProblemDependencies?`
+preserves named problems depending on that variable; directly constructed problems still reduce. -/
 partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
     (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr := do
   let expression := (← instantiateMVars expression).consumeMData
