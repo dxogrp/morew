@@ -9,7 +9,7 @@ import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.PSD
 
-/-! Conic notation, replay templates, and mathematical print recipes. -/
+/-! Conic notation and syntax for reconstructing and displaying constraints. -/
 
 namespace Morew.Elab.Reformulation.Conic
 
@@ -64,9 +64,9 @@ private def delabConeCarrier : Delab := do
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
-  -- Retain subexpression positions for frozen dimension references.
+  -- Retain subexpression positions for fixed dimension references.
   let dimension ← withAppArg <| withAppArg do
-    -- Exact replay retains the original numeral instances and constructors.
+    -- Syntax used to reconstruct expressions retains the original numeral instances and constructors.
     if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
         !(← getOptions).getBool `pp.explicit then
       if let some n ← psdDimensionLiteral? (← getExpr) then
@@ -102,7 +102,7 @@ private def presentationPowerMembershipInstance :
 private def presentationPowerSetMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
   value ∈ Morew.Conic.Cone.powerSet α
 
--- Share the bundled cone and proof through a closed lambda for structural replay.
+-- Use a closed function to retain the cone and its proof when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabPowerConeReplay : Delab := do
@@ -128,7 +128,7 @@ private def delabPowerConeReplay : Delab := do
       ($(mkCIdent ``Morew.Conic.Cone.carrier) ($(mkCIdent ``Morew.Conic.Cone.power) α hα)) value)
   `($function $exponent $evidence $value)
 
--- Render the complete raw-set membership; retain cone proofs in exact replay.
+-- Display membership in the defining set; retain cone proofs when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabPowerConeMembership : Delab := do
@@ -155,7 +155,7 @@ private def delabPowerConeMembership : Delab := do
   let value ← withNaryArg 4 delab
   let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
   unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
-    -- Make only canonical membership explicit; retain replayable arithmetic syntax.
+    -- Make only canonical membership explicit; retain arithmetic syntax for reconstruction.
     return ← `(@Membership.mem _ _ $(mkCIdent ``Set.instMembership) (POW $exponent) $value)
   `($value ∈ POW $exponent)
 
@@ -217,7 +217,7 @@ def viewHooks : Morew.Elab.Reformulation.ViewHooks where
     | .compact => options.setBool compactPSDOption true
     | .detailed => options
   prepareReadable expression := do
-    -- Expose the membership from the exact replay lambda in readable views.
+    -- Display the membership relation defined by the stored function.
     if expression.isApp && expression.getAppFn.isLambda &&
         (expression.getAppFn.find? (·.isConstOf ``presentationPowerMembershipInstance)).isSome then
       return some expression.headBeta

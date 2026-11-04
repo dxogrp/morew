@@ -18,18 +18,18 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 inductive ViewMode where
   /-- Fully explicit, fixed-reference syntax. -/
   | exact
-  /-- A compact print-only payload. -/
+  /-- A compact display. -/
   | compact
-  /-- A detailed print-only payload. -/
+  /-- A detailed display. -/
   | detailed
 
-/-- Backend rendering hooks; empty hooks use ordinary rendering. -/
+/-- Optional rendering functions for conic or NLP representations. -/
 structure ViewHooks where
-  /-- Enable backend delaborators only for the requested rendering context. -/
+  /-- Select expression printers for the requested display format. -/
   options : ViewMode → Options → Options := fun _ => id
-  /-- Expose one backend replay template during readable-expression traversal. -/
+  /-- Expand a stored conic or NLP expression for display. -/
   prepareReadable : Expr → MetaM (Option Expr) := fun _ => pure none
-  /-- Recover optional mathematical print recipes from the final typed rows. -/
+  /-- Construct optional mathematical notation from the final typed constraints. -/
   mathematicalRows : Array Expr → (Expr → TermElabM Syntax) →
       TermElabM (Array (Option Morew.Syntax.PowerChainRow)) :=
     fun rows _ => pure (Array.replicate rows.size none)
@@ -53,18 +53,18 @@ private def viewHooks : CoreM ViewHooks := do
   | [hooks] => pure hooks
   | _ => throwError "multiple internal reformulation presentation providers registered"
 
--- Hide finite-index proofs only in compact print payloads.
+-- Hide finite-index proofs only in compact output.
 private def compactIndexProofsOption : Name :=
   `Morew.Elab.Reformulation.compactIndexProofs
 
--- Use coordinate notation only in print payloads; replay views retain explicit fields.
+-- Use coordinate notation only for display; syntax used to reconstruct expressions retains explicit fields.
 private def coordinateNotationOption : Name :=
   `Morew.Elab.Reformulation.coordinateNotation
 
--- Annotate bound-proof slots to hide atomic proof names in compact term and type output.
+-- Mark bound proofs so their names can be omitted from compact output.
 private def compactFiniteIndexProofs (expression : Expr) (replay : Bool) : MetaM Expr := do
   if replay || !(← getOptions).getBool compactIndexProofsOption then return expression
-  -- Erase replay annotations before locating finite-index constructors.
+  -- Remove stored syntax annotations before locating finite-index constructors.
   let expression ← erasePatternRefAnnotations expression
   Meta.transform expression (post := fun value => do
     if value.isAppOfArity ``Fin.mk 3 then
@@ -182,7 +182,7 @@ def stabilizeTerm (term : TSyntax `term) : CommandElabM (TSyntax `term) :=
 def presentationTypeSyntax (type : Expr) (replay : Bool := true)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) : TermElabM Lean.Syntax := do
   let type ← compactFiniteIndexProofs type replay
-  -- Freeze class projections in auxiliary types.
+  -- Retain explicit class projections in auxiliary types.
   withOptions (fun options =>
       let options := options.setBool `pp.tagAppFns true
       if replay then options.setBool `pp.proofs true |>.setBool `pp.instances true
@@ -353,7 +353,7 @@ def mkFeasibleFunction (domain : Expr) (constraints : Array Expr) : MetaM Expr :
     let propositions := constraints.map fun constraint => mkApp constraint point
     mkLambdaFVars #[point] <| mkConstraintConjunctionExpr propositions.toList
 
-/-- Replace the checkpoint at the transformation spine's base. -/
+/-- Replace the stored source problem at the start of the transformation sequence. -/
 private partial def protectCheckpoint (expression checkpoint replacement : Expr) : MetaM Expr := do
   let expression := expression.consumeMData.headBeta
   if expression == checkpoint then return replacement
@@ -369,7 +369,7 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
   let base ← protectCheckpoint arguments[3]! checkpoint replacement
   pure <| mkAppN expression.getAppFn (arguments.set! 3 base)
 
-/-- Construct the canonical target while preserving checkpoint rows.
+/-- Construct the canonical target while preserving the stored source constraints.
 Use sourceName only to unfold the original problem container. -/
 def canonicalTargetExpressionFromExpressions (sourceName : Name)
     (source semanticAnchor : Expr) (sourceView : Morew.Syntax.ProblemView)
@@ -441,8 +441,8 @@ def canonicalTargetExpressionFromExpressions (sourceName : Name)
 
   withProtectedParts (objectiveType :: constraintTypes.toList) #[]
 
-/-- Elaborate a source and transformation spine, then canonicalize their checked
-expressions while protecting the checkpoint's ordered rows. -/
+/-- Elaborate a source and transformation sequence, then normalize their checked
+expressions while preserving the stored source constraints and their order. -/
 def canonicalTargetExpression (sourceName : Name)
     (sourceTerm semanticAnchorTerm : TSyntax `term) (sourceView : Morew.Syntax.ProblemView)
     (removedCheckpointRows : Std.HashSet Nat) (semantic : TSyntax `term)
@@ -513,7 +513,7 @@ private def delabLpCoordinate : Delab := do
 private def presentationSingletonMembership {Y : Type} (value zero : Y) : Prop :=
   value ∈ ({zero} : Set Y)
 
--- Annotate readable canonical singletons with their Set type for unambiguous replay.
+-- Annotate singleton sets with their `Set` type so stored syntax can be elaborated unambiguously.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabZeroSetMembership : Delab := do
@@ -604,7 +604,7 @@ def delabPresentationTerm (expression : Expr)
   -- Reserve visible model names before naming inner binders.
   withLCtx' (binders.foldl (fun context (id, name) =>
       context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
-  -- Freeze constant heads with implicit arguments, including class projections.
+  -- Retain explicit constant references and implicit arguments, including class projections.
   withOptions (fun options =>
       let options := options.setBool presentationNotationOption true |>.setBool `pp.tagAppFns true
         |>.setBool `pp.coercions.types true |>.setBool `pp.beta false
@@ -614,7 +614,7 @@ def delabPresentationTerm (expression : Expr)
         |>.setBool `pp.structureInstanceTypes true |>.setBool `pp.fieldNotation false
         -- Omitting a field equal to its default can erase direct occurrences.
         |>.setBool `pp.structureInstances.defaults true
-        -- Cast notation would resynthesize coercions in the replaying context.
+        -- Cast notation would infer coercions again when the stored syntax is elaborated.
         |>.setBool `pp.coercions false
       else options) do
     let (stx, infos) ← PrettyPrinter.delabCore expression {}
@@ -758,7 +758,7 @@ private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.Probl
         (names.push (binding.fvarId!, definition.name))
   visit template.definitions.toList #[] objective feasible names
 
--- Inspect typed rows in scope; persist only frozen syntax.
+-- Inspect typed constraints in their context; store syntax with fixed references.
 private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     (inspectRows : Array Expr → Array (FVarId × Name) → TermElabM α) (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
@@ -777,7 +777,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
   let binderTypes ← splitProductDomain domain template.binders.size
   let compactTypes := forRegistration && (← getOptions).getBool compactIndexProofsOption
   let displayedBinders ← template.binders.mapIdxM fun index binder => do
-    -- Retain bare-name type spelling; inspect finite constructors for compact proof slots.
+    -- Retain named types; inspect finite-index constructors to identify proofs omitted from compact output.
     let binderType ← if compactTypes then erasePatternRefAnnotations binderTypes[index]!
       else pure binderTypes[index]!
     let hasFiniteConstructor := (binderType.find?
@@ -866,8 +866,8 @@ def typedPresentationFromExpression (target : Expr)
     }
   }
 
-/-- Register exact replay syntax and a readable presentation recovered from the
-same emitted declaration and parameter telescope. -/
+/-- Register syntax for reconstruction and display from the same generated
+declaration and ordered parameters. -/
 def refreshProblemView (targetName : Name)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
     CommandElabM Unit := do
@@ -935,8 +935,8 @@ def refreshProblemView (targetName : Name)
         let some target ← unfoldDefinition? target
           | throwError "cannot inspect reformulation target `{targetName}`"
         withLCtx' lctx do
-          -- Replay formal instances by local identity or imported class type in parameter order.
-          -- Keep concrete operation instances explicit.
+          -- Reconstruct instance parameters by local identity or imported class type in parameter order.
+          -- Keep the selected operation instances explicit.
           let mut parameterInstances : Std.HashMap FVarId Lean.Syntax := {}
           for parameter in parameters, name in parameterNames do
             unless (← parameter.fvarId!.getDecl).binderInfo == .instImplicit do continue
@@ -968,7 +968,7 @@ def refreshProblemView (targetName : Name)
             { compact, detailed, mathematicalRows : Morew.Syntax.ProblemPrintPresentation }))
   Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)
 
-/-- Rebase a retained presentation into the current section-variable context. -/
+/-- Replace section variables in the stored problem description with those from the current context. -/
 def withTypedPresentation (state : ReformState)
     (action : Morew.Elab.Reformulation.PresentationState → TermElabM α) :
     CommandElabM α :=

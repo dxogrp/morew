@@ -8,7 +8,7 @@ import Morew.Syntax.PowerChainView
 import Mathlib.Tactic.NormNum
 import Lean.Elab.Term
 
-/-! Build mathematical print recipes for complete canonical power chains.
+/-! Construct mathematical notation for complete chains of power cone constraints.
 Incomplete or ambiguous chains use ordinary presentation. -/
 
 namespace Morew.Elab.Reformulation.Conic
@@ -99,7 +99,7 @@ private def nativeRealCast? (value : Expr) : MetaM (Option Expr) := do
 private def same (a b : Expr) : Bool := a.consumeMData == b.consumeMData
 
 private def vectorDimension? (value : Expr) : MetaM (Option Expr) := do
-  -- Erase pattern-reference annotations around replayed Fin types.
+  -- Remove pattern-reference annotations from stored `Fin` types.
   let type ← erasePatternRefAnnotations (← inferType value)
   let .forallE _ index result _ := (← whnf type) | return none
   unless !result.hasLooseBVars && (← isDefEq result q(ℝ)) do return none
@@ -345,7 +345,7 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
   return some ⟨initial ++ #[(sign, .nonnegative auxiliary size signMembership),
     (final, .bound (← renderLeaf value) auxiliary size membership)]⟩
 
-/-- Build print recipes for complete canonical chains, retaining row positions.
+/-- Construct mathematical notation for complete chains, retaining constraint positions.
 Use ordinary presentation for unsupported, ambiguous, or overlapping chains. -/
 def powerChainPrintRows (rows : Array Expr) (renderLeaf : Expr → TermElabM Syntax) :
     TermElabM (Array (Option Morew.Syntax.PowerChainRow)) := do
