@@ -7,7 +7,7 @@ import Morew.Reformulation.NLP
 import MorewTest.Reformulation.DirectNormalization
 
 /-!
-# Imported directly normalized forms and replay
+# Imported directly normalized forms and reconstruction
 -/
 
 namespace MorewTest.ImportCompatibility.DirectNormalization

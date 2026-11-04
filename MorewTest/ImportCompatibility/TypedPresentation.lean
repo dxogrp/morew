@@ -9,7 +9,7 @@ import Morew.Elab.Reformulation.Presentation
 # Typed-presentation import isolation
 
 Typed presentations share the semantic objective sense and import independently
-of source metadata, problem elaboration, and the surface printer.
+of source metadata, problem elaboration, and the problem printer.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView Morew.elabProblem Morew.elabPrintProblem

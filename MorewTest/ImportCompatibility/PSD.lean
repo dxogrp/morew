@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PSD
 
 /-!
-# Imported PSD proof replay and continued reformulations
+# Imported PSD proof reconstruction and continued reformulations
 -/
 
 namespace MorewTest.ImportCompatibility.PositiveSemidefinite

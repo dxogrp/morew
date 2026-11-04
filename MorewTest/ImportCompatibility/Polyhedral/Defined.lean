@@ -8,7 +8,7 @@ import Morew.Reformulation.Conic
 /-!
 # Exported targeted-rewrite presentation
 
-The narrow surface entry point supplies the command and stores generated labels
+The narrow modeling import supplies the command and stores generated labels
 for consumers in a separate module. Symbolic dimensions retain their anonymous
 instance parameter in both the semantic declaration and saved presentation.
 -/

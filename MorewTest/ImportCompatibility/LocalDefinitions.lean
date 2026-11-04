@@ -130,7 +130,7 @@ run_cmd do
       | throwError "local-definition presentation missing"
     unless view.definitions.map (·.name.eraseMacroScopes) == #[`loss, `same, `total, `unused] do
       throwError "local-definition identity or order changed across import"
-    -- Exact replay can expose implicit application arguments. Inspect binding
+    -- Exact reconstruction can expose implicit application arguments. Inspect binding
     -- references recursively instead of depending on readable notation's shape.
     for binding in #[`loss, `same] do
       unless containsIdentifier view.definitions[2]!.value binding do

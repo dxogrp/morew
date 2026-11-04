@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import MorewTest.ImportCompatibility.CoercionReplay.Defined
 
 /-!
-# Coercion identity across presentation replay
+# Coercion identity across presentation reconstruction
 
 Ambient instances and pretty-printing options cannot change a source's explicit
 coercion functions, elaborated casts, local definitions, or decision types.
@@ -23,7 +23,7 @@ local instance (priority := high) : Coe Box ℕ := ⟨fun box => box.size + 1⟩
 example (box : Box) : (box : ℝ) = -box.value := rfl
 example (box : Box) : (box : ℕ) = box.size + 1 := rfl
 
--- Explicitly enabling notation must not override the internal replay settings.
+-- Explicitly enabling notation must not override the internal elaboration options.
 set_option pp.coercions true
 
 reformulation explicitCopy : explicitSource := by
@@ -64,7 +64,7 @@ example (x : Box) (t s : ℝ) : continued.feasible ((x, t), s) ↔
 section
 variable (box : Box)
 
--- Replaying a decision type must not resynthesize the natural-number coercion.
+-- Re-elaborating a decision type must not resynthesize the natural-number coercion.
 reformulation indexedCopy : (indexedFamily box) := by
 
 example : GlobalEquivalence (indexedFamily box) (indexedCopy box) :=

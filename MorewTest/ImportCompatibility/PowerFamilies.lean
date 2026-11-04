@@ -10,7 +10,7 @@ import MorewTest.ImportCompatibility.PowerFamilies.Defined
 # Imported finite power families
 
 Imported prefix chains retain their row order and exact exponents. Further
-reformulation and presentation replay preserve the source, auxiliary coordinates,
+reformulation and presentation reconstruction preserve the source, auxiliary coordinates,
 and named mathematical operations under consumer-side shadowing declarations.
 -/
 
@@ -82,7 +82,7 @@ def Cone.powerSet (_ : ℝ) : Set (ℝ × ℝ × ℝ) := Set.univ
 
 def source : Nat := 37
 
--- The source is replayed with a locally supplied parameter of the same name.
+-- The source is re-elaborated with a locally supplied parameter of the same name.
 variable (n : ℕ)
 
 run_cmd do

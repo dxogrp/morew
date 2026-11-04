@@ -39,7 +39,7 @@ local instance (priority := high) :
 example (x : EuclideanSpace ℝ (Fin 2)) : x 0 = x.ofLp 0 + 11 := rfl
 
 run_cmd do
-  -- Producer print syntax remains readable; both replay views retain the
+  -- Producer print syntax remains readable; both reconstruction views retain the
   -- canonical coordinate function despite the consumer's function coercion.
   checkReadable ``target
   checkReadable ``continued

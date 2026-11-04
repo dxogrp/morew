@@ -12,8 +12,8 @@ import MorewTest.Conic.Form.Defined
 # Imported spectral and matrix-fraction certificates
 
 An imported positive-definite domain certificate supports a subsequent
-matrix-fraction rewrite. Spectral witnesses and the source operator-norm
-instance survive continued transformations and presentation replay.
+matrix-fraction rewrite. Spectral certificates and the source operator-norm
+instance survive continued transformations and presentation reconstruction.
 -/
 
 namespace MorewTest.ImportCompatibility.Spectral
@@ -191,8 +191,8 @@ def delayedNumeralSource :=
 
 namespace ChangedNorm
 
--- Replaying an imported source must keep its original L2 operator norm even
--- when a different matrix norm is in scope at the replay site.
+-- Re-elaboration must preserve the imported L2 operator norm when another
+-- matrix norm is in scope.
 local instance (m n : Nat) : Norm (Matrix (Fin m) (Fin n) ℝ) := ⟨fun _ => 37⟩
 
 -- Imported certificates and conic rewrites retain the source operator norm
@@ -363,7 +363,7 @@ def real :=
   problem (x : ℝ) minimize ‖x‖
 
 -- The instance's value refers to the universe of E even though the reference
--- itself has type ℝ. Replaying under another universe name must preserve that link.
+-- itself has type ℝ. Re-elaborating under another universe name must preserve that link.
 def anchored (E : Type u) :=
   letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{u}⟩
   problem (x : E) minimize ‖x‖
@@ -433,7 +433,7 @@ example : copied.{u, v} E = source.{u, v} E := rfl
 
 end AmbiguousInstanceUniverses
 
--- Checking a term without registering a declaration must not create replay helpers.
+-- Checking a term without registering a declaration must not create reconstruction helpers.
 run_cmd Lean.Elab.Command.liftTermElabM do
   let before ← Lean.getEnv
   let term ← `(letI : Norm ℝ := ⟨fun _ => 1⟩
