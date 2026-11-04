@@ -39,7 +39,7 @@ noncomputable def const (X : Type*) [AddCommGroup X] [Module ℝ X] (c : Y) :
   map := AffineMap.const ℝ X c
   correct _ := rfl
 
-/-- The complete decision point is an affine function of itself. -/
+/-- The identity map is affine. -/
 noncomputable def id (X : Type*) [AddCommGroup X] [Module ℝ X] :
     Certified (fun x : X => x) where
   map := AffineMap.id ℝ X
@@ -189,13 +189,13 @@ noncomputable def vecEmpty (X : Type*) [AddCommGroup X] [Module ℝ X] :
     Certified (fun _ : X => (Matrix.vecEmpty : Fin 0 → ℝ)) :=
   const X Matrix.vecEmpty
 
-/-- Equip an affine finite real vector with its Euclidean norm. -/
+/-- View an affine coordinate vector in Euclidean space. -/
 noncomputable def toEuclidean {n : ℕ} {f : X → Fin n → ℝ} (a : Certified f) :
     Certified (fun x => WithLp.toLp 2 (f x)) where
   map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).symm.toAffineEquiv.toAffineMap.comp a.map
   correct x := congrArg (WithLp.toLp 2) (a.correct x)
 
-/-- Forget the norm of a Euclidean affine vector to obtain its coordinates. -/
+/-- Extract the coordinates of an affine map into Euclidean space. -/
 noncomputable def ofEuclidean {n : ℕ} {f : X → EuclideanSpace ℝ (Fin n)}
     (a : Certified f) : Certified (fun x => WithLp.ofLp (f x)) where
   map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).toAffineEquiv.toAffineMap.comp a.map

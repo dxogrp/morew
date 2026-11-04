@@ -9,8 +9,7 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Finite geometric means and inverse products
 
-The geometric mean and reciprocal product are total real-valued functions.
-Their exact conic representations use the domains stated below.
+The geometric mean and reciprocal product, with their conic representation domains.
 -/
 
 namespace Morew.Fn
@@ -22,8 +21,8 @@ noncomputable def geoMean {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   Real.rpow (∏ i, xs i) (1 / (n : ℝ))
 
 /-- The reciprocal of a finite product. Its conic representation requires a
-nonempty vector with strictly positive coordinates. The empty vector has value
-one, and a product with a zero factor has value zero under real division. -/
+nonempty positive vector. The empty product has reciprocal one; a zero product
+has reciprocal zero under real division. -/
 noncomputable def invProd {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   (∏ i, xs i)⁻¹
 
@@ -41,8 +40,7 @@ theorem geoMean_eq_prod_rpow {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 ≤ x
 theorem invProd_eq_inv_prod {n : Nat} (xs : Fin n → ℝ) :
     invProd xs = (∏ i, xs i)⁻¹ := rfl
 
-/-- The reciprocal of a product is the product of the reciprocals, including
-the totalized zero cases. -/
+/-- The reciprocal of a product is the product of the reciprocals. -/
 theorem invProd_eq_prod_inv {n : Nat} (xs : Fin n → ℝ) :
     invProd xs = ∏ i, (xs i)⁻¹ := by
   simp [invProd]
