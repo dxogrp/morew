@@ -8,11 +8,8 @@ import Morew.Reformulation.Conic
 /-!
 # Naming constraints during a reformulation
 
-`rename old to new` changes a current label in place. Later steps
-select the new label; the predicate and its position stay the same.
-The first example names the two bounds equivalent to an absolute-value
-constraint. The second uses positivity to substitute exponential coordinates.
-Both scripts stop at intermediate reformulations with equivalence certificates.
+`rename old to new` changes a constraint's label. Later steps use the new label;
+the constraint and its position are unchanged.
 -/
 
 namespace Examples.Transformations.Rename

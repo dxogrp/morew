@@ -7,14 +7,11 @@ import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 
 /-!
-# Making a proved consequence available to later steps
+# Deriving constraints
 
-`derive label : proposition using proof` appends a consequence of current
-feasibility, preserving the feasible set.
-
-The first problem uses transitivity of its bounds to make positivity of the
-logarithm's argument available to later steps. The second illustrates adding,
-rewriting, and removing a redundant constraint before complete NLP certification.
+`derive label : proposition using proof` appends a consequence of the current
+constraints. The first example derives a positive lower bound for a logarithm;
+the second derives, rewrites, and removes a redundant absolute-value bound.
 -/
 
 namespace Examples.Transformations.Derive
@@ -35,8 +32,7 @@ theorem marginOfFeasible :
   intro point hp
   exact hp.1.trans hp.2
 
--- Once the transitive bound is an explicit row, the logarithm rule can use
--- it to establish positivity and certify the hypograph with an EXP cone.
+-- The derived bound supplies positivity for the logarithm rule.
 reformulation logarithmicConic : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   hypograph t as logarithm_bound
@@ -46,8 +42,7 @@ reformulation logarithmicConic : logarithmic := by
 example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equivalence
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
--- The derived bound proves positivity, allowing `x := Real.exp u`.
--- The margin remains as the redundant constraint `1 ≤ Real.exp u`.
+-- The same bound allows exponential coordinates; 1 ≤ exp u remains a constraint.
 reformulation exponentialCoordinates : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   substitute x := Real.exp u
@@ -65,9 +60,8 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- This redundant sequence illustrates `derive`, `nlp`, and `remove` together:
--- derive |x| ≤ 1, split it into two bounds, then remove them. The first is
--- a duplicate; the second follows from -1 ≤ x.
+-- Derive |x| ≤ 1 and split it into two bounds. Remove the duplicate x ≤ 1
+-- automatically and prove -x ≤ 1 from the remaining lower bound.
 reformulation absoluteNLP : interval := by
   derive abs_bound : |x| ≤ 1 using (by
     intro point hp

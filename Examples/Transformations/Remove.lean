@@ -6,12 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Removing selected constraints with checked evidence
+# Removing redundant constraints
 
-`remove at label` removes a whole-row duplicate or a supported tautology.
-`remove at label using proof` removes a row implied by the remaining rows.
-The lower bound `1 ≤ x` below makes `0 ≤ x` redundant. After removing it,
-the duplicate, and the tautology, `conic` certifies the remaining problem.
+`remove at label` removes a duplicate constraint or a supported tautology.
+`remove at label using proof` removes a constraint implied by the remaining ones.
+Here `1 ≤ x` implies the weaker bound `0 ≤ x`.
 -/
 
 namespace Examples.Transformations.Remove

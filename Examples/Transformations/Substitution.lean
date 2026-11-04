@@ -9,10 +9,9 @@ import Morew.Reformulation.NLP
 /-!
 # Coordinate substitutions
 
-`substitute` replaces a selected coordinate and proves that every feasible
-original point has a preimage. Domain constraints justify the square and
-exponential substitutions below. Each script records global equivalence;
-scripts ending in `conic` or `nlp` also certify the complete resulting form.
+`substitute` replaces a coordinate and proves that every original feasible point
+has a preimage. Domain constraints justify the square and exponential
+substitutions below.
 -/
 
 namespace Examples.Transformations.Substitution
@@ -41,7 +40,6 @@ example : IsSmoothNLP squared := squared.isSmoothNLP
 reformulation explicitlySquared : nonnegative := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
--- This example stops at the substitution and its equivalence.
 example : GlobalEquivalence nonnegative explicitlySquared := explicitlySquared.equivalence
 
 def interval :=
@@ -94,8 +92,7 @@ reformulation exponentialEpigraph : p := by
 #printp exponentialEpigraph
 example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
 
--- The final step represents the quadratic bound with a cone and certifies
--- the complete problem.
+-- Represent the quadratic bound with a cone.
 reformulation conicProb : p := by
   substitute x := Real.exp u
   epigraph t

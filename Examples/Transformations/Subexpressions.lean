@@ -10,18 +10,14 @@ import Morew.Reformulation.NLP
 # Epigraphs of subexpressions
 
 Use `let` to name an expression shared by the objective and constraints.
-An `epigraph` step can replace a selected subexpression by a new variable and
-add its epigraph bound, provided the surrounding expression preserves the
-required inequality. Its clauses identify the expression and evidence:
-- `at` selects a direct `let` reference or a parenthesized expression;
-  exactly one match is required.
-- `in` selects a named constraint; without it, selection is within the objective.
-- `as` names the added bound constraint.
-- `using` supplies an explicit context certificate; otherwise Morew attempts
-  automatic certification.
+An `epigraph` step replaces a selected subexpression by a new variable and
+adds its epigraph bound, with a monotonicity certificate for the surrounding
+objective or constraint.
 
-Introducing these bounds records equivalence. A final `conic` or `nlp` step
-then certifies the complete reformulated problem in the chosen form.
+- `at` selects a `let` reference or a parenthesized expression with one occurrence.
+- `in` selects a constraint; by default, selection is within the objective.
+- `as` names the added bound.
+- `using` supplies a context certificate; otherwise Morew attempts to infer it.
 -/
 
 namespace Examples.Transformations.Subexpressions
@@ -70,8 +66,7 @@ def nonlinear :=
       error : |x ^ 2 - y| ≤ t
       budget : |x| + y ^ 2 ≤ 10
 
--- The error is already a direct bound. In the budget, first replace |x|
--- by a variable and add the direct bound named `magnitude`.
+-- Introduce a direct bound on |x| before rewriting the budget constraint.
 reformulation smoothConstraints : nonlinear := by
   nlp at error using Rewrite.absEpigraph
   epigraph a at (|x|) in budget as magnitude
