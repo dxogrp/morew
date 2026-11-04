@@ -24,7 +24,7 @@ The optimization variable is $`x\in\mathbf{R}^n`, with parameters
 $`A\in\mathbf{R}^{m\times n}` and $`b\in\mathbf{R}^m`.
 The symbol $`\succeq` means componentwise inequality.
 
-We first import the necessary modules and open the relevant namespaces:
+Import the conic commands and open the namespaces:
 
 ```anchor nonnegLSSetup -defSite
 import Morew.Reformulation.Conic
@@ -32,7 +32,7 @@ open Morew
 open scoped Matrix
 ```
 
-The following block defines the problem:
+Define the problem:
 
 ```anchor nonnegLS -defSite
 noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :=
@@ -42,9 +42,8 @@ noncomputable def nonnegLS (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) 
       nonneg : x ≥ 0
 ```
 
-To rewrite the problem in conic form, we introduce epigraph variable $`t`
-with $`\lVert Ax-b\rVert_2\leq t`, rewrite that bound as a
-second-order cone constraint, and certify the complete problem.
+Introduce an epigraph variable $`t` with $`\lVert Ax-b\rVert_2\leq t`,
+express this bound as a second-order cone constraint, and certify the conic form:
 
 ```anchor conicNonnegLS -defSite
 variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
@@ -64,7 +63,7 @@ noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
 example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
 ```
 
-To print the conic reformulation, we use the `#printp` command:
+Print the conic reformulation with `#printp`:
 
 ```anchor printNonnegLS -defSite
 #printp conicNonnegLS

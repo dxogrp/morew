@@ -9,8 +9,8 @@ file := "installation"
 htmlSplit := .never
 %%%
 
-You need to install [Lean through elan](https://lean-lang.org/install/) to build Morew.
-The Lean version used by Morew is specified in the `lean-toolchain` file.
+Install [Lean through elan](https://lean-lang.org/install/).
+Morew's Lean version is specified in `lean-toolchain`.
 
 # Use Morew in a project
 
@@ -23,7 +23,7 @@ git = "https://github.com/dxogrp/morew.git"
 rev = "main"
 ```
 
-Then run `lake update` to update the dependency.
+Then run `lake update`.
 
 # Build the repository
 
@@ -40,42 +40,39 @@ Run `make help` to see all available commands.
 
 # Imports
 
-To import the whole Morew package, use
+To import the whole package:
 
 ```imports
 import Morew
 ```
 
-For basic modeling commands, use
+For basic modeling commands:
 
 ```imports
 import Morew.Reformulation.Basic
 ```
 
-For conic target commands and default automatic rules, use
+For conic commands and default rules, including basic modeling commands:
 
 ```imports
 import Morew.Reformulation.Conic
 ```
 
-which includes Basic.
-
-For NLP target commands and default automatic rules, use
+For NLP commands and default rules, including basic modeling commands:
 
 ```imports
 import Morew.Reformulation.NLP
 ```
 
-which includes Basic.
 Import both target modules to use both target forms.
 
-To use predefined atomic functions, use
+For predefined atomic functions:
 
 ```imports
 import Morew.Fn
 ```
 
-For mathematical definitions and proofs, use
+For mathematical definitions and proofs:
 
 ```imports
 import Morew.Core
@@ -86,14 +83,5 @@ import Morew.NLP
 
 These cover problems and equivalence, transformations, and target forms.
 
-Custom conic and NLP rules can be registered for automatic selection by tagging them with
-
-```
-@[morew_conic]
-```
-
-or
-
-```
-@[morew_nlp]
-```
+Register custom rules for automatic selection with `@[morew_conic]` or
+`@[morew_nlp]`; see {ref "custom-rules"}[Custom rules].
