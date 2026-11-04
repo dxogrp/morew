@@ -10,11 +10,13 @@ file := "examples"
 htmlSplit := .never
 %%%
 
-Each example presents a complete Lean source file with its printed results.
+Each example includes its Lean source and printed results.
 Read Basic first, then Conic and NLP, followed by Epigraphs and hypographs.
 
-Each module is self-contained. From the repository root, build the collection
-or one module:
+Notation follows [Boyd and Vandenberghe's _Convex Optimization_](https://web.stanford.edu/~boyd/cvxbook/).
+Vector inequalities are componentwise; symmetric-matrix inequalities use the semidefinite order.
+
+From the repository root, build all examples or one module:
 
 ```
 lake build --wfail Examples

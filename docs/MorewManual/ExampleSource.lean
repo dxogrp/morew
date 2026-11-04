@@ -38,6 +38,7 @@ private partial def spaceBreaks : MD4Lean.Text → MD4Lean.Text
   | other => other
 
 private partial def normalizeBlock : MD4Lean.Block → MD4Lean.Block
+  | .code _ #[.normal "math"] _ lines => .p #[.latexMathDisplay lines]
   | .p xs => .p (xs.map spaceBreaks)
   | .header level xs => .header level (xs.map spaceBreaks)
   | .ul tight mark items =>
