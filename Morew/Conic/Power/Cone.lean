@@ -20,11 +20,11 @@ for every real `α`; the cone laws require the stated range.
 
 namespace Morew.Conic.Cone
 
-/-- The power-cone predicate, available independently of a parameter certificate. -/
+/-- The set defined by the power-cone inequalities. -/
 noncomputable def powerSet (α : ℝ) : Set (ℝ × ℝ × ℝ) :=
   {p | 0 ≤ p.1 ∧ 0 ≤ p.2.1 ∧ |p.2.2| ≤ p.1 ^ α * p.2.1 ^ (1 - α)}
 
-/-- Power-set membership in ordinary coordinates. -/
+/-- Membership in `powerSet α` expressed in coordinates. -/
 @[simp]
 theorem mem_powerSet (α x y z : ℝ) :
     (x, y, z) ∈ powerSet α ↔
@@ -83,7 +83,7 @@ theorem add_mem_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1)
   exact (abs_add_le _ _).trans ((add_le_add hpz hqz).trans
     (weighted_product_add_le α hα p.1 q.1 p.2.1 q.2.1 hpx hqx hpy hqy))
 
-/-- A closed convex power cone with a checked parameter in `(0, 1)`. -/
+/-- A closed convex power cone with parameter in `(0, 1)`. -/
 noncomputable def power (α : ℝ) (hα : 0 < α ∧ α < 1) : Cone where
   Space := ℝ × ℝ × ℝ
   carrier := {
@@ -91,7 +91,7 @@ noncomputable def power (α : ℝ) (hα : 0 < α ∧ α < 1) : Cone where
     smul_mem' := fun c hc p hp => smul_mem_powerSet α hα c hc.le p hp
     add_mem' := fun p hp q hq => add_mem_powerSet α hα p q hp hq }
 
-/-- The bundled power cone has exactly the raw power-set carrier. -/
+/-- `Cone.power α hα` represents the set `powerSet α`. -/
 @[simp]
 theorem mem_power (α : ℝ) (hα : 0 < α ∧ α < 1) (p : ℝ × ℝ × ℝ) :
     p ∈ (power α hα).carrier ↔ p ∈ powerSet α :=
@@ -130,7 +130,7 @@ theorem isClosed_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1) :
     ((isClosed_le continuous_const (continuous_fst.comp continuous_snd)).inter
       (isClosed_le (continuous_snd.comp continuous_snd).abs (hx.mul hy)))
 
-/-- The checked power cone has a closed carrier. -/
+/-- The power cone is closed. -/
 theorem isClosed_power (α : ℝ) (hα : 0 < α ∧ α < 1) :
     IsClosed (↑(power α hα).carrier : Set (power α hα).Space) :=
   isClosed_powerSet α hα
@@ -164,7 +164,7 @@ end Morew.Conic.Cone
 namespace Morew.Conic
 
 set_option quotPrecheck false in
-/-- The raw power-cone set. Conic classification separately checks `0 < α < 1`. -/
+/-- The power-cone set. Conic certification requires `0 < α < 1`. -/
 notation:max (name := powerCarrier) "POW " α:arg => Morew.Conic.Cone.powerSet α
 
 end Morew.Conic

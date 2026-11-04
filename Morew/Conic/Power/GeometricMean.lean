@@ -187,8 +187,8 @@ theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     exact (Real.rpow_le_rpow_of_nonpos hu (chain_bound xs u hn hx₀ hfirst hchain)
       hnegative.le).trans hpow
 
-/-- The unweighted finite geometric mean on nonnegative coordinates. The forward
-witness sets auxiliary `i` to the mean of the first `i + 1` coordinates. -/
+/-- The geometric-mean hypograph on nonnegative coordinates. Auxiliary values
+equal to successive prefix means attain the bound. -/
 noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun xs : {xs : Fin n → ℝ // ∀ i, 0 ≤ xs i} =>
       Fn.geoMean xs.1) where

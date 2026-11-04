@@ -165,7 +165,7 @@ end Morew.Conic.Cone
 namespace Morew.Conic
 
 set_option quotPrecheck false in
-/-- The closed exponential cone carrier, in coordinates `(x, y, z)`. -/
+/-- The closed exponential cone, in coordinates `(x, y, z)`. -/
 notation:max (name := exponentialCarrier) "EXP" => Morew.Conic.Cone.exponential.carrier
 
 end Morew.Conic

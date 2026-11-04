@@ -21,7 +21,7 @@ namespace Conic
 
 variable (X : Type u) [AddCommGroup X] [Module ℝ X]
 
-/-- An affine membership constraint in a bundled convex cone. -/
+/-- An affine map constrained to lie in a convex cone. -/
 structure Constraint where
   /-- The target convex cone and its ambient space. -/
   cone : Cone
@@ -118,10 +118,10 @@ end Data
 
 variable {X}
 
-/-- Concrete conic data with equality of the objective and feasible predicate.
+/-- A conic representation with the same objective and feasible set.
 Objective sense is stored separately in `Data.sense`. -/
 structure Form (p : Problem X ℝ) where
-  /-- The concrete affine cone-program data. -/
+  /-- The affine cone-program data. -/
   data : Data X
   /-- The stored data represents the entire problem exactly. -/
   represents : data.toProblem = p
@@ -135,7 +135,7 @@ variable {X : Type u} [AddCommGroup X] [Module ℝ X]
 def IsConic (p : Problem X ℝ) : Prop :=
   Nonempty (Conic.Form p)
 
-/-- A concrete certified conic form witnesses conic representability. -/
+/-- A conic representation implies `IsConic`. -/
 theorem Conic.Form.isConic {p : Problem X ℝ} (form : Conic.Form p) : IsConic p :=
   ⟨form⟩
 

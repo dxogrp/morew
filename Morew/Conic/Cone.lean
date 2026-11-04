@@ -9,7 +9,7 @@ import Mathlib.Geometry.Convex.Cone.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 
 /-!
-# Bundled convex cones
+# Convex cones and their ambient spaces
 
 Each cone carries a finite-dimensional normed real vector space and a mathlib
 `ConvexCone`, closed under addition and positive scaling. Mathlib's convention
@@ -18,7 +18,7 @@ allows empty cones and cones excluding zero; closedness is not required.
 
 namespace Morew.Conic
 
-/-- A convex cone in a bundled finite-dimensional normed real vector space.
+/-- A convex cone together with its finite-dimensional normed real ambient space.
 
 Cone spaces live in `Type`; decision spaces may live in any universe. -/
 structure Cone where
@@ -43,11 +43,11 @@ noncomputable def nonnegativeScalar : Cone where
   Space := ℝ
   carrier := ConvexCone.positive ℝ ℝ
 
-/-- The scalar carrier with its real coordinate type explicit for elaboration. -/
+/-- The nonnegative real numbers as a `ConvexCone ℝ ℝ`. -/
 noncomputable abbrev nonnegativeScalarCarrier : ConvexCone ℝ ℝ :=
   nonnegativeScalar.carrier
 
-/-- The zero cone in `Fin n → ℝ`, whose carrier is the singleton zero vector.
+/-- The cone consisting of the zero vector in `Fin n → ℝ`.
 Mathlib's `⊥` instead denotes the empty cone. -/
 noncomputable def zero (n : Nat) : Cone where
   Space := Fin n → ℝ
@@ -79,12 +79,12 @@ theorem mem_nonnegativeScalar (x : ℝ) :
 end Cone
 
 set_option quotPrecheck false in
-/-- The scalar nonnegative cone carrier. -/
+/-- The cone of nonnegative real numbers. -/
 notation (name := nonnegativeScalarCarrier) "ℝ₊" =>
   Morew.Conic.Cone.nonnegativeScalarCarrier
 
 set_option quotPrecheck false in
-/-- The coordinatewise nonnegative cone carrier in dimension `n`. -/
+/-- The cone of componentwise nonnegative vectors in dimension `n`. -/
 notation:max (name := nonnegativeCarrier) "ℝ₊^" n:arg =>
   (Morew.Conic.Cone.nonnegative n).carrier
 

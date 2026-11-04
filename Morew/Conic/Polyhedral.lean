@@ -54,7 +54,7 @@ theorem norm_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖v‖ ≤ t ↔ 0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) :=
   Morew.Rewrite.Polyhedral.norm_le_iff v t
 
-/-- An explicit native infinity-norm carrier has the same polyhedral bound. -/
+/-- The infinity-norm bound on `WithLp ∞` is equivalent to componentwise bounds. -/
 theorem norm_toLp_top_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp ∞ v‖ ≤ t ↔
       0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) :=
@@ -67,7 +67,7 @@ theorem sum_abs_le_iff_exists {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
       ∃ u : Fin n → ℝ, v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t :=
   Morew.Rewrite.Polyhedral.sum_abs_le_iff_exists v t
 
-/-- The native finite one-norm has an exact auxiliary-vector representation. -/
+/-- The one-norm epigraph represented by linear inequalities with an auxiliary vector. -/
 theorem norm_toLp_one_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 1 v‖ ≤ t ↔
       ∃ u : Fin n → ℝ, v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t :=

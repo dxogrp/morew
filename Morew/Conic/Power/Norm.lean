@@ -87,8 +87,8 @@ theorem norm_toLp_le_iff {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal)
         mul_le_mul_of_nonneg_right hsumr (Real.rpow_nonneg ht _)
       _ = t ^ p.toReal := bound_mul_rpow _ _ hp ht
 
-/-- The native finite p-norm epigraph, represented with one auxiliary vector
-and a finite family of power-cone memberships. -/
+/-- The finite p-norm epigraph, represented by an auxiliary vector
+and a finite family of power-cone constraints. -/
 noncomputable def normEpigraph {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
     EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
   Auxiliary := Fin n → ℝ
