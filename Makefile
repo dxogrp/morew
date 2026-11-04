@@ -54,14 +54,6 @@ check: lint ## run the local Lean build, lint, and kernel checks
 docs: ## build the documentation guide, examples, and API reference
 	@./scripts/build_docs.sh
 
-.PHONY: update-docs
-update-docs: ## incrementally rebuild the manual and refresh the preview
-	@printf "$(BLUE)Updating the manual...$(RESET)\n"
-	@cd docs && LAKE_ARTIFACT_CACHE=false lake build --wfail morewManual
-	@cd docs && lake exe morewManual --output .lake/build/manual
-	@mkdir -p build/docs
-	@cp -R docs/.lake/build/manual/html-multi/. build/docs/
-
 .PHONY: preview
 preview: ## preview generated documentation at http://127.0.0.1:8000
 	@python3 -m http.server --bind 127.0.0.1 --directory build/docs 8000
