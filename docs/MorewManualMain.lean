@@ -16,7 +16,7 @@ def main := manualMain (%doc MorewManual) (config := {
       border-radius: 0.375rem;
     }
 
-    .content-wrapper code:not(.block):not(pre code) {
+    .content-wrapper code:not(.block):not(.math):not(pre code) {
       background-color: #f6f8fa;
       padding: 0.1em 0.3em;
       border-radius: 0.25rem;
