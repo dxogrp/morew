@@ -10,15 +10,25 @@ open Morew
 /-!
 # Power-cone models
 
-Scalar powers, weighted means, geometric means, and inverse products have
-exact power-cone formulations. Retained constraints supply nonnegative or
-positive base domains. Numeric exponent conditions are checked automatically;
-symbolic cone exponents retain their explicit range assumptions.
+Scalar powers, weighted and geometric means, and inverse products have
+power-cone formulations. Base domains come from the constraints; symbolic
+exponents require a proof of `0 < α ∧ α < 1`.
 -/
 
 namespace Examples.Models.Power
 
 noncomputable section
+
+/-!
+A convex power of a scalar variable x:
+
+```math
+\begin{array}{ll}
+\text{minimize} & x^{3/2} \\
+\text{subject to} & x \geq 0.
+\end{array}
+```
+-/
 
 namespace ConvexPower
 
@@ -39,6 +49,19 @@ example : GlobalEquivalence source ready := ready.equivalence
 example : IsConic ready := ready.isConic
 
 end ConvexPower
+
+/-!
+A weighted geometric mean with scalar variables x, y, and t:
+
+```math
+\begin{array}{ll}
+\text{maximize} & t \\
+\text{subject to} & t \leq x^{1/3}y^{2/3}, \\
+ & x+y \leq 10, \\
+ & x \geq 0, \quad y \geq 0.
+\end{array}
+```
+-/
 
 namespace WeightedMean
 
@@ -63,13 +86,25 @@ example : IsConic ready := ready.isConic
 
 end WeightedMean
 
+/-!
+A negative power with scalar variables x and t:
+
+```math
+\begin{array}{ll}
+\text{minimize} & t \\
+\text{subject to} & x^{-1/2} \leq t, \\
+ & x \geq 1.
+\end{array}
+```
+-/
+
 namespace NegativePower
 
 def source :=
   problem (x t : ℝ)
     minimize t
     subject to
-      -- Negative powers require a strictly positive base, certified by this margin.
+      -- The negative power requires x > 0.
       domain : 1 ≤ x
       bound : x ^ (-1 / 2 : ℝ) ≤ t
 
@@ -82,6 +117,19 @@ example : IsConic ready := ready.isConic
 
 end NegativePower
 
+/-!
+For 0 < α < 1, direct power-cone membership gives the scalar problem
+
+```math
+\begin{array}{ll}
+\text{maximize} & z \\
+\text{subject to} & |z| \leq x^\alpha y^{1-\alpha}, \\
+ & x+y \leq 1, \\
+ & x \geq 0, \quad y \geq 0.
+\end{array}
+```
+-/
+
 namespace DirectMembership
 
 def source (α : ℝ) :=
@@ -93,7 +141,7 @@ def source (α : ℝ) :=
 
 variable (α : ℝ) (hα : 0 < α ∧ α < 1)
 
--- The certificate uses hα to establish the exponent range for POW α.
+-- Include the exponent range in the conic certificate.
 include hα in
 reformulation ready : (source α) := by
   conic
@@ -105,6 +153,18 @@ example : (ready.conicForm α hα).data.toProblem = ready α :=
 example : IsConic (ready α) := ready.isConic α hα
 
 end DirectMembership
+
+/-!
+The geometric-mean model has variable x ∈ ℝ³:
+
+```math
+\begin{array}{ll}
+\text{maximize} & (x_1x_2x_3)^{1/3} \\
+\text{subject to} & \mathbf{1}^T x \leq 3, \\
+ & x \succeq 0.
+\end{array}
+```
+-/
 
 namespace GeometricMean
 
@@ -127,13 +187,25 @@ example : IsConic ready := ready.isConic
 
 end GeometricMean
 
+/-!
+The inverse-product model has variable x ∈ ℝ³:
+
+```math
+\begin{array}{ll}
+\text{minimize} & 1/(x_1x_2x_3) \\
+\text{subject to} & \mathbf{1}^T x \leq 6, \\
+ & x \succeq \mathbf{1}.
+\end{array}
+```
+-/
+
 namespace InverseProduct
 
 def source :=
   problem (x : Fin 3 → ℝ)
     minimize Fn.invProd x
     subject to
-      -- This retained margin proves that every coordinate is strictly positive.
+      -- The inverse product requires positive coordinates.
       domain : (fun _ => 1) ≤ x
       budget : ∑ i, x i ≤ 6
 

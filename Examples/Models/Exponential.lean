@@ -10,9 +10,17 @@ open Morew
 /-!
 # Exponential-cone examples
 
-Relative entropy uses a nonnegative numerator and a positive denominator.
-Softplus is defined on all real inputs; its lower bound defines the feasible set.
-Both objectives receive epigraph bounds and complete conic certificates.
+Relative entropy and softplus have exponential-cone representations.
+The relative entropy model has scalar variables a and b:
+
+```math
+\begin{array}{ll}
+\text{minimize} & a\log(a/b) \\
+\text{subject to} & a \geq 0, \quad b \geq 1.
+\end{array}
+```
+
+The objective is defined by continuity as zero at a = 0.
 -/
 
 namespace Examples.Models.Exponential
@@ -25,7 +33,6 @@ def p :=
     minimize Fn.relativeEntropy a b
     subject to
       numerator : 0 ≤ a
-      -- This bound proves positivity of the denominator.
       denominator : 1 ≤ b
 
 reformulation entropyConic : p := by
@@ -41,6 +48,17 @@ example : IsConic entropyConic := entropyConic.isConic
 end
 end RelativeEntropy
 
+/-!
+The softplus model has scalar variable x:
+
+```math
+\begin{array}{ll}
+\text{minimize} & \log(1+e^x) \\
+\text{subject to} & x \geq -2.
+\end{array}
+```
+-/
+
 namespace Softplus
 noncomputable section
 
@@ -50,7 +68,7 @@ def p :=
     subject to
       lower : -2 ≤ x
 
--- Rewrite the selected epigraph constraint before certifying the whole problem.
+-- Rewrite the softplus bound explicitly.
 reformulation selectedConic : p := by
   epigraph t as loss
   conic at loss
@@ -60,7 +78,7 @@ reformulation selectedConic : p := by
 example : GlobalEquivalence p selectedConic := selectedConic.equivalence
 example : IsConic selectedConic := selectedConic.isConic
 
--- The final `conic` command can also perform the softplus rewrite automatically.
+-- `conic` can also select the softplus rule automatically.
 reformulation automaticConic : p := by
   epigraph t as loss
   conic
