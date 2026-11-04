@@ -76,23 +76,26 @@ def p :=
       nonnegative : 0 ≤ x
 
 -- These selected rewrites expose linear bounds and record equivalence.
+-- ANCHOR: linearBounds
 reformulation linearBounds : p := by
   conic at magnitude
   epigraph t as distance
   conic at distance
+-- ANCHOR_END: linearBounds
 
 #printp linearBounds
 example : GlobalEquivalence p linearBounds := linearBounds.equivalence
 
--- The final `conic` also constructs and certifies the complete conic form.
-reformulation conicProb : p := by
-  conic at magnitude
-  epigraph t as distance
-  conic at distance
+/-! Continue from the intermediate problem and compose the two equivalences. -/
+-- ANCHOR: conicChain
+reformulation conicProb : linearBounds := by
   conic
 
+example : GlobalEquivalence p conicProb :=
+  linearBounds.equivalence.trans conicProb.equivalence
+-- ANCHOR_END: conicChain
+
 #printp conicProb
-example : GlobalEquivalence p conicProb := conicProb.equivalence
 example : conicProb.conicForm.data.toProblem = conicProb := conicProb.conicForm.represents
 example : IsConic conicProb := conicProb.isConic
 

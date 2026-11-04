@@ -1,6 +1,10 @@
 import VersoManual
 
 open Verso.Genre Manual
+open Verso.Code.External
+
+set_option verso.exampleProject "."
+set_option verso.exampleModule "Examples.GettingStarted.Conic"
 
 #doc (Manual) "Certificates" =>
 %%%
@@ -21,6 +25,28 @@ Maximization uses the reversed objective order, represented in Lean by `OrderDua
 Given `e : GlobalEquivalence p q` and a proof `hy` that a feasible point of `q`
 is optimal, `e.map_isGlobalOptimum_backward hy` proves optimality of its image in
 `p`.
+
+# Chaining reformulations
+
+A reformulation can use another reformulation as its source. Here `linearBounds`
+rewrites the absolute-value bounds of `p`:
+
+```anchor linearBounds -defSite
+reformulation linearBounds : p := by
+  conic at magnitude
+  epigraph t as distance
+  conic at distance
+```
+
+Complete conic certification in a second declaration, then compose the certificates:
+
+```anchor conicChain -defSite
+reformulation conicProb : linearBounds := by
+  conic
+
+example : GlobalEquivalence p conicProb :=
+  linearBounds.equivalence.trans conicProb.equivalence
+```
 
 # Generated declarations
 
