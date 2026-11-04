@@ -11,7 +11,7 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 /-!
 # Smooth expression closure rules
 
-Closure rules for C² functions on domains in real normed spaces.
+Closure rules for $C^2$ functions on domains in real normed spaces.
 -/
 
 namespace Morew.NLP.Smooth
@@ -140,7 +140,7 @@ theorem cosh (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => Real.cosh (f x)) domain :=
   hf.cosh
 
-/-- The real hyperbolic tangent is globally C². -/
+/-- The real hyperbolic tangent is globally $C^2$. -/
 theorem contDiff_tanh : ContDiff ℝ 2 Real.tanh := by
   have representation : Real.tanh = fun x => Real.sinh x / Real.cosh x :=
     funext Real.tanh_eq_sinh_div_cosh

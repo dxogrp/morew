@@ -100,7 +100,7 @@ private def explicitReplayHelperUniverses (value : Expr) : MetaM (Array Bool) :=
     let levels ← originalLevels.mapM fun _ => mkFreshLevelMVar
     let mut type := helper.type.instantiateLevelParams helper.levelParams levels
     -- Infer fresh universe levels to identify those requiring explicit arguments.
-    -- For example, Type (max u v) leaves u and v undetermined.
+    -- For example, `Type (max u v)` leaves `u` and `v` undetermined.
     for argument in value.getAppArgs do
       let .forallE _ domain body _ ← whnf type
         | return originalLevels.toArray.map fun _ => true

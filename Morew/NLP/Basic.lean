@@ -11,7 +11,7 @@ import Morew.Core
 # Certified smooth nonlinear programs
 
 NLP data stores an objective and finitely many scalar residuals with closed
-bounds, all C² on a common open domain containing every feasible point.
+bounds, all $C^2$ on a common open domain containing every feasible point.
 `Form` certifies equality with the represented problem.
 -/
 
@@ -88,7 +88,7 @@ end Bounds
 
 variable (X : Type u) [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-/-- A total scalar residual with closed bounds and a C² proof on an evaluation domain. -/
+/-- A total scalar residual with closed bounds and a $C^2$ proof on an evaluation domain. -/
 structure Row (domain : Set X) where
   /-- The total real-valued residual. -/
   residual : X → ℝ

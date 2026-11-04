@@ -13,6 +13,6 @@ import Morew.Conic.Power.Basic
 `Cone.power α hα` includes a proof of `0 < α ∧ α < 1`.
 
 `Morew.Conic.Power.Representations` supplies scalar rewrite records,
-`Morew.Conic.Power.Norm` treats finite p-norms, and
+`Morew.Conic.Power.Norm` treats finite `p`-norms, and
 `Morew.Conic.Power.GeometricMean` treats geometric means and inverse products.
 -/

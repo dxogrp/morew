@@ -10,7 +10,7 @@ import Morew.NLP.Domain
 /-!
 # Smooth nonlinear programs
 
-`NLP.Data` stores an objective and scalar residuals with closed bounds, all C²
+`NLP.Data` stores an objective and scalar residuals with closed bounds, all $C^2$
 on a common open domain containing every feasible point. `NLP.Form p` certifies
 `data.toProblem = p`, including objective equality outside that domain.
 
