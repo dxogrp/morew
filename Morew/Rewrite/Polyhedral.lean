@@ -89,7 +89,7 @@ noncomputable def normInfToLpEpigraph {n : Nat} :
   source_iff_exists v t := by
     simpa only [exists_const] using Polyhedral.norm_toLp_top_le_iff v t
 
-/-- The named one-norm uses the same auxiliary vector as the native one-norm. -/
+/-- The epigraph of `Fn.norm1` represented by linear inequalities with an auxiliary vector. -/
 noncomputable def fnNorm1Epigraph {n : Nat} :
     EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm1 v) :=
   norm1Epigraph

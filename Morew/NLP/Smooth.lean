@@ -23,7 +23,7 @@ variable {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
   {Z : Type w} [NormedAddCommGroup Z] [NormedSpace ℝ Z]
   {domain : Set X}
 
-/-- A decision-independent value is smooth on every domain. -/
+/-- A constant function is smooth on every domain. -/
 theorem const (domain : Set X) (value : Y) :
     ContDiffOn ℝ 2 (fun _ : X => value) domain :=
   contDiffOn_const

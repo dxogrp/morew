@@ -8,4 +8,4 @@ import Morew.Fn.Matrix
 import Morew.Fn.Norm
 import Morew.Fn.Power
 
-/-! Mathematical modeling functions and named wrappers for mathlib operations. -/
+/-! Mathematical functions for optimization models. -/

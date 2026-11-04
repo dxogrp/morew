@@ -74,7 +74,7 @@ theorem norm_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     intro i
     simpa only [Real.norm_eq_abs] using abs_le'.mpr ⟨hp i, hn i⟩
 
-/-- An explicit native infinity-norm carrier has the same polyhedral bound. -/
+/-- The infinity-norm bound on `WithLp ∞` is equivalent to componentwise bounds. -/
 theorem norm_toLp_top_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp ∞ v‖ ≤ t ↔
       0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) := by
@@ -97,7 +97,7 @@ theorem sum_abs_le_iff_exists {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     intro i _hi
     exact abs_le'.mpr ⟨hp i, hn i⟩
 
-/-- The native finite one-norm has an exact auxiliary-vector representation. -/
+/-- The one-norm epigraph represented by linear inequalities with an auxiliary vector. -/
 theorem norm_toLp_one_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 1 v‖ ≤ t ↔
       ∃ u : Fin n → ℝ, v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t := by

@@ -235,9 +235,9 @@ def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
     map := fun point => ⟨point.1, point.2.1⟩
     objective_le := fun _ => le_rfl }
 
-/-- Replacing a constraint by an existentially equivalent auxiliary-variable
-predicate preserves global optimization. The forward map chooses an auxiliary
-witness; the backward map projects to the original coordinates. -/
+/-- Replacing a constraint by equivalent constraints with auxiliary variables
+preserves global optimization. The forward map chooses feasible auxiliary
+values; the backward map projects to the original coordinates. -/
 noncomputable def conditionalConstraintLiftEquivalence
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop} [Preorder V]
     (p : Problem X V)

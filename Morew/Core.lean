@@ -17,7 +17,7 @@ namespace Morew
 
 universe u v w
 
-/-- The optimization direction stored in target data and problem presentations. -/
+/-- The optimization direction stored in problem representations. -/
 inductive ObjectiveSense where
   /-- Minimize the objective in its ordinary order. -/
   | minimize
@@ -107,7 +107,7 @@ protected def refl {X : Type u} {V : Type v} [Preorder V]
   map := id
   objective_le := fun _ => le_rfl
 
-/-- Compose two one-way global-improvement certificates. -/
+/-- Compose two global improvement maps. -/
 def trans {X : Type u} {Y : Type v} {Z : Type w} {V : Type*} [Preorder V]
     {p : Problem X V} {q : Problem Y V} {r : Problem Z V}
     (pq : GlobalImprovement p q) (qr : GlobalImprovement q r) :
@@ -115,14 +115,13 @@ def trans {X : Type u} {Y : Type v} {Z : Type w} {V : Type*} [Preorder V]
   map := qr.map ∘ pq.map
   objective_le := fun x => le_trans (qr.objective_le (pq.map x)) (pq.objective_le x)
 
-/-- A one-way certificate transports existence of a feasible point. -/
+/-- A global improvement map preserves existence of a feasible point. -/
 theorem map_hasFeasiblePoint
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     {p : Problem X V} {q : Problem Y V} (c : GlobalImprovement p q) :
     p.HasFeasiblePoint → q.HasFeasiblePoint := fun h => h.map c.map
 
-/-- Unboundedness in the optimization direction is transported forward by a
-one-way certificate. -/
+/-- A global improvement map preserves unboundedness in the optimization direction. -/
 theorem map_isUnbounded
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     {p : Problem X V} {q : Problem Y V} (c : GlobalImprovement p q) :

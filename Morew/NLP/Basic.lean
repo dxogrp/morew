@@ -152,11 +152,11 @@ end Data
 
 variable {X}
 
-/-- Concrete smooth-NLP data with equality of the objective and feasible predicate.
+/-- A smooth NLP representation with the same objective and feasible set.
 Equality includes objective values outside the evaluation domain. Objective
 sense is stored separately in `Data.sense`. -/
 structure Form (p : Problem X ℝ) where
-  /-- The concrete smooth nonlinear-program representation. -/
+  /-- The smooth nonlinear-program data. -/
   data : Data X
   /-- The objective and feasible predicate represent the problem exactly. -/
   represents : data.toProblem = p
@@ -170,7 +170,7 @@ variable {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
 def IsSmoothNLP (p : Problem X ℝ) : Prop :=
   Nonempty (NLP.Form p)
 
-/-- A concrete certified form witnesses smooth-NLP representability. -/
+/-- A smooth NLP representation implies `IsSmoothNLP`. -/
 theorem NLP.Form.isSmoothNLP {p : Problem X ℝ} (form : NLP.Form p) : IsSmoothNLP p :=
   ⟨form⟩
 

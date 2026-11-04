@@ -13,8 +13,8 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 A Euclidean norm bound becomes a nonnegative scalar bound and a squared-norm
 inequality.
 
-`norm2Epigraph` handles native Euclidean-space values and vectors converted with
-`WithLp.toLp 2`. The named-function adapter `fnNorm2Epigraph` forwards to it.
+`norm2Epigraph` represents the Euclidean norm; `fnNorm2Epigraph` gives the
+corresponding representation for `Fn.norm2`.
 -/
 
 namespace Morew.Rewrite
@@ -32,7 +32,7 @@ theorem norm2_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
   · rintro ⟨ht, h⟩
     exact (sq_le_sq₀ hnorm ht).mp (hsq.symm ▸ h)
 
-/-- Native Euclidean-space values use their ordinary coordinates in the target. -/
+/-- The Euclidean-space norm epigraph expressed in vector coordinates. -/
 noncomputable def norm2Epigraph {n : Nat} :
     EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) where
   Auxiliary := Unit

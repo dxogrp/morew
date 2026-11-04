@@ -57,7 +57,7 @@ structure GraphRepresentation {X : Type u} {Y : Type v} (f : X → Y) where
 
 namespace GraphRepresentation
 
-/-- Instantiate a graph representation inside an arbitrary decision domain. -/
+/-- Apply a graph representation to expressions on a decision space. -/
 def toExactConstraintLift {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
     (representation : GraphRepresentation.{u, v, w} f)
     (input : Z → X) (output : Z → Y) :
@@ -67,8 +67,7 @@ def toExactConstraintLift {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
   source_iff_exists point :=
     representation.source_iff_exists (input point) (output point)
 
-/-- Instantiate a graph representation for the symmetric equation
-`f x = y` inside an arbitrary decision domain. -/
+/-- Apply a graph representation to the equation `f x = y` on a decision space. -/
 def toExactConstraintLiftSymm
     {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
     (representation : GraphRepresentation.{u, v, w} f)
@@ -98,8 +97,7 @@ structure EpigraphRepresentation {X : Type u} {Y : Type v} [LE Y]
 
 namespace EpigraphRepresentation
 
-/-- Instantiate an epigraph representation inside an arbitrary decision
-domain. -/
+/-- Apply an epigraph representation to expressions on a decision space. -/
 def toExactConstraintLift
     {X : Type u} {Y : Type v} {Z : Type z} [LE Y] {f : X → Y}
     (representation : EpigraphRepresentation.{u, v, w} f)
@@ -125,8 +123,7 @@ structure HypographRepresentation {X : Type u} {Y : Type v} [LE Y]
 
 namespace HypographRepresentation
 
-/-- Instantiate a hypograph representation inside an arbitrary decision
-domain. -/
+/-- Apply a hypograph representation to expressions on a decision space. -/
 def toExactConstraintLift
     {X : Type u} {Y : Type v} {Z : Type z} [LE Y] {f : X → Y}
     (representation : HypographRepresentation.{u, v, w} f)

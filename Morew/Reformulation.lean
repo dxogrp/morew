@@ -9,5 +9,5 @@ import Morew.Reformulation.NLP
 /-!
 # Reformulation command
 
-Complete command entry point, including both backends and their default rules.
+Conic and smooth NLP reformulation commands with their default rules.
 -/

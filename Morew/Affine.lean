@@ -26,14 +26,14 @@ variable [AddCommGroup Z] [Module ℝ Z]
 
 /-- An affine map together with its pointwise agreement with a function. -/
 structure Certified (f : X → Y) where
-  /-- The concrete affine map. -/
+  /-- The affine map. -/
   map : X →ᵃ[ℝ] Y
   /-- The map agrees with the original function at every decision point. -/
   correct : ∀ x, map x = f x
 
 namespace Certified
 
-/-- A decision-independent constant is affine. -/
+/-- A constant function is affine. -/
 noncomputable def const (X : Type*) [AddCommGroup X] [Module ℝ X] (c : Y) :
     Certified (fun _ : X => c) where
   map := AffineMap.const ℝ X c
@@ -69,13 +69,13 @@ noncomputable def neg {f : X → Y} (a : Certified f) :
   map := -a.map
   correct x := congrArg Neg.neg (a.correct x)
 
-/-- Multiply by a decision-independent real scalar. -/
+/-- Multiply by a fixed real scalar. -/
 noncomputable def realSMul {f : X → Y} (c : ℝ) (a : Certified f) :
     Certified (fun x => c • f x) where
   map := c • a.map
   correct x := congrArg (c • ·) (a.correct x)
 
-/-- Multiply by a decision-independent natural scalar. -/
+/-- Multiply by a fixed natural scalar. -/
 noncomputable def natSMul {f : X → Y} (n : ℕ) (a : Certified f) :
     Certified (fun x => n • f x) where
   map := n • a.map
@@ -134,11 +134,11 @@ noncomputable def rpowOne {f : X → ℝ} (a : Certified f) :
   map := a.map
   correct x := (a.correct x).trans (Real.rpow_one (f x)).symm
 
-/-- The canonical real-power notation for the zeroth-power construction. -/
+/-- The constant-one function written as `f x ^ (0 : ℝ)`. -/
 noncomputable def rpowNotationZeroSource (f : X → ℝ) :
     Certified (fun x => f x ^ (0 : ℝ)) := rpowZeroSource f
 
-/-- The canonical real-power notation for the first-power construction. -/
+/-- An affine function written as `f x ^ (1 : ℝ)`. -/
 noncomputable def rpowNotationOne {f : X → ℝ} (a : Certified f) :
     Certified (fun x => f x ^ (1 : ℝ)) := rpowOne a
 

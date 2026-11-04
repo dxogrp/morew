@@ -16,29 +16,29 @@ Finite families are ordered by coordinate.
 
 namespace Morew.NLP.Rows
 
-/-- The exact upper-bound normalization recorded by a scalar row certificate. -/
+/-- The bound `lhs ≤ rhs` is equivalent to `lhs - rhs ≤ 0`. -/
 theorem upper_residual_iff (lhs rhs : ℝ) :
     (Bounds.upperBound 0).Contains (lhs - rhs) ↔ lhs ≤ rhs := by
   rw [Bounds.contains_upperBound]
   exact sub_nonpos
 
-/-- The exact lower-bound normalization recorded by a scalar row certificate. -/
+/-- The bound `rhs ≤ lhs` is equivalent to `0 ≤ lhs - rhs`. -/
 theorem lower_residual_iff (lhs rhs : ℝ) :
     (Bounds.lowerBound 0).Contains (lhs - rhs) ↔ lhs ≥ rhs := by
   rw [Bounds.contains_lowerBound]
   exact sub_nonneg
 
-/-- The exact equality normalization recorded by a scalar row certificate. -/
+/-- The equality `lhs = rhs` is equivalent to `lhs - rhs = 0`. -/
 theorem fixed_residual_iff (lhs rhs : ℝ) :
     (Bounds.fixed 0).Contains (lhs - rhs) ↔ lhs = rhs := by
   rw [Bounds.contains_fixed]
   exact sub_eq_zero
 
-/-- Canonical vector upper bounds are coordinatewise scalar bounds. -/
+/-- Vector upper bounds are equivalent to componentwise scalar bounds. -/
 theorem vector_le_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
     lhs ≤ rhs ↔ ∀ i, lhs i ≤ rhs i := Iff.rfl
 
-/-- Canonical vector lower bounds are coordinatewise scalar bounds. -/
+/-- Vector lower bounds are equivalent to componentwise scalar bounds. -/
 theorem vector_ge_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
     lhs ≥ rhs ↔ ∀ i, lhs i ≥ rhs i := Iff.rfl
 
@@ -71,7 +71,7 @@ inductive Certified (domain : Set X) : (X → Prop) → Prop where
   | family {n : ℕ} (p : Fin n → X → Prop)
       (certified : ∀ i, Certified domain (p i)) :
       Certified domain (fun x => ∀ i, p i x)
-  /-- Checked logical transport preserves the original row predicate. -/
+  /-- A constraint equivalent to one represented by smooth residuals has the same representation. -/
   | of_iff (p q : X → Prop) (equivalent : ∀ x, p x ↔ q x)
       (certified : Certified domain q) : Certified domain p
 
@@ -121,7 +121,7 @@ theorem preimage_includes {Y : Type*} (domain : Set X) (p : X → Prop)
     ∀ y, p (f y) → y ∈ f ⁻¹' domain :=
   fun y hy => includes (f y) hy
 
-/-- Concrete smooth scalar rows whose conjunction is equivalent to one predicate.
+/-- Smooth scalar constraints whose conjunction is equivalent to one predicate.
 The domain specifies where the residuals are smooth. -/
 structure Block (domain : Set X) (predicate : X → Prop) where
   /-- The number of scalar rows. -/
@@ -135,7 +135,7 @@ namespace Block
 
 variable {domain : Set X} {p q : X → Prop}
 
-/-- An exposed `True` predicate contributes no scalar rows. -/
+/-- The predicate `True` contributes no scalar constraints. -/
 def truth (domain : Set X) : Block domain (fun _ => True) where
   rowCount := 0
   rows := Fin.elim0
@@ -229,7 +229,7 @@ theorem family_rows {n : Nat} (p : Fin n → X → Prop)
   exact congrArg (fun ij : (i : Fin n) × Fin (blocks i).rowCount => (blocks ij.1).rows ij.2)
     (finSigmaFinEquiv.symm_apply_apply ⟨i, j⟩)
 
-/-- Logical transport changes only the predicate represented by the row block. -/
+/-- Represent an equivalent predicate using the same residuals and bounds. -/
 def ofIff (p q : X → Prop) (equivalent : ∀ x, p x ↔ q x)
     (block : Block domain q) : Block domain p where
   rowCount := block.rowCount

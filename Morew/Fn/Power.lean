@@ -26,7 +26,7 @@ has reciprocal zero under real division. -/
 noncomputable def invProd {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   (∏ i, xs i)⁻¹
 
-/-- The geometric mean uses the native real power of the product. -/
+/-- The geometric mean is the real power of the product. -/
 theorem geoMean_eq_rpow_prod {n : Nat} (xs : Fin n → ℝ) :
     geoMean xs = Real.rpow (∏ i, xs i) (1 / (n : ℝ)) := rfl
 
@@ -36,7 +36,7 @@ theorem geoMean_eq_prod_rpow {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 ≤ x
     geoMean xs = ∏ i, Real.rpow (xs i) (1 / (n : ℝ)) :=
   (Real.finsetProd_rpow Finset.univ xs (fun i _ => hx i) _).symm
 
-/-- The inverse product uses the native reciprocal of the product. -/
+/-- The inverse product is the reciprocal of the product. -/
 theorem invProd_eq_inv_prod {n : Nat} (xs : Fin n → ℝ) :
     invProd xs = (∏ i, xs i)⁻¹ := rfl
 

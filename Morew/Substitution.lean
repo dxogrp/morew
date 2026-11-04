@@ -11,8 +11,8 @@ import Mathlib.Analysis.Real.Sqrt
 # Reusable coordinate substitution rules
 
 Coordinate parameterizations with right inverses on specified ranges.
-Coefficients may depend on retained coordinates; nonzero slopes are checked
-at feasible source points.
+Coefficients may depend on unchanged coordinates; affine substitutions require
+nonzero slopes at feasible points.
 -/
 
 namespace Morew.Substitution
