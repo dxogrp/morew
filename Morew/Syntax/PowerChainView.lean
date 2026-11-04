@@ -8,8 +8,8 @@ import Lean.PrettyPrinter
 /-!
 # Displaying finite power-cone representations
 
-Formatting data for geometric-mean and inverse-product constraints. Syntax
-leaves retain the names of the checked presentation and serve as display text.
+Format geometric-mean and inverse-product constraints using names from the checked
+presentation.
 -/
 
 namespace Morew.Syntax
@@ -47,8 +47,7 @@ private def powerMembership (x y z exponent : Format) : Format :=
   Format.group <| f!"({x}, {y}, {z}) ∈" ++
     Format.nest 2 (Format.line ++ f!"POW ({exponent})")
 
-/-- Format one recognized chain row using the caller's ordinary syntax printer
-for every retained leaf. Grouping leaves line wrapping to the active width. -/
+/-- Format a chain row with the caller's syntax printer and current line width. -/
 def PowerChainRow.format (row : PowerChainRow)
     (render : Syntax → CoreM Format) : CoreM Format := do
   match row with

@@ -115,9 +115,9 @@ private inductive RawDeclarationStage where
   | alias
   deriving BEq
 
-/-- Try declarations retaining source syntax first. Retry target and certificate failures with
-explicit semantic types and normalization evidence; preserve original diagnostics
-if retry fails. Alias failures and internal exceptions propagate. -/
+/-- Emit declarations using source syntax, retrying target and certificate failures with
+explicit semantic types and normalization. Preserve the original error if retry fails;
+alias failures and internal exceptions propagate. -/
 private def tryRawDeclarations (emitTarget : CommandElabM (TSyntax `term))
     (emitCertificate : TSyntax `term → CommandElabM (TSyntax `term))
     (emitAlias : TSyntax `term → CommandElabM Unit) : CommandElabM RawDeclarationResult := do

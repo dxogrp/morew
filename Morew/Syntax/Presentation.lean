@@ -79,12 +79,11 @@ structure ProblemView where
   constraints : Array ConstraintView := #[]
   deriving Inhabited
 
-/-- Display views of a reformulation. Compact output omits index proofs;
-detailed output retains them for inspection at print time. -/
+/-- Compact and detailed displays of a reformulation. -/
 structure ProblemPrintPresentation where
-  /-- Ordinary compact output, with finite-index bounds proofs omitted. -/
+  /-- Compact output omitting finite-index bounds proofs. -/
   compact : ProblemView
-  /-- Ordinary output with proof details available for later inspection. -/
+  /-- Output retaining proof details. -/
   detailed : ProblemView
   /-- Optional mathematical displays aligned with the compact view's constraints. -/
   mathematicalRows : Array (Option PowerChainRow) := #[]
@@ -105,9 +104,8 @@ private initialize problemViewExtension :
     addEntryFn := fun state entry => state.insert entry.1 entry.2
   }
 
-/-- Add presentation metadata to an environment. Transformation commands can
-supply a separate readable display while retaining exact syntax for replay.
-Without a display override, the supplied view serves both purposes. -/
+/-- Register replay syntax and optional display views. The replay view is also
+the default display. -/
 def addProblemView (env : Environment) (declName : Name)
     (view : ProblemView) (displayView? : Option ProblemView := none)
     (printPresentation? : Option ProblemPrintPresentation := none) : Environment :=
@@ -133,9 +131,8 @@ def registerProblemView [MonadEnv m] (declName : Name)
     (printPresentation? : Option ProblemPrintPresentation := none) : m Unit :=
   modifyEnv fun env => addProblemView env declName view displayView? printPresentation?
 
-/-- Structurally replace occurrences of a source identifier in a syntax tree.
-Callers must establish freshness of replacement variables and absence of
-shadowing. Names are compared after erasing macro scopes. -/
+/-- Replace an identifier, comparing names without macro scopes.
+The caller ensures freshness and absence of shadowing. -/
 partial def replaceIdent (stx : Lean.Syntax) (oldName : Name)
     (replacement : Lean.Syntax) : Lean.Syntax :=
   if stx.isIdent && stx.getId.eraseMacroScopes == oldName.eraseMacroScopes then
@@ -163,10 +160,8 @@ def ProblemView.replaceIdent (view : ProblemView) (oldName : Name)
       { constraint with
         proposition := Syntax.replaceIdent constraint.proposition oldName replacement } }
 
-/-- Attach the current global resolutions to identifiers without changing their
-source spelling. Local variables still take precedence during elaboration,
-while global references retain the namespace and `open` context in which the
-problem or transformation was written. -/
+/-- Capture global resolutions from the current namespace and `open` context.
+Preserve source spelling and precedence of local variables. -/
 partial def preResolveTerm (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
   match stx with
   | .ident info rawValue value preResolved =>
@@ -195,9 +190,7 @@ def ProblemView.wrapDefinitions (view : ProblemView) (body : TSyntax `term) :
         `(let $name : $type := $value; $body)
     | none => `(let $name := $value; $body)) body
 
-/-- Reconstruct the canonical `problem` term syntax represented by a view.
-Generated declaration commands can elaborate this term and then register the
-same view under the newly created declaration name. -/
+/-- Reconstruct the canonical `problem` term from its presentation. -/
 def ProblemView.toTermSyntax (view : ProblemView) : MacroM (TSyntax `term) := do
   if view.binders.isEmpty then
     Macro.throwError "a problem requires at least one decision variable"
