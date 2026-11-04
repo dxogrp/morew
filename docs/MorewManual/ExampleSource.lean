@@ -74,11 +74,24 @@ private def normalizeModule (source : LitMod) : LitMod := Id.run do
     contents := contents.push { item with code }
   return { source with contents }
 
+inline_extension sourcePathCaption where
+  traverse _ _ _ := pure none
+  toHtml := some fun go _ _ content => open Verso.Output.Html in do
+    pure {{<span class="example-source-path">{{← content.mapM go}}</span>}}
+  toTeX := some fun go _ _ content => content.mapM go
+  extraCss := [r#"
+.example-source-path {
+  color: #666;
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+}
+"#]
+
 private def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc Manual :=
   let doc := modToPage! (normalizeModule (loadJsonString! json)) #[.text title] title none
   { doc with construct := fun context =>
       let part := doc.construct context
-      let sourceCaption := Verso.Doc.Block.para #[.text "Source: ", .code sourcePath]
+      let sourceCaption := Verso.Doc.Block.para #[.other sourcePathCaption #[.code sourcePath]]
       { part with content := #[sourceCaption] ++ part.content } }
 
 open Lean Lean.Elab Term Verso.Doc.Elab Verso.ArgParse
