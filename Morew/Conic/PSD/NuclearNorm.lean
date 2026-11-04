@@ -10,8 +10,8 @@ import Morew.Conic.PSD
 # Exact semidefinite representation of the nuclear norm
 
 A positive-semidefinite block with two auxiliary diagonal blocks bounds the
-nuclear norm by half their combined trace. Singular-vector witnesses attain
-the bound.
+nuclear norm by half their combined trace. Matrices constructed from singular
+vectors attain the bound.
 -/
 
 namespace Morew.Conic.Spectral
@@ -165,7 +165,7 @@ theorem nuclearNorm_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
     rightSingularBasis A i.val) (rightSingularVector_orthonormal A)
   linarith
 
-/-- The nuclear-norm epigraph uses two symmetric witnesses and a half-trace bound. -/
+/-- The nuclear-norm epigraph uses two auxiliary symmetric matrices and a half-trace bound. -/
 theorem nuclearNorm_le_iff (t : ℝ) :
     Fn.nuclearNorm A ≤ t ↔ ∃ W : SymmetricMatrix m, ∃ V : SymmetricMatrix n,
       SymmetricMatrix.fromBlocks W A V ∈ PSD (m + n) ∧

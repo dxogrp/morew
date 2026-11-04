@@ -23,7 +23,8 @@ open Matrix
 
 variable {n : Nat}
 
-/-- A positive-definite matrix admits an attaining triangular PSD witness. -/
+/-- For positive-definite `X`, a lower triangular matrix satisfies the
+semidefinite constraint with diagonal product equal to `det X`. -/
 theorem exists_triangular_block {X : Matrix (Fin n) (Fin n) ℝ} (hX : X.PosDef) :
     ∃ Z : Matrix (Fin n) (Fin n) ℝ,
       Z.IsLowerTriangular ∧ (∀ i, 0 < Z i i) ∧

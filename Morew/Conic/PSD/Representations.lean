@@ -45,7 +45,7 @@ noncomputable def epigraph {n : Nat} :
   source_iff_exists p t := by
     simpa only [exists_const] using matrixFrac_le_iff p.1 p.2.1 p.2.2 t
 
-/-- Native dot-product/inverse spelling of the same exact epigraph. -/
+/-- The matrix-fractional epigraph for `x ⬝ᵥ (P⁻¹ *ᵥ x)`. -/
 noncomputable def nativeEpigraph {n : Nat} :
     EpigraphRepresentation (fun p : (Fin n → ℝ) ×
       {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => p.1 ⬝ᵥ (p.2.1⁻¹ *ᵥ p.1)) :=
@@ -64,7 +64,7 @@ noncomputable def lambdaMaxEpigraph {n : Nat} (hn : 0 < n) :
   source_iff_exists A t := by
     simpa only [exists_const] using lambdaMax_le_iff A.1 A.2 hn t
 
-/-- Exact PSD epigraph of the native matrix L2 operator norm. -/
+/-- A semidefinite representation of the Euclidean operator-norm epigraph. -/
 noncomputable def spectralNormEpigraph {m n : Nat} :
     EpigraphRepresentation (fun A : Matrix (Fin m) (Fin n) ℝ => ‖A‖) where
   Auxiliary := Unit

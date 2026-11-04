@@ -32,7 +32,7 @@ abbrev SymmetricMatrix (n : Nat) : Type := ↥(symmetricMatrixSubmodule n)
 
 namespace SymmetricMatrix
 
-/-- Bundle a real matrix with its symmetry proof. -/
+/-- Construct a `SymmetricMatrix` from a real matrix and a symmetry proof. -/
 def ofMatrix {n : Nat} (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     SymmetricMatrix n := ⟨M, hM⟩
 
@@ -47,12 +47,12 @@ theorem toMatrix_isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
 theorem isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
   M.toMatrix_isSymm
 
-/-- Extracting the matrix from its bundle recovers the original. -/
+/-- Conversion to `SymmetricMatrix` preserves the underlying matrix. -/
 @[simp]
 theorem toMatrix_ofMatrix {n : Nat} (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     (ofMatrix M hM).toMatrix = M := rfl
 
-/-- Rebundling the underlying matrix recovers the original bundle. -/
+/-- Reconstructing a `SymmetricMatrix` from its entries recovers the original. -/
 @[simp]
 theorem ofMatrix_toMatrix {n : Nat} (M : SymmetricMatrix n) :
     ofMatrix M.toMatrix M.toMatrix_isSymm = M := rfl
@@ -167,7 +167,7 @@ theorem posSemidef_fromBlocksFin_iff :
       (Matrix.fromBlocks A B C D).PosSemidef :=
   Matrix.posSemidef_submatrix_equiv finSumFinEquiv.symm
 
-/-- A symmetric block matrix remains symmetric after canonical block indexing. -/
+/-- Block reindexing preserves symmetry. -/
 theorem isSymm_fromBlocksFin (hA : A.IsSymm) (hBC : B.transpose = C) (hD : D.IsSymm) :
     (fromBlocksFin A B C D).IsSymm :=
   (hA.fromBlocks hBC hD).reindex finSumFinEquiv
@@ -176,7 +176,7 @@ end Blocks
 
 namespace SymmetricMatrix
 
-/-- The symmetric block matrix `[A B; Bᵀ D]`, in canonical finite coordinates. -/
+/-- The symmetric block matrix `[A B; Bᵀ D]`, indexed by `Fin (m + n)`. -/
 def fromBlocks {m n : Nat} (A : SymmetricMatrix m)
     (B : Matrix (Fin m) (Fin n) ℝ) (D : SymmetricMatrix n) : SymmetricMatrix (m + n) :=
   ofMatrix (fromBlocksFin A.toMatrix B B.transpose D.toMatrix)
