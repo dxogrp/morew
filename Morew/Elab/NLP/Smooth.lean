@@ -12,20 +12,20 @@ import Morew.Elab.Expansion
 import Morew.Elab.Atom
 import Lean.Meta.Check
 
-/-! Certify C² smoothness on Set.univ for fully elaborated functions X → ℝ.
-Supported spaces are real scalars, finite Euclidean spaces, products, and finite vectors.
+/-! Certify global C² smoothness for elaborated functions `X → ℝ` on real scalars,
+finite Euclidean spaces, products, and finite vectors.
 Constants, projections, arithmetic, natural powers, finite sums, exponential,
-trigonometric, and hyperbolic operations compose structurally. Exponents and indices
-must be decision-independent. Independent expressions are constant functions.
+trigonometric, and hyperbolic operations compose structurally; exponents and indices
+must be decision-independent.
 
-Local lets and beta applications reduce for proof construction. Dependent transparent
-helpers expand under morew.smooth.maxExpansionDepth, maxExpansionSteps, and
-maxExpansionNodes, defaulting to 32, 1024, and 100000. Any zero limit disables
-expansion; each source has one budget. Named Problem containers and predicates stay closed.
+Local lets and beta applications reduce for certification. Dependent transparent
+helpers expand under `morew.smooth.maxExpansionDepth`, `maxExpansionSteps`, and
+`maxExpansionNodes`, defaulting to 32, 1024, and 100000. Budgets apply per source;
+zero disables expansion. Named `Problem` containers and predicates stay closed.
 
-Morew.Elab.NLP.Domain shares the traversal for restricted operations and uses stricter
-constant-domain checks. Diagnostics retain the failing expression's local context.
-Successful proofs refer to the original function and use canonical analytic structures. -/
+`Morew.Elab.NLP.Domain` shares this traversal with additional domain checks for
+restricted operations, including constants. Proofs use canonical analytic structures
+and refer to the original function. -/
 
 /-- Maximum nested helper expansions during smooth certification. -/
 register_option morew.smooth.maxExpansionDepth : Nat := {

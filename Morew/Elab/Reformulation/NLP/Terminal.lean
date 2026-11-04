@@ -7,17 +7,16 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.NLP.Terminal
 import Morew.Elab.Reformulation.Rows
 
-/-! Apply exact direct-bound rewrites, then certify the complete objective and constraints
-on a common open domain. Emit equivalence, nlpForm, and isSmoothNLP declarations.
-Feasibility remains defined by the rows; domain guards are not added.
+/-! Apply exact bound rewrites and certify the objective and residuals on a common
+open domain containing the feasible set. Emit `equivalence`, `nlpForm`, and `isSmoothNLP`.
+Domain inference leaves feasibility unchanged.
 
-The form stores scalar residuals a - b with upper, lower, or fixed zero bounds.
-Displayed conjunctions and finite families remain grouped. Finite families support
-symbolic and zero dimensions; general quantifiers are unsupported. Maximization
-retains OrderDual ℝ and records maximize in the form.
+Store scalar residuals `a - b` with upper, lower, or fixed zero bounds; retain grouped
+conjunctions and finite families for display. Families support symbolic and zero
+dimensions, but not general quantifiers. Maximization retains `OrderDual ℝ` and
+records `maximize` in the form.
 
-The step ends the script. Allocate names and emit declarations and metadata in the
-command transaction. -/
+This terminal step allocates names and emits declarations and metadata atomically. -/
 
 namespace Morew.Elab.Reformulation
 

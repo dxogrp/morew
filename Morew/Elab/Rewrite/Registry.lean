@@ -7,28 +7,25 @@ import Morew.Rewrite.Basic
 import Morew.Elab.Rewrite.Comparison
 import Lean
 
-/-! Register exact representations with morew_conic and morew_nlp attributes.
-Local, scoped, removed, and imported registrations follow Lean attribute scope.
-Records live in Type and are normally definitions. Reject malformed records and
-variable-headed source patterns during registration. Check candidate certificates on use.
+/-! Register exact representations with `morew_conic` and `morew_nlp`, following Lean
+attribute scope. Records live in `Type`. Registration checks record types and requires
+fixed source heads; certificates are checked on use.
 
-Automatic discovery checks all matching rules. NLP requires one certified result;
-conic first applies the built-in SOC/power norm preference. Report ambiguous declaration
-names in sorted order. Explicit using selection needs no registration and has no fallback.
+Automatic discovery certifies all matching rules and requires one success, after
+the built-in SOC/power norm preference for conic rules. Ambiguous names are sorted.
+Explicit `using` selects a single declaration or certificate, registered or otherwise.
 
-Graph, epigraph, and hypograph matching adapts real outer negations through proved
-equivalences, retaining actual operation instances. Whole-predicate records use literal
-matching. Subtype inputs and proof parameters may require independent or retained
-evidence. First prove exactness under precisely the retained constraints; auxiliary
-types are decision-independent and targets cannot depend on feasibility proofs.
-Unit auxiliaries add no coordinate.
+Graph and bound matching adapts outer real negations by equivalence while retaining
+operation instances; whole-predicate records match literally. Independent or retained
+evidence discharges subtype guards and proof parameters. Exactness uses the retained
+constraints; auxiliary types are decision-independent and targets are proof-independent.
+`Unit` auxiliaries add no coordinate.
 
-Conic premises use direct margins. NLP premises use bounded reasoning over retained
-closed comparisons and compatible finite indices. After exactness, NLP may use generated
-guards for domain inclusion. Unsupported retained predicates supply no facts.
+Conic premises use direct margins; NLP uses bounded reasoning over retained closed
+comparisons and compatible finite indices. Once exactness is proved, NLP may use
+generated guards for domain inclusion. Unsupported retained predicates supply no facts.
 
-This module defines attributes. Backend Rules modules install built-ins;
-Morew.Reformulation imports commands and both rule sets. -/
+Backend `Rules` modules install built-ins; `Morew.Reformulation` imports both rule sets. -/
 
 namespace Morew.Elab.Rewrite.Registry
 

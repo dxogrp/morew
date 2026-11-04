@@ -8,14 +8,14 @@ import Morew.Elab.NLP.Rewrite
 import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 
-/-! Replace a selected nonsmooth bound with exactly equivalent smooth constraints.
-Automatic discovery requires one certified morew_nlp rule; using selects a declaration
-or certificate without fallback. Rules match the whole selected predicate.
+/-! Replace a selected bound with equivalent smooth constraints. Discovery requires
+one certified `morew_nlp` rule; `using` selects a single declaration or certificate.
+Rules match the whole selected predicate.
 
-Check exactness using retained constraints before using generated guards for domain
-inclusion. Certify residuals on an open domain containing proposed feasibility.
-Keep vector and finite-family rows grouped. Consume the selected label and allocate
-fresh _nlp_i row names and _aux binders. The step remains nonterminal. -/
+Prove exactness from retained constraints, then use generated guards to certify residuals
+on an open domain containing the new feasible set. Vector and finite-family rows stay
+grouped. Replace the selected label with fresh `_nlp_i` row names and `_aux` binders;
+further steps may follow. -/
 
 namespace Morew.Elab.Reformulation
 

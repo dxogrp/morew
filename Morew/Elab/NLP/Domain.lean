@@ -7,19 +7,19 @@ import Morew.Elab.NLP.Smooth
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Infer a common open domain, C² proofs for the supplied functions, and feasible inclusion.
-Admit native closed real comparisons, conjunctions, and True over real, product,
-and finite-vector decision spaces. Validate feasibility even for an empty source array.
+/-! Certify C² smoothness on a common open domain containing the feasible set.
+Feasibility admits native closed real comparisons, conjunctions, and `True` over real,
+product, and finite-vector spaces, and is checked even when no functions are supplied.
 
-Log, square root, and fixed real powers require positive arguments; inverse and
-division require nonzero denominators, including for constants. Constant helper
-arguments retain these requirements in supported value spaces; function and proof
-arguments remain opaque. Dependent value helpers expand under morew.smooth limits,
-with a fresh budget per source. Named predicates and independent helper bodies stay closed.
+Logarithms, square roots, and fixed real powers require positive arguments; inverses
+and division require nonzero denominators. These conditions also apply to constants
+and supported value arguments of helpers; function and proof arguments remain opaque.
+Dependent helpers expand under `morew.smooth` limits, with one budget per source.
+Named predicates and independent helper bodies stay closed.
 
-Finite sums use their supplied support. Inclusion uses admitted constraints,
-independent hypotheses, and established child domains. Results cover sources in input
-order; a form builder checks objective and residual coverage separately. -/
+Finite sums retain their support. Domain inclusion uses admitted constraints,
+independent hypotheses, and child domains. Results follow input order; the form builder
+checks objective and residual coverage. -/
 
 namespace Morew.Elab.NLP.Domain
 

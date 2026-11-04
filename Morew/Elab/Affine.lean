@@ -17,17 +17,17 @@ import Lean.Meta.Match.MatcherInfo
 
 /-! Affine reification with pointwise proofs.
 
-Transparent, nonrecursive def and abbrev helpers expand only for certification.
-Source expressions and printing retain their helper references.
+Transparent, nonrecursive `def` and `abbrev` helpers expand for certification;
+source expressions and printing retain their names.
 
 Expansion limits apply per source expression, including evidence discovery:
-* morew.affine.maxExpansionDepth: 32 nested expansions.
-* morew.affine.maxExpansionSteps: 1024 unfoldings across branches.
-* morew.affine.maxExpansionNodes: 100000 expanded nodes, including duplication.
+* `morew.affine.maxExpansionDepth`: 32 nested expansions.
+* `morew.affine.maxExpansionSteps`: 1024 unfoldings across branches.
+* `morew.affine.maxExpansionNodes`: 100000 expanded nodes, including duplication.
 
-A zero limit disables expansion; direct recognition remains available.
-Opaque, irreducible, and recursive helpers and custom predicates stay closed.
-Native operations require their canonical instances and domain evidence. -/
+A zero limit leaves only direct recognition. Opaque, irreducible, and recursive
+helpers and custom predicates stay closed. Native operations require canonical
+instances and domain evidence. -/
 
 namespace Morew.Elab.Affine
 

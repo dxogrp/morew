@@ -8,17 +8,17 @@ import Morew.Elab.Conic.Rewrite
 import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 
-/-! Replace the constraint selected by conic at label with a certified conic representation.
-Automatic discovery requires a unique morew_conic rule after the built-in SOC/power
-norm preference. using selects one declaration or certificate without fallback.
+/-! Replace the constraint selected by `conic at label` with an exact conic representation.
+Discovery requires one certified `morew_conic` rule after the SOC/power norm preference;
+`using` selects a single declaration or certificate.
 
-Certify every generated row's affine coordinates and cone requirements. PSD rows
-require global symmetry; domain premises use independent hypotheses or retained
-constraints, excluding the selected row. Replacement predicates must be independent
-of temporary feasibility proofs. Finite sets and exponents require independent evidence.
+Generated rows require affine coordinates and cone certificates, including global
+symmetry for PSD rows. Domain premises use independent hypotheses or retained constraints;
+replacement predicates are independent of temporary feasibility proofs. Finite sets
+and exponents require independent evidence.
 
-Consume the selected label and allocate fresh _conic_i row names and _aux binders.
-Vector rows and finite cone families remain grouped. The step remains nonterminal. -/
+Replace the selected label with fresh `_conic_i` row names and `_aux` binders.
+Vector rows and finite cone families remain grouped; further steps may follow. -/
 
 namespace Morew.Elab.Reformulation
 
