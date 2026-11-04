@@ -22,8 +22,6 @@ search, and links to local source files.
 - [Smooth nonlinear programs](api/Morew/NLP/Basic.html): residuals, domains, target data, and `IsSmoothNLP`.
 - [Commands](api/Morew/Elab/Reformulation/Syntax.html): reformulation syntax and selectors.
 
-# Implementation
-
 The [problem syntax](api/Morew/Syntax.html) and
 [reformulation command](api/Morew/Elab/Reformulation/Command.html) are starting
 points for studying parsing, elaboration, and certificate generation.
