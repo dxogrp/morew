@@ -21,14 +21,12 @@ def p (a : Parameter) :=
       bound : c a x
 ```
 
-# Parameters and optimization variables
+# Problem components
 
 Arguments before `:=`, such as `a`, are fixed parameters. Binders after
 `problem`, such as `x`, are optimization variables. Give each optimization variable an
 explicit type; `(x y : ℝ)` declares two variables of the same type. Their types
 may depend on parameters, including symbolic dimensions.
-
-# Objectives and constraints
 
 Use `minimize expression` or `maximize expression` to set the objective and its
 direction. The indented `subject to` block lists named propositions that must
@@ -41,12 +39,12 @@ annotation, as in `let name : ℝ := expression`.
 
 # Printing
 
-`#print p` displays the type and Lean definition of `p`. The `Problem` structure
-contains the fields `objective` and `feasible`.
+The standard `#print p` command displays the type and Lean definition of `p`.
+The `Problem` structure contains the fields `objective` and `feasible`.
 
-`#printp p` displays a registered problem's variables, objective, and constraints.
-For a problem family, it retains its parameters symbolically. The same command
-prints the result of a reformulation.
+The additional `#printp p` command displays a registered problem's variables,
+objective, and constraints. For a problem family, it retains its parameters
+symbolically. The same command prints the result of a reformulation.
 
 # Reformulation declarations
 
