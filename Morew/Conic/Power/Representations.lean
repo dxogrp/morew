@@ -9,12 +9,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact scalar-power representations
 
-Base domains are explicit subtype inputs. Real exponents remain exact parameters;
-their range proofs determine the bundled power cone. Hypographs use a nonnegative
-auxiliary above the original bound, so negative bounds remain feasible.
-
-Native `Real.rpow` and canonical real-exponent notation have distinct registered
-source patterns. The endpoint records require no sign condition on the base.
+Subtype inputs carry the base domains. Hypographs use a nonnegative auxiliary
+above the bound. `Real.rpow` and real-exponent notation have separate source
+patterns; exponents zero and one require no sign condition on the base.
 -/
 
 namespace Morew.Conic.Power

@@ -12,18 +12,16 @@ import Mathlib.Tactic.Ring
 /-!
 # Second-order cones and exact quadratic bounds
 
-The second-order cone uses the Euclidean norm of an ordinary finite coordinate
-vector. The rotated cone is the linear preimage of a second-order cone and uses
-the convention `‖x‖² ≤ 2 * u * v`, with both scalar coordinates nonnegative.
-The representation lemmas include dimension zero and require strict positivity
-of the denominator for quadratic-over-linear bounds.
+The second-order cone is `{(t, x) | ‖x‖₂ ≤ t}`. The rotated cone uses
+`‖x‖₂² ≤ 2uv`, with `u ≥ 0` and `v ≥ 0`. Quadratic-over-linear representations
+require a positive denominator.
 -/
 
 namespace Morew.Conic
 
 namespace Cone
 
-/-- The second-order cone `{(t,x) | ‖x‖₂ ≤ t}` in ordinary coordinates. -/
+/-- The second-order cone `{(t, x) | ‖x‖₂ ≤ t}`. -/
 noncomputable def secondOrder (n : Nat) : Cone where
   Space := ℝ × (Fin n → ℝ)
   carrier := {
@@ -71,9 +69,7 @@ noncomputable def rotatedSecondOrderMap (n : Nat) :
       · simp
         ring
 
-/-- The rotated second-order cone with convention `‖x‖₂² ≤ 2*u*v`.
-It is constructed as a linear preimage, so its cone laws follow from those of
-the second-order cone. -/
+/-- The rotated second-order cone `{(u, v, x) | ‖x‖₂² ≤ 2uv, u ≥ 0, v ≥ 0}`. -/
 noncomputable def rotatedSecondOrder (n : Nat) : Cone where
   Space := ℝ × ℝ × (Fin n → ℝ)
   carrier := (secondOrder (n + 1)).carrier.comap (rotatedSecondOrderMap n)
@@ -91,8 +87,7 @@ private theorem rotated_norm_sq {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
   intro i _
   rw [mul_pow, Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2)]
 
-/-- Rotated second-order membership retains both nonnegative coordinates,
-including when the vector has dimension zero. -/
+/-- Rotated second-order cone membership in coordinates. -/
 @[simp]
 theorem mem_rotatedSecondOrder {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
     (u, v, x) ∈ (rotatedSecondOrder n).carrier ↔
