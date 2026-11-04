@@ -149,6 +149,10 @@ Without either clause, Morew selects a registered rule automatically.
 
 ## Conic and smooth NLP forms
 
+A conic formulation has an affine objective and affine maps into cones.
+A smooth nonlinear formulation has an objective and scalar residuals that are
+twice continuously differentiable on an open domain containing the feasible set.
+
 `conic at label` and `nlp at label` replace one constraint by an equivalent
 representation. Append `using rule` to choose its representation explicitly.
 These steps may introduce variables and multiple constraints.

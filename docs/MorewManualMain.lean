@@ -21,5 +21,15 @@ def main := manualMain (%doc MorewManual) (config := {
       padding: 0.1em 0.3em;
       border-radius: 0.25rem;
     }
+
+    table.tabular[id^='functions-'] {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    table.tabular[id^='functions-'] .katex {
+      white-space: nowrap;
+    }
   " }
 })
