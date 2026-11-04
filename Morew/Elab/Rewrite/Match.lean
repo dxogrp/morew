@@ -180,12 +180,12 @@ private def checkIndependent (point : Expr) (arguments : Array Expr) : MetaM Uni
     -- independent hypotheses, or the caller's evidence callback.
     if (← isClass? type).isSome then
       if (← Expr.depends point type) || (← Expr.depends point argument) then
-        throwError "representation instance depends on the decision variable: {argument}"
+        throwError "representation instance depends on the optimization variable: {argument}"
     else if !(← isProof argument) then
       if ← Expr.depends point type then
-        throwError "representation parameter type depends on the decision variable: {type}"
+        throwError "representation parameter type depends on the optimization variable: {type}"
       if (← Expr.depends point argument) && !(← Expr.isSupportedSpace type) then
-        throwError "representation shape parameter depends on the decision variable: {argument}"
+        throwError "representation shape parameter depends on the optimization variable: {argument}"
 
 /-- Expose representation fields and binding syntax while retaining every
 mathematical function and predicate head in the target. -/
@@ -282,7 +282,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
       throwError "internal error: representation target is not existential"
     let auxiliary ← expose (← instantiateMVars existsType.getAppArgs[0]!)
     if ← Expr.depends point auxiliary then
-      throwError "representation auxiliary type depends on the decision variable"
+      throwError "representation auxiliary type depends on the optimization variable"
     checkWithKernel proof
     let target ← expose existsType.getAppArgs[1]!
     return .ok { auxiliary, target, sourceIff := proof, usedEvidence }

@@ -31,12 +31,12 @@ def negativeSource :=
 reformulation noCoverageTarget : negativeSource := by
   substitute x := u ^ 3
 
-/-- error: unknown decision variable `y` -/
+/-- error: unknown optimization variable `y` -/
 #guard_msgs in
 reformulation badVariableTarget : negativeSource := by
   substitute y := Real.exp u
 
-/-- error: decision variable `x` already exists -/
+/-- error: optimization variable `x` already exists -/
 #guard_msgs in
 reformulation collisionTarget : negativeSource := by
   epigraph x

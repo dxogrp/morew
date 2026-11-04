@@ -53,7 +53,7 @@ reformulation shadowed : macroSource := by
 example : GlobalEquivalence macroSource shadowed := shadowed.equivalence
 example (u y : ℝ) : shadowed.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
-/-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
+/-- error: substitution replacement uses model-local definition `loss`, which depends on the optimization variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : macroSource := by
   substitute x := u + loss using macroCoverage
@@ -103,7 +103,7 @@ def recordCoverage : FeasibleSurjection recordSource
   preimage point := (point.1.1 - (point.1.2 + 1), point.1.2)
   rightInverse point := by simp
 
--- A named projection is part of an existing binding, not a new decision name.
+-- A named projection is part of an existing binding, not a new optimization variable name.
 reformulation projected : recordSource := by
   substitute x := u + shift.value using recordCoverage
 

@@ -95,7 +95,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun x : ℝ => @LE.le ℝ ⟨fun _ _ => True⟩ 1 x),
     #[fun x : ℝ => Real.log x]))) .unsupportedRow 0 none (some 0)
 
-/-! A shadowed name cannot transfer positivity to another decision variable. -/
+/-! A shadowed name cannot transfer positivity to another optimization variable. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(fun x : ℝ => fun _hx : 0 < x =>

@@ -32,7 +32,7 @@ example : (continuedNLP.nlpForm n).data.toProblem = continuedNLP n :=
   (continuedNLP.nlpForm n).represents
 
 -- Terminal certification preserves the imported coordinate norm's symbolic
--- dimension and introduces no auxiliary decision variables.
+-- dimension and introduces no auxiliary optimization variables.
 reformulation nativeContinuedNLP : (nativeSelectedNLP n) := by nlp
 
 example : Problem ((Fin n → ℝ) × ℝ) ℝ := nativeContinuedNLP n

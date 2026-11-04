@@ -12,7 +12,7 @@ namespace Morew
 /-- Syntax category for a reformulation step. -/
 declare_syntax_cat reformulationStep
 
-/-- Substitute a decision variable using a map whose range contains every feasible source point. -/
+/-- Substitute an optimization variable using a map whose range contains every feasible source point. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
 /-- Select an explicit coordinate parameterization. -/

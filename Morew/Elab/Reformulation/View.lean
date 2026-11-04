@@ -460,7 +460,7 @@ def canonicalTargetExpression (sourceName : Name)
     removedCheckpointRows semanticExpression simplifyExpLogTerms
 
 private partial def splitProductDomain (domain : Expr) : Nat → MetaM (Array Expr)
-  | 0 => throwError "a problem presentation requires at least one decision variable"
+  | 0 => throwError "a problem presentation requires at least one optimization variable"
   | 1 => pure #[domain]
   | count + 2 => do
       let domain ← whnf domain
@@ -478,7 +478,7 @@ def packPoint (components : Array Expr) : MetaM Expr := do
       point ← mkAppM ``Prod.mk #[point, components[index]!]
     pure point
   else
-    throwError "a problem presentation requires at least one decision variable"
+    throwError "a problem presentation requires at least one optimization variable"
 
 /-- Internal rendering flag for stored presentations. -/
 def presentationNotationOption : Name := `Morew.Elab.Reformulation.presentationNotation
@@ -1081,13 +1081,13 @@ def presentationDeltaBetween
     unless offset == next.constraints.size do
       throwError "constraint splice does not match the next presentation shape"
   if next.binders.size < current.binders.size then
-    throwError "reformulation steps cannot remove decision-variable binders"
+    throwError "reformulation steps cannot remove optimization-variable binders"
   let mut binderReplacements := #[]
   for index in [:current.binders.size] do
     let oldBinder := current.binders[index]!
     let newBinder := next.binders[index]!
     unless ← isDefEq oldBinder.type newBinder.type do
-      throwError "reformulation changed the type of decision variable `{oldBinder.name}`"
+      throwError "reformulation changed the type of optimization variable `{oldBinder.name}`"
     unless sameVisibleName oldBinder.name newBinder.name do
       let typeEquality ← mkEqRefl oldBinder.type
       binderReplacements := binderReplacements.push {

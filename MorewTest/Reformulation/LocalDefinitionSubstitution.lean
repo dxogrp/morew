@@ -9,7 +9,7 @@ import Morew.Reformulation.Basic
 # Substitution through model-local definitions
 
 Definition values and annotations follow renamed decisions, while replacement
-inference distinguishes existing aliases from the one new decision variable.
+inference distinguishes existing aliases from the one new optimization variable.
 -/
 
 namespace MorewTest.Reformulation.LocalDefinitionSubstitution
@@ -276,12 +276,12 @@ example (u t : ℝ) : inlineConstraintLifted.objective (u, t) = u := by
 example (u t : ℝ) : inlineConstraintLifted.feasible (u, t) ↔
     t ≤ 10 ∧ Real.exp u ≤ t := Iff.rfl
 
-/-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
+/-- error: substitution replacement uses model-local definition `loss`, which depends on the optimization variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : source := by
   substitute x := Real.exp u + loss
 
-/-- error: decision variable `loss` conflicts with a model-local definition; choose a different decision name -/
+/-- error: optimization variable `loss` conflicts with a model-local definition; choose a different optimization variable name -/
 #guard_msgs in
 reformulation collidingBinder : source := by
   epigraph loss

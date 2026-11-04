@@ -131,7 +131,7 @@ private def matchingBody (expression : Expr) : MetaM Expr := do
 private def materialize (source domain point evidence : Expr) (retained : Array Expr)
     (matched : Match.Result) (provider : Affine.EvidenceProvider) : MetaM Plan.Result := do
   let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
-  if ← Expr.depends point auxiliary then throwError "the auxiliary type depends on a decision variable"
+  if ← Expr.depends point auxiliary then throwError "the auxiliary type depends on an optimization variable"
   let target ← withLocalDeclD `auxiliary auxiliary fun auxiliary => do
     let body ← Plan.exposeTarget (mkApp matched.target auxiliary)
     let reduceProjection (value : Expr) : MetaM TransformStep := do

@@ -224,7 +224,7 @@ info: problem (a u b : ℝ)
 section
 variable (t : ∀ x : ℝ, x = x) (u : ℝ)
 
--- Proof-only parameters and unrelated section locals do not reserve decision names.
+-- Proof-only parameters and unrelated section locals do not reserve optimization variable names.
 reformulation proofOnlyParameter : free := by
   derive reflexive : x = x using (fun point _ => t point)
   epigraph t

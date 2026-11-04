@@ -10,7 +10,7 @@ htmlSplit := .never
 %%%
 
 Commands act on the current problem and preserve global equivalence. Names in
-the syntax below stand for decision variables, expressions, constraints, or
+the syntax below stand for optimization variables, expressions, constraints, or
 proofs.
 
 # Epigraphs and hypographs
@@ -53,7 +53,7 @@ Both whole-objective commands also accept `as label`.
 
 `substitute x := expression` replaces the coordinate `x` by a parameterization
 covering its feasible values. The expression uses a new variable and may depend
-on the other decision variables.
+on the other optimization variables.
 
 Use `via rule` to select a coordinate parameterization explicitly, or
 `using proof` to supply a `FeasibleSurjection` for the complete current problem:

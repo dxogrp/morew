@@ -107,7 +107,7 @@ def dependentTypeSource :=
     let value : Fin (n + 1) := 0
     minimize value.val
 
-/-- error: the selected type depends on a decision variable; dependent auxiliaries are unsupported -/
+/-- error: the selected type depends on an optimization variable; dependent auxiliaries are unsupported -/
 #guard_msgs (substring := true) in
 reformulation dependentTypeTarget : dependentTypeSource := by
   epigraph a at value

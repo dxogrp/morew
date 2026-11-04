@@ -55,7 +55,7 @@ private def mkProduct (terms : Array (TSyntax `term)) : MacroM (TSyntax `term) :
       result ← `(⟨$result, $(terms[i]!)⟩)
     pure result
   else
-    Macro.throwError "a reformulated problem must have at least one decision variable"
+    Macro.throwError "a reformulated problem must have at least one optimization variable"
 
 private def mkProductPattern (names : Array Name) : MacroM (TSyntax `term) := do
   let terms := names.map fun name => (⟨mkIdent name⟩ : TSyntax `term)
@@ -115,7 +115,7 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
   let candidates ← newBinderCandidates state.view oldName replacement.raw
   if candidates.isEmpty then
     throwErrorAt replacement
-      "cannot determine the new decision variable; the substitution expression must contain one new identifier"
+      "cannot determine the new optimization variable; the substitution expression must contain one new identifier"
   let usedCandidates ← withTypedPresentation state fun presentation =>
     withPresentationBinders presentation fun binderTypes binders =>
       withViewDefinitions state.view fun definitions => do
@@ -132,10 +132,10 @@ private def inferNewBinder (state : ReformState) (oldName : Name)
   | [name] => pure name
   | [] =>
       throwErrorAt replacement
-        "cannot determine the new decision variable; the substitution expression must contain one new identifier"
+        "cannot determine the new optimization variable; the substitution expression must contain one new identifier"
   | names =>
       throwErrorAt replacement
-        "ambiguous substitution: expected exactly one new decision variable, found {names}"
+        "ambiguous substitution: expected exactly one new optimization variable, found {names}"
 
 /-- Retain displayed binding identities in replacement syntax. Inline model definitions
 only when their values and types are independent of the replaced variable. -/
@@ -152,10 +152,10 @@ private def expandReplacementDefinitions (state : ReformState) (binderIndex : Na
             if expression.containsFVar definition.fvarId! &&
                 (← Morew.Elab.Expr.depends binders[binderIndex]! definition) then
               throwErrorAt replacement
-                "substitution replacement uses model-local definition `{view.name.eraseMacroScopes}`, which depends on the decision variable being replaced"
+                "substitution replacement uses model-local definition `{view.name.eraseMacroScopes}`, which depends on the optimization variable being replaced"
           if ← Morew.Elab.Expr.depends binders[binderIndex]! expression then
             throwErrorAt replacement
-              "substitution replacement depends on the decision variable being replaced"
+              "substitution replacement depends on the optimization variable being replaced"
           let mut expression := expression
           for definition in definitions.reverse do
             let some value := (← definition.fvarId!.getDecl).value?
@@ -532,7 +532,7 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
     ⟨← liftTermElabM <| preResolveReplacement state.view replacement.raw⟩
   let oldName := oldIdent.getId
   let some binderIndex := findBinderIndex state.view oldName
-    | throwErrorAt oldIdent "unknown decision variable `{oldName.eraseMacroScopes}`"
+    | throwErrorAt oldIdent "unknown optimization variable `{oldName.eraseMacroScopes}`"
   let newName ← inferNewBinder state oldName binderIndex replacement
   let request : Morew.Elab.Reformulation.NameRequest := {
     id := 0

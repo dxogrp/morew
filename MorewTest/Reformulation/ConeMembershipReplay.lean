@@ -237,7 +237,7 @@ def source :=
 reformulation target : source := by
   conic
 
--- The decision name forces the declaration's instance parameter to be renamed
+-- The optimization variable name forces the declaration's instance parameter to be renamed
 -- while rendering. That fresh display name is unavailable to the re-elaboration context.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``target
@@ -291,7 +291,7 @@ run_cmd do
       containsIdentifier view.definitions[1]!.value `other do
     Lean.throwError "replay inferred away distinct colliding instance parameters"
   unless view.binders[0]!.name.hasMacroScopes do
-    Lean.throwError "replay did not distinguish the colliding decision name"
+    Lean.throwError "replay did not distinguish the colliding optimization variable name"
   let term ← Lean.Elab.liftMacroM view.toTermSyntax
   let name := Lean.mkIdent `replayed
   Lean.Elab.Command.elabCommand (← `(noncomputable def $name := $term))
@@ -308,7 +308,7 @@ namespace RenamedInstanceCollision
 
 variable [replacement : InstanceNameCollision.Coeff]
 
--- The decision variable's macro scope distinguishes it from an instance of the
+-- The optimization variable's macro scope distinguishes it from an instance of the
 -- same name. Reconstruction must preserve this scope after the section ends.
 run_cmd do
   let some view := Syntax.getProblemView? (← Lean.getEnv) ``InstanceNameCollision.target

@@ -35,12 +35,12 @@ private def decodeDefinition (stx : Lean.Syntax) : MacroM Morew.Syntax.Definitio
   | _ => Macro.throwErrorAt stx "invalid model-local definition"
 
 private def mkProductType : List (TSyntax `term) → MacroM (TSyntax `term)
-  | [] => Macro.throwError "a problem requires at least one decision variable"
+  | [] => Macro.throwError "a problem requires at least one optimization variable"
   | first :: rest => rest.foldlM (fun accumulated typeSyntax => do
       `($accumulated × $typeSyntax)) first
 
 private def mkProductPattern : List (TSyntax `ident) → MacroM (TSyntax `term)
-  | [] => Macro.throwError "a problem requires at least one decision variable"
+  | [] => Macro.throwError "a problem requires at least one optimization variable"
   | first :: rest =>
       let restTerms : List (TSyntax `term) := rest.map fun name => ⟨name.raw⟩
       restTerms.foldlM (fun accumulated name => do
@@ -62,7 +62,7 @@ private def ensureDistinct (what : String) (names : Array Name) (refs : Array Le
           s!"duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
 private def decisionProjections (point : Expr) : Nat → MetaM (Array Expr)
-  | 0 => throwError "a problem requires at least one decision variable"
+  | 0 => throwError "a problem requires at least one optimization variable"
   | 1 => pure #[point]
   | count + 2 => do
       let first ← mkAppM ``Prod.fst #[point]
@@ -70,7 +70,7 @@ private def decisionProjections (point : Expr) : Nat → MetaM (Array Expr)
       return previous.push (← mkAppM ``Prod.snd #[point])
 
 private def decisionTypes (domain : Expr) : Nat → MetaM (Array Expr)
-  | 0 => throwError "a problem requires at least one decision variable"
+  | 0 => throwError "a problem requires at least one optimization variable"
   | 1 => pure #[domain]
   | count + 2 => do
       let domain ← whnf domain
@@ -327,12 +327,12 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
     match ref with
     | `(problemBinder| ($names:ident* : $_)) => names.map fun _ => ref
     | _ => #[]
-  liftMacroM <| ensureDistinct "decision variable" (binders.map (fun binder => binder.name)) binderRefs
+  liftMacroM <| ensureDistinct "optimization variable" (binders.map (fun binder => binder.name)) binderRefs
   liftMacroM <| ensureDistinct "constraint" (constraints.map (fun constraint => constraint.name)) constraintsStx
   liftMacroM <| ensureDistinct "model-local definition" (definitions.map (·.name)) definitionsStx
   for definition in definitions, ref in definitionsStx do
     if binders.any (fun binder => binder.name.eraseMacroScopes == definition.name.eraseMacroScopes) then
-      throwErrorAt ref "model-local definition `{definition.name.eraseMacroScopes}` conflicts with a decision variable"
+      throwErrorAt ref "model-local definition `{definition.name.eraseMacroScopes}` conflicts with an optimization variable"
     if (← getLCtx).any (fun declaration =>
         !declaration.isImplementationDetail &&
           declaration.userName.eraseMacroScopes == definition.name.eraseMacroScopes) then

@@ -142,7 +142,7 @@ theorem pullback_feasible {X : Type u} {Y : Type v} {V : Type w}
     (p : Problem X V) (f : Y → X) (y : Y) :
     (p.pullback f).feasible y ↔ p.feasible (f y) := Iff.rfl
 
-/-- Introduce an objective bound as a new decision variable.
+/-- Introduce an objective bound as a new optimization variable.
 
 For an ordinary order this is an epigraph. For an `OrderDual` objective it is
 the corresponding hypograph in the underlying order. -/

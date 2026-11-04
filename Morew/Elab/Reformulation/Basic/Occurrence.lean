@@ -146,13 +146,13 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
     let auxiliaryType ← zetaReduce (← inferType needle)
     for binding in binders do
       if ← Morew.Elab.Expr.depends binding auxiliaryType then
-        throwErrorAt selector "the selected type depends on a decision variable; dependent auxiliaries are unsupported"
+        throwErrorAt selector "the selected type depends on an optimization variable; dependent auxiliaries are unsupported"
     let preorderType ← mkAppM ``Preorder #[auxiliaryType]
     let preorder ← synthInstance preorderType
     let preorder ← zetaReduce preorder
     for binding in binders do
       if ← Morew.Elab.Expr.depends binding preorder then
-        throwErrorAt selector "the selected order instance depends on a decision variable"
+        throwErrorAt selector "the selected order instance depends on an optimization variable"
     withLocalDeclD binderName auxiliaryType fun auxiliary => do
       let (replaced, count) ← (replaceOccurrence body needle auxiliary row?.isSome).run 0
       if count == 0 then

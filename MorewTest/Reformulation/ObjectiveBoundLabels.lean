@@ -356,7 +356,7 @@ elab "assert_objective_bound_atomic% " nested:command : command => do
         (Morew.Syntax.getProblemPrintPresentation? after name).isSome then
       Lean.throwError "failed objective-bound step registered presentation metadata for {name}"
 
-/-- error: decision variable `x` already exists -/
+/-- error: optimization variable `x` already exists -/
 #guard_msgs in
 assert_objective_bound_atomic%
 reformulation binderCollision : minimumSource certificate binderCollisionAlias := by

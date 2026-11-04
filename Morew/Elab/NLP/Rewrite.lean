@@ -35,7 +35,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 
--- Reduce model fields only for named structures independent of the decision variables.
+-- Reduce model fields only for named structures independent of the optimization variables.
 -- Normalize structure before checking independence; preserve evidence lets during decomposition.
 private partial def structural (point expression : Expr) (preserveLets : Bool := false) :
     MetaM Expr := do

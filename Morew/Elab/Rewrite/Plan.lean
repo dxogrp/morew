@@ -187,7 +187,7 @@ def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
     if ← hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
   if ← Expr.depends point auxiliary then
-    throwError "the auxiliary type depends on a decision variable"
+    throwError "the auxiliary type depends on an optimization variable"
   if ← Expr.depends evidence auxiliary then
     throwError "the auxiliary type depends on retained feasibility evidence"
   if ← Expr.depends evidence target then

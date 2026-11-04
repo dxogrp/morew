@@ -37,11 +37,11 @@ private def elabReplayInstance : TermElab := fun stx expectedType? => do
     | _ => Meta.synthInstance type
   ensureHasType expectedType? result
 
-/-- Presentation data for one (nondependent) decision-variable binder. -/
+/-- Presentation data for one (nondependent) optimization-variable binder. -/
 structure BinderView where
-  /-- The source-level name of the decision variable. -/
+  /-- The source-level name of the optimization variable. -/
   name : Name
-  /-- The syntax of the decision variable's declared type. -/
+  /-- The syntax of the optimization variable's declared type. -/
   typeSyntax : Lean.Syntax
   deriving Inhabited
 
@@ -69,7 +69,7 @@ structure DefinitionView where
 structure ProblemView where
   /-- Whether the problem was written as a minimization or maximization. -/
   sense : ObjectiveSense
-  /-- Presentation data for the problem's decision-variable binders. -/
+  /-- Presentation data for the problem's optimization-variable binders. -/
   binders : Array BinderView
   /-- Sequential local definitions shared by the objective and constraints. -/
   definitions : Array DefinitionView := #[]
@@ -178,7 +178,7 @@ partial def preResolveTerm (stx : Lean.Syntax) : TermElabM Lean.Syntax := do
   | _ => pure stx
 
 /-- Close a problem body over the model's ordered local definitions. The
-decision-variable binders must already surround the resulting term. -/
+optimization-variable binders must already surround the resulting term. -/
 def ProblemView.wrapDefinitions (view : ProblemView) (body : TSyntax `term) :
     MacroM (TSyntax `term) := do
   view.definitions.toList.foldrM (fun (definition : DefinitionView) (body : TSyntax `term) => do
@@ -193,7 +193,7 @@ def ProblemView.wrapDefinitions (view : ProblemView) (body : TSyntax `term) :
 /-- Reconstruct the canonical `problem` term from its presentation. -/
 def ProblemView.toTermSyntax (view : ProblemView) : MacroM (TSyntax `term) := do
   if view.binders.isEmpty then
-    Macro.throwError "a problem requires at least one decision variable"
+    Macro.throwError "a problem requires at least one optimization variable"
   let binders ← view.binders.mapM fun (binder : BinderView) => do
     let name : TSyntax `ident := Lean.mkIdent binder.name
     let typeSyntax : TSyntax `term := ⟨binder.typeSyntax⟩

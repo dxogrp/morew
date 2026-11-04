@@ -141,11 +141,11 @@ private def reportNamePreflightError {α}
       | .explicitDecisionBinder | .inferredDecisionBinder => do
           if state.usedSourceParameterNames.any (sameVisibleName · name) then
             throwErrorAt request.ref
-              "decision variable `{name}` conflicts with a source parameter; rename the outer parameter or choose a different decision name"
+              "optimization variable `{name}` conflicts with a source parameter; rename the outer parameter or choose a different optimization variable name"
           if state.view.definitions.any (fun definition => sameVisibleName definition.name name) then
             throwErrorAt request.ref
-              "decision variable `{name}` conflicts with a model-local definition; choose a different decision name"
-          throwErrorAt request.ref "decision variable `{name}` already exists"
+              "optimization variable `{name}` conflicts with a model-local definition; choose a different optimization variable name"
+          throwErrorAt request.ref "optimization variable `{name}` already exists"
       | .explicitConstraintLabel =>
           throwErrorAt request.ref "constraint name `{name}` already exists"
       | .fixedPublicDefault =>

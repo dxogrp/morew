@@ -8,7 +8,7 @@ import Morew.Reformulation.Basic
 /-!
 # Occurrence selectors referencing generated decisions
 
-Selectors use the current decision names after auxiliary introductions and
+Selectors use the current optimization variable names after auxiliary introductions and
 substitution. Lexical binders and macro scopes retain their own identities.
 -/
 

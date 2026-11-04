@@ -128,7 +128,7 @@ run_cmd liftTermElabM do
       ← `(fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2 + p.2) ≤ 3)])
 
 -- Exact inputs: composition does not depend on whether the operand and the
--- decision variable have the same type.
+-- optimization variable have the same type.
 noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 @[morew_conic]

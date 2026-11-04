@@ -317,7 +317,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       for id in dependencies.fvarSet.toArray do
         let name := (← id.getDecl).userName.eraseMacroScopes
         if template.binders.any (sameVisibleName ·.name name) then
-          throwError "source parameter `{name}` conflicts with a decision variable; rename the outer parameter"
+          throwError "source parameter `{name}` conflicts with an optimization variable; rename the outer parameter"
         if template.definitions.any (sameVisibleName ·.name name) then
           throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
         unless usedSourceParameterNames.contains name do

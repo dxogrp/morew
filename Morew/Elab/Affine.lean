@@ -120,7 +120,7 @@ private def finish (point source certificate : Expr)
 
 private def withIndexInstance (point inst : Expr) (action : ReifyM Expr) : ReifyM Expr := do
   if ← Expr.depends point inst then
-    reject inst "the finite indexing instance depends on a decision variable"
+    reject inst "the finite indexing instance depends on an optimization variable"
   mapLetDeclZeta `_affineIndex (← inferType inst) inst fun _ => action
 
 -- Expose finite enumeration through HMul instance aliases, then check the canonical prefix.
@@ -157,7 +157,7 @@ private def construct (point source : Expr) (name : Name) (args : Array Expr)
 
 private def nonzeroProof (point divisor : Expr) (provider : EvidenceProvider) : ReifyM Expr := do
   if ← Expr.depends point divisor then
-    reject divisor "the divisor depends on a decision variable"
+    reject divisor "the divisor depends on an optimization variable"
   let zero : Expr := q((0 : ℝ))
   let obligation ← mkAppM ``Ne #[divisor, zero]
   for declaration in ← getLCtx do
@@ -258,7 +258,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
       let opArgs := operation.getAppArgs
       for index in #[opArgs[5]!, opArgs[6]!] do
         if ← Expr.depends point index then
-          reject index "the matrix reindexing depends on a decision variable"
+          reject index "the matrix reindexing depends on an optimization variable"
       let value ← reifyBody point args[5]! provider
       return ← construct point expression ``Morew.Affine.Certified.reindex
         #[opArgs[5]!, opArgs[6]!, value] (some 1)
@@ -280,7 +280,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``Matrix.submatrix && args.size == 8 then
     for index in #[args[6]!, args[7]!] do
       if ← Expr.depends point index then
-        reject index "the matrix index map depends on a decision variable"
+        reject index "the matrix index map depends on an optimization variable"
     let value ← reifyBody point args[5]! provider
     return ← construct point expression ``Morew.Affine.Certified.submatrix
       #[value, args[6]!, args[7]!] (some 3)
@@ -323,7 +323,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
             #[leftMap, right] (some 2)
         discard <| reifyBody point left provider
         discard <| reifyBody point right provider
-        reject expression "both matrix factors of multiplication depend on decision variables"
+        reject expression "both matrix factors of multiplication depend on optimization variables"
     if !(← Expr.depends point left) then
       let rightMap ← reifyBody point right provider
       return ← construct point expression ``Morew.Affine.Certified.mulConstLeft
@@ -334,7 +334,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
         #[leftMap, right] (some 2)
     discard <| reifyBody point left provider
     discard <| reifyBody point right provider
-    reject expression "both factors of multiplication depend on decision variables"
+    reject expression "both factors of multiplication depend on optimization variables"
   if name == some ``HSMul.hSMul && args.size == 6 then
     let coefficient := args[4]!
     if ← Expr.depends point coefficient then
@@ -343,7 +343,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
         let scalar ← reifyBody point coefficient provider
         return ← construct point expression ``Morew.Affine.Certified.smulConst
           #[scalar, args[5]!] (some 2)
-      reject coefficient "the scalar coefficient depends on a decision variable"
+      reject coefficient "the scalar coefficient depends on an optimization variable"
     let value ← reifyBody point args[5]! provider
     let scalarType ← inferType coefficient
     let constructor ← if ← isDefEq scalarType (mkConst ``Real) then
@@ -400,7 +400,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``Finset.sum && args.size == 5 then
     let set := args[3]!
     if ← Expr.depends point set then
-      reject set "the finite sum's index set depends on a decision variable"
+      reject set "the finite sum's index set depends on an optimization variable"
     let family ← withLocalDeclD `i args[0]! fun i => do
       let certificate ← reifyBody point (mkApp args[4]! i) provider
       mkLambdaFVars #[i] certificate
@@ -419,7 +419,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
           #[leftMap, right] (some 2)
       discard <| reifyBody point left provider
       discard <| reifyBody point right provider
-      reject expression "both dot-product factors depend on decision variables"
+      reject expression "both dot-product factors depend on optimization variables"
   if (name == some ``Matrix.mulVec || name == some ``Matrix.vecMul) && args.size == 7 then
     return ← withIndexInstance point args[4]! do
       let matrix := if name == some ``Matrix.mulVec then args[5]! else args[6]!
@@ -427,7 +427,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
       if ← Expr.depends point matrix then
         -- Diagnose an unsupported entry first, then the coefficient's dependence.
         discard <| reifyBody point matrix provider
-        reject matrix "the coefficient matrix depends on a decision variable"
+        reject matrix "the coefficient matrix depends on an optimization variable"
       let vectorMap ← reifyBody point vector provider
       if name == some ``Matrix.mulVec then
         return ← construct point expression ``Morew.Affine.Certified.mulVec
@@ -439,7 +439,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← Expr.isSupportedSpace vectorType) then
       if ← Expr.depends point index then
-        reject index "the vector index depends on a decision variable"
+        reject index "the vector index depends on an optimization variable"
       let vectorMap ← reifyBody point vector provider
       return ← construct point expression ``Morew.Affine.Certified.eval #[vectorMap, index]
   -- Prefer a failing inner operand to its enclosing unsupported application.

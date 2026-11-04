@@ -65,7 +65,7 @@ def scaled :=
       slope : 0 < a
       budget : x ≤ 4
 
--- The coefficient a is another decision variable. Its constraint 0 < a
+-- The coefficient a is another optimization variable. Its constraint 0 < a
 -- gives the preimage u = x / a; substitution and its preimage both preserve a.
 reformulation retainedCoefficient : scaled := by
   substitute x := a * u

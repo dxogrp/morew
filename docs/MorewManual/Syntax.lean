@@ -9,7 +9,7 @@ file := "syntax"
 htmlSplit := .never
 %%%
 
-A problem declaration gives its decision variables, objective, and constraints.
+A problem declaration gives its optimization variables, objective, and constraints.
 The following schematic uses functions `r`, `f`, and `c` of the indicated data:
 
 ```
@@ -21,10 +21,10 @@ def p (a : Parameter) :=
       bound : c a x
 ```
 
-# Parameters and decision variables
+# Parameters and optimization variables
 
 Arguments before `:=`, such as `a`, are fixed parameters. Binders after
-`problem`, such as `x`, are decision variables. Give each decision variable an
+`problem`, such as `x`, are optimization variables. Give each optimization variable an
 explicit type; `(x y : ℝ)` declares two variables of the same type. Their types
 may depend on parameters, including symbolic dimensions.
 

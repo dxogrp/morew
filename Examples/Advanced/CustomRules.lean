@@ -25,7 +25,7 @@ def absoluteDeviation (center x : ℝ) : ℝ := |x - center|
 @[morew_conic, morew_nlp]
 def absoluteDeviationEpigraph (center : ℝ) :
     EpigraphRepresentation (absoluteDeviation center) where
-  Auxiliary := Unit -- No auxiliary decision variable.
+  Auxiliary := Unit -- No auxiliary optimization variable.
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
 

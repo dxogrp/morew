@@ -399,7 +399,7 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
 private def fixedArgument (point expression : Expr) (what : String) : CertifyM Expr := do
   let reduced ← reduceLocalStructure point expression
   if ← Expr.depends point reduced then
-    reject expression .dependency m!"{what} depends on a decision variable"
+    reject expression .dependency m!"{what} depends on an optimization variable"
   return reduced
 
 private def domainApp (point : Expr) (name : Name) (args : Array Expr) : MetaM Expr := do

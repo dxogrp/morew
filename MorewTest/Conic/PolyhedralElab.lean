@@ -207,7 +207,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       {0} (by simp) (fun _ => x) ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     (if x ≤ 0 then ({0} : Finset ℕ) else {1}).sup'
-      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "decision variable"
+      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "optimization variable"
   expectRejected (← `(fun x : ℝ => 0 ≤ x ∨ x ≤ 0)) "unsupported exact target"
     (some (← `(disjunctiveTarget)))
   expectRejected (← `(predicateHelper)) "unsupported exact target"

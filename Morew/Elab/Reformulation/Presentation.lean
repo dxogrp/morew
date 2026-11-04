@@ -62,7 +62,7 @@ private def ensureIsType (type : Expr) (description : String) : MetaM Unit := do
 
 private def leftAssociatedDomain (binders : Array BinderEntry) : MetaM Expr := do
   let some first := binders[0]?
-    | throwError "a problem presentation requires at least one decision variable"
+    | throwError "a problem presentation requires at least one optimization variable"
   let mut domain := first.type
   for index in [1:binders.size] do
     domain ← mkAppM ``Prod #[domain, binders[index]!.type]

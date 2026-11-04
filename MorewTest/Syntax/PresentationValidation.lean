@@ -47,7 +47,7 @@ run_cmd do
     objective := Lean.Syntax.mkNumLit "0"
   }
 
-/-- error: problem presentation metadata contains no decision-variable binders -/
+/-- error: problem presentation metadata contains no optimization-variable binders -/
 #guard_msgs in
 #printp malformedProblem
 
@@ -65,7 +65,7 @@ run_cmd do
     objective := Lean.mkIdent `x
   }
 
-/-- error: problem presentation metadata contains duplicate decision variable name `x` -/
+/-- error: problem presentation metadata contains duplicate optimization variable name `x` -/
 #guard_msgs in
 #printp duplicateBinderProblem
 
@@ -115,7 +115,7 @@ run_cmd do
   }
 
 /--
-error: problem presentation metadata contains unprintable decision variable name
+error: problem presentation metadata contains unprintable optimization variable name
 -/
 #guard_msgs in
 #printp anonymousBinderProblem

@@ -126,7 +126,7 @@ def NamePreflightError.message : NamePreflightError → MessageData
       | .fixedPublicDefault =>
           m!"default constraint label `{visibleName occupied}` is already in use; choose an explicit label with `as`"
       | .explicitDecisionBinder | .inferredDecisionBinder =>
-          m!"decision variable `{visibleName occupied}` already exists"
+          m!"optimization variable `{visibleName occupied}` already exists"
       | .explicitConstraintLabel =>
           m!"constraint label `{visibleName occupied}` already exists"
       | .generatedBinderFamily | .generatedRowFamily =>

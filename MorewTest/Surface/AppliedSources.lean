@@ -395,7 +395,7 @@ section
 
 variable (x : ℝ)
 
-/-- error: source parameter `x` conflicts with a decision variable; rename the outer parameter -/
+/-- error: source parameter `x` conflicts with an optimization variable; rename the outer parameter -/
 #guard_msgs in
 reformulation conflictingParameter : (quadratic x)
     certificate conflictingParameterAlias := by
@@ -407,7 +407,7 @@ section
 
 variable (t : ℝ)
 
-/-- error: decision variable `t` conflicts with a source parameter; rename the outer parameter or choose a different decision name -/
+/-- error: optimization variable `t` conflicts with a source parameter; rename the outer parameter or choose a different optimization variable name -/
 #guard_msgs in
 reformulation conflictingNewBinder : (quadratic t)
     certificate conflictingNewBinderAlias := by
@@ -419,7 +419,7 @@ section
 
 variable (u : ℝ)
 
-/-- error: decision variable `u` conflicts with a source parameter; rename the outer parameter or choose a different decision name -/
+/-- error: optimization variable `u` conflicts with a source parameter; rename the outer parameter or choose a different optimization variable name -/
 #guard_msgs in
 reformulation conflictingSubstitution : (logarithmic u) := by
   substitute x := Real.exp u
