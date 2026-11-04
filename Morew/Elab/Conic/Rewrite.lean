@@ -183,7 +183,7 @@ def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
           Match.declaration point body name accept prove) provider
 
 /-- Match graph and bound records with their operation instances.
-Adapt whole-predicate certificates directly, retrying subtype guards by typed matching. -/
+Adapt whole-predicate certificates directly, retrying subtype conditions by typed matching. -/
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do

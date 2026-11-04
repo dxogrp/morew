@@ -9,7 +9,7 @@ import Morew.Elab.Expr
 import Morew.Elab.State
 
 /-! Certify generated residuals after the caller proves replacement exactness.
-Domain inclusion uses admitted retained and generated rows; unsupported leaves
+Domain inclusion uses admitted retained and generated rows; unsupported predicates
 supply no facts. Finite families stay grouped with intersected domains. -/
 
 namespace Morew.Elab.NLP.Rows
@@ -29,7 +29,7 @@ structure Result where
   /-- Computational scalar rows, with checked equivalence to each predicate. -/
   rowBlocks : Array Expr
 
-/-- Rebase every expression before the reformulation runner materializes a step. -/
+/-- Express the result in a new variable context before constructing a reformulation step. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   domain := result.domain.replaceFVars oldVars newVars
   domainIsOpen := result.domainIsOpen.replaceFVars oldVars newVars
@@ -250,7 +250,7 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
       if result.size ≥ 128 then break
       if ← isDefEq (← inferType candidate) index then
         unless isFinite || isSupport do
-          -- Admit ambient indices only with a native finite-support premise.
+          -- Admit ambient indices only with a standard finite-set membership premise.
           let .forallE _ premise _ _ ← structural point (rest.instantiate1 candidate)
             | continue
           unless (← finiteMembership? point premise).isSome do continue
@@ -259,7 +259,7 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
     return result
   return #[]
 
-/-- Project only checked closed comparisons at compatible finite indices. -/
+/-- Extract checked real equalities and non-strict inequalities at compatible finite indices. -/
 def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obligation => do
   let (indices, support) ← indexContext point obligation
   let mut result ← projectedFacts point feasibleProof indices support 32
@@ -508,7 +508,7 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
   return .ok result
 
 /-- Certify generated rows against the proposed feasibility after exactness is proved.
-Conditional exactness uses only retained constraints. Ignore unsupported retained leaves
+Conditional exactness uses only retained constraints. Ignore unsupported retained predicates
 and restore caller state on every outcome. -/
 def certifyRows (feasible : Expr) (rows : Array Expr) :
     MetaM (Except Domain.DomainError Result) :=

@@ -18,7 +18,7 @@ import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 
-/-! Certify affine scalar/vector comparisons and native cone memberships, including
+/-! Certify affine scalar/vector comparisons and standard cone memberships, including
 PSD predicates with global symmetry. Finite exponential and power families use
 product cones. Return a cone row and pointwise equivalence. -/
 
@@ -46,7 +46,7 @@ def RowResult.mapExprM (row : RowResult) (f : Expr → MetaM Expr) : MetaM RowRe
         pointwiseIff := ← f normalized.pointwiseIff }
   }
 
-/-- Rebase a row and all its cached evidence onto a new variable context. -/
+/-- Express a row and its cached evidence in a new variable context. -/
 def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : RowResult := {
   constraint := row.constraint.replaceFVars oldVars newVars
   pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars
@@ -267,7 +267,7 @@ private def membershipData (point body : Expr) (label? : Option Name)
     return .error (← rowError body "membership does not match the canonical cone" label?)
   return .ok (cone, value)
 
-/-- Recover matrix coordinates of native PSD predicates or canonical PSD membership.
+/-- Recover matrix coordinates of standard PSD predicates or canonical PSD membership.
 Check scalar and membership instances. -/
 def positiveSemidefiniteValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
@@ -578,7 +578,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
   unless codomain == mkSort Level.zero do
     return .error (← rowError predicate "expected a predicate on the decision space" label?)
   withLocalDeclD `point domain fun point =>
-    -- Preserve the typed relation head while reducing language wrappers.
+    -- Preserve the typed relation while reducing local lets and applications.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOf ``Matrix.PosSemidef then
         return ← normalizePositiveSemidefiniteRow predicate domain point body provider label?
@@ -662,7 +662,7 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
   withFiniteInstances (← Expr.sourceFiniteInstances predicate).toList do
     normalizeRowWithInstances predicate provider label?
 
-/-- Certify affine comparisons, zero singletons, native cone memberships, matrix PSD,
+/-- Certify affine comparisons, zero singletons, standard cone memberships, matrix PSD,
 and finite exponential or power families. All coordinates must be affine.
 The optional label supplies diagnostic context. -/
 def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})

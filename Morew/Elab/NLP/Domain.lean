@@ -8,17 +8,18 @@ import Morew.Elab.Expr
 import Morew.Elab.State
 
 /-! Certify C² smoothness on a common open domain containing the feasible set.
-Feasibility admits native closed real comparisons, conjunctions, and `True` over real,
-product, and finite-vector spaces, and is checked even when no functions are supplied.
+Feasibility admits standard real equalities and non-strict inequalities, conjunctions,
+and `True` over real, product, and finite-vector spaces. It is checked even when no
+functions are supplied.
 
 Logarithms, square roots, and fixed real powers require positive arguments; inverses
 and division require nonzero denominators. These conditions also apply to constants
-and supported value arguments of helpers; function and proof arguments remain opaque.
+and supported value arguments of helpers; function and proof arguments are not examined.
 Dependent helpers expand under `morew.smooth` limits, with one budget per source.
-Named predicates and independent helper bodies stay closed.
+Named predicates and independent helper bodies remain unexpanded.
 
 Finite sums retain their support. Domain inclusion uses admitted constraints,
-independent hypotheses, and child domains. Results follow input order; the form builder
+independent hypotheses, and operand domains. Results follow input order; the form builder
 checks objective and residual coverage. -/
 
 namespace Morew.Elab.NLP.Domain
@@ -31,7 +32,7 @@ structure DomainError where
   source : Expr
   /-- The supplied function's position, when failure concerns a function. -/
   sourceIndex? : Option Nat := none
-  /-- The conjunction leaf's position, when admission of a row fails. -/
+  /-- The conjunct's position, when admission of a row fails. -/
   rowIndex? : Option Nat := none
   /-- The local expression where certification stopped. -/
   expression : Expr

@@ -22,7 +22,7 @@ structure BodyNormalization where
   body : Expr
   /-- Proof of `original ↔ body`. -/
   iff : Expr
-  /-- Whether a comparison leaf was replaced. -/
+  /-- Whether a comparison was replaced. -/
   changed : Bool
 
 /-- A predicate and a checked pointwise equivalence from its original spelling. -/
@@ -31,7 +31,7 @@ structure PredicateNormalization where
   predicate : Expr
   /-- Proof of `∀ x, original x ↔ predicate x`. -/
   pointwiseIff : Expr
-  /-- Whether a comparison leaf was replaced. -/
+  /-- Whether a comparison was replaced. -/
   changed : Bool
 
 private theorem comparisonEq
@@ -96,7 +96,7 @@ private def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
   let zero ← exposeTemplate (← mkAppOptM ``nativeZero #[some type, none])
   if ← literalZero rhs zero then
     return (lhs, ← mkAppM ``nativeSubZero #[lhs])
-  -- Recognize explicit native negation without unfolding operands.
+  -- Recognize standard negation without unfolding operands.
   let negated := rhs.consumeMData
   if negated.isAppOfArity ``Neg.neg 3 then
     let args := negated.getAppArgs
@@ -208,8 +208,8 @@ private def isolated (action : MetaM α) : MetaM α := do
   | .ok result => return result
   | .error impossible => nomatch impossible
 
-/-- Normalize native comparisons, preserving operands, local lets, and conjunctions.
-Leave other leaves intact; reject unresolved inputs in isolation. -/
+/-- Normalize standard comparisons, preserving operands, local lets, and conjunctions.
+Leave other predicates intact; reject unresolved inputs in isolation. -/
 def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   if ← unresolved original then
     throwError "membership normalization requires fully elaborated expressions"
@@ -226,7 +226,7 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   return result
 
 /-- Normalize a predicate with pointwise equivalence. Nonempty certificates follow
-decomposePredicate leaf order, excluding True and retaining repeated occurrences. -/
+`decomposePredicate` order, excluding `True` and retaining repeated occurrences. -/
 def normalizePredicate (predicate : Expr)
     (certificates : Array PredicateNormalization := #[]) :
     MetaM PredicateNormalization := isolated do

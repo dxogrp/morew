@@ -37,7 +37,7 @@ structure Result where
   /-- Origin and type of each appended auxiliary, in binder order. -/
   auxiliaries : Array (Nat × Expr)
 
-/-- Rebase terminal evidence before command materialization. -/
+/-- Express terminal evidence in a new variable context before constructing the command. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
@@ -149,7 +149,7 @@ private def decompose (domain predicate : Expr) : MetaM (Array Expr × Expr) :=
     checkWithKernel proof
     return (predicates, proof)
 
--- Split a named group only after a leaf has a certified replacement.
+-- Split a named group only after a conjunct has a certified replacement.
 private def tryGroupCore (work : Work) (index : Nat) : MetaM (Option Work) := do
   let source := work.presentation.constraints[index]!.predicate
   let (leaves, decomposition) ← decompose work.presentation.domainType source
@@ -190,7 +190,7 @@ private def originalError (original : PresentationState) (origin : Nat)
     rowIndex? := some origin
     reason := ← addMessageContext m!"constraint `{label}` is not certified as a smooth NLP by the available rules: {error.reason}\nexact rewriting: {ruleError.reason}\nuse `nlp at {label}` or `nlp at {label} using ruleName` before `nlp`; expose nested nonsmooth occurrences with an explicit epigraph or hypograph step" }
 
--- Admit surface reductions only after direct smoothness certification; retry when later guards help.
+-- Accept reduced predicates after smoothness certification; retry when later constraints establish domains.
 private partial def normalizeDirectRows (work : Work) (reduce : Expr → MetaM Expr) : MetaM Work := do
   let feasible ← feasibility work.presentation
   let constraints ← work.presentation.constraints.mapIdxM fun index row => do
@@ -273,7 +273,7 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
     auxiliaries := work.auxiliaries }
 
 /-- Plan exact replacements and certify the final problem before name allocation.
-Restore state on failure. Admit surface reductions only after direct certification. -/
+Restore state on failure. Accept reduced predicates only after direct certification. -/
 def plan (presentation : PresentationState) (reduce? : Option (Expr → MetaM Expr) := none) :
     MetaM (Except Domain.DomainError Result) :=
   State.withIsolatedMVars do

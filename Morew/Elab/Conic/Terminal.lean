@@ -38,7 +38,7 @@ structure Result where
   /-- Original entry and auxiliary type, in decision-binder append order. -/
   auxiliaries : Array (Nat × Expr)
 
-/-- Rebase all terminal evidence onto a fresh section-variable context. -/
+/-- Express terminal evidence in a fresh section-variable context. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars

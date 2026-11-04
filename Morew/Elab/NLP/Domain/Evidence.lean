@@ -11,22 +11,23 @@ import Mathlib.Tactic.Positivity
 import Lean.Meta.Check
 import Morew.Elab.State
 
-/-! Domain evidence from native closed real comparisons, conjunctions, True,
-established child domains, and independent hypotheses. Hide other proofs from tactics. -/
+/-! Domain evidence from standard real equalities and non-strict inequalities,
+conjunctions, `True`, established operand domains, and independent hypotheses.
+Hide other proofs from tactics. -/
 
 namespace Morew.Elab.NLP.Domain.Evidence
 
 open Lean Lean.Meta Qq
 
-/-- A rejected source feasibility leaf, numbered from zero in traversal order. -/
+/-- A rejected feasibility conjunct, numbered from zero in traversal order. -/
 structure AdmissionError where
-  /-- The position of the unsupported leaf in the source conjunction. -/
+  /-- The unsupported conjunct's position. -/
   rowIndex : Nat
   /-- The unsupported, structurally reduced proposition. -/
   expression : Expr
   /-- Its type, captured before temporary decision binders leave scope. -/
   type : Expr
-  /-- Explanation carrying the leaf's local pretty-printing context. -/
+  /-- Explanation carrying the conjunct's local pretty-printing context. -/
   reason : MessageData
 
 private partial def hasPlaceholders (expression : Expr) : StateT FVarIdSet MetaM Bool := do
@@ -82,8 +83,8 @@ private partial def admitBody (point expression : Expr) (index : Nat) :
   return .error (← admissionFailure index expression
     "expected canonical closed real ≤, ≥, or = comparisons joined by And, or True")
 
-/-- Validate all feasibility leaves as native closed real comparisons, conjunctions,
-or True. Keep named predicates closed. -/
+/-- Validate feasibility as standard real equalities and non-strict inequalities,
+conjunctions, or `True`. Keep named predicates unexpanded. -/
 def admit (feasible : Expr) : MetaM (Except AdmissionError Unit) :=
   State.withIsolatedMVars do
     try
@@ -102,7 +103,7 @@ def admit (feasible : Expr) : MetaM (Except AdmissionError Unit) :=
     catch exception =>
       return .error (← admissionFailure 0 feasible exception.toMessageData)
 
-/-- Project all conjunction leaves from an admitted source-feasibility proof.
+/-- Extract all conjuncts from an admitted source-feasibility proof.
 Local structural lets are reduced without unfolding named predicates.
 -/
 partial def rowFacts (point feasibleProof : Expr) : MetaM (Array Expr) := do
@@ -261,7 +262,7 @@ private def proveCore (point target : Expr) (facts : Array Expr) : MetaM Expr :=
         -- Retain strict margins even when their propositions simplify to True.
         withFacts (approved ++ simplified).toList #[] fun facts => search target facts
 
-/-- Search approved source, child-domain, independent parameter, and finite-index facts.
+/-- Search approved source, operand-domain, independent parameter, and finite-index facts.
 Kernel-check results and restore state on failure. Limit search to 2,000,000 internal
 heartbeats or the tighter caller limit. -/
 def prove? (point target : Expr) (facts : Array Expr := #[]) : MetaM (Option Expr) := do

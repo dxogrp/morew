@@ -35,7 +35,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 
--- Reduce model fields only for decision-independent named containers.
+-- Reduce model fields only for named structures independent of the decision variables.
 -- Normalize structure before checking independence; preserve evidence lets during decomposition.
 private partial def structural (point expression : Expr) (preserveLets : Bool := false) :
     MetaM Expr := do
@@ -72,7 +72,7 @@ private partial def exposeTarget (point body : Expr) : MetaM Expr := do
   if let some prefixSize := prefixSize? then
     let args := body.getAppArgs
     if args.size >= prefixSize then
-      -- Normalize the record container while preserving its target predicate head.
+      -- Normalize the record expression while preserving its target predicate head.
       let record ← whnf args[prefixSize - 1]!
       if let some field ← projectCore? record 1 then
         return ← exposeTarget point (mkAppN field (args.extract prefixSize args.size))
@@ -186,7 +186,7 @@ private def planCore (source : Expr) (retained : Array Expr)
       match direct with
       | .ok result => return .ok result
       | .error original =>
-        -- Adapt the whole predicate; retry subtype guards with retained evidence.
+        -- Adapt the whole predicate; retry subtype conditions with retained evidence.
         let reachedTarget ← IO.mkRef false
         let reachedPremise ← IO.mkRef false
         try

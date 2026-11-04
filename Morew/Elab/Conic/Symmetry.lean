@@ -193,7 +193,7 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
               Affine.Expansion.expand matrix fun expression preserveLets =>
                 Expr.reduceStructure expression (preserveLets := preserveLets)
             catch _ =>
-              -- On expansion failure, use native identities and independent hypotheses
+              -- On expansion failure, use standard identities and independent hypotheses
               -- on the original matrix.
               saved.restore
               pure matrix

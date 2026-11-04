@@ -21,7 +21,7 @@ must be decision-independent.
 Local lets and beta applications reduce for certification. Dependent transparent
 helpers expand under `morew.smooth.maxExpansionDepth`, `maxExpansionSteps`, and
 `maxExpansionNodes`, defaulting to 32, 1024, and 100000. Budgets apply per source;
-zero disables expansion. Named `Problem` containers and predicates stay closed.
+zero disables expansion. Named `Problem` definitions and predicates remain unexpanded.
 
 `Morew.Elab.NLP.Domain` shares this traversal with additional domain checks for
 restricted operations, including constants. Proofs use canonical analytic structures
@@ -55,7 +55,7 @@ inductive SmoothFailureKind where
   | unsupportedSpace
   /-- This operation needs domain evidence not supplied by global recognition. -/
   | restrictedDomain
-  /-- This native operation is not globally smooth in general. -/
+  /-- This standard operation is not globally smooth in general. -/
   | nonsmooth
   /-- No rule handles this function, coercion, or other operation. -/
   | unknownHead
@@ -142,7 +142,7 @@ private def expansionConfig : MetaM Expansion.Config := do
     label := "smooth"
   }
 
--- Follow selected fields and applications while keeping named Problem containers closed.
+-- Follow selected fields and applications without unfolding named Problem definitions.
 private partial def unfoldValueHead? (config : Expansion.Config) (expression : Expr)
     (depth : Nat) : Expansion.ExpandM (Option Expansion.Step) := do
   unless Expansion.enabled config do return none
@@ -554,7 +554,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         smooth := ← construct point expression ``Morew.NLP.Smooth.ofEuclidean
           #[← operandFunction point value child.smooth, child.smooth] (intermediateSpaces := #[← inferType value]) }
   if let .proj ``Prod index value := expression then
-    -- Inspect supported fixed components; leave unsupported value spaces opaque.
+    -- Inspect fixed components in supported value spaces.
     if independent && !(← supportedSpace (← inferType value)) then
       return ← constant point expression (← univInfo point)
     let child ← certifyBody point value

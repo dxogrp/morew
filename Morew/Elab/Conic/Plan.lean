@@ -20,7 +20,7 @@ structure Result extends Morew.Elab.Rewrite.Plan.Result where
   /-- Checked affine cone rows corresponding to `rowPredicates`. -/
   certifiedRows : Array RowResult
 
-/-- Rebase all expressions of a checked replacement. -/
+/-- Express a checked replacement in a new variable context. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
   { toResult := result.toResult.replaceFVars oldVars newVars
     certifiedRows := result.certifiedRows.map fun row => row.replaceFVars oldVars newVars }
@@ -144,7 +144,7 @@ private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
     unless ← isDefEq sourceArgs[index]! canonicalArgs[index]! do return false
   return true
 
--- Reduce native extended-real numerals, inverses, and quotients inside toReal.
+-- Reduce standard extended-real numerals, inverses, and quotients inside toReal.
 private partial def literalENNReal (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
