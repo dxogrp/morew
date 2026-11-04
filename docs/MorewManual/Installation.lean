@@ -64,7 +64,7 @@ For NLP commands and default rules, including basic modeling commands:
 import Morew.Reformulation.NLP
 ```
 
-Import both target modules to use both target forms.
+Import both modules to use conic and NLP commands.
 
 For predefined atomic functions:
 

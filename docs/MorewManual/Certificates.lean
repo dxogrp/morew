@@ -61,10 +61,10 @@ example : GlobalEquivalence p conicProb :=
   * The global equivalence between the source and `q`.
 *
   * `q.conicForm` or `q.nlpForm`
-  * The concrete target data and its representation proof.
+  * A conic or smooth NLP representation of `q`, with its proof.
 *
   * `q.conicForm.represents` or `q.nlpForm.represents`
-  * Equality of the represented problem with `q`, including its objective and feasible predicate.
+  * Equality of the represented problem with `q`, including its objective and feasibility conditions.
 *
   * `q.isConic` or `q.isSmoothNLP`
   * A proof that the problem has the corresponding form.
@@ -74,7 +74,7 @@ For problem families, apply the generated declaration to the parameters first,
 as in `(q.conicForm A b).represents`.
 The target data also records whether the objective is minimized or maximized.
 
-# Mathematical evidence
+# Representation equivalence
 
 A constraint representation proves $`P(x)\iff\exists u,\ Q(x,u)`.
 Graph, epigraph, and hypograph representations apply this statement to
