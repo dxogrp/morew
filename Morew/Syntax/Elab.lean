@@ -92,7 +92,7 @@ private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr
         throwError "internal error: model-local body is not an objective/feasibility pair"
       pure (expression.getArg! 2, expression.getArg! 3)
 
--- Replay preserves the source norm instance; display preserves its notation.
+-- Reconstruction preserves the source norm instance; printing preserves its notation.
 private def explicitReplayHelperUniverses (value : Expr) : MetaM (Array Bool) :=
   withoutModifyingState do
     let .const name originalLevels := value.getAppFn | return #[]
@@ -133,7 +133,7 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
           let some declaration := (← getLCtx).find? id | return stx
           if let some value := declaration.value? (allowNondep := true) then
             if (← isClass? declaration.type).isSome then
-              -- Close enclosing instances over source parameters for replay.
+              -- Make source parameters explicit in stored instance definitions.
               -- Expand local lets and retain their universe dependencies.
               let name ← mkAuxDeclName `_normReplay
               let value ← mkAuxDefinitionFor name value (zetaDelta := true) (compile := false)
@@ -150,7 +150,7 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
               let (value, valueInfos) ← PrettyPrinter.delabCore value {}
                 PrettyPrinter.Delaborator.delab
               return ← freezeNormReplayReferences valueInfos explicitUniverses value.raw
-          -- Preserve the source binder's macro scopes in replay references.
+          -- Preserve the source binder's macro scopes in stored references.
           let name := mkIdentFrom stx declaration.userName
           if declaration.binderInfo.isInstImplicit then
             let (type, typeInfos) ← PrettyPrinter.delabCore declaration.type {}
@@ -165,7 +165,7 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
 private def normReplaySyntax (expression : Expr)
     (explicitUniverses : Array (Expr × Lean.Syntax) := #[]) :
     TermElabM (Option Lean.Syntax) := do
-  -- Replay metadata is registered for declarations.
+  -- Reconstruction data is registered for declarations.
   if (← getDeclName?).isNone then return none
   let expression ← instantiateMVars expression
   -- Match by name to keep norm-library imports optional.
@@ -182,7 +182,7 @@ private def normReplaySyntax (expression : Expr)
     return some (← freezeNormReplayReferences infos explicitUniverses term.raw)
 
 -- Preserve explicit source universe arguments, including macro expansions.
--- Inferred universes are resolved in the replay context.
+-- Inferred universes are resolved during re-elaboration.
 private partial def explicitUniverseHead? (stx : Lean.Syntax) : Option Lean.Syntax :=
   if stx.isOfKind ``Lean.Parser.Term.explicitUniv then some stx
   else if stx.isOfKind ``Lean.Parser.Term.app then explicitUniverseHead? stx[0]

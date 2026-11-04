@@ -19,7 +19,7 @@ namespace Morew.Syntax
 
 open Lean Lean.Elab Lean.Elab.Term Lean.Parser
 
-/-- Replay a formal instance parameter by its original local name, falling
+/-- Resolve a formal instance parameter by its original local name, falling
 back to typeclass search in the new context. -/
 syntax (name := replayInstance) "morew_replay_instance% " ident " : " term : term
 
@@ -104,8 +104,8 @@ private initialize problemViewExtension :
     addEntryFn := fun state entry => state.insert entry.1 entry.2
   }
 
-/-- Register replay syntax and optional display views. The replay view is also
-the default display. -/
+/-- Register reconstruction syntax and optional displays. By default, print the
+reconstruction syntax. -/
 def addProblemView (env : Environment) (declName : Name)
     (view : ProblemView) (displayView? : Option ProblemView := none)
     (printPresentation? : Option ProblemPrintPresentation := none) : Environment :=

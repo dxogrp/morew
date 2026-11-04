@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Lean.Parser
 
 /-!
-# Problem surface grammar
+# Problem grammar
 
 Syntax categories and parser declarations for problem terms and `#printp`.
 -/
@@ -52,7 +52,7 @@ syntax (name := maximizeConstrainedProblemTerm)
   "subject " "to" ppLine
     ppIndent(many1Indent(problemConstraint)) : term
 
-/-- Print the source-aligned mathematical presentation of a registered problem. -/
+/-- Print a registered problem using its source notation. -/
 syntax (name := printProblemCmd) "#printp " ident : command
 
 end Morew

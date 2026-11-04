@@ -7,7 +7,7 @@ import Morew.Syntax.Elab
 import Morew.Syntax.Printer
 
 /-!
-# Problem surface language
+# Problem modeling language
 
 Problem syntax, source presentations, term elaboration, and `#printp`.
 -/

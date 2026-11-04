@@ -16,9 +16,9 @@ namespace Morew.Syntax
 
 open Lean
 
-/-- One of the fixed rows in a geometric-mean or inverse-product chain.
-`membership` selects cone notation for the final bound. Syntax leaves are
-closed presentation syntax. -/
+/-- A constraint in a geometric-mean or inverse-product representation.
+`membership` selects cone notation for the final bound. Operands are closed
+syntax expressions. -/
 inductive PowerChainRow where
   /-- Equality of the first auxiliary and input coordinates. -/
   | first (auxiliary source : Syntax) (membership : Bool)
@@ -40,7 +40,7 @@ private def coordinate (render : Syntax → CoreM Format) (vector : Syntax)
 
 private def operand (render : Syntax → CoreM Format) (value : Syntax) : CoreM Format := do
   let valueFormat ← render value
-  -- Parentheses also protect conditional, lambda, and compound scalar leaves.
+  -- Parentheses also protect conditional, lambda, and compound scalar expressions.
   return if value.isIdent || value.isOfKind numLitKind then valueFormat else f!"({valueFormat})"
 
 private def powerMembership (x y z exponent : Format) : Format :=
