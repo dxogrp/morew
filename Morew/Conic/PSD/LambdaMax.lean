@@ -10,8 +10,8 @@ import Mathlib.Analysis.Matrix.Order
 /-!
 # Exact largest-eigenvalue epigraph
 
-The source is the supremum of the real spectrum on a symmetric matrix of
-positive dimension. The target preserves the original entries in `t I - A`.
+For a symmetric matrix of positive dimension, a largest-eigenvalue bound
+is equivalent to positive semidefiniteness of `t I - A`.
 -/
 
 namespace Morew.Conic.Spectral

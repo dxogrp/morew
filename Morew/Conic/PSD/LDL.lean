@@ -10,8 +10,7 @@ import Mathlib.LinearAlgebra.Matrix.Block
 # Normalized real LDL factorization
 
 The lower triangular factor in mathlib's LDL decomposition has unit diagonal.
-These facts supply the attaining triangular witness for the log-determinant
-representation, including for empty matrices.
+This gives an attaining witness for the log-determinant representation.
 -/
 
 namespace Morew.Conic.LogDet

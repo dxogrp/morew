@@ -9,8 +9,7 @@ import Mathlib.Data.Real.Basic
 /-!
 # Lower-triangular matrix coordinates
 
-The auxiliary coordinates contain exactly the entries on and below the diagonal.
-Their matrix embedding is linear, including when the dimension is empty.
+Independent coordinates on and below the diagonal, with a linear matrix embedding.
 -/
 
 namespace Morew.Conic

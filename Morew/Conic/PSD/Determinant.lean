@@ -7,10 +7,10 @@ import Mathlib.Analysis.Matrix.Order
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 
 /-!
-# Determinant bounds for positive matrices
+# Determinant bounds for positive-definite matrices
 
 The determinant is monotone under positive-semidefinite perturbations of a
-positive-definite real matrix. These lemmas also include empty dimensions.
+positive-definite real matrix.
 -/
 
 namespace Morew.Conic.LogDet

@@ -14,9 +14,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact positive-semidefinite representation records
 
-These records express spectral bounds, matrix fractions, log-determinants, and
-positive-definite domains using PSD and exponential cones and scalar inequalities.
-They connect the mathematical equivalences to the public rewrite API.
+Rewrite records for spectral bounds, matrix-fractional functions,
+log-determinants, and positive definiteness using semidefinite and exponential
+cones and scalar inequalities.
 -/
 
 open scoped Matrix Matrix.Norms.L2Operator
@@ -34,7 +34,7 @@ end Morew.Conic
 
 namespace Morew.Conic.MatrixFraction
 
-/-- Matrix-fraction epigraph with an explicit positive-definite input domain. -/
+/-- Matrix-fractional epigraph on positive-definite inputs. -/
 noncomputable def epigraph {n : Nat} :
     EpigraphRepresentation (fun p : (Fin n → ℝ) ×
       {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matrixFrac p.1 p.2.1) where
@@ -73,7 +73,7 @@ noncomputable def spectralNormEpigraph {m n : Nat} :
   source_iff_exists A t := by
     simpa only [exists_const] using spectralNorm_le_iff A t
 
-/-- A proof-bearing nuclear-norm epigraph representation. -/
+/-- A semidefinite representation of the nuclear-norm epigraph. -/
 noncomputable def nuclearNormEpigraph {m n : Nat} :
     EpigraphRepresentation (Fn.nuclearNorm (m := m) (n := n)) where
   Auxiliary := SymmetricMatrix m × SymmetricMatrix n

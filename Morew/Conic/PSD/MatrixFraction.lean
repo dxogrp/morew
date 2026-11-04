@@ -7,17 +7,17 @@ import Morew.Fn.Matrix
 import Morew.Conic.PSD
 
 /-!
-# Exact matrix-fraction epigraph
+# Matrix-fractional epigraph
 
-On the positive-definite domain, the representation uses the original matrix
-and vector as affine entries of a Schur-complement block matrix.
+On the positive-definite domain, a Schur complement gives a semidefinite
+representation of the matrix-fractional epigraph.
 -/
 
 namespace Morew.Conic.MatrixFraction
 
 open Matrix
 
-/-- The matrix-fraction upper bound is exactly its Schur PSD block. -/
+/-- A matrix-fractional upper bound is equivalent to a semidefinite block constraint. -/
 theorem matrixFrac_le_iff {n : Nat} (x : Fin n → ℝ)
     (P : Matrix (Fin n) (Fin n) ℝ) (hP : P.PosDef) (t : ℝ) :
     Fn.matrixFrac x P ≤ t ↔

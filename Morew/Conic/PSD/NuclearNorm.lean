@@ -9,8 +9,9 @@ import Morew.Conic.PSD
 /-!
 # Exact semidefinite representation of the nuclear norm
 
-The auxiliary symmetric matrices use the standard half-trace normalization.
-Singular-vector witnesses attain the norm, including zero and empty matrices.
+A positive-semidefinite block with two auxiliary diagonal blocks bounds the
+nuclear norm by half their combined trace. Singular-vector witnesses attain
+the bound.
 -/
 
 namespace Morew.Conic.Spectral
@@ -29,8 +30,8 @@ private theorem quadratic_outer {n : Nat} (v u : EuclideanSpace ℝ (Fin n)) :
   simp [Matrix.vecMulVec_mulVec, dotProduct_smul, EuclideanSpace.inner_eq_star_dotProduct,
     smul_eq_mul, pow_two, dotProduct_comm]
 
-/-- A positive quadratic form summed over a finite orthonormal family is bounded
-by its trace. -/
+/-- A positive-semidefinite quadratic form summed over a finite orthonormal family
+is bounded above by its trace. -/
 theorem sum_quadratic_le_trace {n : Nat} {ι : Type*} [Fintype ι]
     {W : Matrix (Fin n) (Fin n) ℝ} (hW : W.PosSemidef)
     (u : ι → EuclideanSpace ℝ (Fin n)) (hu : Orthonormal ℝ u) :
@@ -164,8 +165,7 @@ theorem nuclearNorm_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
     rightSingularBasis A i.val) (rightSingularVector_orthonormal A)
   linarith
 
-/-- The exact nuclear-norm epigraph uses two symmetric witnesses and the
-standard half-trace inequality. -/
+/-- The nuclear-norm epigraph uses two symmetric witnesses and a half-trace bound. -/
 theorem nuclearNorm_le_iff (t : ℝ) :
     Fn.nuclearNorm A ≤ t ↔ ∃ W : SymmetricMatrix m, ∃ V : SymmetricMatrix n,
       SymmetricMatrix.fromBlocks W A V ∈ PSD (m + n) ∧

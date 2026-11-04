@@ -13,9 +13,8 @@ import Morew.Fn.Matrix
 /-!
 # Exact log-determinant hypographs
 
-Lower triangular factors give an exact PSD/exponential representation of the
-positive-definite log-determinant hypograph. The reverse implication proves
-positive definiteness from the cone constraints.
+Lower triangular factors give a semidefinite/exponential cone representation
+of the log-determinant hypograph on positive-definite matrices.
 -/
 
 namespace Morew.Conic.LogDet
@@ -83,9 +82,8 @@ theorem posDef_and_prod_le_det_of_triangular_block
     field_simp
   exact ⟨hX, hdetQ ▸ det_le_det hQ hdiff⟩
 
-/-- The positive-definite log-determinant hypograph in positive dimension has
-an exact PSD/exponential representation. The function is the total real
-logarithm of the determinant. -/
+/-- A semidefinite/exponential cone representation of the log-determinant
+hypograph for positive-definite matrices of positive dimension. -/
 theorem hypograph_iff (X : Matrix (Fin n) (Fin n) ℝ) (t : ℝ) (_hn : 0 < n) :
     (X.PosDef ∧ t ≤ Fn.logDet X) ↔
       ∃ z : LowerTriangularEntries n, ∃ u : Fin n → ℝ,
