@@ -12,16 +12,15 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 # Bundled convex cones
 
 Each cone carries a finite-dimensional normed real vector space and a mathlib
-`ConvexCone`, which supplies closure under addition and positive scaling.
-The definition allows empty cones, cones excluding zero, and cones that are not closed.
+`ConvexCone`, closed under addition and positive scaling. Mathlib's convention
+allows empty cones and cones excluding zero; closedness is not required.
 -/
 
 namespace Morew.Conic
 
 /-- A convex cone in a bundled finite-dimensional normed real vector space.
 
-Cone spaces live in `Type`; decision spaces may live in any universe.
-This keeps the cone-space universe out of the classification `Morew.IsConic`. -/
+Cone spaces live in `Type`; decision spaces may live in any universe. -/
 structure Cone where
   /-- The real vector space containing this cone. -/
   Space : Type

@@ -10,10 +10,8 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Smoothness evidence for generated constraint rows
 
-Each certificate describes a supplied predicate using smooth scalar residuals
-with closed bounds. `Block` stores the concrete rows and a proof that their
-conjunction is equivalent to the predicate. Finite families remain grouped, with rows
-ordered by coordinate, including symbolic dimensions and empty families.
+`Block` represents a predicate by smooth scalar residuals with closed bounds.
+Finite families are ordered by coordinate.
 -/
 
 namespace Morew.NLP.Rows
@@ -50,7 +48,7 @@ theorem vector_eq_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-/-- A predicate assembled from smooth closed scalar residuals on one domain. -/
+/-- A predicate assembled from smooth scalar residuals with closed bounds on one domain. -/
 inductive Certified (domain : Set X) : (X → Prop) → Prop where
   /-- The empty row imposes no condition. -/
   | truth : Certified domain (fun _ => True)
@@ -126,7 +124,7 @@ theorem preimage_includes {Y : Type*} (domain : Set X) (p : X → Prop)
 /-- Concrete smooth scalar rows whose conjunction is equivalent to one predicate.
 The domain specifies where the residuals are smooth. -/
 structure Block (domain : Set X) (predicate : X → Prop) where
-  /-- The number of normalized scalar rows, possibly symbolic or zero. -/
+  /-- The number of scalar rows. -/
   rowCount : Nat
   /-- The actual residuals and bounds, with smoothness on the shared domain. -/
   rows : Fin rowCount → Row X domain
@@ -143,7 +141,7 @@ def truth (domain : Set X) : Block domain (fun _ => True) where
   rows := Fin.elim0
   holds_iff _ := ⟨fun _ => trivial, fun _ i => Fin.elim0 i⟩
 
-/-- Retain the exact difference with its closed upper bound at zero. -/
+/-- Bound `lhs - rhs` above by zero. -/
 def le (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x ≤ rhs x) where
@@ -152,7 +150,7 @@ def le (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (upper_residual_iff _ _).mp (h 0),
     fun h _ => (upper_residual_iff _ _).mpr h⟩
 
-/-- Retain the exact difference with its closed lower bound at zero. -/
+/-- Bound `lhs - rhs` below by zero. -/
 def ge (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x ≥ rhs x) where
@@ -161,7 +159,7 @@ def ge (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (lower_residual_iff _ _).mp (h 0),
     fun h _ => (lower_residual_iff _ _).mpr h⟩
 
-/-- Retain the exact difference fixed at zero. -/
+/-- Set `lhs - rhs` equal to zero. -/
 def eq (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x = rhs x) where

@@ -10,10 +10,9 @@ import Morew.Core
 /-!
 # Certified smooth nonlinear programs
 
-NLP data stores a real objective, finitely many scalar residuals with closed
-bounds, and their C² proofs on a common open evaluation domain. The rows imply
-membership in that domain. Objectives and residuals are total functions and
-may be nonconvex. `Form` certifies equality with the represented problem.
+NLP data stores an objective and finitely many scalar residuals with closed
+bounds, all C² on a common open domain containing every feasible point.
+`Form` certifies equality with the represented problem.
 -/
 
 namespace Morew
@@ -22,8 +21,7 @@ universe u
 
 namespace NLP
 
-/-- Optional closed lower and upper bounds on a real residual.
-Absent endpoints impose no condition; inconsistent endpoints are permitted. -/
+/-- Optional lower and upper bounds on a real residual, imposed non-strictly. -/
 structure Bounds where
   /-- A closed lower bound, or no lower bound. -/
   lower : Option ℝ
@@ -44,7 +42,7 @@ def upperBound (upper : ℝ) : Bounds := ⟨none, some upper⟩
 /-- Require the residual to equal `value`. -/
 def fixed (value : ℝ) : Bounds := ⟨some value, some value⟩
 
-/-- Require both closed bounds, without assuming `lower ≤ upper`. -/
+/-- Require `lower ≤ residual ≤ upper`. -/
 def between (lower upper : ℝ) : Bounds := ⟨some lower, some upper⟩
 
 /-- A value satisfies every endpoint that is present. -/
@@ -61,13 +59,13 @@ def Contains (bounds : Bounds) (value : ℝ) : Prop :=
 theorem contains_unbounded (value : ℝ) : unbounded.Contains value :=
   ⟨trivial, trivial⟩
 
-/-- A lower bound is a closed lower comparison. -/
+/-- A lower bound requires `lower ≤ value`. -/
 @[simp]
 theorem contains_lowerBound (lower value : ℝ) :
     (lowerBound lower).Contains value ↔ lower ≤ value := by
   simp [Contains, lowerBound]
 
-/-- An upper bound is a closed upper comparison. -/
+/-- An upper bound requires `value ≤ upper`. -/
 @[simp]
 theorem contains_upperBound (upper value : ℝ) :
     (upperBound upper).Contains value ↔ value ≤ upper := by
@@ -80,7 +78,7 @@ theorem contains_fixed (fixedValue value : ℝ) :
   change fixedValue ≤ value ∧ value ≤ fixedValue ↔ value = fixedValue
   exact ⟨fun h => le_antisymm h.2 h.1, fun h => by simp [h]⟩
 
-/-- Two endpoints impose their closed comparisons in lower/upper order. -/
+/-- Two endpoints bound the residual from below and above. -/
 @[simp]
 theorem contains_between (lower upper value : ℝ) :
     (between lower upper).Contains value ↔ lower ≤ value ∧ value ≤ upper :=
@@ -107,14 +105,11 @@ def Row.Holds {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
 /-- Finite-dimensional smooth nonlinear-program data.
 
 The rows define feasibility and imply membership in the open evaluation domain.
-Zero rows make every point feasible, so the domain is then the whole space.
-An empty domain is allowed when the rows are infeasible; smoothness there is vacuous.
-
-Maximizing declarations use `Problem X (OrderDual ℝ)` and sense `.maximize`,
-with the original objective function. Since `OrderDual ℝ` is a reducible synonym
-for `ℝ`, equality of `Problem` values alone does not determine the sense. -/
+Maximization uses `Problem X (OrderDual ℝ)` and sense `.maximize`, with the
+original objective. The sense is stored separately because `OrderDual ℝ` is
+definitionally equal to `ℝ`. -/
 structure Data [FiniteDimensional ℝ X] where
-  /-- Whether consumers should minimize or maximize the objective. -/
+  /-- The optimization direction. -/
   sense : ObjectiveSense
   /-- The common domain on which all stored smoothness proofs apply. -/
   domain : Set X
@@ -124,7 +119,7 @@ structure Data [FiniteDimensional ℝ X] where
   objective : X → ℝ
   /-- The objective is twice continuously differentiable on the domain. -/
   objective_smooth : ContDiffOn ℝ 2 objective domain
-  /-- The number of scalar rows, possibly zero. -/
+  /-- The number of scalar constraints. -/
   rowCount : Nat
   /-- Every row uses the same evaluation domain. -/
   rows : Fin rowCount → Row X domain
@@ -171,8 +166,7 @@ end NLP
 variable {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
   [FiniteDimensional ℝ X]
 
-/-- Existence of a certified smooth-NLP representation.
-Retain an `NLP.Form` directly when the concrete data is needed. -/
+/-- Existence of a certified smooth-NLP representation. `NLP.Form` carries the data. -/
 def IsSmoothNLP (p : Problem X ℝ) : Prop :=
   Nonempty (NLP.Form p)
 

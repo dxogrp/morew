@@ -9,10 +9,8 @@ import Morew.Core
 /-!
 # Certified affine cone programs
 
-Conic data records an affine objective and finitely many affine cone-membership
-rows. A `Conic.Form p` pairs this data with an equality to the represented
-problem. Decision spaces are real vector spaces; cone spaces carry their own
-normed structures.
+Conic data records an affine objective and finitely many affine cone constraints.
+`Conic.Form p` certifies that these data represent `p`.
 -/
 
 namespace Morew
@@ -25,7 +23,7 @@ variable (X : Type u) [AddCommGroup X] [Module ℝ X]
 
 /-- An affine membership constraint in a bundled convex cone. -/
 structure Constraint where
-  /-- The target cone, including its vector space and checked cone laws. -/
+  /-- The target convex cone and its ambient space. -/
   cone : Cone
   /-- The affine map from decision points into the cone space. -/
   map : X →ᵃ[ℝ] cone.Space
@@ -38,14 +36,14 @@ variable {X}
 def Holds (c : Constraint X) (x : X) : Prop :=
   c.map x ∈ c.cone.carrier
 
-/-- The zero-cone row for an affine map, including scalar and finite-vector maps. -/
+/-- Constrain an affine map to vanish. -/
 def eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
   cone := { Space := Y, carrier := 0 }
   map := f
 
-/-- The nonnegative-cone row for an affine map into an ordered real vector
-space. For finite vectors, the order is coordinatewise. -/
+/-- Constrain an affine map to be nonnegative. For finite vectors, the order is
+componentwise. -/
 def nonnegative {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
     [PosSMulMono ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
@@ -76,16 +74,14 @@ end Constraint
 
 /-- Finite-dimensional affine cone-program data.
 
-Objective sense is stored separately from the objective and constraints.
-Maximizing declarations use `Problem X (OrderDual ℝ)` and sense `.maximize`.
-Since `OrderDual ℝ` is a reducible synonym for `ℝ`, equality of `Problem` values
-alone does not determine the sense. -/
+Maximization uses `Problem X (OrderDual ℝ)` and sense `.maximize`. The sense
+is stored separately because `OrderDual ℝ` is definitionally equal to `ℝ`. -/
 structure Data [FiniteDimensional ℝ X] where
-  /-- Whether consumers should minimize or maximize the objective. -/
+  /-- The optimization direction. -/
   sense : ObjectiveSense
   /-- The affine real-valued objective. -/
   objective : X →ᵃ[ℝ] ℝ
-  /-- The number of cone-membership rows, possibly zero. -/
+  /-- The number of cone constraints. -/
   rowCount : Nat
   /-- The rows, whose cone spaces may have different dimensions. -/
   constraints : Fin rowCount → Constraint X
@@ -112,8 +108,7 @@ theorem toProblem_objective (data : Data X) (x : X) :
 theorem toProblem_feasible (data : Data X) (x : X) :
     data.toProblem.feasible x ↔ ∀ i, (data.constraints i).Holds x := Iff.rfl
 
-/-- The feasible set of an affine cone program is convex, including when
-there are no rows. -/
+/-- The feasible set of an affine cone program is convex. -/
 theorem feasibleSetConvex (data : Data X) :
     Convex ℝ {x | data.toProblem.feasible x} := by
   simpa only [toProblem_feasible, Set.ofPred_forall] using
@@ -136,8 +131,7 @@ end Conic
 variable {X : Type u} [AddCommGroup X] [Module ℝ X]
   [FiniteDimensional ℝ X]
 
-/-- A proposition asserting the existence of a certified conic representation.
-Use `Conic.Form` directly when the concrete representation is needed. -/
+/-- Existence of a certified conic representation. `Conic.Form` carries the data. -/
 def IsConic (p : Problem X ℝ) : Prop :=
   Nonempty (Conic.Form p)
 

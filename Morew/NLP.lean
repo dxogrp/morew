@@ -10,10 +10,9 @@ import Morew.NLP.Domain
 /-!
 # Smooth nonlinear programs
 
-`NLP.Data` stores an objective, scalar residuals with closed bounds, and C²
-proofs on a common open domain containing every feasible point. The residual
-bounds define feasibility. `NLP.Form p` pairs these data with the equality
-`data.toProblem = p`, preserving objective values on the whole decision space.
+`NLP.Data` stores an objective and scalar residuals with closed bounds, all C²
+on a common open domain containing every feasible point. `NLP.Form p` certifies
+`data.toProblem = p`, including objective equality outside that domain.
 
 `Morew.NLP.Smooth` provides smoothness rules for arithmetic, finite sums,
 components, and elementary functions. `Morew.NLP.Domain` provides open domains

@@ -11,9 +11,7 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 /-!
 # Smooth expression closure rules
 
-These lemmas compose C² functions on arbitrary domains in real normed spaces,
-including infinite-dimensional spaces. Finite sums and projections retain
-their supplied index set and fixed index.
+Closure rules for C² functions on domains in real normed spaces.
 -/
 
 namespace Morew.NLP.Smooth
@@ -49,7 +47,7 @@ theorem neg (f : X → Y) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => -f x) domain :=
   hf.neg
 
-/-- Multiply two smooth real functions; both factors may depend on decisions. -/
+/-- Multiply two smooth real functions. -/
 theorem mul (f g : X → ℝ) (hf : ContDiffOn ℝ 2 f domain)
     (hg : ContDiffOn ℝ 2 g domain) : ContDiffOn ℝ 2 (fun x => f x * g x) domain :=
   hf.mul hg
@@ -80,7 +78,7 @@ theorem snd (f : X → Y × Z) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => (f x).2) domain :=
   hf.snd
 
-/-- Equip a smooth real coordinate vector with the Euclidean norm. -/
+/-- View a smooth coordinate vector in Euclidean space. -/
 theorem toEuclidean {n : Nat} (f : X → Fin n → ℝ)
     (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => WithLp.toLp 2 (f x)) domain :=
@@ -117,7 +115,7 @@ theorem comp (g : Y → Z) (f : X → Y) (hg : ContDiff ℝ 2 g)
     (hf : ContDiffOn ℝ 2 f domain) : ContDiffOn ℝ 2 (fun x => g (f x)) domain :=
   hg.comp_contDiffOn hf
 
-/-- Exponentiation preserves smoothness on the domain. -/
+/-- The exponential of a smooth function is smooth. -/
 theorem exp (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => Real.exp (f x)) domain :=
   hf.exp
@@ -142,14 +140,14 @@ theorem cosh (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => Real.cosh (f x)) domain :=
   hf.cosh
 
-/-- The native real hyperbolic tangent is globally C². -/
+/-- The real hyperbolic tangent is globally C². -/
 theorem contDiff_tanh : ContDiff ℝ 2 Real.tanh := by
   have representation : Real.tanh = fun x => Real.sinh x / Real.cosh x :=
     funext Real.tanh_eq_sinh_div_cosh
   rw [representation]
   exact Real.contDiff_sinh.div Real.contDiff_cosh (fun x => (Real.cosh_pos x).ne')
 
-/-- Native hyperbolic tangent preserves smoothness on every domain. -/
+/-- The hyperbolic tangent of a smooth function is smooth. -/
 theorem tanh (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
     ContDiffOn ℝ 2 (fun x => Real.tanh (f x)) domain :=
   contDiff_tanh.comp_contDiffOn hf
