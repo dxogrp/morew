@@ -5,7 +5,7 @@ open Verso.Genre Manual VersoLiterate Verso.Code.External
 namespace MorewManual.ExampleSource
 
 -- Literate fragments can contain only one end of an anchor, so filter marker lines
--- without extracting anchors. Highlighted.lines preserves token and hover information.
+-- without extracting anchors. `Highlighted.lines` preserves token and hover information.
 private def omitAnchorMarkers (hl : SubVerso.Highlighting.Highlighted) :
     SubVerso.Highlighting.Highlighted :=
   hl.lines.foldl (init := .empty) fun result line =>

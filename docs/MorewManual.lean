@@ -4,8 +4,7 @@ import MorewManual.QuickStart
 import MorewManual.Syntax
 import MorewManual.Functions
 import MorewManual.Certificates
-import MorewManual.CustomRules
-import MorewManual.Options
+import MorewManual.Advanced
 import MorewManual.Examples
 import MorewManual.API
 
@@ -25,9 +24,7 @@ Morew is a mathematical optimization rewriting system in Lean.
 
 {include 0 MorewManual.Certificates}
 
-{include 0 MorewManual.CustomRules}
-
-{include 0 MorewManual.Options}
+{include 0 MorewManual.Advanced}
 
 {include 0 MorewManual.Examples}
 
