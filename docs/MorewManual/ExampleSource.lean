@@ -4,6 +4,13 @@ open Verso.Genre Manual VersoLiterate Verso.Code.External
 
 namespace MorewManual.ExampleSource
 
+-- Literate fragments can contain only one end of an anchor, so filter marker lines
+-- without extracting anchors. Highlighted.lines preserves token and hover information.
+private def omitAnchorMarkers (hl : SubVerso.Highlighting.Highlighted) :
+    SubVerso.Highlighting.Highlighted :=
+  hl.lines.foldl (init := .empty) fun result line =>
+    if (SubVerso.Highlighting.anchor? line.toString).isOk then result else result ++ line
+
 /-- Render source examples with their printed results. -/
 scoped instance : LoadLiterate Manual :=
   { (inferInstance : LoadLiterate Manual) with
@@ -13,7 +20,10 @@ scoped instance : LoadLiterate Manual :=
           if message.severity == .info then
             some (ExternalCode.leanOutputBlock message)
           else none
-        .concat (#[ExternalCode.leanBlock hl {}] ++ output)
+        let code := omitAnchorMarkers hl
+        let blocks := if code.toString.trimAscii.isEmpty then #[]
+          else #[ExternalCode.leanBlock code {}]
+        .concat (blocks ++ output)
       | .data .., content => .concat (content.map goB) }
 
 private partial def spaceBreaks : MD4Lean.Text → MD4Lean.Text
