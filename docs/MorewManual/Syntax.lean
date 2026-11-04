@@ -161,3 +161,67 @@ A final `conic` or `nlp` command rewrites the remaining constraints, certifies
 the target problem, and ends the script. For a reformulation named `q`, it
 supplies `q.isConic` or `q.isSmoothNLP`, respectively. These terminal commands
 are optional; every reformulation supplies an equivalence certificate.
+
+# Certificates
+%%%
+tag := "certificates"
+%%%
+
+## Generated declarations
+
+:::table +header
+*
+  * Declaration
+  * Meaning
+*
+  * `q.equivalence`
+  * The global equivalence between the source and `q`.
+*
+  * `q.conicForm` or `q.nlpForm`
+  * A conic or smooth NLP representation of `q`, with its proof.
+*
+  * `q.conicForm.represents` or `q.nlpForm.represents`
+  * Equality of the represented problem with `q`, including its objective and feasibility conditions.
+*
+  * `q.isConic` or `q.isSmoothNLP`
+  * A proof that the problem has the corresponding form.
+:::
+
+For problem families, apply the generated declaration to the parameters first,
+as in `(q.conicForm A b).represents`.
+The target data also records whether the objective is minimized or maximized.
+
+## Global equivalence
+
+For minimization problems $`p` and $`q` with feasible sets $`X_p` and $`X_q`
+and real-valued objectives $`f_p` and $`f_q`, a `GlobalEquivalence p q` contains maps
+$`F:X_p\to X_q` and $`G:X_q\to X_p` satisfying
+
+$$`f_q(F(x))\leq f_p(x)\quad(x\in X_p),\qquad
+f_p(G(y))\leq f_q(y)\quad(y\in X_q).`
+
+The problems have the same optimal value, and these maps transfer optimal
+solutions in either direction.
+Maximization uses the reversed objective order, represented in Lean by `OrderDual`.
+
+Given `e : GlobalEquivalence p q` and a proof `hy` that a feasible point of `q`
+is optimal, `e.map_isGlobalOptimum_backward hy` proves optimality of its image in
+`p`.
+
+See the [core API](api/Morew/Core.html).
+
+## Chaining reformulations
+
+A reformulation can use another reformulation as its source. The following
+schematic chains two reformulations and composes their certificates with `.trans`:
+
+```
+reformulation q : p := by
+  ...
+
+reformulation r : q := by
+  ...
+
+example : GlobalEquivalence p r :=
+  q.equivalence.trans r.equivalence
+```

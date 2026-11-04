@@ -16,8 +16,9 @@ Define custom rules and configure the expansion of helper functions.
 tag := "custom-rules"
 %%%
 
-A custom rule expresses a constraint as an equivalent condition with auxiliary
-variables. Define a representation with `def`:
+A custom rule proves $`P(x)\iff\exists u,\ Q(x,u)`, with source constraint
+$`P`, replacement $`Q`, and auxiliary values $`u`. Define it with `def`
+using one of these representations:
 
 :::table +header
 *
@@ -40,9 +41,8 @@ variables. Define a representation with `def`:
 ## Required fields
 
 Supply `Auxiliary`, the type of auxiliary values; `target`, the replacement
-condition; and `source_iff_exists`, a proof that the source condition holds
-exactly when some auxiliary value satisfies `target`. Use `Unit` when the
-replacement needs no auxiliary variable.
+condition; and `source_iff_exists`, a proof of this equivalence. Use `Unit`
+when the replacement needs no auxiliary variable.
 
 For equivalent conditions $`P(x)\iff Q(x)`, `ExactConstraintLift.ofIff`
 constructs a representation directly.
