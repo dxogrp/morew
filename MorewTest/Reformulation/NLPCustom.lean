@@ -15,24 +15,24 @@ noncomputable section
 
 def userSquare (x : ℝ) : ℝ := x ^ 2
 
-def graph : GraphRepresentation userSquare where
+def graph : GraphRepr userSquare where
   Auxiliary := Unit
   target x y _ := y = x ^ 2
   source_iff_exists x y := by simp [userSquare]
 
-def epigraphRule : EpigraphRepresentation userSquare where
+def epigraphRule : EpigraphRepr userSquare where
   Auxiliary := Unit
   target x t _ := x ^ 2 ≤ t
   source_iff_exists x t := by simp [userSquare]
 
-def hypographRule : HypographRepresentation userSquare where
+def hypographRule : HypographRepr userSquare where
   Auxiliary := Unit
   target x t _ := t ≤ x ^ 2
   source_iff_exists x t := by simp [userSquare]
 
-def exactRule : ExactConstraintLift
+def exactRule : ConstraintRepr
     (fun p : ℝ × ℝ => p.1 ≤ 5 ∧ p.2 ≤ 6) :=
-  ExactConstraintLift.ofIff (fun p => p.1 ≤ 5 ∧ p.2 ≤ 6) (fun _ => Iff.rfl)
+  ConstraintRepr.ofIff (fun p => p.1 ≤ 5 ∧ p.2 ≤ 6) (fun _ => Iff.rfl)
 
 def source :=
   problem (x y : ℝ)
@@ -53,7 +53,7 @@ example : GlobalEquiv source target := target.equiv
 example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ^ 2 ∧ x ^ 2 ≤ y ∧ y ≤ x ^ 2 ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
-def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
+def absoluteGraph : GraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x y _ := 0 ≤ y ∧ y ^ 2 = x ^ 2
   source_iff_exists x y := by
@@ -79,7 +79,7 @@ example : GlobalEquiv absoluteGraphSource absoluteGraphTarget :=
 
 -- A generated guard may establish the domain only after unconditional exactness
 -- has been checked. The target's `log` is smooth on the open set `u > 0`.
-def guardedLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def guardedRepr : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x
   source_iff_exists x := by simp
@@ -93,14 +93,14 @@ def guardedSource :=
       after : x ≤ 20
 
 reformulation guardedTarget : guardedSource := by
-  nlp at positive using guardedLift
+  nlp at positive using guardedRepr
 
 example : GlobalEquiv guardedSource guardedTarget := guardedTarget.equiv
 example (x u : ℝ) : guardedTarget.feasible (x, u) ↔
     x < 10 ∧ u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x ∧ x ≤ 20 := Iff.rfl
 
-def removableLift : ExactConstraintLift (fun x : ℝ => x = x) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => by simp)
+def removableRepr : ConstraintRepr (fun x : ℝ => x = x) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => by simp)
 
 def removableSource :=
   problem (x : ℝ)
@@ -110,7 +110,7 @@ def removableSource :=
       bound : |x| ≤ 3
 
 reformulation removableTarget : removableSource := by
-  nlp at removable using removableLift
+  nlp at removable using removableRepr
   nlp at bound
 
 example (x : ℝ) : removableTarget.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl
@@ -186,7 +186,7 @@ theorem coefficient_pos (c : ℝ) : 0 < coefficient c := by
 
 def weighted (c x : ℝ) : ℝ := Real.log (coefficient c) * x
 
-def weightedGraph (c : ℝ) : GraphRepresentation (weighted c) where
+def weightedGraph (c : ℝ) : GraphRepr (weighted c) where
   Auxiliary := Unit
   target x y _ :=
     let _h : 0 < coefficient c := coefficient_pos c
@@ -216,7 +216,7 @@ def model (c : ℝ) : Problem ℝ ℝ where
   objective x := x
   feasible x := c * x ≤ 3
 
-def lift : ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+def repr : ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x =>
     (model (let _h : True := True.intro
       ((fun _ : ℝ => 2) ∘ fun y => y * y) x)).feasible x)
@@ -228,7 +228,7 @@ def source :=
     subject to bound : 2 * x ≤ 3
 
 reformulation target : source := by
-  nlp at bound using lift
+  nlp at bound using repr
 
 example : GlobalEquiv source target := target.equiv
 example (x : ℝ) : target.feasible x ↔ 2 * x ≤ 3 := Iff.rfl

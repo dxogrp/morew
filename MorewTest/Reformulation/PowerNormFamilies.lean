@@ -97,7 +97,7 @@ info: problem (x : Fin n → ℝ) (t : ℝ) (bound_aux : Fin n → ℝ)
 #printp power
 
 def customNormEpigraph {n : ℕ} :
-    EpigraphRepresentation (fun z : EuclideanSpace ℝ (Fin n) => ‖z‖) :=
+    EpigraphRepr (fun z : EuclideanSpace ℝ (Fin n) => ‖z‖) :=
   Conic.SecondOrder.normEpigraph
 
 elab "assert_l2_ambiguity_atomic% " nested:command : command => do

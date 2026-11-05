@@ -22,7 +22,7 @@ open Morew
 noncomputable section
 
 def positiveLogEpigraph :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
   Auxiliary := ℝ
   target x t u := x.1 = Real.exp u ∧ u ≤ t
   source_iff_exists x t := by
@@ -60,7 +60,7 @@ def guardedAbs (x : ℝ) : ℝ := |x|
 
 @[morew_conic, morew_nlp]
 def nonnegativeAbsEpigraph :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := ℝ
   target x t u := u = x.1 ∧ u ≤ t
   source_iff_exists x t := by
@@ -152,7 +152,7 @@ example : twoNLP.nlpForm.data.rowCount = 5 := rfl
 namespace Imported
 
 def nonnegativeShiftedAbs (center : ℝ) (hc : center ≤ 0) :
-    EpigraphRepresentation
+    EpigraphRepr
       (fun x : {x : ℝ // 0 ≤ x} => Registry.Source.shiftedAbs center x.1) where
   Auxiliary := ℝ
   target x t u := u = x.1 - center ∧ u ≤ t
@@ -215,7 +215,7 @@ example : IsConic continued := continued.isConic
 
 -- `Unit` remains the representation of an absent auxiliary optimization variable.
 def nonnegativeAbsUnit :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := Unit
   target x t _ := x.1 ≤ t
   source_iff_exists x t := by
@@ -264,7 +264,7 @@ reformulation missingNLP : missingGuard := by
   nlp at bound using nonnegativeAbsEpigraph
 
 -- Using the selected guard to discharge itself would erase its restriction.
-def selectedGuardLift : ExactConstraintLift (fun x : {x : ℝ // 0 ≤ x} => 0 ≤ x.1) where
+def selectedGuardRepr : ConstraintRepr (fun x : {x : ℝ // 0 ≤ x} => 0 ≤ x.1) where
   Auxiliary := ℝ
   target x u := u = x.1
   source_iff_exists x := ⟨fun _ => ⟨x.1, rfl⟩, fun _ => x.2⟩
@@ -280,10 +280,10 @@ def retainedGuard :=
 
 -- Parentheses select a concrete exact representation.
 reformulation concreteConic : retainedGuard := by
-  conic at bound using (selectedGuardLift)
+  conic at bound using (selectedGuardRepr)
 
 reformulation concreteNLP : retainedGuard := by
-  nlp at bound using (selectedGuardLift)
+  nlp at bound using (selectedGuardRepr)
 
 example : GlobalEquiv retainedGuard concreteConic := concreteConic.equiv
 example : GlobalEquiv retainedGuard concreteNLP := concreteNLP.equiv
@@ -293,15 +293,15 @@ example (x u : ℝ) : concreteNLP.feasible (x, u) ↔ 1 ≤ x ∧ u = x := Iff.r
 #guard_error_fragments ["constraint `bound`", "missing nonnegative constant margin"] in
 assert_contextual_atomic%
 reformulation selectedOnlyConic : selectedGuard := by
-  conic at bound using selectedGuardLift
+  conic at bound using selectedGuardRepr
 
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
 assert_contextual_atomic%
 reformulation selectedOnlyNLP : selectedGuard := by
-  nlp at bound using selectedGuardLift
+  nlp at bound using selectedGuardRepr
 
 def generatedGuardEpigraph :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := ℝ
   target x t u := 0 ≤ x.1 ∧ u = x.1 ∧ u ≤ t
   source_iff_exists x t := by
@@ -361,7 +361,7 @@ def firstMagnitude (x : ℝ) : ℝ := |x|
 -- The rule uses the full decision carrier, but leaves its second coordinate
 -- unconstrained by matching. Declaration lookup must retain that coordinate.
 def wholePointRule (bound : ℝ) :
-    ExactConstraintLift
+    ConstraintRepr
       (fun p : {p : ℝ × ℝ // 0 ≤ p.1} => firstMagnitude p.1.1 ≤ bound) where
   Auxiliary := ℝ
   target p u := u = p.1.1 ∧ u ≤ bound
@@ -417,7 +417,7 @@ def shiftedMagnitude (x y : ℝ) : ℝ := |x| + y
 -- Here the guarded pair is inferred from operands inside a larger decision
 -- space. Whole-point fallback cannot supply this input.
 def productRule :
-    EpigraphRepresentation
+    EpigraphRepr
       (fun p : {p : ℝ × ℝ // 0 ≤ p.1} => shiftedMagnitude p.1.1 p.1.2) where
   Auxiliary := ℝ
   target p t u := u = p.1.1 ∧ u + p.1.2 ≤ t

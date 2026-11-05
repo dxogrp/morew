@@ -14,7 +14,7 @@ installing the DSL. These tests exercise the factor-of-two convention, native
 Euclidean coordinates, positive denominator evidence, and empty vectors.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.SecondOrder
 

@@ -40,14 +40,14 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
     let result ← match outcome with
       | .ok result => pure result
       | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
-    let .exact lift := result.certificate
+    let .exact repr := result.certificate
       | throwError "an unconditional replacement acquired retained assumptions"
     unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
       throwError "expected {rows} rows, got {result.rowPredicates.size}"
     unless result.auxiliary?.isSome == auxiliary do
       throwError "unexpected auxiliary-variable shape"
     result.toResult.check source #[]
-    checkWithKernel lift
+    checkWithKernel repr
     checkWithKernel result.targetIff
     for row in result.certifiedRows do
       checkWithKernel row.constraint
@@ -66,25 +66,25 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
   unless message.contains fragment do
     throwError "expected diagnostic containing {fragment}, got {message}"
 
-elab "polyhedral_lift% " source:term : term => do
+elab "polyhedral_repr% " source:term : term => do
   let source ← elaborate source
   match ← Morew.Elab.Conic.Rewrite.planUnique source with
   | .ok result =>
-    let .exact lift := result.certificate
+    let .exact repr := result.certificate
       | throwError "an unconditional replacement acquired retained assumptions"
-    pure lift
+    pure repr
   | .error error => throwError "{error.reason}"
 
-def symbolicNorm (n : ℕ) : ExactConstraintLift (fun v : Fin n → ℝ => ‖v‖ ≤ 2) :=
-  polyhedral_lift% (fun v : Fin n → ℝ => ‖v‖ ≤ 2)
+def symbolicNorm (n : ℕ) : ConstraintRepr (fun v : Fin n → ℝ => ‖v‖ ≤ 2) :=
+  polyhedral_repr% (fun v : Fin n → ℝ => ‖v‖ ≤ 2)
 
 def symbolicOneNorm (n : ℕ) :
-    ExactConstraintLift (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖ ≤ 2) :=
-  polyhedral_lift% (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖ ≤ 2)
+    ConstraintRepr (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖ ≤ 2) :=
+  polyhedral_repr% (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖ ≤ 2)
 
 def symbolicMaximum {ι : Type u} (s : Finset ι) (hs : s.Nonempty) (a : ι → ℝ) :
-    ExactConstraintLift (fun x : ℝ => s.sup' hs (fun i => a i * x) ≤ 2) :=
-  polyhedral_lift% (fun x : ℝ => s.sup' hs (fun i => a i * x) ≤ 2)
+    ConstraintRepr (fun x : ℝ => s.sup' hs (fun i => a i * x) ≤ 2) :=
+  polyhedral_repr% (fun x : ℝ => s.sup' hs (fun i => a i * x) ≤ 2)
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   expectPlan (← `(fun p : ℝ × ℝ => |p.1 + 1| ≤ p.2)) 2 false
@@ -117,27 +117,27 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       letI := Fintype.ofEquiv (Fin 2) e
       max (a ⬝ᵥ x) (x ⬝ᵥ a) ≤ 1)) 2 false (parameterCount := 3)
 
-def wholeConjunction : ExactConstraintLift (fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2) :=
-  ExactConstraintLift.ofIff
+def wholeConjunction : ConstraintRepr (fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2) :=
+  ConstraintRepr.ofIff
     (fun p : ℝ × ℝ => True ∧ (p.1 ≤ p.2 ∧ -p.1 ≤ p.2) ∧ 0 ≤ p.2 ∧ True)
     (fun _ => by simp only [true_and, and_true, Morew.Conic.Polyhedral.abs_le_iff])
 
-def affineGraph : GraphRepresentation (fun x : ℝ => x + 1) where
+def affineGraph : GraphRepr (fun x : ℝ => x + 1) where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists _ _ := ⟨fun h => ⟨(), h⟩, fun ⟨_, h⟩ => h⟩
 
-def absEpigraph : EpigraphRepresentation (fun x : ℝ => |x|) where
+def absEpigraph : EpigraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x t _ := x ≤ t ∧ -x ≤ t
   source_iff_exists _ _ := by simp only [exists_const, Morew.Conic.Polyhedral.abs_le_iff]
 
-def minimumHypograph : HypographRepresentation (fun p : ℝ × ℝ => min p.1 p.2) where
+def minimumHypograph : HypographRepr (fun p : ℝ × ℝ => min p.1 p.2) where
   Auxiliary := Unit
   target p t _ := t ≤ p.1 ∧ t ≤ p.2
   source_iff_exists _ _ := by simp only [exists_const, Morew.Conic.Polyhedral.le_min_iff]
 
-def oneAuxiliary : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def oneAuxiliary : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x a := a = x ∧ 0 ≤ a
   source_iff_exists x := by
@@ -147,26 +147,26 @@ def oneAuxiliary : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
     · rintro ⟨a, rfl, h⟩
       exact h
 
-def nonlinearExact : ExactConstraintLift (fun x : ℝ => 0 ≤ x ^ 2) :=
-  ExactConstraintLift.ofIff (fun x : ℝ => 0 ≤ x ^ 2) (fun _ => Iff.rfl)
+def nonlinearExact : ConstraintRepr (fun x : ℝ => 0 ≤ x ^ 2) :=
+  ConstraintRepr.ofIff (fun x : ℝ => 0 ≤ x ^ 2) (fun _ => Iff.rfl)
 
-def boolAuxiliary : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def boolAuxiliary : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := Bool
   target x _ := 0 ≤ x
   source_iff_exists _ := ⟨fun h => ⟨false, h⟩, fun ⟨_, h⟩ => h⟩
 
 def opaqueAbs (x : ℝ) : ℝ := |x|
 
-def unchangedTrue : ExactConstraintLift (fun _ : ℝ => True) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => Iff.rfl)
+def unchangedTrue : ConstraintRepr (fun _ : ℝ => True) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => Iff.rfl)
 
 def predicateHelper (x : ℝ) : Prop := 0 ≤ x
 
-def wrappedTarget : ExactConstraintLift predicateHelper :=
-  ExactConstraintLift.ofIff predicateHelper (fun _ => Iff.rfl)
+def wrappedTarget : ConstraintRepr predicateHelper :=
+  ConstraintRepr.ofIff predicateHelper (fun _ => Iff.rfl)
 
-def disjunctiveTarget : ExactConstraintLift (fun x : ℝ => 0 ≤ x ∨ x ≤ 0) :=
-  ExactConstraintLift.ofIff (fun x => 0 ≤ x ∨ x ≤ 0) (fun _ => Iff.rfl)
+def disjunctiveTarget : ConstraintRepr (fun x : ℝ => 0 ≤ x ∨ x ≤ 0) :=
+  ConstraintRepr.ofIff (fun x => 0 ≤ x ∨ x ≤ 0) (fun _ => Iff.rfl)
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   expectPlan (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) 3 false
@@ -183,7 +183,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectPlan (← `(fun _ : ℝ => True)) 0 false (some (← `(unchangedTrue)))
   expectRejected (← `(fun x : ℝ => 0 ≤ x ^ 2)) "generated row"
     (some (← `(nonlinearExact)))
-  expectRejected (← `(fun x : ℝ => 0 ≤ x)) "unsupported exact-lift decision space"
+  expectRejected (← `(fun x : ℝ => 0 ≤ x)) "unsupported variable type"
     (some (← `(boolAuxiliary)))
   expectRejected (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2)) "does not match"
     (some (← `(absEpigraph)))

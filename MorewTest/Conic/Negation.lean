@@ -100,7 +100,7 @@ run_cmd liftTermElabM do
   reject (← `(fun z : ℝ × ℝ => z.2 ≤ -|z.1 ^ 2|))
   reject (← `(fun z : ℝ × ℝ => -|z.1| ≤ z.2))
 
-noncomputable def negativeIdentity : EpigraphRepresentation (fun x : ℝ => -x) where
+noncomputable def negativeIdentity : EpigraphRepr (fun x : ℝ => -x) where
   Auxiliary := Unit
   target x t _ := -x ≤ t
   source_iff_exists _ _ := by simp only [exists_const]

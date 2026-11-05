@@ -20,7 +20,7 @@ def shiftedAbs (center x : ℝ) : ℝ := |x - center|
 
 /-- One parameterized exact record can support both target languages. -/
 @[morew_conic, morew_nlp]
-def shiftedAbsEpigraph (center : ℝ) : EpigraphRepresentation (shiftedAbs center) where
+def shiftedAbsEpigraph (center : ℝ) : EpigraphRepr (shiftedAbs center) where
   Auxiliary := Unit
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t

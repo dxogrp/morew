@@ -34,7 +34,7 @@ theorem norm2_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
 
 /-- The Euclidean-space norm epigraph expressed in vector coordinates. -/
 noncomputable def norm2Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) where
+    EpigraphRepr (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) where
   Auxiliary := Unit
   target v t _ := 0 ≤ t ∧ (∑ i, (WithLp.ofLp v i) ^ 2) ≤ t ^ 2
   source_iff_exists v t := by
@@ -42,7 +42,7 @@ noncomputable def norm2Epigraph {n : Nat} :
 
 /-- The named Euclidean norm has the same two polynomial epigraph inequalities. -/
 noncomputable def fnNorm2Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm2 v) where
+    EpigraphRepr (fun v : Fin n → ℝ => Fn.norm2 v) where
   Auxiliary := (norm2Epigraph (n := n)).Auxiliary
   target v t u := norm2Epigraph.target (WithLp.toLp 2 v) t u
   source_iff_exists v t :=

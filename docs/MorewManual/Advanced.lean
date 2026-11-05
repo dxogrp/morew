@@ -25,16 +25,16 @@ using one of these representations:
   * Representation
   * Source condition
 *
-  * `GraphRepresentation f`
+  * `GraphRepr f`
   * $`y=f(x)`
 *
-  * `EpigraphRepresentation f`
+  * `EpigraphRepr f`
   * $`f(x)\leq t`
 *
-  * `HypographRepresentation f`
+  * `HypographRepr f`
   * $`t\leq f(x)`
 *
-  * `ExactConstraintLift P`
+  * `ConstraintRepr P`
   * $`P(x)`
 :::
 
@@ -44,7 +44,7 @@ Supply `Auxiliary`, the type of auxiliary values; `target`, the replacement
 condition; and `source_iff_exists`, a proof of this equivalence. Use `Unit`
 when the replacement needs no auxiliary variable.
 
-For equivalent conditions $`P(x)\iff Q(x)`, `ExactConstraintLift.ofIff`
+For equivalent conditions $`P(x)\iff Q(x)`, `ConstraintRepr.ofIff`
 constructs a representation directly.
 
 ## Registration and selection

@@ -25,7 +25,7 @@ def diagonalSource :=
 
 /-- A reusable exact certificate, with no global automatic registration. -/
 def schurRule (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
       (Matrix.diagonal ![p.2] - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
   .ofIff (fun p =>
     (fromBlocksFin A.toMatrix p.1 p.1.transpose (Matrix.diagonal ![p.2])).PosSemidef) (by

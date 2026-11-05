@@ -25,7 +25,7 @@ private theorem boundary (x : ℝ) : (0, 0, x) ∈ EXP ↔ 0 ≤ x := by simp
 
 def userIdentity (x : ℝ) : ℝ := x
 
-def graphRule : GraphRepresentation userIdentity where
+def graphRule : GraphRepr userIdentity where
   Auxiliary := Unit
   target x y _ :=
     let difference := y - x
@@ -36,18 +36,18 @@ def graphRule : GraphRepresentation userIdentity where
       forall_const]
     exact eq_comm.trans le_antisymm_iff
 
-def epigraphRule : EpigraphRepresentation Fn.softplus where
+def epigraphRule : EpigraphRepr Fn.softplus where
   Auxiliary := Fin 2 → ℝ
   target x t u := (∀ i : Fin 2, (![0, x] i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1
   source_iff_exists x t := Exponential.softplus_le_iff x t
 
-def hypographRule : HypographRepresentation userIdentity where
+def hypographRule : HypographRepr userIdentity where
   Auxiliary := Unit
   target x t _ := (0, 0, x - t) ∈ EXP
   source_iff_exists x t := by
     simp only [userIdentity, boundary, sub_nonneg, exists_const]
 
-def scalarAuxiliaryRule : ExactConstraintLift
+def scalarAuxiliaryRule : ConstraintRepr
     (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2) where
   Auxiliary := ℝ
   target point u := u = point.1 ∧
@@ -117,7 +117,7 @@ example (x t u : ℝ) : target.objective ((x, t), u) = x + t := rfl
 example (x t u : ℝ) : target.feasible ((x, t), u) ↔
     x * x ≤ 1 ∧ u = x ∧ (u, 1, t) ∈ EXP ∧ t ≤ 10 := Iff.rfl
 
-def emptyRule : ExactConstraintLift (fun _ : ℝ => True) where
+def emptyRule : ConstraintRepr (fun _ : ℝ => True) where
   Auxiliary := Unit
   target x _ := ∀ _ : Fin 0, (x, 1, x) ∈ EXP
   source_iff_exists _ := by simp
@@ -168,7 +168,7 @@ def automaticSource :=
 reformulation noFallback : automaticSource := by
   conic at exponential using scalarAuxiliaryRule
 
-def unitEpigraph : EpigraphRepresentation Real.exp where
+def unitEpigraph : EpigraphRepr Real.exp where
   Auxiliary := Unit
   target x t _ := (x, 1, t) ∈ EXP
   source_iff_exists x t := by
@@ -185,7 +185,7 @@ def nonlinearSource :=
 reformulation nonlinearTarget : nonlinearSource := by
   conic at bad using unitEpigraph
 
-def uninspectableRule : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def uninspectableRule : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := Unit
   target x _ := ∀ _ : Fin 1, True ∧ (0, 0, x) ∈ EXP
   source_iff_exists _ := by simp

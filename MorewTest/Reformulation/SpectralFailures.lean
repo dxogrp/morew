@@ -93,7 +93,7 @@ reformulation rejectedStaleLabel : normSource := by
 
 /-- A downstream alias retains its own identity during rule selection. -/
 def customSpectralNormEpigraph {m n : Nat} :
-    EpigraphRepresentation (fun A : Matrix (Fin m) (Fin n) ℝ => ‖A‖) :=
+    EpigraphRepr (fun A : Matrix (Fin m) (Fin n) ℝ => ‖A‖) :=
   Conic.Spectral.spectralNormEpigraph
 
 section Ambiguity

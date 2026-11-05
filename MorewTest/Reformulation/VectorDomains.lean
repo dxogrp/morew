@@ -26,7 +26,7 @@ def positiveSum {n : ℕ} (x : Fin n → ℝ) : ℝ := ∑ i, x i
 
 @[morew_conic]
 def nonnegativeSumEpigraph {n : ℕ} :
-    EpigraphRepresentation
+    EpigraphRepr
       (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} => nonnegativeSum x.1) where
   Auxiliary := Unit
   target x t _ := (∑ i, x.1 i) ≤ t
@@ -34,7 +34,7 @@ def nonnegativeSumEpigraph {n : ℕ} :
 
 @[morew_conic]
 def positiveSumEpigraph {n : ℕ} :
-    EpigraphRepresentation
+    EpigraphRepr
       (fun x : {x : Fin n → ℝ // ∀ i, 0 < x i} => positiveSum x.1) where
   Auxiliary := Unit
   target x t _ := (∑ i, x.1 i) ≤ t

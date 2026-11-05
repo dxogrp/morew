@@ -210,7 +210,7 @@ def fakeOrder :=
 reformulation incompatibleOrder : fakeOrder := by
   conic at bound
 
-/-- error: constraint `exponential`: expected ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation; reduced type is ℝ -/
+/-- error: constraint `exponential`: expected ConstraintRepr, GraphRepr, EpigraphRepr, or HypographRepr; reduced type is ℝ -/
 #guard_msgs in
 reformulation invalidExplicitRule : source := by
   conic at exponential using (0 : ℝ)
@@ -221,9 +221,9 @@ def scalarSource :=
     subject to
       exponential : Real.exp x ≤ t
 
-def uncertifiedTarget : ExactConstraintLift
+def uncertifiedTarget : ConstraintRepr
     (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2) :=
-  ExactConstraintLift.ofIff (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2)
+  ConstraintRepr.ofIff (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2)
     (fun _ => Iff.rfl)
 
 -- The exact certificate has a non-affine target, so explicit selection fails.

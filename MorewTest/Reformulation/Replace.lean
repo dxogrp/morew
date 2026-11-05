@@ -33,22 +33,22 @@ def source :=
       norm : ‖WithLp.toLp 1 v‖ ≤ 5
       after : first ≤ second + 1
 
-def removeLift : ExactConstraintLift (fun p : ℝ × (Fin 1 → ℝ) => p.1 = p.1) :=
+def removeRepr : ConstraintRepr (fun p : ℝ × (Fin 1 → ℝ) => p.1 = p.1) :=
   .ofIff (fun _ => True) (fun _ => by simp)
 
-def upperLift : ExactConstraintLift (fun p : ℝ × (Fin 1 → ℝ) => p.1 ≤ 3) :=
+def upperRepr : ConstraintRepr (fun p : ℝ × (Fin 1 → ℝ) => p.1 ≤ 3) :=
   .ofIff (fun p => p.1 ≤ 3) (fun _ => Iff.rfl)
 
 reformulation conicTarget : source := by
-  conic at removable using removeLift
+  conic at removable using removeRepr
   conic at labels.cap
-  conic at cap_conic_1 using upperLift
+  conic at cap_conic_1 using upperRepr
   conic at norm
 
 reformulation nlpTarget : source := by
-  nlp at removable using removeLift
+  nlp at removable using removeRepr
   nlp at labels.cap
-  nlp at cap_nlp_1 using upperLift
+  nlp at cap_nlp_1 using upperRepr
   nlp at norm
 
 example : GlobalEquiv source conicTarget := conicTarget.equiv

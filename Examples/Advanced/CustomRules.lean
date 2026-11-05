@@ -24,7 +24,7 @@ def absoluteDeviation (center x : ℝ) : ℝ := |x - center|
 
 @[morew_conic, morew_nlp]
 def absoluteDeviationEpigraph (center : ℝ) :
-    EpigraphRepresentation (absoluteDeviation center) where
+    EpigraphRepr (absoluteDeviation center) where
   Auxiliary := Unit -- No auxiliary optimization variable.
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
@@ -74,7 +74,7 @@ end
 -- The equation `y = |x|` is equivalent to `0 ≤ y` and `y² = x²`.
 -- Register this graph formula for smooth NLP reformulations.
 @[morew_nlp]
-def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
+def absoluteGraph : GraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x y _ := 0 ≤ y ∧ y ^ 2 = x ^ 2
   source_iff_exists x y := by
@@ -101,7 +101,7 @@ example : IsSmoothNLP signedGraphNLP := signedGraphNLP.isSmoothNLP
 
 -- A subtype states the representation's domain, proved from existing constraints.
 def positiveLogEpigraph :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
   Auxiliary := ℝ
   target x t u := x.1 = Real.exp u ∧ u ≤ t
   source_iff_exists x t := by

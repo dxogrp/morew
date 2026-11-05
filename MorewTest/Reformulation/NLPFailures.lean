@@ -83,21 +83,21 @@ reformulation selected : ambiguousSource := by
 
 example : GlobalEquiv ambiguousSource selected := selected.equiv
 
-/-- error: constraint `bound`: expected ExactConstraintLift -/
+/-- error: constraint `bound`: expected ConstraintRepr -/
 #guard_msgs (substring := true) in
 reformulation wrongRecord : source := by
   nlp at bound using (0 : ℝ)
 
-def wrongLift : ExactConstraintLift (fun x : ℝ => x ≤ 3) :=
-  ExactConstraintLift.ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
+def wrongRepr : ConstraintRepr (fun x : ℝ => x ≤ 3) :=
+  ConstraintRepr.ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
 
 /-- error: constraint `bound`: the supplied exact certificate does not describe the entire selected predicate -/
 #guard_msgs in
 reformulation wrongPredicate : source := by
-  nlp at bound using wrongLift
+  nlp at bound using wrongRepr
 
-def guardedRule (_ : True) : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) :=
-  ExactConstraintLift.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
+def guardedRule (_ : True) : ConstraintRepr (fun x : ℝ => |x| ≤ 3) :=
+  ConstraintRepr.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
     (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
 
 /-- error: constraint `bound`: failed to elaborate exact rule: exact rule contains unresolved metavariables -/
@@ -105,7 +105,7 @@ def guardedRule (_ : True) : ExactConstraintLift (fun x : ℝ => |x| ≤ 3) :=
 reformulation unresolvedRule : source := by
   nlp at bound using (guardedRule _)
 
-def zeroGuard : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def zeroGuard : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = 0 ∧ Real.log u = 0 ∧ 0 ≤ x
   source_iff_exists x := by simp
@@ -119,13 +119,13 @@ reformulation invalidGeneratedDomain : zeroGuardSource := by
 
 def strictSource := problem (x : ℝ) minimize x subject to strict : x < 3
 
-def strictLift : ExactConstraintLift (fun x : ℝ => x < 3) :=
-  ExactConstraintLift.ofIff (fun x => x < 3) (fun _ => Iff.rfl)
+def strictRepr : ConstraintRepr (fun x : ℝ => x < 3) :=
+  ConstraintRepr.ofIff (fun x => x < 3) (fun _ => Iff.rfl)
 
 /-- error: constraint `strict`: generated row certification failed -/
 #guard_msgs (substring := true) in
 reformulation strict : strictSource := by
-  nlp at strict using strictLift
+  nlp at strict using strictRepr
 
 elab "assert_atomic_nlp% " nested:command : command => do
   let before ← Lean.getEnv

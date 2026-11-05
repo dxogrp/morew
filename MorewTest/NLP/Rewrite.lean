@@ -157,7 +157,7 @@ run_cmd liftTermElabM do
       (@ite s.Nonempty (x = 0) (Classical.propDecidable _) hs hs)
       (fun i => (i : ℝ) * x ^ 2) ≤ 3) #[])) 1 false 2
 
-noncomputable def absoluteGraph : Morew.GraphRepresentation (fun a : ℝ => |a|) where
+noncomputable def absoluteGraph : Morew.GraphRepr (fun a : ℝ => |a|) where
   Auxiliary := Unit
   target a t _ := t ^ 2 = a ^ 2 ∧ 0 ≤ t
   source_iff_exists a t := by
@@ -169,24 +169,24 @@ noncomputable def absoluteGraph : Morew.GraphRepresentation (fun a : ℝ => |a|)
       apply (sq_eq_sq₀ ht (abs_nonneg a)).mp
       simpa only [sq_abs] using h
 
-def emptyLift : Morew.ExactConstraintLift (fun _ : ℝ => True) :=
+def emptyRepr : Morew.ConstraintRepr (fun _ : ℝ => True) :=
   .ofIff (fun _ => True) (fun _ => Iff.rfl)
 
-def identityLift : Morew.ExactConstraintLift (fun x : ℝ => x ^ 2 ≤ 3) :=
+def identityRepr : Morew.ConstraintRepr (fun x : ℝ => x ^ 2 ≤ 3) :=
   .ofIff (fun x => x ^ 2 ≤ 3) (fun _ => Iff.rfl)
 
 private def hiddenTarget (x : ℝ) : Prop := x ^ 2 ≤ 3
 
-def opaqueTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x ^ 2 ≤ 3) :=
+def opaqueTargetRepr : Morew.ConstraintRepr (fun x : ℝ => x ^ 2 ≤ 3) :=
   .ofIff hiddenTarget (fun _ => Iff.rfl)
 
-def strictLift : Morew.ExactConstraintLift (fun x : ℝ => x < 1) :=
+def strictRepr : Morew.ConstraintRepr (fun x : ℝ => x < 1) :=
   .ofIff (fun x => x < 1) (fun _ => Iff.rfl)
 
-def disjunctiveLift : Morew.ExactConstraintLift (fun x : ℝ => x ≤ 0 ∨ 1 ≤ x) :=
+def disjunctiveRepr : Morew.ConstraintRepr (fun x : ℝ => x ≤ 0 ∨ 1 ≤ x) :=
   .ofIff (fun x => x ≤ 0 ∨ 1 ≤ x) (fun _ => Iff.rfl)
 
-def booleanAuxiliary : Morew.ExactConstraintLift (fun _ : ℝ => True) where
+def booleanAuxiliary : Morew.ConstraintRepr (fun _ : ℝ => True) where
   Auxiliary := Bool
   target _ _ := True
   source_iff_exists _ := ⟨fun _ => ⟨false, trivial⟩, fun _ => trivial⟩
@@ -207,8 +207,8 @@ run_cmd liftTermElabM do
   expectUsing (← `(fun v : EuclideanSpace ℝ (Fin 2) =>
     input (fun _ : ℝ => ‖v‖ ≤ min 2 3) #[]))
     (← `(Morew.Rewrite.norm2Epigraph (n := 2))) 2 false 1
-  expectUsing (← `(input (fun _ : ℝ => True) #[])) (← `(emptyLift)) 0
-  expectUsing (← `(input (fun x : ℝ => x ^ 2 ≤ 3) #[])) (← `(identityLift)) 1
+  expectUsing (← `(input (fun _ : ℝ => True) #[])) (← `(emptyRepr)) 0
+  expectUsing (← `(input (fun x : ℝ => x ^ 2 ≤ 3) #[])) (← `(identityRepr)) 1
 
 private def hiddenAbs (x : ℝ) : ℝ := |x|
 private def hiddenSquare (x : ℝ) : ℝ := x * x
@@ -231,44 +231,44 @@ private noncomputable def smoothModel (c : ℝ) : Morew.Problem ℝ ℝ where
   objective x := c * x
   feasible x := c * x ≤ 3
 
-private def modelTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 3) :=
+private def modelTargetRepr : Morew.ConstraintRepr (fun x : ℝ => x * x ≤ 3) :=
   .ofIff (fun x => (smoothModel x).feasible x) (fun _ => Iff.rfl)
 
-private def independentModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def independentModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel 2).feasible x) (fun _ => Iff.rfl)
 
-private def betaIndependentModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def betaIndependentModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel ((fun _ : ℝ => 2) x)).feasible x)
     (fun _ => Iff.rfl)
 
-private def projectionIndependentModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def projectionIndependentModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel ((2 : ℝ), x).1).feasible x)
     (fun _ => Iff.rfl)
 
-private def letIndependentModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def letIndependentModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel (let _y := x; 2)).feasible x)
     (fun _ => Iff.rfl)
 
-private def nestedLetModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def nestedLetModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x =>
     (smoothModel (let _h : True := True.intro; (fun _ : ℝ => 2) x)).feasible x)
     (fun _ => Iff.rfl)
 
-private def chainedLetModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def chainedLetModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x =>
     (smoothModel (let _h : True := True.intro
       let _unused := x
       (fun _ : ℝ => 2) x)).feasible x)
     (fun _ => Iff.rfl)
 
-private def compositionModelTargetLift :
-    Morew.ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+private def compositionModelTargetRepr :
+    Morew.ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x => (smoothModel (((fun _ : ℝ => 2) ∘ fun y => y * y) x)).feasible x)
     (fun _ => Iff.rfl)
 
@@ -278,21 +278,21 @@ private theorem positiveCoefficient_pos (c : ℝ) : 0 < positiveCoefficient c :=
   unfold positiveCoefficient
   positivity
 
-private def proofLetModelTargetLift (c : ℝ) :
-    Morew.ExactConstraintLift (fun x : ℝ => Real.log (positiveCoefficient c) * x ≤ 3) :=
+private def proofLetModelTargetRepr (c : ℝ) :
+    Morew.ConstraintRepr (fun x : ℝ => Real.log (positiveCoefficient c) * x ≤ 3) :=
   .ofIff (fun x =>
     let _h : 0 < positiveCoefficient c := positiveCoefficient_pos c
     (smoothModel ((fun _ : ℝ => Real.log (positiveCoefficient c)) x)).feasible x)
     (fun _ => Iff.rfl)
 
-private def nestedProofLetModelTargetLift (c : ℝ) :
-    Morew.ExactConstraintLift (fun x : ℝ => Real.log (positiveCoefficient c) * x ≤ 3) :=
+private def nestedProofLetModelTargetRepr (c : ℝ) :
+    Morew.ConstraintRepr (fun x : ℝ => Real.log (positiveCoefficient c) * x ≤ 3) :=
   .ofIff (fun x =>
     (smoothModel (let _h : 0 < positiveCoefficient c := positiveCoefficient_pos c
       ((fun _ : ℝ => Real.log (positiveCoefficient c)) ∘ fun y => y * y) x)).feasible x)
     (fun _ => Iff.rfl)
 
-private def literalModelTargetLift : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 3) :=
+private def literalModelTargetRepr : Morew.ConstraintRepr (fun x : ℝ => x * x ≤ 3) :=
   .ofIff (fun x =>
     (Morew.Problem.mk (fun y : ℝ => y) (fun y => x * y ≤ 3)).feasible x)
     (fun _ => Iff.rfl)
@@ -335,27 +335,27 @@ run_cmd liftTermElabM do
     let p : Morew.Problem ℝ ℝ := ⟨fun y => y, fun y => |x * y| ≤ 3⟩
     p.feasible x) #[])) 2
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(independentModelTargetLift)) 1
+    (← `(independentModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(betaIndependentModelTargetLift)) 1
+    (← `(betaIndependentModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(projectionIndependentModelTargetLift)) 1
+    (← `(projectionIndependentModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(letIndependentModelTargetLift)) 1
+    (← `(letIndependentModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(nestedLetModelTargetLift)) 1
+    (← `(nestedLetModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(chainedLetModelTargetLift)) 1
+    (← `(chainedLetModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => 2 * x ≤ 3) #[]))
-    (← `(compositionModelTargetLift)) 1
+    (← `(compositionModelTargetRepr)) 1
   expectUsing (← `(input (fun x : ℝ => Real.log (positiveCoefficient 1) * x ≤ 3) #[]))
-    (← `(proofLetModelTargetLift 1)) 1
+    (← `(proofLetModelTargetRepr 1)) 1
   expectUsing (← `(input (fun x : ℝ => Real.log (positiveCoefficient 1) * x ≤ 3) #[]))
-    (← `(nestedProofLetModelTargetLift 1)) 1
+    (← `(nestedProofLetModelTargetRepr 1)) 1
   expectUsing (← `(input (fun x : ℝ => x * x ≤ 3) #[]))
-    (← `(literalModelTargetLift)) 1
+    (← `(literalModelTargetRepr)) 1
   let source ← Domain.elaborate (← `(fun x : ℝ => x * x ≤ 3))
-  let rule ← Domain.elaborate (← `(modelTargetLift))
+  let rule ← Domain.elaborate (← `(modelTargetRepr))
   let .error error ← Rewrite.plan source #[] (some rule)
     | throwError "a decision-dependent named model target was unfolded"
   unless (← error.reason.toString).contains "generated row" do
@@ -386,16 +386,16 @@ run_cmd liftTermElabM do
 -- Explicit records cannot bypass exact-source, target-grammar or state checks.
 run_cmd liftTermElabM do
   let source ← Domain.elaborate (← `(fun x : ℝ => |x| ≤ 3))
-  let wrong ← Domain.elaborate (← `(identityLift))
+  let wrong ← Domain.elaborate (← `(identityRepr))
   let .error _ ← Rewrite.plan source #[] (some wrong)
     | throwError "mismatching explicit record was accepted"
   let smoothSource ← Domain.elaborate (← `(fun x : ℝ => x ^ 2 ≤ 3))
-  let opaqueTarget ← Domain.elaborate (← `(opaqueTargetLift))
+  let opaqueTarget ← Domain.elaborate (← `(opaqueTargetRepr))
   let .error error ← Rewrite.plan smoothSource #[] (some opaqueTarget)
     | throwError "a named target predicate was unfolded"
   unless (← error.reason.toString).contains "generated row" do
     throwError "named target did not fail at the target grammar boundary"
-  for term in #[← `(strictLift), ← `(disjunctiveLift), ← `(booleanAuxiliary)] do
+  for term in #[← `(strictRepr), ← `(disjunctiveRepr), ← `(booleanAuxiliary)] do
     let rule ← Domain.elaborate term
     let type ← whnf (← inferType rule)
     let .error _ ← Rewrite.plan type.getAppArgs[1]! #[] (some rule)

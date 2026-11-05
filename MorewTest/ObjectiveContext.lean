@@ -104,7 +104,7 @@ example (point : ℝ × ℝ) :
     weightedConstraintSource.feasible point ↔
       ∃ a : ℝ, (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
         (fun point a => point.1 * a ≤ 10) .upper).feasible (point, a) :=
-  weightedConstraintContext.toExactConstraintLift.source_iff_exists point
+  weightedConstraintContext.toConstraintRepr.source_iff_exists point
 
 /-- An upper-bound constraint representation also supports maximization. -/
 def maximumDecomposition : ConstraintDecomposition maximumSource (fun n => n ≤ 7) where

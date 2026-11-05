@@ -109,18 +109,18 @@ partial def structural (expression : Expr) (preserveLets : Bool := false) : Meta
   | _ => pure expression
 
 /-- Read the accepted family and represented predicate/function from a type. -/
-def representation (type : Expr) : MetaM (Family × Expr × Expr) := do
+def repr (type : Expr) : MetaM (Family × Expr × Expr) := do
   let type ← whnf type
   let args := type.getAppArgs
-  if type.isAppOfArity ``Morew.ExactConstraintLift 2 then
+  if type.isAppOfArity ``Morew.ConstraintRepr 2 then
     return (.exact, args[0]!, args[1]!)
-  if type.isAppOfArity ``Morew.GraphRepresentation 3 then
+  if type.isAppOfArity ``Morew.GraphRepr 3 then
     return (.graph, args[0]!, args[2]!)
-  if type.isAppOfArity ``Morew.EpigraphRepresentation 4 then
+  if type.isAppOfArity ``Morew.EpigraphRepr 4 then
     return (.epigraph, args[0]!, args[3]!)
-  if type.isAppOfArity ``Morew.HypographRepresentation 4 then
+  if type.isAppOfArity ``Morew.HypographRepr 4 then
     return (.hypograph, args[0]!, args[3]!)
-  throwError "expected ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation; reduced type is {type}"
+  throwError "expected ConstraintRepr, GraphRepr, EpigraphRepr, or HypographRepr; reduced type is {type}"
 
 private def fixedTypeHead? (type : Expr) : MetaM (Option Name) := do
   let type ← whnf type
@@ -140,7 +140,7 @@ private def entry (declaration : Name) : MetaM Entry := do
   let type := (← getConstInfo declaration).type
   forallTelescopeReducing type fun _ body => do
     let body ← whnf body
-    let (family, input, represented) ← representation body
+    let (family, input, represented) ← repr body
     let outputHead? ← if family == .exact then pure none else fixedTypeHead? body.getAppArgs[1]!
     withLocalDeclD `input input fun input => do
       let body ← structural (mkApp represented input)

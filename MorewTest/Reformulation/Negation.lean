@@ -171,7 +171,7 @@ namespace Custom
 def reward (center x : ℝ) : ℝ := min (x - center) (2 * x)
 
 @[morew_conic, morew_nlp]
-def rewardHypograph (center : ℝ) : HypographRepresentation (reward center) where
+def rewardHypograph (center : ℝ) : HypographRepr (reward center) where
   Auxiliary := Unit
   target x t _ := t ≤ x - center ∧ t ≤ 2 * x
   source_iff_exists x t := Rewrite.minHypograph.source_iff_exists (x - center, 2 * x) t
@@ -195,7 +195,7 @@ example : applied center = target center := rfl
 
 -- Distinct direct-negative and derived rules produce ambiguity.
 def negativeRewardEpigraph (center : ℝ) :
-    EpigraphRepresentation (fun x => -reward center x) where
+    EpigraphRepr (fun x => -reward center x) where
   Auxiliary := Unit
   target x t _ := -t ≤ x - center ∧ -t ≤ 2 * x
   source_iff_exists x t := by
@@ -242,8 +242,8 @@ example : nlpSigned center = target center := rfl
 
 -- Existing direct whole-predicate and graph rules still match directly.
 def exactRule (center : ℝ) :
-    ExactConstraintLift (fun p : ℝ × ℝ => p.2 ≤ reward center p.1) :=
-  (rewardHypograph center).toExactConstraintLift Prod.fst Prod.snd
+    ConstraintRepr (fun p : ℝ × ℝ => p.2 ≤ reward center p.1) :=
+  (rewardHypograph center).toConstraintRepr Prod.fst Prod.snd
 
 def wholeSource (center : ℝ) :=
   problem (x t : ℝ)
@@ -259,7 +259,7 @@ assert_not_exists exactUnchanged exactUnchanged.equiv
 
 def shifted (x : ℝ) : ℝ := x + 1
 
-def shiftedGraph : GraphRepresentation shifted where
+def shiftedGraph : GraphRepr shifted where
   Auxiliary := Unit
   target x t _ := t = x + 1
   source_iff_exists _ _ := by simp only [shifted, exists_const]
@@ -299,7 +299,7 @@ namespace FixedParameters
 
 def indexedAbs (n : Nat) (x : ℝ) : ℝ := |x - n|
 
-def indexedAbsEpigraph (n : Nat) : EpigraphRepresentation (indexedAbs n) where
+def indexedAbsEpigraph (n : Nat) : EpigraphRepr (indexedAbs n) where
   Auxiliary := Unit
   target x t _ := x - n ≤ t ∧ -(x - n) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - n) t
@@ -336,7 +336,7 @@ example (x t : ℝ) : (signedTarget n).feasible (x, t) ↔
 
 def finAbs {n : Nat} (i : Fin n) (x : ℝ) : ℝ := indexedAbs i.val x
 
-def finAbsEpigraph {n : Nat} (i : Fin n) : EpigraphRepresentation (finAbs i) :=
+def finAbsEpigraph {n : Nat} (i : Fin n) : EpigraphRepr (finAbs i) :=
   indexedAbsEpigraph i.val
 
 def finSource {n : Nat} (i : Fin n) :=

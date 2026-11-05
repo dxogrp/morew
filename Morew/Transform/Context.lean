@@ -150,11 +150,11 @@ namespace ConstraintBoundContext
 
 /-- Express a bound on a subexpression as an existential constraint equivalence
 under the retained assumptions. -/
-def toExactConstraintLift {X : Type u} {A : Type v} [Preorder A]
+def toConstraintRepr {X : Type u} {A : Type v} [Preorder A]
     {remainder source : X → Prop} {f : X → A} {C : X → A → Prop}
     {direction : BoundDirection}
     (context : ConstraintBoundContext remainder source f C direction) :
-    ExactConstraintLift (fun x => remainder x ∧ source x) where
+    ConstraintRepr (fun x => remainder x ∧ source x) where
   Auxiliary := A
   target x a := remainder x ∧ C x a ∧ direction.Rel (f x) a
   source_iff_exists x := by
@@ -211,9 +211,9 @@ noncomputable def constraintBoundAtEquiv
   let full : ConstraintDecomposition p (fun x => decomposition.remainder x ∧ source x) := {
     remainder := fun _ => True
     feasible_iff := fun x => by simpa only [true_and] using decomposition.feasible_iff x }
-  let lift := context.toExactConstraintLift
-  exact (exactConstraintLiftEquivalence p lift full).trans
-    (pointwiseEquiv (p.liftConstraint lift full)
+  let repr := context.toConstraintRepr
+  exact (replaceConstraintEquiv p repr full).trans
+    (pointwiseEquiv (p.replaceConstraint repr full)
       (p.constraintBoundAt (A := A) decomposition f C direction)
       (fun _ => rfl) (fun _ => ⟨fun h => h.2, fun h => ⟨trivial, h⟩⟩))
 

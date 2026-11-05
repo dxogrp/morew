@@ -10,7 +10,7 @@ namespace MorewTest.Rewrite.Registry.First
 /-- Independent imported registration used to check candidate-order invariance. -/
 @[morew_nlp]
 def first (c : ℝ) :
-    Morew.EpigraphRepresentation (MorewTest.Rewrite.Registry.Source.shifted c) :=
+    Morew.EpigraphRepr (MorewTest.Rewrite.Registry.Source.shifted c) :=
   MorewTest.Rewrite.Registry.Source.Scoped.shiftedEpigraph c
 
 -- Ordinary attribute erasure changes this module's active state, not the

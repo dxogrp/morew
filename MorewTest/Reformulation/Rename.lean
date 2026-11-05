@@ -213,7 +213,7 @@ def absoluteSource :=
       magnitude : |x| ≤ 3
       after : x ≤ 5
 
-def upperLift : ExactConstraintLift (fun x : ℝ => x ≤ 3) :=
+def upperRepr : ConstraintRepr (fun x : ℝ => x ≤ 3) :=
   .ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
 
 def lowerSource :=

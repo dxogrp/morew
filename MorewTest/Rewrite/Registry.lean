@@ -102,7 +102,7 @@ private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Uni
 
 private noncomputable def proofDomainValue (x : ℝ) (_f : (|x| ≤ 3) → ℝ) : ℝ := x
 
-private noncomputable def proofDomainRule : Morew.ExactConstraintLift
+private noncomputable def proofDomainRule : Morew.ConstraintRepr
     (fun x : ℝ => proofDomainValue x (fun _ : |x| ≤ 3 => x) ≤ 3) :=
   .ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
 
@@ -132,7 +132,7 @@ end HelperOpacity
 -- including nested values and projections from a larger decision domain.
 private noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
 
-private noncomputable def pairAbsRule : Morew.EpigraphRepresentation pairAbs where
+private noncomputable def pairAbsRule : Morew.EpigraphRepr pairAbs where
   Auxiliary := Unit
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
@@ -143,7 +143,7 @@ private noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ :=
   |p.1.1 - p.1.2 + p.2|
 
 private noncomputable def nestedPairAbsRule :
-    Morew.EpigraphRepresentation nestedPairAbs where
+    Morew.EpigraphRepr nestedPairAbs where
   Auxiliary := Unit
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
@@ -158,7 +158,7 @@ run_elab do
 
 private def nonnegativeValue (x : {x : ℝ // 0 ≤ x}) : ℝ := x.val
 
-private def nonnegativeValueRule : Morew.EpigraphRepresentation nonnegativeValue where
+private def nonnegativeValueRule : Morew.EpigraphRepr nonnegativeValue where
   Auxiliary := Unit
   target x t _ := x.val ≤ t
   source_iff_exists _ _ := by simp only [nonnegativeValue, exists_const]
@@ -172,7 +172,7 @@ run_elab do
 -- Exact inputs: infer the operand even when its type is the decision type.
 private noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
-private noncomputable def boundedRule : Morew.ExactConstraintLift bounded :=
+private noncomputable def boundedRule : Morew.ConstraintRepr bounded :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
     (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
 
@@ -181,13 +181,13 @@ run_elab do
   matched (← `(fun x : ℝ => bounded (x + 1))) ``boundedRule
   matched (← `(fun p : ℝ × ℝ => bounded (p.1 + 1))) ``boundedRule
 
-private noncomputable def exactSubtypeRule : Morew.ExactConstraintLift
+private noncomputable def exactSubtypeRule : Morew.ConstraintRepr
     (fun x : {x : ℝ // 0 ≤ x} => |x.val| ≤ 3) where
   Auxiliary := ℝ
   target x u := u = x.val ∧ u ≤ 3
   source_iff_exists x := by simp [abs_of_nonneg x.property]
 
-private noncomputable def exactNestedSubtypeRule : Morew.ExactConstraintLift
+private noncomputable def exactNestedSubtypeRule : Morew.ConstraintRepr
     (fun x : {x : {x : ℝ // 0 ≤ x} // x.val ≤ 2} => |x.val.val| ≤ 3) where
   Auxiliary := ℝ
   target x u := u = x.val.val ∧ u ≤ 3
@@ -285,16 +285,16 @@ run_elab do
       matched (← `(fun p : ℝ × ℝ => @LE.le ℝ nativeLE (shifted 3 p.1) p.2))
         ``Scoped.shiftedEpigraph
 
-private def empty : Morew.ExactConstraintLift (fun _ : ℝ => True) :=
+private def empty : Morew.ConstraintRepr (fun _ : ℝ => True) :=
   .ofIff (fun _ => True) (fun _ => Iff.rfl)
 
 run_elab do
   matched (← `(fun _ : ℝ => True)) ``empty
 
-private def lowerSpelling : Morew.ExactConstraintLift (fun x : ℝ => x * x ≤ 4) :=
+private def lowerSpelling : Morew.ConstraintRepr (fun x : ℝ => x * x ≤ 4) :=
   .ofIff (fun x => x * x ≤ 4) (fun _ => Iff.rfl)
 
-private def upperSpelling : Morew.ExactConstraintLift (fun x : ℝ => 4 ≥ x * x) :=
+private def upperSpelling : Morew.ConstraintRepr (fun x : ℝ => 4 ≥ x * x) :=
   .ofIff (fun x => x * x ≤ 4) (fun _ => Iff.rfl)
 
 section
@@ -314,7 +314,7 @@ run_elab do
 end
 
 private noncomputable def subtypeAbs :
-    Morew.EpigraphRepresentation (fun x : { x : ℝ // 0 ≤ x } => |x.val|) where
+    Morew.EpigraphRepr (fun x : { x : ℝ // 0 ≤ x } => |x.val|) where
   Auxiliary := Unit
   target x t _ := x.val ≤ t
   source_iff_exists x t := by simp [abs_of_nonneg x.property]
@@ -342,13 +342,13 @@ run_elab do
         throwError "irrelevant subtype evidence escaped into the target"
       checkWithKernel matched.sourceIff
 
-private def badHead : Morew.GraphRepresentation (fun x : ℝ => x) where
+private def badHead : Morew.GraphRepr (fun x : ℝ => x) where
   Auxiliary := Unit
   target x y _ := y = x
   source_iff_exists _ _ := by simp
 
 private noncomputable def pairRule :
-    Morew.EpigraphRepresentation (fun p : ℝ × ℝ => let (a, b) := p; max a b) :=
+    Morew.EpigraphRepr (fun p : ℝ × ℝ => let (a, b) := p; max a b) :=
   Morew.Rewrite.maxEpigraph
 
 section
@@ -363,7 +363,7 @@ end
 /-- A universe-polymorphic fixed head for checking actual universe inference. -/
 def generic {α : Type u} (x : α) : α := x
 
-def genericGraph {α : Type u} : Morew.GraphRepresentation (@generic α) where
+def genericGraph {α : Type u} : Morew.GraphRepr (@generic α) where
   Auxiliary := Unit
   target x y _ := y = x
   source_iff_exists _ _ := by simp [generic]

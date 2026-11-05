@@ -20,14 +20,14 @@ reformulation conicRows : absoluteSource := by
   rename magnitude to cap
   conic at cap
   rename cap_conic_1 to upper
-  conic at upper using upperLift
+  conic at upper using upperRepr
   rename upper_conic_1 to upper
 
 reformulation nlpRows : absoluteSource := by
   rename magnitude to cap
   nlp at cap
   rename cap_nlp_1 to upper
-  nlp at upper using upperLift
+  nlp at upper using upperRepr
   rename upper_nlp_1 to upper
 
 example (x : ℝ) : conicRows.feasible x ↔

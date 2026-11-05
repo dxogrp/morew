@@ -171,7 +171,7 @@ example : (schurMaximum.conicForm A).data.sense = ObjectiveSense.maximize := rfl
 
 /-- This target retains symmetric block constructors instead of a native matrix. -/
 def blockSchurRule (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
       (Matrix.diagonal ![p.2] - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
   .ofIff (fun p => A.fromBlocks p.1
     (SymmetricMatrix.ofMatrix (Matrix.diagonal ![p.2]) (Matrix.isSymm_diagonal _)) ∈ PSD (1 + 1))
@@ -254,7 +254,7 @@ run_cmd do
     Lean.throwError m!"compact PSD formatting changed an unrelated local definition: {ordinary}"
 
 def rightSchurRule (D : SymmetricMatrix 1) (hD : D.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
       (Matrix.diagonal ![p.2] - p.1 * D.toMatrix⁻¹ * p.1.transpose).PosSemidef) :=
   .ofIff (fun p =>
     (fromBlocksFin (Matrix.diagonal ![p.2]) p.1 p.1.transpose D.toMatrix).PosSemidef) (by

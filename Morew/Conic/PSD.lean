@@ -14,7 +14,7 @@ Real symmetric matrices inherit the entrywise supremum norm. Schur-complement
 identities use positive-definite pivots; block matrices are indexed by
 `Fin (m + n)`.
 
-`Morew.Conic.PSD.Representations` provides rewrite records for spectral bounds,
+`Morew.Conic.PSD.Repr` provides rewrite records for spectral bounds,
 matrix-fractional functions, log-determinants, and positive definiteness.
 -/
 

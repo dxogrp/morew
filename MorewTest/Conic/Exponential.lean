@@ -14,7 +14,7 @@ modeling language. Counterexamples distinguish totalized real formulas from
 their logarithm and entropy domains.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.Exponential
 

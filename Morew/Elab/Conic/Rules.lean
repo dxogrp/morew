@@ -4,12 +4,12 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Polyhedral
-import Morew.Conic.SecondOrder.Representations
-import Morew.Conic.Exponential.Representations
-import Morew.Conic.Power.Representations
+import Morew.Conic.SecondOrder.Repr
+import Morew.Conic.Exponential.Repr
+import Morew.Conic.Power.Repr
 import Morew.Conic.Power.Norm
 import Morew.Conic.Power.GeometricMean
-import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.Repr
 import Morew.Elab.Rewrite.Registry
 
 /-! Install built-in conic rules via `morew_conic`. Local attribute removal excludes a rule.

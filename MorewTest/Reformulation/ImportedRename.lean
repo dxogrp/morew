@@ -15,7 +15,7 @@ noncomputable section
 
 reformulation continued : conicRows := by
   rename upper to imported_upper
-  conic at imported_upper using upperLift
+  conic at imported_upper using upperRepr
   rename imported_upper_conic_1 to final_upper
 
 example : continued = conicRows := rfl

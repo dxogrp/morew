@@ -139,7 +139,7 @@ def emptyRatio :=
 reformulation emptyStillRequiresMargin : emptyRatio := by
   conic at ratio
 
-/-- error: constraint `square`: expected ExactConstraintLift -/
+/-- error: constraint `square`: expected ConstraintRepr -/
 #guard_msgs (substring := true) in
 reformulation invalidExplicitRule : source := by
   conic at square using (0 : ℝ)

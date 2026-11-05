@@ -186,7 +186,7 @@ run_cmd liftTermElabM do
   check (← `(fun z : (Fin 2 → ℝ) × ℝ => ‖WithLp.toLp 2 z.1‖ ≤ z.2)) (← socRows)
 
 noncomputable def customSOC {n : Nat} :
-    EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) :=
+    EpigraphRepr (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) :=
   Morew.Conic.SecondOrder.normEpigraph
 
 section
@@ -205,7 +205,7 @@ run_cmd liftTermElabM do
 end
 
 noncomputable def customPower {n : Nat} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) :=
+    EpigraphRepr (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) :=
   Morew.Conic.Power.normEpigraph p hp
 
 section
@@ -225,7 +225,7 @@ end
 -- The exact representation includes a nonlinear equality. Matching succeeds,
 -- but conic certification rejects that row.
 noncomputable def nonlinearPower {n : Nat} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
+    EpigraphRepr (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
   Auxiliary := (Fin n → ℝ) × ℝ
   target v t r := (Morew.Conic.Power.normEpigraph p hp).target v t r.1 ∧
     r.2 = ∑ i, (v i) ^ 2

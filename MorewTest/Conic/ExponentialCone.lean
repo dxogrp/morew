@@ -14,7 +14,7 @@ closedness, cone laws, and symbolic or empty products independently of automatic
 atom rewriting.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.ExponentialCone
 

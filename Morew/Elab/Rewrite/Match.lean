@@ -194,14 +194,14 @@ def expose (expression : Expr) : MetaM Expr := do
     let reduced ← Registry.structural value (preserveLets := true)
     let head := reduced.getAppFn.constName?
     let descriptor := match head with
-      | some ``Morew.ExactConstraintLift.target => some (3, 1)
-      | some ``Morew.GraphRepresentation.target => some (4, 1)
-      | some ``Morew.EpigraphRepresentation.target => some (5, 1)
-      | some ``Morew.HypographRepresentation.target => some (5, 1)
-      | some ``Morew.ExactConstraintLift.Auxiliary => some (3, 0)
-      | some ``Morew.GraphRepresentation.Auxiliary => some (4, 0)
-      | some ``Morew.EpigraphRepresentation.Auxiliary => some (5, 0)
-      | some ``Morew.HypographRepresentation.Auxiliary => some (5, 0)
+      | some ``Morew.ConstraintRepr.target => some (3, 1)
+      | some ``Morew.GraphRepr.target => some (4, 1)
+      | some ``Morew.EpigraphRepr.target => some (5, 1)
+      | some ``Morew.HypographRepr.target => some (5, 1)
+      | some ``Morew.ConstraintRepr.Auxiliary => some (3, 0)
+      | some ``Morew.GraphRepr.Auxiliary => some (4, 0)
+      | some ``Morew.EpigraphRepr.Auxiliary => some (5, 0)
+      | some ``Morew.HypographRepr.Auxiliary => some (5, 0)
       | _ => none
     if let some (prefixSize, field) := descriptor then
       let arguments := reduced.getAppArgs
@@ -221,7 +221,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let (parameters, _, type) ← forallMetaTelescopeReducing (← inferType originalRule)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
-  let (family, inputType, _) ← Registry.representation type
+  let (family, inputType, _) ← Registry.repr type
   if view?.isSome && family == .exact then
     throwError "comparison adaptation requires a graph, epigraph, or hypograph representation"
   let (input, proofArguments) ← if family == .exact then
@@ -236,19 +236,19 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
     | .exact => do
-      mkAppOptM ``Morew.ExactConstraintLift.source_iff_exists
+      mkAppOptM ``Morew.ConstraintRepr.source_iff_exists
         (prefixArgs ++ #[some rule, some input])
     | .graph =>
       let output ← mkFreshExprMVar type.getAppArgs[1]!
-      mkAppOptM ``Morew.GraphRepresentation.source_iff_exists
+      mkAppOptM ``Morew.GraphRepr.source_iff_exists
         (prefixArgs ++ #[some rule, some input, some output])
     | .epigraph =>
       let output ← mkFreshExprMVar type.getAppArgs[1]!
-      mkAppOptM ``Morew.EpigraphRepresentation.source_iff_exists
+      mkAppOptM ``Morew.EpigraphRepr.source_iff_exists
         (prefixArgs ++ #[some rule, some input, some output])
     | .hypograph =>
       let output ← mkFreshExprMVar type.getAppArgs[1]!
-      mkAppOptM ``Morew.HypographRepresentation.source_iff_exists
+      mkAppOptM ``Morew.HypographRepr.source_iff_exists
         (prefixArgs ++ #[some rule, some input, some output])
   let proofType ← whnf (← inferType proof)
   let mut expected ← normalizeComparison proofType.getAppArgs[0]!
@@ -305,7 +305,7 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
     | .error original =>
       let expression ← prepare
       let (_, _, type) ← forallMetaTelescopeReducing (← inferType expression)
-      let (family, inputType, _) ← Registry.representation type
+      let (family, inputType, _) ← Registry.repr type
       if family == .graph || family == .epigraph || family == .hypograph then
         let mut failure := original
         if family == .graph then
@@ -342,7 +342,7 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
   | .error (_, error) => throw error
 
 /-- Match and certify the supplied record in isolated attempts including `accept`.
-Retain successful proof dependencies. Concrete `ExactConstraintLift` records use
+Retain successful proof dependencies. Concrete `ConstraintRepr` records use
 the whole decision point, possibly as a subtype.
 Graph orientations and sign views form one candidate.
 Whole-predicate records keep literal matching. -/

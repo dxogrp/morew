@@ -117,15 +117,15 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
     | some _ => do
       let decomposition ← makeDecomposition presentation index oldProblem
       let (natural, primitive) ← match certificate with
-        | .exact lift => do
-          let natural ← mkAppM ``Morew.Problem.liftConstraint #[oldProblem, lift, decomposition]
-          let primitive ← mkAppM ``Morew.exactConstraintLiftEquivalence
-            #[oldProblem, lift, decomposition]
+        | .exact repr => do
+          let natural ← mkAppM ``Morew.Problem.replaceConstraint #[oldProblem, repr, decomposition]
+          let primitive ← mkAppM ``Morew.replaceConstraintEquiv
+            #[oldProblem, repr, decomposition]
           pure (natural, primitive)
         | .contextual _ target sourceIffExists => do
-          let natural ← mkAppM ``Morew.Problem.liftConstraintConditional
+          let natural ← mkAppM ``Morew.Problem.replaceConstraintUnder
             #[oldProblem, decomposition, target]
-          let primitive ← mkAppM ``Morew.conditionalConstraintLiftEquivalence
+          let primitive ← mkAppM ``Morew.replaceConstraintUnderEquiv
             #[oldProblem, decomposition, target, sourceIffExists]
           pure (natural, primitive)
       pure (natural, some primitive)
@@ -135,9 +135,9 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
       match auxiliary? with
       | none =>
         let sourceIff ← match certificate with
-          | .exact lift => do
-            let target ← mkAppM ``Morew.ExactConstraintLift.target #[lift]
-            let exact ← mkAppM ``Morew.ExactConstraintLift.source_iff_exists #[lift]
+          | .exact repr => do
+            let target ← mkAppM ``Morew.ConstraintRepr.target #[repr]
+            let exact ← mkAppM ``Morew.ConstraintRepr.source_iff_exists #[repr]
             let unitIff ← mkAppM ``unitTargetIff #[source, target, exact]
             pure (mkApp unitIff point)
           | .contextual _ target sourceIffExists => do

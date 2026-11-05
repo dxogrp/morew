@@ -54,15 +54,15 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
     | .ok result => pure result
   result.toResult.check source retained
   match result.certificate with
-  | .exact lift =>
+  | .exact repr =>
       if contextual then throwError "retained domain evidence escaped its contextual certificate"
       unless result.auxiliary?.isSome == auxiliary do throwError "unexpected auxiliary decision space"
       let expectedRows := if auxiliary then 2 else 1
       unless result.rowPredicates.size == expectedRows do throwError "unexpected generated row count"
-      discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
+      discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
       checkWithKernel result.targetIff
-      if lift.hasMVar || result.targetIff.hasMVar || lift.hasSorry then
-        throwError "incomplete exact exponential lift"
+      if repr.hasMVar || result.targetIff.hasMVar || repr.hasSorry then
+        throwError "incomplete exponential representation"
       let nextDomain ← match result.auxiliary? with
         | none => pure domain
         | some auxiliary => mkAppM ``Prod #[domain, auxiliary]

@@ -209,7 +209,7 @@ noncomputable def source :=
     subject to
       bound : |x| ≤ 3
 
-noncomputable def modelRule : ExactConstraintLift source.feasible :=
+noncomputable def modelRule : ConstraintRepr source.feasible :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
     (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
 

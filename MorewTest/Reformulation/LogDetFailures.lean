@@ -231,7 +231,7 @@ reformulation rejectedStaleLabel : validSource := by
 
 /-- A downstream alias remains a distinct candidate. -/
 def customLogDetHypograph {n : Nat} (hn : 0 < n) :
-    HypographRepresentation
+    HypographRepr
       (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} => Fn.logDet X.1) :=
   Morew.Conic.LogDet.hypograph hn
 

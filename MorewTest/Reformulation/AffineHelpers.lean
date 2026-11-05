@@ -158,10 +158,10 @@ namespace TypedPlans
 open Lean Lean.Meta
 
 private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
-  let .exact lift := result.certificate
-    | throwError "finite evidence changed an unconditional lift into a contextual lift"
-  discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
-  for proof in #[lift, result.targetIff] do
+  let .exact repr := result.certificate
+    | throwError "finite evidence made an unconditional representation contextual"
+  discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
+  for proof in #[repr, result.targetIff] do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
   checkWithKernel result.targetIff
   for row in result.certifiedRows do
@@ -204,9 +204,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite infimum-coordinate plan failed: {error.reason}"
 
-def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
-    ExactConstraintLift (fun (_x : ι → ℝ) => True) :=
-  ExactConstraintLift.ofIff
+def helperTargetRepr {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
+    ConstraintRepr (fun (_x : ι → ℝ) => True) :=
+  ConstraintRepr.ofIff
     (fun x => finiteDot e a x = finiteDot e a x)
     (fun _ => ⟨fun _ => rfl, fun _ => True.intro⟩)
 
@@ -214,7 +214,7 @@ def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
 -- representation's target contains a helper carrying the needed enumeration.
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
-    (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetLift e a)))
+    (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetRepr e a)))
   lambdaBoundedTelescope expression 3 fun _ pair => do
     let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!

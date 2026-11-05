@@ -111,7 +111,7 @@ example : comparisonsReady.nlpForm.data.rowCount = 6 := rfl
 
 section BoundAmbiguity
 
-def negativeAbsHypograph : HypographRepresentation (fun x : ℝ => -|x|) where
+def negativeAbsHypograph : HypographRepr (fun x : ℝ => -|x|) where
   Auxiliary := Unit
   target x t _ := x ≤ -t ∧ -x ≤ -t
   source_iff_exists x t := by
@@ -135,7 +135,7 @@ end BoundAmbiguity
 namespace Domain
 
 def positiveLogHypograph :
-    HypographRepresentation (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
+    HypographRepr (fun x : {x : ℝ // 0 < x} => Real.log x.1) where
   Auxiliary := Unit
   target x t _ := Real.exp t ≤ x.1
   source_iff_exists x t := by
@@ -173,7 +173,7 @@ assert_not_exists rejectedMissing rejectedMissing.equiv
 def guardedIdentity (x : ℝ) : ℝ := x
 
 def guardedHypograph :
-    HypographRepresentation (fun x : {x : ℝ // 0 ≤ x} => guardedIdentity x.1) where
+    HypographRepr (fun x : {x : ℝ // 0 ≤ x} => guardedIdentity x.1) where
   Auxiliary := Unit
   target x t _ := t ≤ x.1
   source_iff_exists _ _ := by simp only [guardedIdentity, exists_const]
@@ -201,7 +201,7 @@ theorem absolute_iff (x y : ℝ) : y = |x| ↔ 0 ≤ y ∧ y ^ 2 = x ^ 2 := by
   · rintro ⟨hy, hsq⟩
     simpa only [abs_of_nonneg hy] using (sq_eq_sq_iff_abs_eq_abs y x).mp hsq
 
-def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
+def absoluteGraph : GraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x y _ := 0 ≤ y ∧ y ^ 2 = x ^ 2
   source_iff_exists x y := by
@@ -262,7 +262,7 @@ example (x y : ℝ) : equationsTarget.feasible (x, y) ↔
     0 ≤ y ∧ y ^ 2 = x ^ 2 ∧
     0 ≤ -y ∧ (-y) ^ 2 = x ^ 2 := Iff.rfl
 
-def negativeAbsoluteGraph : GraphRepresentation (fun x : ℝ => -|x|) where
+def negativeAbsoluteGraph : GraphRepr (fun x : ℝ => -|x|) where
   Auxiliary := Unit
   target x y _ := 0 ≤ -y ∧ (-y) ^ 2 = x ^ 2
   source_iff_exists x y := by
@@ -312,7 +312,7 @@ namespace Guarded
 attribute [-morew_nlp] absoluteGraph
 
 def nonnegativeAbsoluteGraph :
-    GraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => |x.1|) where
+    GraphRepr (fun x : {x : ℝ // 0 ≤ x} => |x.1|) where
   Auxiliary := Unit
   target x y _ := y = x.1
   source_iff_exists x _ := by simp only [exists_const, abs_of_nonneg x.2]
@@ -371,7 +371,7 @@ reformulation alteredSelected : alteredNegation := by nlp at bound using absolut
 assert_not_exists alteredAutomatic alteredSelected
 
 -- A valid graph record whose target is still nonsmooth is not an NLP certificate.
-def unsmoothedGraph : GraphRepresentation (fun x : ℝ => |x|) where
+def unsmoothedGraph : GraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x y _ := y = |x|
   source_iff_exists _ _ := by simp only [exists_const]

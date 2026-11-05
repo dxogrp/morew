@@ -14,7 +14,7 @@ coordinates, every supported exponent regime, and negative hypograph bounds.
 They depend only on the semantic modules.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.Power
 

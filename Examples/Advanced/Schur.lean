@@ -31,7 +31,7 @@ open Morew Morew.Conic
 noncomputable section
 
 def schurCertificate {m n : Nat} (A : SymmetricMatrix m) (hA : A.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
       (Matrix.diagonal (fun _ : Fin n => p.2) - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
   .ofIff (fun p =>
     SymmetricMatrix.fromBlocks A p.1

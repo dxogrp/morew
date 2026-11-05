@@ -15,7 +15,7 @@ orientations without installing the DSL. Rectangular off-diagonal blocks and
 zero-dimensional blocks test the canonical indexing convention.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.PositiveSemidefinite
 

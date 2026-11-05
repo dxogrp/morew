@@ -69,9 +69,9 @@ theorem removeConstraint_feasible {X : Type u} {V : Type v}
     (p.removeConstraint decomposition).feasible point ↔ decomposition.remainder point := Iff.rfl
 
 /-- Replace a selected constraint by a predicate on the original and auxiliary
-coordinates. `conditionalConstraintLiftEquivalence` proves equivalence under
+coordinates. `replaceConstraintUnderEquiv` proves equivalence under
 the retained constraints. -/
-def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
+def replaceConstraintUnder {X : Type u} {V : Type v} {A : Type w}
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) : Problem (X × A) V where
@@ -79,52 +79,52 @@ def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
   feasible point := decomposition.remainder point.1 ∧ target point.1 point.2
 
 @[simp]
-theorem liftConstraintConditional_objective
+theorem replaceConstraintUnder_objective
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
     (p : Problem X V) (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) (point : X × A) :
-    (p.liftConstraintConditional decomposition target).objective point =
+    (p.replaceConstraintUnder decomposition target).objective point =
       p.objective point.1 := rfl
 
 @[simp]
-theorem liftConstraintConditional_feasible
+theorem replaceConstraintUnder_feasible
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
     (p : Problem X V) (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) (point : X × A) :
-    (p.liftConstraintConditional decomposition target).feasible point ↔
+    (p.replaceConstraintUnder decomposition target).feasible point ↔
       decomposition.remainder point.1 ∧ target point.1 point.2 := Iff.rfl
 
 /-- Replace a selected constraint by an existentially equivalent predicate,
 retaining the other constraints. -/
-def liftConstraint {X : Type u} {V : Type v} {source : X → Prop}
+def replaceConstraint {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    Problem (X × lift.Auxiliary) V where
+    Problem (X × repr.Auxiliary) V where
   objective point := p.objective point.1
   feasible point :=
-    decomposition.remainder point.1 ∧ lift.target point.1 point.2
+    decomposition.remainder point.1 ∧ repr.target point.1 point.2
 
 @[simp]
-theorem liftConstraint_objective
+theorem replaceConstraint_objective
     {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source)
-    (point : X × lift.Auxiliary) :
-    (p.liftConstraint lift decomposition).objective point =
+    (point : X × repr.Auxiliary) :
+    (p.replaceConstraint repr decomposition).objective point =
       p.objective point.1 := rfl
 
 @[simp]
-theorem liftConstraint_feasible
+theorem replaceConstraint_feasible
     {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source)
-    (point : X × lift.Auxiliary) :
-    (p.liftConstraint lift decomposition).feasible point ↔
+    (point : X × repr.Auxiliary) :
+    (p.replaceConstraint repr decomposition).feasible point ↔
       decomposition.remainder point.1 ∧
-        lift.target point.1 point.2 := Iff.rfl
+        repr.target point.1 point.2 := Iff.rfl
 
 /-- Pull an optimization problem back along a map of decision spaces. -/
 def pullback {X : Type u} {Y : Type v} {V : Type w}
@@ -238,14 +238,14 @@ def restrictionEquiv {X : Type u} {V : Type v} [Preorder V]
 /-- Replacing a constraint by equivalent constraints with auxiliary variables
 preserves global optimization. The forward map chooses feasible auxiliary
 values; the backward map projects to the original coordinates. -/
-noncomputable def conditionalConstraintLiftEquivalence
+noncomputable def replaceConstraintUnderEquiv
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop} [Preorder V]
     (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop)
     (source_iff_exists : ∀ x, decomposition.remainder x →
       (source x ↔ ∃ a, target x a)) :
-    GlobalEquiv p (p.liftConstraintConditional decomposition target) where
+    GlobalEquiv p (p.replaceConstraintUnder decomposition target) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
@@ -266,25 +266,25 @@ noncomputable def conditionalConstraintLiftEquivalence
 
 /-- Replacing a constraint by an existentially equivalent predicate preserves
 global optimization. -/
-noncomputable def exactConstraintLiftEquivalence
+noncomputable def replaceConstraintEquiv
     {X : Type u} {V : Type v} {source : X → Prop} [Preorder V]
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    GlobalEquiv p (p.liftConstraint lift decomposition) where
+    GlobalEquiv p (p.replaceConstraint repr decomposition) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
         (decomposition.feasible_iff x.1).mp x.2
-      have hexists : ∃ a, lift.target x.1 a :=
-        (lift.source_iff_exists x.1).mp hparts.2
+      have hexists : ∃ a, repr.target x.1 a :=
+        (repr.source_iff_exists x.1).mp hparts.2
       exact ⟨(x.1, Classical.choose hexists), hparts.1,
         Classical.choose_spec hexists⟩
     objective_le := fun _ => le_rfl }
   backward := {
     map := fun point => by
       have hsource : source point.1.1 :=
-        (lift.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
+        (repr.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
       exact ⟨point.1.1,
         (decomposition.feasible_iff point.1.1).mpr
           ⟨point.2.1, hsource⟩⟩

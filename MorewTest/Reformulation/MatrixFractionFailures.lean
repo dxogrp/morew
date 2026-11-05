@@ -153,7 +153,7 @@ def validSource :=
 
 /-- A downstream alias participates in ordinary exact-rule selection. -/
 def customMatrixFracEpigraph {n : Nat} :
-    EpigraphRepresentation (fun p : (Fin n → ℝ) ×
+    EpigraphRepr (fun p : (Fin n → ℝ) ×
       {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matFrac p.1 p.2.1) :=
   Conic.MatrixFraction.epigraph
 

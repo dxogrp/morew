@@ -67,8 +67,8 @@ private theorem conditionalExact (x : ℕ) (retained : x ≤ 3) :
   ⟨fun _ => ⟨x, rfl⟩, fun _ => retained.trans (by decide)⟩
 
 noncomputable example : GlobalEquiv conditionalProblem
-    (conditionalProblem.liftConstraintConditional conditionalDecomposition (fun x a : ℕ => a = x)) :=
-  conditionalConstraintLiftEquivalence conditionalProblem conditionalDecomposition
+    (conditionalProblem.replaceConstraintUnder conditionalDecomposition (fun x a : ℕ => a = x)) :=
+  replaceConstraintUnderEquiv conditionalProblem conditionalDecomposition
     (fun x a : ℕ => a = x) conditionalExact
 
 example : ¬ (∀ x : ℕ, x ≤ 5 ↔ ∃ a : ℕ, a = x) := by
@@ -86,9 +86,9 @@ def impossibleDecomposition : ConstraintDecomposition impossibleProblem (fun _ =
   feasible_iff _ := Iff.rfl
 
 noncomputable example : GlobalEquiv impossibleProblem
-    (impossibleProblem.liftConstraintConditional impossibleDecomposition
+    (impossibleProblem.replaceConstraintUnder impossibleDecomposition
       (fun (_ : ℕ) (_ : Empty) => True)) :=
-  conditionalConstraintLiftEquivalence impossibleProblem impossibleDecomposition
+  replaceConstraintUnderEquiv impossibleProblem impossibleDecomposition
     (fun (_ : ℕ) (_ : Empty) => True) (fun _ h => h.elim)
 
 end MorewTest.Transform

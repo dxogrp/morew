@@ -18,7 +18,7 @@ namespace InstanceSafety
 
 def affineAtom (x : ℝ) : ℝ := x + 1
 
-def affineGraph : GraphRepresentation affineAtom where
+def affineGraph : GraphRepr affineAtom where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists _ _ := by simp only [affineAtom, exists_const]

@@ -195,16 +195,16 @@ example (x : Parameter.Index → ℝ) :
     automaticTarget.feasible x ↔
       Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
 
-def exactLift : ExactConstraintLift (fun x : Parameter.Index → ℝ =>
+def exactRepr : ConstraintRepr (fun x : Parameter.Index → ℝ =>
     |@dotProduct Parameter.Index ℝ
       (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1) :=
-  ExactConstraintLift.ofIff (fun x =>
+  ConstraintRepr.ofIff (fun x =>
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
     (fun _ => Morew.Rewrite.Polyhedral.abs_le_iff _ _)
 
 reformulation customTarget : source := by
-  conic at bound using exactLift
+  conic at bound using exactRepr
 
 example : GlobalEquiv source customTarget := customTarget.equiv
 
@@ -476,24 +476,24 @@ namespace Custom
 
 def userFunction (x : ℝ) : ℝ := x
 
-def graph : GraphRepresentation userFunction where
+def graph : GraphRepr userFunction where
   Auxiliary := Unit
   target x y _ := y = x
   source_iff_exists x y := by simp [userFunction]
 
-def epiRule : EpigraphRepresentation userFunction where
+def epiRule : EpigraphRepr userFunction where
   Auxiliary := Unit
   target x t _ := x ≤ t
   source_iff_exists x t := by simp [userFunction]
 
-def hypoRule : HypographRepresentation userFunction where
+def hypoRule : HypographRepr userFunction where
   Auxiliary := Unit
   target x t _ := t ≤ x
   source_iff_exists x t := by simp [userFunction]
 
-def exactLift : ExactConstraintLift
+def exactRepr : ConstraintRepr
     (fun point : ℝ × ℝ => point.1 ≤ 5 ∧ point.2 ≤ 6) :=
-  ExactConstraintLift.ofIff (fun point => point.1 ≤ 5 ∧ point.2 ≤ 6)
+  ConstraintRepr.ofIff (fun point => point.1 ≤ 5 ∧ point.2 ≤ 6)
     (fun _ => Iff.rfl)
 
 def source :=
@@ -509,7 +509,7 @@ reformulation target : source := by
   conic at graph_row using graph
   conic at epigraph_row using epiRule
   conic at hypograph_row using hypoRule
-  conic at grouped using exactLift
+  conic at grouped using exactRepr
 
 example : GlobalEquiv source target := target.equiv
 
@@ -517,7 +517,7 @@ example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ∧ x ≤ y ∧ y ≤ x ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
 /-- A local alias in a replacement row may depend on the auxiliary decision. -/
-def auxiliaryAliasLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def auxiliaryAliasRepr : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = x ∧ (let y := u; 0 ≤ y)
   source_iff_exists x := by simp
@@ -531,7 +531,7 @@ def auxiliaryAliasSource :=
       after : x ≤ 5
 
 reformulation auxiliaryAliasTarget : auxiliaryAliasSource := by
-  conic at positive using auxiliaryAliasLift
+  conic at positive using auxiliaryAliasRepr
 
 example : GlobalEquiv auxiliaryAliasSource auxiliaryAliasTarget :=
   auxiliaryAliasTarget.equiv
@@ -539,8 +539,8 @@ example : GlobalEquiv auxiliaryAliasSource auxiliaryAliasTarget :=
 example (x u : ℝ) : auxiliaryAliasTarget.feasible (x, u) ↔
     x ≤ 3 ∧ u = x ∧ 0 ≤ u ∧ x ≤ 5 := Iff.rfl
 
-def trivialLift : ExactConstraintLift (fun x : ℝ => x = x) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => by simp)
+def trivialRepr : ConstraintRepr (fun x : ℝ => x = x) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => by simp)
 
 def removableSource :=
   problem (x : ℝ)
@@ -550,7 +550,7 @@ def removableSource :=
       bound : |x| ≤ 3
 
 reformulation removableTarget : removableSource := by
-  conic at removable using trivialLift
+  conic at removable using trivialRepr
   conic at bound
 
 example (x : ℝ) : removableTarget.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl

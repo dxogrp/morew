@@ -141,7 +141,7 @@ example : NLP.Form (projectedGroupAgain c) := projectedGroupAgain.nlpForm c
 
 -- Explicit exact records may also place their target's evidence beneath a
 -- projection; both the selected result and a later terminal command retain it.
-def projectedGraph : GraphRepresentation (weighted c) where
+def projectedGraph : GraphRepr (weighted c) where
   Auxiliary := Unit
   target x y _ :=
     (let _h : 0 < coefficient c := coefficient_pos c

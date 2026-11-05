@@ -242,7 +242,7 @@ run_cmd liftTermElabM do
   checkEvidence (← `(fun (q : Fin 2 → ℝ) (_h : 1 < q 0) (_x : ℝ) (i : Fin 2) =>
     1 < (ENNReal.ofReal (q i)).toReal)) 2 true false
 
-def rationalFamilyLift : ExactConstraintLift (fun x : ℝ =>
+def rationalFamilyRepr : ConstraintRepr (fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (3 / 2 : ℝ))) where
   Auxiliary := Unit
   target x _ := ∀ _i : Fin 2,
@@ -252,11 +252,12 @@ def rationalFamilyLift : ExactConstraintLift (fun x : ℝ =>
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (3 / 2 : ℝ))))
-  let .ok result ← Morew.Elab.Conic.Plan.plan source (mkConst ``rationalFamilyLift)
-    | throwError "exact grouped power lift was rejected"
+  let .ok result ← Morew.Elab.Conic.Plan.plan source (mkConst ``rationalFamilyRepr)
+    | throwError "exact grouped power representation was rejected"
   result.toResult.check source #[]
   unless result.rowPredicates.size == 1 && result.certifiedRows.size == 1 &&
-      result.auxiliary?.isNone do throwError "grouped power lift changed row or auxiliary count"
+      result.auxiliary?.isNone do
+    throwError "grouped power representation changed row or auxiliary count"
   lambdaTelescope result.rowPredicates[0]! fun _ body =>
     forallTelescope body fun indices membership => do
       unless indices.size == 1 && membership.isAppOfArity ``Membership.mem 5 do
@@ -266,8 +267,8 @@ run_cmd liftTermElabM do
       unless ← isDefEq cone.getAppArgs[0]! (← elaborate (← `((2 / 3 : ℝ)))) do
         throwError "literal rational exponent was not normalized under the quantifier"
 
-def extendedFamilyLift (p : ℝ≥0∞) (hp : 1 < p.toReal) :
-    ExactConstraintLift (fun x : ℝ => ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / p.toReal)) where
+def extendedFamilyRepr (p : ℝ≥0∞) (hp : 1 < p.toReal) :
+    ConstraintRepr (fun x : ℝ => ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / p.toReal)) where
   Auxiliary := Unit
   target x _ := ∀ _i : Fin 2,
     (x, 1, x) ∈ (Cone.power (1 / p.toReal) (inverseRange p.toReal hp)).carrier
@@ -277,7 +278,7 @@ private def checkExtendedPlan (parameter evidence expected : TSyntax `term)
     (retainedName? : Option Name := none) : TermElabM Unit := do
   let source ← elaborate (← `(fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / ($parameter : ℝ≥0∞).toReal)))
-  let rule ← elaborate (← `(extendedFamilyLift $parameter $evidence))
+  let rule ← elaborate (← `(extendedFamilyRepr $parameter $evidence))
   let .ok result ← Morew.Elab.Conic.Plan.plan source rule
     | throwError "extended-real parameter family was rejected"
   result.toResult.check source #[]
@@ -302,7 +303,7 @@ run_cmd liftTermElabM do
   checkExtendedPlan (← `(namedExponent)) (← `(by norm_num [namedExponent]))
     (← `((1 / namedExponent.toReal : ℝ))) (some ``namedExponent)
 
-def castFamilyLift (n : ℕ) (hn : 0 < n) : ExactConstraintLift (fun x : ℝ =>
+def castFamilyRepr (n : ℕ) (hn : 0 < n) : ConstraintRepr (fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / ((n : ℝ) + 1))) where
   Auxiliary := Unit
   target x _ := ∀ _i : Fin 2,
@@ -316,7 +317,7 @@ run_cmd liftTermElabM do
   for (dimension, named) in #[(← `((3 : ℕ)), false), (← `(namedDimension), true)] do
     let source ← elaborate (← `(fun x : ℝ =>
       ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (($dimension : ℕ) + 1 : ℝ))))
-    let rule ← elaborate (← `(castFamilyLift $dimension (by decide)))
+    let rule ← elaborate (← `(castFamilyRepr $dimension (by decide)))
     let .ok result ← Morew.Elab.Conic.Plan.plan source rule
       | throwError "cast-parameter family was rejected"
     result.toResult.check source #[]

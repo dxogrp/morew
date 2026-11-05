@@ -12,7 +12,7 @@ import Morew.Conic.Power.Basic
 `|z| ≤ x ^ α * y ^ (1 - α)`. The set is defined for all real `α`;
 `Cone.power α hα` includes a proof of `0 < α ∧ α < 1`.
 
-`Morew.Conic.Power.Representations` supplies scalar rewrite records,
+`Morew.Conic.Power.Repr` supplies scalar rewrite records,
 `Morew.Conic.Power.Norm` treats finite `p`-norms, and
 `Morew.Conic.Power.GeometricMean` treats geometric means and inverse products.
 -/
