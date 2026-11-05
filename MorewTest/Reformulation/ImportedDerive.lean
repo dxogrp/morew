@@ -18,15 +18,15 @@ reformulation continuedMaximum : withMargin := by
     exact lt_of_lt_of_le zero_lt_one hp.2.2)
   substitute x := Real.exp u
 
-example : GlobalEquivalence transitiveSource continuedMaximum :=
-  withMargin.equivalence.trans continuedMaximum.equivalence
+example : GlobalEquiv transitiveSource continuedMaximum :=
+  withMargin.equiv.trans continuedMaximum.equiv
 example : continuedMaximum = exponential := rfl
 
 reformulation continuedMinimum : afterEpigraph := by
   derive copied_bound : x ^ 2 ≤ t using (by intro point hp; exact hp.1)
 
-example : GlobalEquivalence quadratic continuedMinimum :=
-  afterEpigraph.equivalence.trans continuedMinimum.equivalence
+example : GlobalEquiv quadratic continuedMinimum :=
+  afterEpigraph.equiv.trans continuedMinimum.equiv
 example (x t : ℝ) : continuedMinimum.feasible (x, t) ↔
     x ^ 2 ≤ t ∧ x ^ 2 ≤ t + 1 ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -48,8 +48,8 @@ reformulation continuedFamily : (shiftedDerived offset) := by
   derive repeated_lower : 0 ≤ shifted using (by intro point hp; exact hp.1)
   substitute x := u
 
-example : GlobalEquivalence (shiftedFamily offset) (continuedFamily offset) :=
-  (shiftedDerived.equivalence offset).trans (continuedFamily.equivalence offset)
+example : GlobalEquiv (shiftedFamily offset) (continuedFamily offset) :=
+  (shiftedDerived.equiv offset).trans (continuedFamily.equiv offset)
 example (u : ℝ) : (continuedFamily offset).feasible u ↔
     0 ≤ u + offset ∧ 0 ≤ (u + offset) + (u + offset) ∧ 0 ≤ u + offset := Iff.rfl
 end
@@ -64,10 +64,10 @@ reformulation continuedAuxiliary : (freshenedAuxiliary auxiliary_aux auxiliary_a
     intro point _
     exact sq_nonneg point.2)
 
-example : GlobalEquivalence SecondOrderCustom.source
+example : GlobalEquiv SecondOrderCustom.source
     (continuedAuxiliary auxiliary_aux auxiliary_aux_1) :=
-  (freshenedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1).trans
-    (continuedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1)
+  (freshenedAuxiliary.equiv auxiliary_aux auxiliary_aux_1).trans
+    (continuedAuxiliary.equiv auxiliary_aux auxiliary_aux_1)
 end
 
 namespace Shadow
@@ -80,8 +80,8 @@ reformulation renamed : Hygiene.target := by
 
 example (u : ℝ) : renamed.feasible u ↔
     Derive.Hygiene.cap u ∧ Derive.Hygiene.cap u ∧ Derive.Hygiene.cap u := Iff.rfl
-example : GlobalEquivalence Hygiene.source renamed :=
-  Hygiene.target.equivalence.trans renamed.equivalence
+example : GlobalEquiv Hygiene.source renamed :=
+  Hygiene.target.equiv.trans renamed.equiv
 
 run_cmd do
   for (original, copied) in #[

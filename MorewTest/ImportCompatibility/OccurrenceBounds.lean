@@ -23,8 +23,8 @@ def score (offset x : ℝ) : ℝ := offset + x
 reformulation constraintLift : (LocalDefinitions.Defined.family 2) := by
   epigraph t at loss in cap as loss_bound
 
-example : GlobalEquivalence (LocalDefinitions.Defined.family 2) constraintLift :=
-  constraintLift.equivalence
+example : GlobalEquiv (LocalDefinitions.Defined.family 2) constraintLift :=
+  constraintLift.equiv
 
 example (x t : ℝ) : constraintLift.objective (x, t) =
     LocalDefinitions.Defined.External.score 2 x +
@@ -44,8 +44,8 @@ example (x t : ℝ) : objectiveLift.feasible (x, t) ↔
 reformulation generatedLift : (LocalDefinitions.Defined.generated 4) := by
   epigraph s at loss in cap
 
-example : GlobalEquivalence (LocalDefinitions.Defined.generated 4) generatedLift :=
-  generatedLift.equivalence
+example : GlobalEquiv (LocalDefinitions.Defined.generated 4) generatedLift :=
+  generatedLift.equiv
 
 example (x t s : ℝ) : generatedLift.feasible ((x, t), s) ↔
     s ≤ 10 ∧ (LocalDefinitions.Defined.External.score 4 x +
@@ -56,8 +56,8 @@ example (x t s : ℝ) : generatedLift.feasible ((x, t), s) ↔
 reformulation generatedObjective : (LocalDefinitions.Defined.generated 4) := by
   epigraph s at (t)
 
-example : GlobalEquivalence (LocalDefinitions.Defined.generated 4) generatedObjective :=
-  generatedObjective.equivalence
+example : GlobalEquiv (LocalDefinitions.Defined.generated 4) generatedObjective :=
+  generatedObjective.equiv
 example (x t s : ℝ) : generatedObjective.objective ((x, t), s) = s := rfl
 example (x t s : ℝ) : generatedObjective.feasible ((x, t), s) ↔
     LocalDefinitions.Defined.External.score 4 x ≤ 10 ∧

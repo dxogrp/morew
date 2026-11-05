@@ -35,12 +35,12 @@ reformulation target : source := by
   epigraph t
 
 /--
-info: MorewTest.Surface.CertificateNamespaceCapture.target.equivalence : GlobalEquivalence source target
+info: MorewTest.Surface.CertificateNamespaceCapture.target.equiv : GlobalEquiv source target
 -/
 #guard_msgs in
-#check target.equivalence
+#check target.equiv
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 end CertificateNamespaceCapture
 
@@ -66,7 +66,7 @@ def target.coverage := 0
 reformulation target : source := by
   substitute x := u using coverage
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 end UsingWitnessCapture
 
@@ -93,7 +93,7 @@ def MorewTest.Surface.DuplicatedPrefixCapture.Witnesses.coverage := 0
 reformulation target : source := by
   substitute x := u using coverage
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 end DuplicatedPrefixCapture
 
@@ -110,8 +110,8 @@ def Nested.f (x : ℝ) : ℝ := x - 1
 reformulation Nested.target : source := by
   epigraph t
 
-example : GlobalEquivalence source Nested.target :=
-  Nested.target.equivalence
+example : GlobalEquiv source Nested.target :=
+  Nested.target.equiv
 
 example (x t : ℝ) :
     Nested.target.feasible (x, t) ↔ f x ≤ t := Iff.rfl
@@ -148,7 +148,7 @@ def f (_ : Domain) : ℝ := 0
 reformulation target : SourceNS.source := by
   epigraph t
 
-example : GlobalEquivalence SourceNS.source target := target.equivalence
+example : GlobalEquiv SourceNS.source target := target.equiv
 
 example (x : SourceNS.Domain) (t : ℝ) :
     target.feasible (x, t) ↔ SourceNS.Functions.f x ≤ t := Iff.rfl

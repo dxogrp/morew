@@ -36,7 +36,7 @@ reformulation lowered : source := by
   conic at norm
   conic at quotient
 
-example : GlobalEquivalence source lowered := lowered.equivalence
+example : GlobalEquiv source lowered := lowered.equiv
 
 end
 end MorewTest.ImportCompatibility.SecondOrder

@@ -35,7 +35,7 @@ reformulation missing : source certificate missingAlias := by
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in #[`missing, `missing.equivalence, `missingAlias] do
+  for name in #[`missing, `missing.equiv, `missingAlias] do
     let full := `MorewTest.Reformulation.SecondOrderFailures ++ name
     if env.contains full || (Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed second-order rewrite emitted {full}"
@@ -139,7 +139,7 @@ def emptyRatio :=
 reformulation emptyStillRequiresMargin : emptyRatio := by
   conic at ratio
 
-/-- error: constraint `square`: expected ExactConstraintLift -/
+/-- error: constraint `square`: expected ConstraintRepr -/
 #guard_msgs (substring := true) in
 reformulation invalidExplicitRule : source := by
   conic at square using (0 : ℝ)

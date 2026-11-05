@@ -63,10 +63,10 @@ private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM Str
     | throwError "cannot derive a generated-name family from constraint `{name}`"
   return stem
 
-private def positiveSemidefiniteMembership {n : ℕ}
+private def psdMembership {n : ℕ}
     (matrix : Matrix (Fin n) (Fin n) ℝ) (symmetric : matrix.IsSymm) : Prop :=
   Morew.Conic.SymmetricMatrix.ofMatrix matrix symmetric ∈
-    (Morew.Conic.Cone.positiveSemidefinite n).carrier
+    (Morew.Conic.Cone.psd n).carrier
 
 private theorem retainedMatrixIsSymm {n : ℕ}
     {retained checked : Matrix (Fin n) (Fin n) ℝ}
@@ -74,7 +74,7 @@ private theorem retainedMatrixIsSymm {n : ℕ}
   equality.symm ▸ symmetry
 
 -- Recover semantic symmetry evidence and transport it along checked matrix equalities.
-private def normalizeRetainedPositiveSemidefinite (normalizationProof : Term)
+private def normalizeRetainedPSD (normalizationProof : Term)
     (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
   unless original.isAppOf ``Matrix.PosSemidef &&
       target.isAppOfArity ``Membership.mem 5 do
@@ -93,11 +93,11 @@ private def normalizeRetainedPositiveSemidefinite (normalizationProof : Term)
     checkWithKernel equality
     symmetry ← mkAppM ``retainedMatrixIsSymm #[equality, symmetry]
   let converted ← mkAppM ``Morew.Conic.SymmetricMatrix.ofMatrix #[matrix, symmetry]
-  let some body ← unfoldDefinition? (← mkAppM ``positiveSemidefiniteMembership
+  let some body ← unfoldDefinition? (← mkAppM ``psdMembership
     #[matrix, symmetry])
     | throwError "could not reconstruct retained PSD membership"
   let iff ← mkAppM ``Iff.symm
-    #[← mkAppM ``Morew.Conic.Cone.mem_positiveSemidefinite #[converted]]
+    #[← mkAppM ``Morew.Conic.Cone.mem_psd #[converted]]
   unless ← isDefEq (← inferType iff) (mkApp2 (mkConst ``Iff) original body) do
     throwError "retained PSD membership does not match its original predicate"
   checkWithKernel iff
@@ -134,7 +134,7 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
   if ← isDefEq body (mkConst ``True) then
     return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
   if body.isAppOf ``Matrix.PosSemidef then
-    return ← normalizeRetainedPositiveSemidefinite normalizationProof body target
+    return ← normalizeRetainedPSD normalizationProof body target
   let normalized : Except Exception Morew.Elab.Conic.BodyNormalization ← try
       pure (.ok (← Morew.Elab.Conic.normalizeBody original))
     catch error => pure (.error error)
@@ -208,9 +208,9 @@ private def materializeTerminalConic (state : ReformState)
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
     let targetProblem ← prepared.presentation.canonicalProblem
-    let exact ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[typed.normalization.equivalence, prepared.equivalence]
-    let primitive ← state.runner.liftEquivalence exact
+    let exact ← mkAppM ``Morew.GlobalEquiv.trans
+      #[typed.normalization.equiv, prepared.equiv]
+    let primitive ← state.runner.liftEquiv exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate `_terminalConicCertificate primitive

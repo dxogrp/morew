@@ -34,11 +34,11 @@ example (u : ℝ) : shiftedLeft.objective u = 2 + u := rfl
 example (u : ℝ) : subtractedRight.objective u = u - 2 := rfl
 example (u : ℝ) : subtractedLeft.objective u = 2 - u := rfl
 example (u : ℝ) : affine.objective u = (-2) * u + 3 := rfl
-example : GlobalEquivalence scalar affine := affine.equivalence
+example : GlobalEquiv scalar affine := affine.equiv
 
 def natural := problem (x : ℕ) minimize x
 reformulation naturalRenamed : natural := by substitute x := u
-example : GlobalEquivalence natural naturalRenamed := naturalRenamed.equivalence
+example : GlobalEquiv natural naturalRenamed := naturalRenamed.equiv
 
 def nonnegative :=
   problem (x : ℝ)
@@ -56,9 +56,9 @@ reformulation squaredApplied : nonnegative := by
 
 example (u : ℝ) : squared.objective u = u ^ 2 := rfl
 example (u : ℝ) : squared.feasible u ↔ True ∧ u ^ 2 ≤ 4 := Iff.rfl
-example : GlobalEquivalence nonnegative squared := squared.equivalence
-example : GlobalEquivalence nonnegative squaredNamed := squaredNamed.equivalence
-example : GlobalEquivalence nonnegative squaredApplied := squaredApplied.equivalence
+example : GlobalEquiv nonnegative squared := squared.equiv
+example : GlobalEquiv nonnegative squaredNamed := squaredNamed.equiv
+example : GlobalEquiv nonnegative squaredApplied := squaredApplied.equiv
 
 /--
 info: problem (u : ℝ)
@@ -80,7 +80,7 @@ def zeroSource :=
 
 reformulation zeroSquare : zeroSource := by substitute x := u ^ 2
 example : zeroSquare.feasible 0 := by norm_num [zeroSquare]
-example : GlobalEquivalence zeroSource zeroSquare := zeroSquare.equivalence
+example : GlobalEquiv zeroSource zeroSquare := zeroSquare.equiv
 
 def shared :=
   problem (x : ℝ)
@@ -88,7 +88,7 @@ def shared :=
     subject to shared_domain : let y := x; True ∧ (0 < y ∧ y ≤ 4)
 
 reformulation sharedExponential : shared := by substitute x := Real.exp u
-example : GlobalEquivalence shared sharedExponential := sharedExponential.equivalence
+example : GlobalEquiv shared sharedExponential := sharedExponential.equiv
 
 def marginSource (epsilon : ℝ) :=
   problem (x : ℝ)
@@ -103,8 +103,8 @@ reformulation marginSquare : (marginSource epsilon) := by
   substitute x := u ^ 2
 example (u : ℝ) : (marginExponential epsilon).feasible u ↔ Real.exp u ≥ epsilon :=
   Iff.rfl
-example : GlobalEquivalence (marginSource epsilon) (marginSquare epsilon) :=
-  marginSquare.equivalence epsilon positive
+example : GlobalEquiv (marginSource epsilon) (marginSquare epsilon) :=
+  marginSquare.equiv epsilon positive
 end
 
 def MarginEvidence (epsilon : ℝ) : Prop := True ∧ 0 < epsilon
@@ -115,8 +115,8 @@ variable (epsilon : ℝ) (positive : MarginEvidence epsilon)
 reformulation aliasedMargin : (marginSource epsilon) := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence (marginSource epsilon) (aliasedMargin epsilon) :=
-  aliasedMargin.equivalence epsilon positive
+example : GlobalEquiv (marginSource epsilon) (aliasedMargin epsilon) :=
+  aliasedMargin.equiv epsilon positive
 end
 
 def positiveMargin :=
@@ -142,7 +142,7 @@ reformulation dependentSelected : dependentSlope := by
 
 example (a u : ℝ) : dependentAffine.objective (a, u) = a * u + a := rfl
 example (a u : ℝ) : dependentAffine.feasible (a, u) ↔ a ≠ 0 := Iff.rfl
-example : GlobalEquivalence dependentSlope dependentSelected := dependentSelected.equivalence
+example : GlobalEquiv dependentSlope dependentSelected := dependentSelected.equiv
 
 def reverseDisequality :=
   problem (a x : ℝ)
@@ -152,8 +152,8 @@ def reverseDisequality :=
 reformulation reverseDisequalityTarget : reverseDisequality := by
   substitute x := a * u
 
-example : GlobalEquivalence reverseDisequality reverseDisequalityTarget :=
-  reverseDisequalityTarget.equivalence
+example : GlobalEquiv reverseDisequality reverseDisequalityTarget :=
+  reverseDisequalityTarget.equiv
 
 /--
 info: problem (a u : ℝ)
@@ -176,8 +176,8 @@ def negativeSlope :=
     subject to slope : a < 0
 reformulation negativeDependent : negativeSlope := by substitute x := a * u
 
-example : GlobalEquivalence positiveSlope positiveDependent := positiveDependent.equivalence
-example : GlobalEquivalence negativeSlope negativeDependent := negativeDependent.equivalence
+example : GlobalEquiv positiveSlope positiveDependent := positiveDependent.equiv
+example : GlobalEquiv negativeSlope negativeDependent := negativeDependent.equiv
 
 -- A sufficient coverage range is not an assertion about all forward images.
 -- Renaming with this descriptor must retain the original nonnegativity row.
@@ -197,7 +197,7 @@ def manualCoverage : FeasibleSurjection scalar (fun u : ℝ => 2 * (u + 1)) wher
   rightInverse x := by ring
 reformulation manual : scalar := by
   substitute x := 2 * (u + 1) using manualCoverage
-example : GlobalEquivalence scalar manual := manual.equivalence
+example : GlobalEquiv scalar manual := manual.equiv
 
 def squareRootSource :=
   problem (x : ℝ)
@@ -223,14 +223,14 @@ reformulation target : minimum := by
 
 example (a u b t : ℝ) : target.feasible (((a, u), b), t) ↔ a + u ^ 2 + b ≤ t := Iff.rfl
 example (point : FeasiblePoint minimum) :
-    let mapped := target.equivalence.forward.map point
+    let mapped := target.equiv.forward.map point
     mapped.1.1.1.1 = point.1.1.1 ∧
       mapped.1.1.1.2 = Real.sqrt point.1.1.2 ∧ mapped.1.1.2 = point.1.2 := by
   constructor
   · rfl
   constructor <;> rfl
 example (point : FeasiblePoint target) :
-    let mapped := target.equivalence.backward.map point
+    let mapped := target.equiv.backward.map point
     mapped.1.1.1 = point.1.1.1.1 ∧
       mapped.1.1.2 = point.1.1.1.2 ^ 2 ∧ mapped.1.2 = point.1.1.2 := by
   constructor
@@ -245,7 +245,7 @@ def maximum :=
 reformulation maximumTarget : maximum := by
   hypograph t as objective_bound
   substitute x := u ^ 2
-example : GlobalEquivalence maximum maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv maximum maximumTarget := maximumTarget.equiv
 example (a u b t : ℝ) : maximumTarget.feasible (((a, u), b), t) ↔ t ≤ a + u ^ 2 + b :=
   Iff.rfl
 

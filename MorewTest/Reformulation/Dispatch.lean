@@ -35,7 +35,7 @@ reformulation target : source certificate aliasProof := by
   derive trivial_row : True using (fun _ _ => True.intro)
   epigraph t
 
-assert_not_exists target target.equivalence aliasProof
+assert_not_exists target target.equiv aliasProof
 
 run_cmd do
   let env ← getEnv
@@ -49,7 +49,7 @@ end Duplicate
 
 -- Local registration removal restores the original handler and failed output names.
 reformulation target : source certificate aliasProof := by epigraph t
-example : GlobalEquivalence source target := aliasProof
+example : GlobalEquiv source target := aliasProof
 
 end
 end MorewTest.Reformulation.Dispatch

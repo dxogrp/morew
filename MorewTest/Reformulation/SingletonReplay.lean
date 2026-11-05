@@ -52,8 +52,8 @@ reformulation continued : displayReplay := by
   rename vector to zeroVector
 
 example : continued = target := rfl
-example : GlobalEquivalence source continued :=
-  target.equivalence.trans continued.equivalence
+example : GlobalEquiv source continued :=
+  target.equiv.trans continued.equiv
 example (x : ℝ) (v : Fin 2 → ℝ) : continued.feasible (x, v) ↔
     x ∈ ({0} : Set ℝ) ∧ v ∈ ({0} : Set (Fin 2 → ℝ)) := Iff.rfl
 

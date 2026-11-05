@@ -17,12 +17,12 @@ open Lean Lean.Meta
 /-- Unconditional exactness or exactness under retained constraints.
 Auxiliary types are uniform and targets are independent of feasibility proofs. -/
 inductive Certificate where
-  | exact (lift : Expr)
+  | exact (repr : Expr)
   | contextual (auxiliary target sourceIffExists : Expr)
 
 /-- The proof-bearing expression shared when storing a replacement. -/
 def Certificate.expression : Certificate → Expr
-  | .exact lift => lift
+  | .exact repr => repr
   | .contextual _ _ sourceIffExists => sourceIffExists
 
 /-- Substitute scoped evidence through every part of an exactness certificate. -/
@@ -30,18 +30,18 @@ def Certificate.replaceFVars (certificate : Certificate)
     (oldVars newVars : Array Expr) : Certificate :=
   let replace := fun expression : Expr => expression.replaceFVars oldVars newVars
   match certificate with
-  | .exact lift => .exact (replace lift)
+  | .exact repr => .exact (replace repr)
   | .contextual auxiliary target sourceIffExists =>
     .contextual (replace auxiliary) (replace target) (replace sourceIffExists)
 
 /-- The uniform auxiliary type of either kind of certificate. -/
 def Certificate.auxiliaryType : Certificate → MetaM Expr
-  | .exact lift => do whnf (← mkAppM ``Morew.ExactConstraintLift.Auxiliary #[lift])
+  | .exact repr => do whnf (← mkAppM ``Morew.ConstraintRepr.Auxiliary #[repr])
   | .contextual auxiliary _ _ => whnf auxiliary
 
 /-- The proof-independent target on original and auxiliary coordinates. -/
 def Certificate.targetFunction : Certificate → MetaM Expr
-  | .exact lift => mkAppM ``Morew.ExactConstraintLift.target #[lift]
+  | .exact repr => mkAppM ``Morew.ConstraintRepr.target #[repr]
   | .contextual _ target _ => pure target
 
 /-- The exact replacement data shared by target-specific planners. -/
@@ -130,23 +130,23 @@ def predicateDomain (predicate : Expr) : MetaM Expr := do
   return domain
 
 /-- Check that a record describes the complete selected predicate. -/
-def checkLift (source lift : Expr) : MetaM Expr := do
-  let type ← whnf (← inferType lift)
-  unless type.isAppOfArity ``Morew.ExactConstraintLift 2 do
-    throwError "expected an exact constraint lift"
+def checkRepr (source repr : Expr) : MetaM Expr := do
+  let type ← whnf (← inferType repr)
+  unless type.isAppOfArity ``Morew.ConstraintRepr 2 do
+    throwError "expected a constraint representation"
   unless ← isDefEq type.getAppArgs[1]! source do
     throwError "the supplied exact certificate does not describe the entire selected predicate"
-  let lift ← instantiateMVars lift
-  if ← unresolved lift then
+  let repr ← instantiateMVars repr
+  if ← unresolved repr then
     throwError "the exact certificate contains unresolved metavariables; supply its input and bound maps explicitly"
-  checkWithKernel lift
-  return lift
+  checkWithKernel repr
+  return repr
 
 /-- Check exactness against the selected predicate and current ordered retained rows. -/
 def Certificate.check (certificate : Certificate) (source : Expr)
     (retained : Array Expr) : MetaM Unit := do
   let expressions := match certificate with
-    | .exact lift => #[lift]
+    | .exact repr => #[repr]
     | .contextual auxiliary target sourceIffExists => #[auxiliary, target, sourceIffExists]
   for expression in #[source] ++ retained ++ expressions do
     if ← hasPlaceholders expression then
@@ -158,7 +158,7 @@ def Certificate.check (certificate : Certificate) (source : Expr)
     unless ← isDefEq (← predicateDomain row) domain do
       throwError "retained constraint has a different decision domain"
   match certificate with
-  | .exact lift => discard <| checkLift source lift
+  | .exact repr => discard <| checkRepr source repr
   | .contextual auxiliary target sourceIffExists =>
     for expression in #[auxiliary, target, sourceIffExists] do
       if ← unresolved expression then
@@ -204,47 +204,47 @@ def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
   let closedTarget ← mkLambdaFVars #[point] target
   if !(← Expr.depends evidence sourceIff) then
     let pointwise ← mkLambdaFVars #[point] sourceIff
-    let lift ← mkAppM ``Morew.ExactConstraintLift.mk #[auxiliary, closedTarget, pointwise]
-    return .exact (← checkLift source lift)
+    let repr ← mkAppM ``Morew.ConstraintRepr.mk #[auxiliary, closedTarget, pointwise]
+    return .exact (← checkRepr source repr)
   let conditional ← mkLambdaFVars #[point, evidence] sourceIff
   checkWithKernel conditional
   return .contextual auxiliary closedTarget conditional
 
-private def adaptRepresentation (source domain rule : Expr) (adapter : Name)
+private def adaptRepr (source domain rule : Expr) (adapter : Name)
     (inputType outputType : Expr) : MetaM Expr := do
   let input ← mkFreshExprMVar (← mkArrow domain inputType)
   let output ← mkFreshExprMVar (← mkArrow domain outputType)
-  let lift ← mkAppM adapter #[rule, input, output]
-  checkLift source lift
+  let repr ← mkAppM adapter #[rule, input, output]
+  checkRepr source repr
 
 /-- Adapt one of the supported exact representation records to a selected predicate. -/
-def customLift (source domain rule : Expr) : MetaM Expr := do
+def customRepr (source domain rule : Expr) : MetaM Expr := do
   let type ← whnf (← inferType rule)
   let args := type.getAppArgs
-  if type.isAppOfArity ``Morew.ExactConstraintLift 2 then
-    return ← checkLift source rule
-  if type.isAppOfArity ``Morew.GraphRepresentation 3 then
+  if type.isAppOfArity ``Morew.ConstraintRepr 2 then
+    return ← checkRepr source rule
+  if type.isAppOfArity ``Morew.GraphRepr 3 then
     let saved ← saveState
     try
-      return ← adaptRepresentation source domain rule
-        ``Morew.GraphRepresentation.toExactConstraintLift args[0]! args[1]!
+      return ← adaptRepr source domain rule
+        ``Morew.GraphRepr.toConstraintRepr args[0]! args[1]!
     catch _ =>
       saved.restore
-      return ← adaptRepresentation source domain rule
-        ``Morew.GraphRepresentation.toExactConstraintLiftSymm args[0]! args[1]!
-  if type.isAppOfArity ``Morew.EpigraphRepresentation 4 then
-    return ← adaptRepresentation source domain rule
-      ``Morew.EpigraphRepresentation.toExactConstraintLift args[0]! args[1]!
-  if type.isAppOfArity ``Morew.HypographRepresentation 4 then
-    return ← adaptRepresentation source domain rule
-      ``Morew.HypographRepresentation.toExactConstraintLift args[0]! args[1]!
-  throwError "expected an ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation for the entire selected predicate"
+      return ← adaptRepr source domain rule
+        ``Morew.GraphRepr.toConstraintReprSymm args[0]! args[1]!
+  if type.isAppOfArity ``Morew.EpigraphRepr 4 then
+    return ← adaptRepr source domain rule
+      ``Morew.EpigraphRepr.toConstraintRepr args[0]! args[1]!
+  if type.isAppOfArity ``Morew.HypographRepr 4 then
+    return ← adaptRepr source domain rule
+      ``Morew.HypographRepr.toConstraintRepr args[0]! args[1]!
+  throwError "expected a ConstraintRepr, GraphRepr, EpigraphRepr, or HypographRepr for the entire selected predicate"
 
 /-- Check target equivalence with the supplied decision layout and row order.
 Smooth planning checks this before using generated rows as domain evidence. -/
 def Result.checkTargetIff (result : Result)
     (mismatchMessage : MessageData :=
-      "internal error: target decomposition does not match the exact lift") : MetaM Unit := do
+      "internal error: target decomposition does not match the constraint representation") : MetaM Unit := do
   let auxiliary ← result.certificate.auxiliaryType
   let targetFunction ← result.certificate.targetFunction
   for expression in #[auxiliary, targetFunction, result.nextDomain, result.targetIff] ++

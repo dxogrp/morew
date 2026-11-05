@@ -15,16 +15,16 @@ noncomputable section
 
 reformulation continuedLog : logBound := by conic
 
-example : GlobalEquivalence logSource continuedLog :=
-  logBound.equivalence.trans continuedLog.equivalence
+example : GlobalEquiv logSource continuedLog :=
+  logBound.equiv.trans continuedLog.equiv
 example : IsConic continuedLog := continuedLog.isConic
 example : continuedLog.conicForm.data.toProblem = continuedLog :=
   continuedLog.conicForm.represents
 
 reformulation continuedAbs : absBound := by conic
 
-example : GlobalEquivalence absSource continuedAbs :=
-  absBound.equivalence.trans continuedAbs.equivalence
+example : GlobalEquiv absSource continuedAbs :=
+  absBound.equiv.trans continuedAbs.equiv
 example : IsConic continuedAbs := continuedAbs.isConic
 example : continuedAbs.conicForm.data.sense = .maximize := rfl
 
@@ -34,8 +34,8 @@ reformulation continuedCompound : compoundBound := by
   hypograph total at (a + b)
   conic
 
-example : GlobalEquivalence compoundSource continuedCompound :=
-  compoundBound.equivalence.trans continuedCompound.equivalence
+example : GlobalEquiv compoundSource continuedCompound :=
+  compoundBound.equiv.trans continuedCompound.equiv
 example : IsConic continuedCompound := continuedCompound.isConic
 
 namespace Shadow

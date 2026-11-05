@@ -49,7 +49,7 @@ reformulation customSubstitutionTarget : customSubstitutionSource := by
 run_cmd do
   let env ← getEnv
   if env.contains `MorewTest.Surface.Atom.customSubstitutionTarget ||
-      env.contains `MorewTest.Surface.Atom.customSubstitutionTarget.equivalence ||
+      env.contains `MorewTest.Surface.Atom.customSubstitutionTarget.equiv ||
       (Morew.Syntax.getProblemView? env `MorewTest.Surface.Atom.customSubstitutionTarget).isSome then
     throwError "an unsupported substitution committed output"
 

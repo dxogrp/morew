@@ -33,10 +33,10 @@ private theorem sumSymmetric {ι n : Type*} (s : Finset ι)
     (∑ i ∈ s, f i).IsSymm := by
   simp only [Matrix.IsSymm, Matrix.transpose_sum, fun i => (h i).eq]
 
-private theorem positiveDefiniteSymmetric {n : Type*} (M : Matrix n n ℝ)
+private theorem posDefSymmetric {n : Type*} (M : Matrix n n ℝ)
     (h : M.PosDef) : M.IsSymm := Matrix.isHermitian_iff_isSymm.mp h.isHermitian
 
-private theorem positiveSemidefiniteSymmetric {n : Type*} (M : Matrix n n ℝ)
+private theorem psdSymmetric {n : Type*} (M : Matrix n n ℝ)
     (h : M.PosSemidef) : M.IsSymm := Matrix.isHermitian_iff_isSymm.mp h.isHermitian
 
 private def structuralRules (matrix : Expr) : Array Name := Id.run do
@@ -137,7 +137,7 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
         for subgoal in goals do solve subgoal hypotheses (fuel - 1)
         return
       catch _ => saved.restore
-    for name in #[``positiveDefiniteSymmetric, ``positiveSemidefiniteSymmetric] do
+    for name in #[``posDefSymmetric, ``psdSymmetric] do
       try
         let goals ← goal.apply (← mkConstWithFreshMVarLevels name)
         for subgoal in goals do solve subgoal hypotheses (fuel - 1)

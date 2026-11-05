@@ -27,7 +27,7 @@ def within (x bound : ℝ) : Prop := bound < x
 reformulation imported : (Defined.family 3) := by
   epigraph t
 
-example : GlobalEquivalence (Defined.family 3) imported := imported.equivalence
+example : GlobalEquiv (Defined.family 3) imported := imported.equiv
 
 example (x t : ℝ) : imported.feasible (x, t) ↔
     x ≤ 3 ∧ x + 1 ≤ t := Iff.rfl
@@ -43,14 +43,14 @@ reformulation target : (Defined.naturalFamily 4) := by
   epigraph t
 
 example (x t : Nat) : target.feasible (x, t) ↔ Nat.add x 4 ≤ t := Iff.rfl
-example : GlobalEquivalence (Defined.naturalFamily 4) target := target.equivalence
+example : GlobalEquiv (Defined.naturalFamily 4) target := target.equiv
 
 end ChangedInstance
 
 reformulation generated : (Defined.generated 4) := by
   epigraph s as secondBound
 
-example : GlobalEquivalence (Defined.generated 4) generated := generated.equivalence
+example : GlobalEquiv (Defined.generated 4) generated := generated.equiv
 
 example (x t s : ℝ) : generated.feasible ((x, t), s) ↔
     x ≤ 4 ∧ x + 1 ≤ t ∧ t ≤ s := Iff.rfl
@@ -63,8 +63,8 @@ reformulation importedSubstitution : (Defined.logarithmic shift) := by
   substitute x := Real.exp u
   epigraph t
 
-example : GlobalEquivalence (Defined.logarithmic shift) (importedSubstitution shift) :=
-  importedSubstitution.equivalence shift
+example : GlobalEquiv (Defined.logarithmic shift) (importedSubstitution shift) :=
+  importedSubstitution.equiv shift
 
 example (u t : ℝ) : (importedSubstitution shift).feasible (u, t) ↔
     u + shift ≤ t := Iff.rfl
@@ -74,21 +74,21 @@ end
 reformulation generatedSubstitution : (Defined.substituted 5) := by
   epigraph t
 
-example : GlobalEquivalence (Defined.substituted 5) generatedSubstitution :=
-  generatedSubstitution.equivalence
+example : GlobalEquiv (Defined.substituted 5) generatedSubstitution :=
+  generatedSubstitution.equiv
 
 example (u t : ℝ) : generatedSubstitution.feasible (u, t) ↔ u + 5 ≤ t := Iff.rfl
 
 example : Conic.Form (Defined.terminal 6) := Defined.terminal.conicForm 6
 example : IsConic (Defined.terminal 6) := Defined.terminal.isConic 6
-example : GlobalEquivalence (Defined.absoluteBound 6) (Defined.terminal 6) :=
-  Defined.terminal.equivalence 6
+example : GlobalEquiv (Defined.absoluteBound 6) (Defined.terminal 6) :=
+  Defined.terminal.equiv 6
 
 reformulation terminal : (Defined.terminal 6) := by
   hypograph t
   conic
 
-example : GlobalEquivalence (Defined.terminal 6) terminal := terminal.equivalence
+example : GlobalEquiv (Defined.terminal 6) terminal := terminal.equiv
 example : Conic.Form terminal := terminal.conicForm
 example : IsConic terminal := terminal.isConic
 

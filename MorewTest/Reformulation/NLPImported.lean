@@ -18,13 +18,13 @@ variable (radius : ℝ) (positive : 0 < radius)
 reformulation target : (NLPImportedSource.family radius) := by
   nlp at magnitude
 
-example : GlobalEquivalence (NLPImportedSource.family radius) (target radius) :=
-  target.equivalence radius
+example : GlobalEquiv (NLPImportedSource.family radius) (target radius) :=
+  target.equiv radius
 
 reformulation continued : (target radius) := by
   epigraph t at first as square_bound
 
-example : GlobalEquivalence (target radius) (continued radius) := continued.equivalence radius
+example : GlobalEquiv (target radius) (continued radius) := continued.equiv radius
 
 /--
 info: problem (x : ℝ)

@@ -35,7 +35,7 @@ theorem disjunctionContext : ConstraintBoundContext (fun _ : ℝ => True)
 reformulation disjunctionSplit : disjunction := by
   epigraph t at loss in cap as loss_bound using disjunctionContext
 
-example : GlobalEquivalence disjunction disjunctionSplit := disjunctionSplit.equivalence
+example : GlobalEquiv disjunction disjunctionSplit := disjunctionSplit.equiv
 example (x t : ℝ) : disjunctionSplit.objective (x, t) = x := rfl
 example (x t : ℝ) : disjunctionSplit.feasible (x, t) ↔
     (t ≤ 1 ∨ x ≤ 0) ∧ x ^ 2 ≤ t := Iff.rfl
@@ -74,7 +74,7 @@ theorem existentialContext : ConstraintBoundContext (fun _ : ℝ => True)
 reformulation existentialSplit : existential := by
   epigraph t at (x ^ 2) in cap using existentialContext
 
-example : GlobalEquivalence existential existentialSplit := existentialSplit.equivalence
+example : GlobalEquiv existential existentialSplit := existentialSplit.equiv
 example (x t : ℝ) : existentialSplit.feasible (x, t) ↔
     (∃ y : ℝ, t ≤ y ∧ y ≤ 1) ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -93,8 +93,8 @@ theorem implicationUpperContext : ConstraintBoundContext (fun _ : ℝ => True)
 reformulation implicationUpperSplit : implicationUpper := by
   epigraph t at loss in cap using implicationUpperContext
 
-example : GlobalEquivalence implicationUpper implicationUpperSplit :=
-  implicationUpperSplit.equivalence
+example : GlobalEquiv implicationUpper implicationUpperSplit :=
+  implicationUpperSplit.equiv
 example (x t : ℝ) : implicationUpperSplit.feasible (x, t) ↔
     (1 ≤ t → False) ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -113,8 +113,8 @@ theorem implicationLowerContext : ConstraintBoundContext (fun _ : ℝ => True)
 reformulation implicationLowerSplit : implicationLower := by
   hypograph t at loss in cap using implicationLowerContext
 
-example : GlobalEquivalence implicationLower implicationLowerSplit :=
-  implicationLowerSplit.equivalence
+example : GlobalEquiv implicationLower implicationLowerSplit :=
+  implicationLowerSplit.equiv
 example (x t : ℝ) : implicationLowerSplit.feasible (x, t) ↔
     (t ≤ 1 → False) ∧ t ≤ x ^ 2 := Iff.rfl
 
@@ -178,7 +178,7 @@ reformulation headLetSplit : headLet := by
 reformulation headLetAutomatic : headLet := by
   epigraph t at (x ^ 2)
 
-example : GlobalEquivalence headLet headLetSplit := headLetSplit.equivalence
+example : GlobalEquiv headLet headLetSplit := headLetSplit.equiv
 example : headLetAutomatic = headLetSplit := rfl
 example (x t : ℝ) : headLetSplit.objective (x, t) = t + 1 := rfl
 example (x t : ℝ) : headLetSplit.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
@@ -194,8 +194,8 @@ def predicateHeadLet :=
 reformulation predicateHeadLetSplit : predicateHeadLet := by
   epigraph t at (x ^ 2) in cap using disjunctionContext
 
-example : GlobalEquivalence predicateHeadLet predicateHeadLetSplit :=
-  predicateHeadLetSplit.equivalence
+example : GlobalEquiv predicateHeadLet predicateHeadLetSplit :=
+  predicateHeadLetSplit.equiv
 example (x t : ℝ) : predicateHeadLetSplit.feasible (x, t) ↔
     (t ≤ 1 ∨ x ≤ 0) ∧ x ^ 2 ≤ t := Iff.rfl
 

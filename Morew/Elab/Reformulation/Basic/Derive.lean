@@ -42,7 +42,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel proof
       pure proof
-    let addition ← mkAppM ``Morew.addConstraintEquivalence
+    let addition ← mkAppM ``Morew.addConstraintEquiv
       #[typed.semantic, predicate, implied]
     Rows.Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition
 

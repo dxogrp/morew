@@ -59,7 +59,7 @@ run_cmd replayStored ``target `exactReplay `displayReplay
 
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example : IsConic target := target.isConic
 
 namespace AlteredCoercion

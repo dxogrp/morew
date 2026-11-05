@@ -15,12 +15,12 @@ noncomputable section
 
 reformulation continued : conicRows := by
   rename upper to imported_upper
-  conic at imported_upper using upperLift
+  conic at imported_upper using upperRepr
   rename imported_upper_conic_1 to final_upper
 
 example : continued = conicRows := rfl
-example : GlobalEquivalence absoluteSource continued :=
-  conicRows.equivalence.trans continued.equivalence
+example : GlobalEquiv absoluteSource continued :=
+  conicRows.equiv.trans continued.equiv
 
 reformulation renamedAgain : ordered := by
   rename bounds.upper to cap
@@ -37,8 +37,8 @@ reformulation continuedFamily : (renamedFamily offset) := by
 
 example (x : ℝ) : (continuedFamily offset).feasible x ↔
     0 ≤ x + offset ∧ 0 ≤ x + offset := Iff.rfl
-example : GlobalEquivalence (family offset) (continuedFamily offset) :=
-  (renamedFamily.equivalence offset).trans (continuedFamily.equivalence offset)
+example : GlobalEquiv (family offset) (continuedFamily offset) :=
+  (renamedFamily.equiv offset).trans (continuedFamily.equiv offset)
 end
 
 namespace Instances
@@ -85,8 +85,8 @@ reformulation hygienic : Hygiene.target := by
   substitute x := u
 
 example (u : ℝ) : hygienic.feasible u ↔ Rename.Hygiene.cap u := Iff.rfl
-example : GlobalEquivalence Hygiene.source hygienic :=
-  Hygiene.target.equivalence.trans hygienic.equivalence
+example : GlobalEquiv Hygiene.source hygienic :=
+  Hygiene.target.equiv.trans hygienic.equiv
 
 run_cmd do
   for (original, copied) in #[

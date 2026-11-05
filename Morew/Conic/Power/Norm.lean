@@ -90,7 +90,7 @@ theorem norm_toLp_le_iff {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal)
 /-- The finite `p`-norm epigraph, represented by an auxiliary vector
 and a finite family of power-cone constraints. -/
 noncomputable def normEpigraph {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
+    EpigraphRepr (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
   Auxiliary := Fin n → ℝ
   target v t r := 0 ≤ t ∧ (∑ i, r i) ≤ t ∧ ∀ i,
     (r i, t, v i) ∈ (Cone.power (1 / p.toReal) (inverse_exponent_range p.toReal hp)).carrier

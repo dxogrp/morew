@@ -139,7 +139,7 @@ private def nativeBoundary (name : Name) : Bool :=
     `Morew.Conic.fromBlocksFin, `Morew.Conic.SymmetricMatrix.toMatrix,
     `Morew.Conic.SymmetricMatrix.ofMatrix,
     `Morew.Conic.lowerTriangularMatrix,
-    `Morew.Fn.lambdaMax, `Morew.Fn.nuclearNorm, `Morew.Fn.matrixFrac, `Morew.Fn.logDet,
+    `Morew.Fn.lambdaMax, `Morew.Fn.normNuc, `Morew.Fn.matFrac, `Morew.Fn.logDet,
     ``LE.le, ``GE.ge, ``LT.lt, ``Eq, ``And, ``Membership.mem,
     `ite, `dite, `cond, `Decidable.decide, `abs, ``Norm.norm, ``NNNorm.nnnorm, ``ENorm.enorm,
     `Inv.inv, `Min.min, `Max.max, `PosPart.posPart, `min, `max, `Finset.prod, `tsum,

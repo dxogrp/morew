@@ -55,6 +55,7 @@ import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
 import MorewTest.Conic.Terminal
+import MorewTest.ConstraintRepr
 import MorewTest.Core
 import MorewTest.DerivedConstraint
 import MorewTest.Diagnostics
@@ -62,7 +63,6 @@ import MorewTest.DiagnosticsSupport
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
-import MorewTest.ExactConstraintLift
 import MorewTest.Fn.Norm
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
@@ -109,7 +109,7 @@ import MorewTest.Imports.NLP
 import MorewTest.Imports.NLPConic
 import MorewTest.Imports.NLPSuites
 import MorewTest.Imports.Reformulation
-import MorewTest.Imports.Representations
+import MorewTest.Imports.Repr
 import MorewTest.Imports.Semantic
 import MorewTest.NLP
 import MorewTest.NLP.Domain

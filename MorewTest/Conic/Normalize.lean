@@ -110,7 +110,7 @@ private def secondMatrix (x : ℝ) := Matrix.diagonal ![x]
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun x : ℝ =>
     True ∧ (Morew.Conic.SymmetricMatrix.ofMatrix (firstMatrix x)
-      (Matrix.isSymm_diagonal _) ∈ (Morew.Conic.Cone.positiveSemidefinite 1).carrier) ∧
+      (Matrix.isSymm_diagonal _) ∈ (Morew.Conic.Cone.psd 1).carrier) ∧
       (secondMatrix x).PosSemidef))
   let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate source
   let certificates ← leaves.mapM fun leaf => do

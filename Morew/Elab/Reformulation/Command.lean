@@ -7,7 +7,7 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Step
 import Lean.Elab.MutualDef
 
-/-! Declare a transformed problem and its `GlobalEquivalence` certificate.
+/-! Declare a transformed problem and its `GlobalEquiv` certificate.
 Terminal `conic` and `nlp` steps also emit structural forms and representability proofs. -/
 
 namespace Morew
@@ -282,7 +282,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
     | _ => throwUnsupportedSyntax
 
   let targetDeclName ← outputDeclName targetName
-  let certificateDeclName := targetDeclName ++ `equivalence
+  let certificateDeclName := targetDeclName ++ `equiv
   let aliasDeclName? ← aliasName.mapM outputDeclName
   if let some aliasDeclName := aliasDeclName? then
     if aliasDeclName == targetDeclName then
@@ -297,7 +297,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
     | some ref, some name => some (rootIdentFrom ref name)
     | _, _ => none
 
-  let runner := globalEquivalenceRunner
+  let runner := globalEquivRunner
   let (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
       usedSourceParameterNames) ← runTermElabM fun sectionFVars => withRef inputTerm do
     let source ← elabTerm inputTerm none
@@ -408,7 +408,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       if finalProof.hasMVar then
         throwError "final reformulation certificate contains unresolved metavariables"
       check finalProof
-    let stableEquivalenceProof := state.certificateSyntax
+    let stableEquivProof := state.certificateSyntax
 
     let targetTerm ← liftMacroM <| state.view.toTermSyntax
     let emitRawTarget := emitDefinition targetDeclIdent fun _ => do
@@ -422,21 +422,21 @@ private def elabReformulationCore : CommandElab := fun stx => do
       let targetSimp ← liftMacroM `(
         Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
       let normalizationLemmas := normalizationLemmas.push targetSimp
-      let normalizationEquivalence ← liftMacroM `(
-        Morew.pointwiseEquivalence $stableSemantic $appliedTarget
+      let normalizationEquiv ← liftMacroM `(
+        Morew.pointwiseEquiv $stableSemantic $appliedTarget
           (fun _ => by
             simp only [$[$normalizationLemmas],*] <;> rfl)
           (fun _ => by
             simp only [$[$normalizationLemmas],*] <;> rfl))
       let normalization ← liftMacroM <|
-        liftCertificateEquivalence state.runner normalizationEquivalence
-      let equivalenceProof ← liftMacroM <|
-        certificateTransTerm state.runner stableEquivalenceProof normalization
+        liftCertificateEquiv state.runner normalizationEquiv
+      let equivProof ← liftMacroM <|
+        certificateTransTerm state.runner stableEquivProof normalization
       let relation ← liftMacroM <|
         certificateRelationTerm state.runner sourceTerm appliedTarget
       emitDefinition certificateDeclIdent fun _ => do
         let type ← elabTerm relation none
-        let value ← elabTermEnsuringType equivalenceProof type
+        let value ← elabTermEnsuringType equivProof type
         pure (type, value)
     let emitAlias (appliedCertificate : TSyntax `term) : CommandElabM Unit := do
       if let some aliasDeclIdent := aliasDeclIdent? then

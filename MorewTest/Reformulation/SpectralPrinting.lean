@@ -65,7 +65,7 @@ info: problem (x : Fin n → ℝ) (P : SymmetricMatrix n) (t : ℝ) (domain_aux 
   minimize t
   subject to
     domain_conic_1 : (fromBlocksFin P.toMatrix 1 1 (SymmetricMatrix.toMatrix domain_aux)).PosSemidef
-    bound : Fn.matrixFrac x P.toMatrix ≤ t
+    bound : Fn.matFrac x P.toMatrix ≤ t
 -/
 #guard_msgs in
 #printp domainIntermediate

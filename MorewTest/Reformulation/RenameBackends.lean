@@ -20,21 +20,21 @@ reformulation conicRows : absoluteSource := by
   rename magnitude to cap
   conic at cap
   rename cap_conic_1 to upper
-  conic at upper using upperLift
+  conic at upper using upperRepr
   rename upper_conic_1 to upper
 
 reformulation nlpRows : absoluteSource := by
   rename magnitude to cap
   nlp at cap
   rename cap_nlp_1 to upper
-  nlp at upper using upperLift
+  nlp at upper using upperRepr
   rename upper_nlp_1 to upper
 
 example (x : ℝ) : conicRows.feasible x ↔
     -5 ≤ x ∧ x ≤ 3 ∧ -x ≤ 3 ∧ x ≤ 5 := Iff.rfl
 example : nlpRows = conicRows := rfl
-example : GlobalEquivalence absoluteSource conicRows := conicRows.equivalence
-example : GlobalEquivalence absoluteSource nlpRows := nlpRows.equivalence
+example : GlobalEquiv absoluteSource conicRows := conicRows.equiv
+example : GlobalEquiv absoluteSource nlpRows := nlpRows.equiv
 
 reformulation conicTerminal : absoluteSource := by
   rename magnitude to cap
@@ -62,7 +62,7 @@ reformulation vectorConic : vectorSource := by
   conic
 
 example : IsConic vectorConic := vectorConic.isConic
-example : GlobalEquivalence vectorSource vectorConic := vectorConic.equivalence
+example : GlobalEquiv vectorSource vectorConic := vectorConic.equiv
 
 run_cmd do
   for (name, expected) in #[

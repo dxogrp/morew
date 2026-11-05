@@ -84,10 +84,10 @@ partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Expr.reduceStructure body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
-    | some ``Morew.ExactConstraintLift.target => some 3
-    | some ``Morew.GraphRepresentation.target => some 4
-    | some ``Morew.EpigraphRepresentation.target => some 5
-    | some ``Morew.HypographRepresentation.target => some 5
+    | some ``Morew.ConstraintRepr.target => some 3
+    | some ``Morew.GraphRepr.target => some 4
+    | some ``Morew.EpigraphRepr.target => some 5
+    | some ``Morew.HypographRepr.target => some 5
     | _ => none
   if let some prefixSize := prefixSize? then
     let args := body.getAppArgs
@@ -282,7 +282,7 @@ private def finishCore (source domain : Expr) (certificate : Certificate)
   let auxiliary? := if noAuxiliary then none else some auxiliary
   let nextDomain ← if noAuxiliary then pure domain else mkAppM ``Prod #[domain, auxiliary]
   unless ← Expr.isSupportedSpace nextDomain do
-    throwError "unsupported exact-lift decision space {nextDomain}; expected real scalars, products, or finite function spaces"
+    throwError "unsupported variable type {nextDomain} for a constraint representation; expected real scalars, products, or finite function spaces"
   let targetFunction ← whnf (← certificate.targetFunction)
   let (rowPredicates, targetIff) ← withLocalDeclD `point nextDomain fun point => do
     let target := if noAuxiliary then mkApp2 targetFunction point (mkConst ``Unit.unit)
@@ -335,8 +335,8 @@ private def planDirect (sourcePredicate rule : Expr)
       let result ← withFiniteInstances (← Expr.sourceFiniteInstances source).toList do
         withLocalDeclD `point domain fun point =>
           withPredicateEvidence point (mkApp source point) do
-            let lift ← customLift source domain rule
-            finish source domain (.exact lift) #[] provider
+            let repr ← customRepr source domain rule
+            finish source domain (.exact repr) #[] provider
       return .ok result
     catch error =>
       return .error {

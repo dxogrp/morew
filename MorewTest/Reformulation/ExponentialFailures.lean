@@ -95,7 +95,7 @@ def entropyMissingNumeratorDomain :=
     minimize t
     subject to
       margin : 1 ≤ b
-      entropy : Fn.relativeEntropy a b ≤ t
+      entropy : Fn.relEntr a b ≤ t
 
 /-- error: constraint `entropy`: -/
 #guard_msgs (substring := true) in
@@ -106,7 +106,7 @@ def entropyZeroDenominator :=
   problem (t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy 0 0 ≤ t
+      entropy : Fn.relEntr 0 0 ≤ t
 
 /-- error: constraint `entropy`: -/
 #guard_msgs (substring := true) in
@@ -210,7 +210,7 @@ def fakeOrder :=
 reformulation incompatibleOrder : fakeOrder := by
   conic at bound
 
-/-- error: constraint `exponential`: expected ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation; reduced type is ℝ -/
+/-- error: constraint `exponential`: expected ConstraintRepr, GraphRepr, EpigraphRepr, or HypographRepr; reduced type is ℝ -/
 #guard_msgs in
 reformulation invalidExplicitRule : source := by
   conic at exponential using (0 : ℝ)
@@ -221,9 +221,9 @@ def scalarSource :=
     subject to
       exponential : Real.exp x ≤ t
 
-def uncertifiedTarget : ExactConstraintLift
+def uncertifiedTarget : ConstraintRepr
     (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2) :=
-  ExactConstraintLift.ofIff (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2)
+  ConstraintRepr.ofIff (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2)
     (fun _ => Iff.rfl)
 
 -- The exact certificate has a non-affine target, so explicit selection fails.
@@ -260,7 +260,7 @@ run_cmd do
       `nonaffineCoordinate, `nonaffineLogArgument, `unsupportedSubset, `incompatibleOrder,
       `invalidExplicitRule, `explicitCannotFallback, `failureAfterAuxiliary, `stale] do
     let full := `MorewTest.Reformulation.ExponentialFailures ++ name
-    if env.contains full || env.contains (full ++ `equivalence) ||
+    if env.contains full || env.contains (full ++ `equiv) ||
         (Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed exponential rewrite emitted {full}"
 

@@ -37,8 +37,8 @@ example : (conicTarget.conicForm n).data.toProblem = conicTarget n :=
   (conicTarget.conicForm n).represents
 example : (nlpTarget.nlpForm n).data.toProblem = nlpTarget n :=
   (nlpTarget.nlpForm n).represents
-example : GlobalEquivalence (source n) (conicTarget n) := conicTarget.equivalence n
-example : GlobalEquivalence (source n) (nlpTarget n) := nlpTarget.equivalence n
+example : GlobalEquiv (source n) (conicTarget n) := conicTarget.equiv n
+example : GlobalEquiv (source n) (nlpTarget n) := nlpTarget.equiv n
 
 -- Explicit selection accepts both names and applied records. The targeted
 -- intermediate remains available for imported continuation.
@@ -146,8 +146,8 @@ example : IsConic (residualConic n m A b) := residualConic.isConic n m A b
 example : IsSmoothNLP (residualNLP n m A b) := residualNLP.isSmoothNLP n m A b
 example : (residualConic.conicForm n m A b).data.rowCount = 1 := rfl
 example : residualCoordinates m n A b = residual m n A b := rfl
-example : GlobalEquivalence (residual m n A b) (residualNLP n m A b) :=
-  residualNLP.equivalence n m A b
+example : GlobalEquiv (residual m n A b) (residualNLP n m A b) :=
+  residualNLP.equiv n m A b
 end Rectangular
 
 def negativeObjective :=
@@ -162,8 +162,8 @@ reformulation negativeNLP : negativeObjective := by
   hypograph t
   nlp
 
-example : GlobalEquivalence negativeObjective negativeConic := negativeConic.equivalence
-example : GlobalEquivalence negativeObjective negativeNLP := negativeNLP.equivalence
+example : GlobalEquiv negativeObjective negativeConic := negativeConic.equiv
+example : GlobalEquiv negativeObjective negativeNLP := negativeNLP.equiv
 example : negativeConic.conicForm.data.sense = .maximize := rfl
 example : negativeNLP.nlpForm.data.sense = .maximize := rfl
 
@@ -214,8 +214,8 @@ def shadowed :=
 example : shadowed = source 2 := rfl
 reformulation shadowedConic : shadowed := by conic
 reformulation shadowedNLP : shadowed := by nlp
-example : GlobalEquivalence shadowed shadowedConic := shadowedConic.equivalence
-example : GlobalEquivalence shadowed shadowedNLP := shadowedNLP.equivalence
+example : GlobalEquiv shadowed shadowedConic := shadowedConic.equiv
+example : GlobalEquiv shadowed shadowedNLP := shadowedNLP.equiv
 end ShadowNorm
 
 end

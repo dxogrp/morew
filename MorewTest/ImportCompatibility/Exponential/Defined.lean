@@ -38,7 +38,7 @@ reformulation lowered : source := by
   conic at lse
   conic at logarithm
 
-example : GlobalEquivalence source lowered := lowered.equivalence hn hε
+example : GlobalEquiv source lowered := lowered.equiv hn hε
 
 end
 end MorewTest.ImportCompatibility.Exponential

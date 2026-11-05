@@ -19,7 +19,7 @@ def source (n : Nat) :=
     minimize t
     subject to
       domain : P.toMatrix.PosDef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 variable (n : Nat)
 

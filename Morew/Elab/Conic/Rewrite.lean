@@ -188,7 +188,7 @@ def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
-      if (← whnf (← inferType rule)).isAppOfArity ``Morew.ExactConstraintLift 2 then
+      if (← whnf (← inferType rule)).isAppOfArity ``Morew.ConstraintRepr 2 then
         let direct ← Plan.plan source rule provider
         if let .ok result := direct then return .ok result
       attempt source retained

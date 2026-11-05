@@ -37,7 +37,7 @@ reformulation scalarTarget : scalarSource := by
   conic at maximum
   conic at minimum
 
-example : GlobalEquivalence scalarSource scalarTarget := scalarTarget.equivalence
+example : GlobalEquiv scalarSource scalarTarget := scalarTarget.equiv
 
 example (x t : ℝ) : scalarTarget.objective (x, t) = x ^ 2 := rfl
 
@@ -87,7 +87,7 @@ reformulation target : source := by
   conic at reverseAbsolute
   conic at reverseMinimum
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x y t : ℝ) (v : Fin 2 → ℝ) : target.feasible (((x, y), t), v) ↔
     x ≤ t / 2 ∧ -x ≤ t / 2 ∧ t / 2 ≤ x ∧ t / 2 ≤ y ∧
@@ -109,8 +109,8 @@ reformulation namedEpigraph : absoluteObjective := by
   epigraph t as magnitude
   conic at magnitude
 
-example : GlobalEquivalence absoluteObjective defaultEpigraph := defaultEpigraph.equivalence
-example : GlobalEquivalence absoluteObjective namedEpigraph := namedEpigraph.equivalence
+example : GlobalEquiv absoluteObjective defaultEpigraph := defaultEpigraph.equiv
+example : GlobalEquiv absoluteObjective namedEpigraph := namedEpigraph.equiv
 
 /--
 info: problem (x t : ℝ)
@@ -130,7 +130,7 @@ reformulation minimumHypograph : minimumObjective := by
   hypograph t
   conic at hypograph_t
 
-example : GlobalEquivalence minimumObjective minimumHypograph := minimumHypograph.equivalence
+example : GlobalEquiv minimumObjective minimumHypograph := minimumHypograph.equiv
 
 /--
 info: problem (x t : ℝ)
@@ -161,7 +161,7 @@ reformulation target : source := by
   conic at upper
   conic at lower
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 end FiniteExtrema
 
@@ -188,25 +188,25 @@ def source :=
 reformulation automaticTarget : source := by
   conic at bound
 
-example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
+example : GlobalEquiv source automaticTarget := automaticTarget.equiv
 
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     automaticTarget.feasible x ↔
       Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
 
-def exactLift : ExactConstraintLift (fun x : Parameter.Index → ℝ =>
+def exactRepr : ConstraintRepr (fun x : Parameter.Index → ℝ =>
     |@dotProduct Parameter.Index ℝ
       (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1) :=
-  ExactConstraintLift.ofIff (fun x =>
+  ConstraintRepr.ofIff (fun x =>
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
     (fun _ => Morew.Rewrite.Polyhedral.abs_le_iff _ _)
 
 reformulation customTarget : source := by
-  conic at bound using exactLift
+  conic at bound using exactRepr
 
-example : GlobalEquivalence source customTarget := customTarget.equivalence
+example : GlobalEquiv source customTarget := customTarget.equiv
 
 example (x : Parameter.Index → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
@@ -222,7 +222,7 @@ variable [Parameter]
 reformulation continued : automaticTarget := by
   epigraph t
 
-example : GlobalEquivalence automaticTarget continued := continued.equivalence
+example : GlobalEquiv automaticTarget continued := continued.equiv
 
 example (x : Parameter.Index → ℝ) (t : ℝ) :
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
@@ -261,8 +261,8 @@ variable {a : ℝ} [Parameter a]
 reformulation continued : lowered := by
   epigraph t
 
-example : GlobalEquivalence (lowered (a := a)) (continued (a := a)) :=
-  continued.equivalence
+example : GlobalEquiv (lowered (a := a)) (continued (a := a)) :=
+  continued.equiv
 
 example (x t : ℝ) : (continued (a := a)).feasible (x, t) ↔
     x ≤ a ∧ -x ≤ a ∧ Parameter.objective (a := a) ≤ t := Iff.rfl
@@ -291,7 +291,7 @@ reformulation target : source := by
   conic at explicitInfinity
   conic at one
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (v u : Fin Dimension.size → ℝ) (t : ℝ) :
     target.objective ((v, t), u) = t := rfl
@@ -350,7 +350,7 @@ def singleSource :=
 reformulation singleTarget : singleSource := by
   conic at budget
 
-example : GlobalEquivalence singleSource singleTarget := singleTarget.equivalence
+example : GlobalEquiv singleSource singleTarget := singleTarget.equiv
 
 /--
 info: problem (v budget_aux : Fin 1 → ℝ)
@@ -383,7 +383,7 @@ reformulation target : source := by
   substitute x := Real.exp u
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u t : ℝ) : target.objective (u, t) = t := rfl
 
@@ -413,7 +413,7 @@ reformulation maximumTarget : maximumSource := by
   conic at bound
   hypograph t as value
 
-example : GlobalEquivalence maximumSource maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv maximumSource maximumTarget := maximumTarget.equiv
 
 example (x t : ℝ) : maximumTarget.feasible (x, t) ↔
     x ≤ 5 ∧ -x ≤ 5 ∧ t ≤ x := Iff.rfl
@@ -438,7 +438,7 @@ reformulation target : source := by
   conic at labels.cap
   conic at «cap value»
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 /--
 info: problem (budget_aux : ℝ) (v budget_aux_1 : Fin 1 → ℝ)
@@ -468,7 +468,7 @@ macro "conicMacro " target:ident : command =>
 
 conicMacro macroTarget
 
-example : GlobalEquivalence macroSource macroTarget := macroTarget.equivalence
+example : GlobalEquiv macroSource macroTarget := macroTarget.equiv
 
 end Names
 
@@ -476,24 +476,24 @@ namespace Custom
 
 def userFunction (x : ℝ) : ℝ := x
 
-def graph : GraphRepresentation userFunction where
+def graph : GraphRepr userFunction where
   Auxiliary := Unit
   target x y _ := y = x
   source_iff_exists x y := by simp [userFunction]
 
-def epiRule : EpigraphRepresentation userFunction where
+def epiRule : EpigraphRepr userFunction where
   Auxiliary := Unit
   target x t _ := x ≤ t
   source_iff_exists x t := by simp [userFunction]
 
-def hypoRule : HypographRepresentation userFunction where
+def hypoRule : HypographRepr userFunction where
   Auxiliary := Unit
   target x t _ := t ≤ x
   source_iff_exists x t := by simp [userFunction]
 
-def exactLift : ExactConstraintLift
+def exactRepr : ConstraintRepr
     (fun point : ℝ × ℝ => point.1 ≤ 5 ∧ point.2 ≤ 6) :=
-  ExactConstraintLift.ofIff (fun point => point.1 ≤ 5 ∧ point.2 ≤ 6)
+  ConstraintRepr.ofIff (fun point => point.1 ≤ 5 ∧ point.2 ≤ 6)
     (fun _ => Iff.rfl)
 
 def source :=
@@ -509,15 +509,15 @@ reformulation target : source := by
   conic at graph_row using graph
   conic at epigraph_row using epiRule
   conic at hypograph_row using hypoRule
-  conic at grouped using exactLift
+  conic at grouped using exactRepr
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ∧ x ≤ y ∧ y ≤ x ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
 /-- A local alias in a replacement row may depend on the auxiliary decision. -/
-def auxiliaryAliasLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def auxiliaryAliasRepr : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = x ∧ (let y := u; 0 ≤ y)
   source_iff_exists x := by simp
@@ -531,16 +531,16 @@ def auxiliaryAliasSource :=
       after : x ≤ 5
 
 reformulation auxiliaryAliasTarget : auxiliaryAliasSource := by
-  conic at positive using auxiliaryAliasLift
+  conic at positive using auxiliaryAliasRepr
 
-example : GlobalEquivalence auxiliaryAliasSource auxiliaryAliasTarget :=
-  auxiliaryAliasTarget.equivalence
+example : GlobalEquiv auxiliaryAliasSource auxiliaryAliasTarget :=
+  auxiliaryAliasTarget.equiv
 
 example (x u : ℝ) : auxiliaryAliasTarget.feasible (x, u) ↔
     x ≤ 3 ∧ u = x ∧ 0 ≤ u ∧ x ≤ 5 := Iff.rfl
 
-def trivialLift : ExactConstraintLift (fun x : ℝ => x = x) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => by simp)
+def trivialRepr : ConstraintRepr (fun x : ℝ => x = x) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => by simp)
 
 def removableSource :=
   problem (x : ℝ)
@@ -550,7 +550,7 @@ def removableSource :=
       bound : |x| ≤ 3
 
 reformulation removableTarget : removableSource := by
-  conic at removable using trivialLift
+  conic at removable using trivialRepr
   conic at bound
 
 example (x : ℝ) : removableTarget.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl

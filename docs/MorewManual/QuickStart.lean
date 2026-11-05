@@ -58,8 +58,8 @@ reformulation conicNonnegLS : (nonnegLS A b) := by
 The reformulation supplies equivalence and conic certificates:
 
 ```anchor nonnegLSCertificate -defSite
-noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
-  conicNonnegLS.equivalence A b
+noncomputable example : GlobalEquiv (nonnegLS A b) (conicNonnegLS A b) :=
+  conicNonnegLS.equiv A b
 example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
 ```
 

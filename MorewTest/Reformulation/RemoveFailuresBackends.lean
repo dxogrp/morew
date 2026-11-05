@@ -45,7 +45,7 @@ reformulation lateFailure : absolute certificate lateFailureAlias := by
   remove at temporary
 
 example : lateFailure = absolute := rfl
-example : GlobalEquivalence absolute lateFailure := lateFailureAlias
+example : GlobalEquiv absolute lateFailure := lateFailureAlias
 
 end
 end MorewTest.Reformulation.RemoveFailures

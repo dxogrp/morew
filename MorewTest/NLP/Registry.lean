@@ -90,7 +90,7 @@ private def reject (term : TSyntax `term) (message : String)
 
 noncomputable def userAbs (x : ℝ) : ℝ := |x|
 
-noncomputable def userAbsRule : EpigraphRepresentation userAbs := Rewrite.absEpigraph
+noncomputable def userAbsRule : EpigraphRepr userAbs := Rewrite.absEpigraph
 
 -- A namespace and a suitable type alone do not activate a rule. Explicit names
 -- may select an unregistered record, and inference is performed at its use site.
@@ -107,7 +107,7 @@ run_cmd liftTermElabM do
   check (← `(input (fun x : ℝ => userAbs (Real.log x) ≤ 3)
     #[(fun x : ℝ => 1 ≤ x)])) 2
 
-noncomputable def alternateUserAbsRule : EpigraphRepresentation userAbs := userAbsRule
+noncomputable def alternateUserAbsRule : EpigraphRepr userAbs := userAbsRule
 
 section
 attribute [local morew_nlp] alternateUserAbsRule
@@ -136,7 +136,7 @@ run_cmd liftTermElabM do
 
 noncomputable def shiftedAbs (c x : ℝ) : ℝ := |x - c|
 
-noncomputable def shiftedRule (c : ℝ) : EpigraphRepresentation (shiftedAbs c) where
+noncomputable def shiftedRule (c : ℝ) : EpigraphRepr (shiftedAbs c) where
   Auxiliary := Unit
   target x t _ := x - c ≤ t ∧ -(x - c) ≤ t
   source_iff_exists x t := by
@@ -147,7 +147,7 @@ run_cmd liftTermElabM do
     (some ``shiftedRule) 1
 
 noncomputable def guardedShiftedRule (c : ℝ) (_hc : 0 < c) :
-    EpigraphRepresentation (shiftedAbs c) := shiftedRule c
+    EpigraphRepr (shiftedAbs c) := shiftedRule c
 
 -- Declaration premises may use independent local hypotheses or checked retained
 -- comparisons. The generated target is certified only after exactness.
@@ -171,7 +171,7 @@ run_cmd liftTermElabM do
 -- while the certificate retains the selected predicate.
 noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
 
-@[morew_nlp] noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
+@[morew_nlp] noncomputable def pairAbsRule : EpigraphRepr pairAbs where
   Auxiliary := Unit
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
@@ -190,7 +190,7 @@ run_cmd liftTermElabM do
 
 noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.2 + p.2|
 
-@[morew_nlp] noncomputable def nestedPairAbsRule : EpigraphRepresentation nestedPairAbs where
+@[morew_nlp] noncomputable def nestedPairAbsRule : EpigraphRepr nestedPairAbs where
   Auxiliary := Unit
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
@@ -206,7 +206,7 @@ run_cmd liftTermElabM do
 -- the current decision space coincide.
 noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
-@[morew_nlp] noncomputable def boundedRule : ExactConstraintLift bounded :=
+@[morew_nlp] noncomputable def boundedRule : ConstraintRepr bounded :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
     (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
 
@@ -238,7 +238,7 @@ section QuantifiedHelperOpacity
 private noncomputable def hiddenAbs (x : ℝ) : ℝ := |x|
 
 private noncomputable def quantifiedAbsRule :
-    ExactConstraintLift (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
+    ConstraintRepr (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
     intro x
     simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
@@ -280,7 +280,7 @@ end StructuralHelperOpacity
 noncomputable def userBound (c x : ℝ) : Prop := |x| ≤ c
 
 @[morew_nlp] noncomputable def completePredicateRule (c : ℝ) :
-    ExactConstraintLift (fun x : ℝ => userBound c x) :=
+    ConstraintRepr (fun x : ℝ => userBound c x) :=
   .ofIff (fun x => x ≤ c ∧ -x ≤ c)
     (fun x => Rewrite.Polyhedral.abs_le_iff x c)
 
@@ -289,7 +289,7 @@ run_cmd liftTermElabM do
 
 noncomputable def userSquare (x : ℝ) : ℝ := x * x
 
-@[morew_nlp] noncomputable def graphRule : GraphRepresentation userSquare where
+@[morew_nlp] noncomputable def graphRule : GraphRepr userSquare where
   Auxiliary := Unit
   target x y _ := y = x * x
   source_iff_exists _ _ := by simp [userSquare]
@@ -303,7 +303,7 @@ run_cmd liftTermElabM do
 -- restores caller state.
 noncomputable def shift (x : ℝ) : ℝ := x + 1
 
-@[morew_nlp] noncomputable def shiftGraph : GraphRepresentation shift where
+@[morew_nlp] noncomputable def shiftGraph : GraphRepr shift where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists x y := by simp only [shift, exists_const]
@@ -351,7 +351,7 @@ run_cmd liftTermElabM do
         (∑ i, (WithLp.ofLp p.1 i) ^ 2) ≤ p.2 ^ 2)])) 1
 
 noncomputable def alternateNorm2Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) :=
+    EpigraphRepr (fun v : EuclideanSpace ℝ (Fin n) => ‖v‖) :=
   Rewrite.norm2Epigraph
 
 section
@@ -368,7 +368,7 @@ end
 
 -- The premise is essential: dropping nonnegativity changes the represented bound.
 noncomputable def nonnegativeAbsRule :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
   Auxiliary := ℝ
   target x t u := u = x.1 ∧ u ≤ t
   source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property]
@@ -400,7 +400,7 @@ run_cmd liftTermElabM do
 
 -- A uniform finite auxiliary remains a family even in dimension zero.
 noncomputable def nonnegativeAbsVectorRule (n : ℕ) :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
   Auxiliary := Fin n → ℝ
   target x t u := (∀ i, u i = x.1) ∧ x.1 ≤ t
   source_iff_exists x t := by
@@ -429,13 +429,13 @@ run_cmd liftTermElabM do
       for proof in result.certified.rowCertificates do checkWithKernel proof
 
 noncomputable def nonnegativeAbsGraph :
-    GraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+    GraphRepr (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
   Auxiliary := ℝ
   target x y u := u = x.1 ∧ y = u
   source_iff_exists x y := by simp [userAbs, abs_of_nonneg x.property]
 
 noncomputable def nonnegativeAbsHypograph :
-    HypographRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+    HypographRepr (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
   Auxiliary := ℝ
   target x t u := u = x.1 ∧ t ≤ u
   source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property]
@@ -452,7 +452,7 @@ run_cmd liftTermElabM do
 -- smooth evaluation. The analogous zero guard is mathematically exact under
 -- Lean's total logarithm, but fails the intended positive-domain policy.
 noncomputable def nonnegativeAbsLogRule (c : ℝ) (hc : Real.log c = 0) :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => userAbs x.1) where
   Auxiliary := ℝ
   target x t u := u = c ∧ x.1 + Real.log u ≤ t
   source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property, hc]

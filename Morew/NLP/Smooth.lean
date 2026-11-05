@@ -142,9 +142,9 @@ theorem cosh (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain) :
 
 /-- The real hyperbolic tangent is globally $C^2$. -/
 theorem contDiff_tanh : ContDiff ℝ 2 Real.tanh := by
-  have representation : Real.tanh = fun x => Real.sinh x / Real.cosh x :=
+  have repr : Real.tanh = fun x => Real.sinh x / Real.cosh x :=
     funext Real.tanh_eq_sinh_div_cosh
-  rw [representation]
+  rw [repr]
   exact Real.contDiff_sinh.div Real.contDiff_cosh (fun x => (Real.cosh_pos x).ne')
 
 /-- The hyperbolic tangent of a smooth function is smooth. -/

@@ -25,7 +25,7 @@ reformulation asConic : targeted := by conic
 reformulation asNLP : targeted := by nlp
 example : IsConic asConic := asConic.isConic
 example : IsSmoothNLP asNLP := asNLP.isSmoothNLP
-example : GlobalEquivalence source asConic := targeted.equivalence.trans asConic.equivalence
-example : GlobalEquivalence source asNLP := targeted.equivalence.trans asNLP.equivalence
+example : GlobalEquiv source asConic := targeted.equiv.trans asConic.equiv
+example : GlobalEquiv source asNLP := targeted.equiv.trans asNLP.equiv
 end
 end MorewTest.Imports.ConicNLP

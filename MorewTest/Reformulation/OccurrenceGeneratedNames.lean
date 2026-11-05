@@ -25,7 +25,7 @@ reformulation chained : source := by
   epigraph a at (x ^ 2)
   epigraph b at (Real.exp a)
 
-example : GlobalEquivalence source chained := chained.equivalence
+example : GlobalEquiv source chained := chained.equiv
 example (x a b : ℝ) : chained.objective ((x, a), b) = b + |x| := rfl
 example (x a b : ℝ) : chained.feasible ((x, a), b) ↔
     x ^ 2 ≤ a ∧ Real.exp a ≤ b := Iff.rfl
@@ -45,7 +45,7 @@ reformulation inConstraint : source := by
   epigraph a at (x ^ 2) in epigraph_t
   epigraph b at (Real.exp a) in epigraph_t
 
-example : GlobalEquivalence source inConstraint := inConstraint.equivalence
+example : GlobalEquiv source inConstraint := inConstraint.equiv
 example (x t a b : ℝ) : inConstraint.objective (((x, t), a), b) = t := rfl
 example (x t a b : ℝ) : inConstraint.feasible (((x, t), a), b) ↔
     b + |x| ≤ t ∧ x ^ 2 ≤ a ∧ Real.exp a ≤ b := Iff.rfl
@@ -54,7 +54,7 @@ reformulation wholeThenSelection : source := by
   epigraph t
   epigraph s at (t)
 
-example : GlobalEquivalence source wholeThenSelection := wholeThenSelection.equivalence
+example : GlobalEquiv source wholeThenSelection := wholeThenSelection.equiv
 example (x t s : ℝ) : wholeThenSelection.objective ((x, t), s) = s := rfl
 example (x t s : ℝ) : wholeThenSelection.feasible ((x, t), s) ↔
     Real.exp (x ^ 2) + |x| ≤ t ∧ t ≤ s := Iff.rfl
@@ -69,7 +69,7 @@ reformulation substituted : logarithmic := by
   substitute x := Real.exp u
   epigraph t at (u ^ 2)
 
-example : GlobalEquivalence logarithmic substituted := substituted.equivalence
+example : GlobalEquiv logarithmic substituted := substituted.equiv
 example (u t : ℝ) : substituted.objective (u, t) = t + |u| := rfl
 example (u t : ℝ) : substituted.feasible (u, t) ↔ u ^ 2 ≤ t := Iff.rfl
 
@@ -79,7 +79,7 @@ reformulation first : source := by
 reformulation continued : first := by
   epigraph b at (Real.exp a)
 
-example : GlobalEquivalence first continued := continued.equivalence
+example : GlobalEquiv first continued := continued.equiv
 example (x a b : ℝ) : continued.objective ((x, a), b) = b + |x| := rfl
 example (x a b : ℝ) : continued.feasible ((x, a), b) ↔
     x ^ 2 ≤ a ∧ Real.exp a ≤ b := Iff.rfl
@@ -102,7 +102,7 @@ reformulation nestedBinderLifted : nestedBinder := by
       exact add_le_add bound le_rfl)
   epigraph b at (applyFunction (fun a : ℝ => a) a)
 
-example : GlobalEquivalence nestedBinder nestedBinderLifted := nestedBinderLifted.equivalence
+example : GlobalEquiv nestedBinder nestedBinderLifted := nestedBinderLifted.equiv
 example (x a b : ℝ) : nestedBinderLifted.objective ((x, a), b) = b + |x| := rfl
 example (x a b : ℝ) : nestedBinderLifted.feasible ((x, a), b) ↔
     x ^ 2 ≤ a ∧ a ≤ b := Iff.rfl
@@ -114,7 +114,7 @@ macro "liftGenerated " target:ident " from " original:ident " with " decision:id
 
 liftGenerated macroLifted from source with x
 
-example : GlobalEquivalence source macroLifted := macroLifted.equivalence
+example : GlobalEquiv source macroLifted := macroLifted.equiv
 example (x a b : ℝ) : macroLifted.objective ((x, a), b) = b + |x| := rfl
 example (x a b : ℝ) : macroLifted.feasible ((x, a), b) ↔
     x ^ 2 ≤ a ∧ Real.exp a ≤ b := Iff.rfl
@@ -131,7 +131,7 @@ reformulation projectedLifted : projected := by
       exact bound.1)
   epigraph t at (a.1)
 
-example : GlobalEquivalence projected projectedLifted := projectedLifted.equivalence
+example : GlobalEquiv projected projectedLifted := projectedLifted.equiv
 example (x a b t : ℝ) : projectedLifted.objective ((x, (a, b)), t) = t := rfl
 example (x a b t : ℝ) : projectedLifted.feasible ((x, (a, b)), t) ↔
     (x ≤ a ∧ x ≤ b) ∧ a ≤ t := Iff.rfl

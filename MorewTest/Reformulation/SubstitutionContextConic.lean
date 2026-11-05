@@ -27,7 +27,7 @@ reformulation target : source := by
   substitute x := Real.exp u
   conic
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example : IsConic target := target.isConic
 example : target.conicForm.data.toProblem = target := target.conicForm.represents
 example (u : ℝ) : target.feasible u ↔ (u, 1, 10) ∈ EXP := Iff.rfl

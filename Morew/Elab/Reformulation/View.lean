@@ -1040,14 +1040,14 @@ def checkedPointwiseNormalization (sourceName : Name)
   let feasibleIff ← elabTerm proofSyntax (some feasibleType)
   synthesizeSyntheticMVarsNoPostponing
   let feasibleIff ← instantiateMVars feasibleIff
-  let equivalence ← mkAppM ``Morew.pointwiseEquivalence
+  let equiv ← mkAppM ``Morew.pointwiseEquiv
     #[semantic, canonical, objectiveEquality, feasibleIff]
   let normalization : Morew.Elab.Reformulation.PointwiseNormalization := {
     semantic
     canonical
     objectiveEquality
     feasibleIff
-    equivalence
+    equiv
   }
   normalization.check
   pure normalization

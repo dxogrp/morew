@@ -231,7 +231,7 @@ reformulation rejectedStaleLabel : validSource := by
 
 /-- A downstream alias remains a distinct candidate. -/
 def customLogDetHypograph {n : Nat} (hn : 0 < n) :
-    HypographRepresentation
+    HypographRepr
       (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} => Fn.logDet X.1) :=
   Morew.Conic.LogDet.hypograph hn
 
@@ -248,7 +248,7 @@ reformulation selectedExplicitly : validSource := by
   conic at bound using customLogDetHypograph
   conic
 
-example : GlobalEquivalence validSource selectedExplicitly := selectedExplicitly.equivalence
+example : GlobalEquiv validSource selectedExplicitly := selectedExplicitly.equiv
 example : IsConic selectedExplicitly := selectedExplicitly.isConic
 
 end Ambiguity
@@ -271,22 +271,22 @@ reformulation selectedNative : (fixedNativeSource X) := by
   conic at bound using Morew.Conic.LogDet.nativeHypograph
   conic
 
-example : GlobalEquivalence (fixedNativeSource X) (selectedNative X hX) :=
-  selectedNative.equivalence X hX
+example : GlobalEquiv (fixedNativeSource X) (selectedNative X hX) :=
+  selectedNative.equiv X hX
 example : IsConic (selectedNative X hX) := selectedNative.isConic X hX
 
 reformulation selectedScalar : (fixedNativeSource X) := by
   conic at bound using Exponential.logHypograph
   conic
 
-example : GlobalEquivalence (fixedNativeSource X) (selectedScalar X) :=
-  selectedScalar.equivalence X hdet
+example : GlobalEquiv (fixedNativeSource X) (selectedScalar X) :=
+  selectedScalar.equiv X hdet
 example : IsConic (selectedScalar X) := selectedScalar.isConic X
 
 end NativeScalarAmbiguity
 
 reformulation recovered : validSource := by conic
-example : GlobalEquivalence validSource recovered := recovered.equivalence
+example : GlobalEquiv validSource recovered := recovered.equiv
 example : IsConic recovered := recovered.isConic
 
 -- The contextual theorem still applies when its retained domain is infeasible.
@@ -301,8 +301,8 @@ def infeasibleSingular :=
 reformulation infeasibleSingularTarget : infeasibleSingular := by
   conic at bound
   conic
-example : GlobalEquivalence infeasibleSingular infeasibleSingularTarget :=
-  infeasibleSingularTarget.equivalence
+example : GlobalEquiv infeasibleSingular infeasibleSingularTarget :=
+  infeasibleSingularTarget.equiv
 
 def infeasibleIndefinite :=
   problem (t : ℝ)
@@ -314,8 +314,8 @@ def infeasibleIndefinite :=
 reformulation infeasibleIndefiniteTarget : infeasibleIndefinite := by
   conic at bound
   conic
-example : GlobalEquivalence infeasibleIndefinite infeasibleIndefiniteTarget :=
-  infeasibleIndefiniteTarget.equivalence
+example : GlobalEquiv infeasibleIndefinite infeasibleIndefiniteTarget :=
+  infeasibleIndefiniteTarget.equiv
 
 assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedNativeMissing
   rejectedSemidefinite

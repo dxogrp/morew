@@ -20,7 +20,7 @@ noncomputable section
 private def assertNoReformulationOutput (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
-  let certificateName := target ++ `equivalence
+  let certificateName := target ++ `equiv
   if env.contains target then
     Lean.throwError "failed reformulation emitted target `{target}`"
   if env.contains certificateName then

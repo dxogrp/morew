@@ -15,24 +15,24 @@ noncomputable section
 
 def userSquare (x : ℝ) : ℝ := x ^ 2
 
-def graph : GraphRepresentation userSquare where
+def graph : GraphRepr userSquare where
   Auxiliary := Unit
   target x y _ := y = x ^ 2
   source_iff_exists x y := by simp [userSquare]
 
-def epigraphRule : EpigraphRepresentation userSquare where
+def epigraphRule : EpigraphRepr userSquare where
   Auxiliary := Unit
   target x t _ := x ^ 2 ≤ t
   source_iff_exists x t := by simp [userSquare]
 
-def hypographRule : HypographRepresentation userSquare where
+def hypographRule : HypographRepr userSquare where
   Auxiliary := Unit
   target x t _ := t ≤ x ^ 2
   source_iff_exists x t := by simp [userSquare]
 
-def exactRule : ExactConstraintLift
+def exactRule : ConstraintRepr
     (fun p : ℝ × ℝ => p.1 ≤ 5 ∧ p.2 ≤ 6) :=
-  ExactConstraintLift.ofIff (fun p => p.1 ≤ 5 ∧ p.2 ≤ 6) (fun _ => Iff.rfl)
+  ConstraintRepr.ofIff (fun p => p.1 ≤ 5 ∧ p.2 ≤ 6) (fun _ => Iff.rfl)
 
 def source :=
   problem (x y : ℝ)
@@ -49,11 +49,11 @@ reformulation target : source := by
   nlp at hypograph_row using hypographRule
   nlp at grouped using exactRule
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ^ 2 ∧ x ^ 2 ≤ y ∧ y ≤ x ^ 2 ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
-def absoluteGraph : GraphRepresentation (fun x : ℝ => |x|) where
+def absoluteGraph : GraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x y _ := 0 ≤ y ∧ y ^ 2 = x ^ 2
   source_iff_exists x y := by
@@ -74,12 +74,12 @@ def absoluteGraphSource :=
 reformulation absoluteGraphTarget : absoluteGraphSource := by
   nlp at graph using absoluteGraph
 
-example : GlobalEquivalence absoluteGraphSource absoluteGraphTarget :=
-  absoluteGraphTarget.equivalence
+example : GlobalEquiv absoluteGraphSource absoluteGraphTarget :=
+  absoluteGraphTarget.equiv
 
 -- A generated guard may establish the domain only after unconditional exactness
 -- has been checked. The target's `log` is smooth on the open set `u > 0`.
-def guardedLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def guardedRepr : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x
   source_iff_exists x := by simp
@@ -93,14 +93,14 @@ def guardedSource :=
       after : x ≤ 20
 
 reformulation guardedTarget : guardedSource := by
-  nlp at positive using guardedLift
+  nlp at positive using guardedRepr
 
-example : GlobalEquivalence guardedSource guardedTarget := guardedTarget.equivalence
+example : GlobalEquiv guardedSource guardedTarget := guardedTarget.equiv
 example (x u : ℝ) : guardedTarget.feasible (x, u) ↔
     x < 10 ∧ u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x ∧ x ≤ 20 := Iff.rfl
 
-def removableLift : ExactConstraintLift (fun x : ℝ => x = x) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => by simp)
+def removableRepr : ConstraintRepr (fun x : ℝ => x = x) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => by simp)
 
 def removableSource :=
   problem (x : ℝ)
@@ -110,7 +110,7 @@ def removableSource :=
       bound : |x| ≤ 3
 
 reformulation removableTarget : removableSource := by
-  nlp at removable using removableLift
+  nlp at removable using removableRepr
   nlp at bound
 
 example (x : ℝ) : removableTarget.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl
@@ -125,7 +125,7 @@ def restrictedSource :=
 reformulation restrictedTarget : restrictedSource := by
   nlp at magnitude
 
-example : GlobalEquivalence restrictedSource restrictedTarget := restrictedTarget.equivalence
+example : GlobalEquiv restrictedSource restrictedTarget := restrictedTarget.equiv
 
 section FiniteEvidence
 
@@ -141,7 +141,7 @@ def familySource :=
 reformulation familyTarget : (familySource n) := by
   nlp at magnitude
 
-example : GlobalEquivalence (familySource n) (familyTarget n) := familyTarget.equivalence n
+example : GlobalEquiv (familySource n) (familyTarget n) := familyTarget.equiv n
 
 def literalSource :=
   problem (v : Fin 2 → ℝ)
@@ -153,7 +153,7 @@ def literalSource :=
 reformulation literalTarget : literalSource := by
   nlp at magnitude
 
-example : GlobalEquivalence literalSource literalTarget := literalTarget.equivalence
+example : GlobalEquiv literalSource literalTarget := literalTarget.equiv
 
 end FiniteEvidence
 
@@ -171,8 +171,8 @@ def supportedSource :=
 reformulation supportedTarget : (supportedSource s hs a) := by
   nlp at magnitude
 
-example : GlobalEquivalence (supportedSource s hs a) (supportedTarget s a) :=
-  supportedTarget.equivalence s hs a
+example : GlobalEquiv (supportedSource s hs a) (supportedTarget s a) :=
+  supportedTarget.equiv s hs a
 
 end ParameterEvidence
 
@@ -186,7 +186,7 @@ theorem coefficient_pos (c : ℝ) : 0 < coefficient c := by
 
 def weighted (c x : ℝ) : ℝ := Real.log (coefficient c) * x
 
-def weightedGraph (c : ℝ) : GraphRepresentation (weighted c) where
+def weightedGraph (c : ℝ) : GraphRepr (weighted c) where
   Auxiliary := Unit
   target x y _ :=
     let _h : 0 < coefficient c := coefficient_pos c
@@ -203,7 +203,7 @@ variable (c : ℝ)
 reformulation target : (source c) := by
   nlp at graph using weightedGraph c
 
-example : GlobalEquivalence (source c) (target c) := target.equivalence c
+example : GlobalEquiv (source c) (target c) := target.equiv c
 
 example (x y : ℝ) : (target c).feasible (x, y) ↔
     y = Real.log (coefficient c) * x := Iff.rfl
@@ -216,7 +216,7 @@ def model (c : ℝ) : Problem ℝ ℝ where
   objective x := x
   feasible x := c * x ≤ 3
 
-def lift : ExactConstraintLift (fun x : ℝ => 2 * x ≤ 3) :=
+def repr : ConstraintRepr (fun x : ℝ => 2 * x ≤ 3) :=
   .ofIff (fun x =>
     (model (let _h : True := True.intro
       ((fun _ : ℝ => 2) ∘ fun y => y * y) x)).feasible x)
@@ -228,9 +228,9 @@ def source :=
     subject to bound : 2 * x ≤ 3
 
 reformulation target : source := by
-  nlp at bound using lift
+  nlp at bound using repr
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x : ℝ) : target.feasible x ↔ 2 * x ≤ 3 := Iff.rfl
 
 end StructuralModelArgument

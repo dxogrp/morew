@@ -95,7 +95,7 @@ info: problem (x : ℝ)
 reformulation minimumEpigraph : minimum := by
   epigraph t
 
-example : GlobalEquivalence minimum minimumEpigraph := minimumEpigraph.equivalence
+example : GlobalEquiv minimum minimumEpigraph := minimumEpigraph.equiv
 
 /--
 info: problem (x t : ℝ)
@@ -110,7 +110,7 @@ info: problem (x t : ℝ)
 reformulation maximumHypograph : maximum := by
   hypograph t
 
-example : GlobalEquivalence maximum maximumHypograph := maximumHypograph.equivalence
+example : GlobalEquiv maximum maximumHypograph := maximumHypograph.equiv
 
 /--
 info: problem (x t : ℝ)

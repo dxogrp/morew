@@ -36,31 +36,31 @@ noncomputable def lambdaMax {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
 
 /-- The matrix-fractional function `xᵀ P⁻¹ x`, using mathlib's total inverse.
 Its Schur-complement representation requires `P.PosDef`. -/
-noncomputable def matrixFrac {n : Nat} (x : Fin n → ℝ)
+noncomputable def matFrac {n : Nat} (x : Fin n → ℝ)
     (P : Matrix (Fin n) (Fin n) ℝ) : ℝ := x ⬝ᵥ (P⁻¹ *ᵥ x)
 
 /-- The matrix fraction on an empty vector is zero. -/
-@[simp] theorem matrixFrac_empty (x : Fin 0 → ℝ) (P : Matrix (Fin 0) (Fin 0) ℝ) :
-    matrixFrac x P = 0 := by simp [matrixFrac, dotProduct]
+@[simp] theorem matFrac_empty (x : Fin 0 → ℝ) (P : Matrix (Fin 0) (Fin 0) ℝ) :
+    matFrac x P = 0 := by simp [matFrac, dotProduct]
 
 /-- The sum of the singular values, counted with multiplicity. -/
-noncomputable def nuclearNorm {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) : ℝ :=
+noncomputable def normNuc {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) : ℝ :=
   ∑ i : Fin n, (Matrix.toEuclideanLin A).singularValues i
 
-theorem nuclearNorm_nonneg {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) :
-    0 ≤ nuclearNorm A :=
+theorem normNuc_nonneg {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) :
+    0 ≤ normNuc A :=
   Finset.sum_nonneg fun i _ => (Matrix.toEuclideanLin A).singularValues_nonneg i
 
-@[simp] theorem nuclearNorm_zero {m n : Nat} :
-    nuclearNorm (0 : Matrix (Fin m) (Fin n) ℝ) = 0 := by
-  simp [nuclearNorm]
+@[simp] theorem normNuc_zero {m n : Nat} :
+    normNuc (0 : Matrix (Fin m) (Fin n) ℝ) = 0 := by
+  simp [normNuc]
 
-@[simp] theorem nuclearNorm_empty_columns {m : Nat} (A : Matrix (Fin m) (Fin 0) ℝ) :
-    nuclearNorm A = 0 := by
-  simp [nuclearNorm]
+@[simp] theorem normNuc_empty_columns {m : Nat} (A : Matrix (Fin m) (Fin 0) ℝ) :
+    normNuc A = 0 := by
+  simp [normNuc]
 
-@[simp] theorem nuclearNorm_empty_rows {n : Nat} (A : Matrix (Fin 0) (Fin n) ℝ) :
-    nuclearNorm A = 0 := by
+@[simp] theorem normNuc_empty_rows {n : Nat} (A : Matrix (Fin 0) (Fin n) ℝ) :
+    normNuc A = 0 := by
   have : A = 0 := Subsingleton.elim _ _
   simp [this]
 

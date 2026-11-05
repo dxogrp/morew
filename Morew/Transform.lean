@@ -29,8 +29,8 @@ structure ConstraintDecomposition {X : Type u} {V : Type v}
 namespace Problem
 
 /-- Append a constraint, preserving the decision space and objective.
-For global equivalence, use `addConstraintEquivalence` with an implication
-from feasibility, or `restrictionEquivalence` with a feasible improvement map. -/
+For global equivalence, use `addConstraintEquiv` with an implication
+from feasibility, or `restrictionEquiv` with a feasible improvement map. -/
 def addConstraint {X : Type u} {V : Type v}
     (p : Problem X V) (constraint : X → Prop) : Problem X V where
   objective := p.objective
@@ -48,7 +48,7 @@ theorem addConstraint_feasible {X : Type u} {V : Type v}
       p.feasible point ∧ constraint point := Iff.rfl
 
 /-- Remove a selected constraint, preserving the decision space and objective.
-`removeConstraintEquivalence` proves equivalence when the retained constraints
+`removeConstraintEquiv` proves equivalence when the retained constraints
 imply the removed constraint. -/
 def removeConstraint {X : Type u} {V : Type v}
     {selected : X → Prop} (p : Problem X V)
@@ -69,9 +69,9 @@ theorem removeConstraint_feasible {X : Type u} {V : Type v}
     (p.removeConstraint decomposition).feasible point ↔ decomposition.remainder point := Iff.rfl
 
 /-- Replace a selected constraint by a predicate on the original and auxiliary
-coordinates. `conditionalConstraintLiftEquivalence` proves equivalence under
+coordinates. `replaceConstraintUnderEquiv` proves equivalence under
 the retained constraints. -/
-def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
+def replaceConstraintUnder {X : Type u} {V : Type v} {A : Type w}
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) : Problem (X × A) V where
@@ -79,52 +79,52 @@ def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
   feasible point := decomposition.remainder point.1 ∧ target point.1 point.2
 
 @[simp]
-theorem liftConstraintConditional_objective
+theorem replaceConstraintUnder_objective
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
     (p : Problem X V) (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) (point : X × A) :
-    (p.liftConstraintConditional decomposition target).objective point =
+    (p.replaceConstraintUnder decomposition target).objective point =
       p.objective point.1 := rfl
 
 @[simp]
-theorem liftConstraintConditional_feasible
+theorem replaceConstraintUnder_feasible
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop}
     (p : Problem X V) (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop) (point : X × A) :
-    (p.liftConstraintConditional decomposition target).feasible point ↔
+    (p.replaceConstraintUnder decomposition target).feasible point ↔
       decomposition.remainder point.1 ∧ target point.1 point.2 := Iff.rfl
 
 /-- Replace a selected constraint by an existentially equivalent predicate,
 retaining the other constraints. -/
-def liftConstraint {X : Type u} {V : Type v} {source : X → Prop}
+def replaceConstraint {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    Problem (X × lift.Auxiliary) V where
+    Problem (X × repr.Auxiliary) V where
   objective point := p.objective point.1
   feasible point :=
-    decomposition.remainder point.1 ∧ lift.target point.1 point.2
+    decomposition.remainder point.1 ∧ repr.target point.1 point.2
 
 @[simp]
-theorem liftConstraint_objective
+theorem replaceConstraint_objective
     {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source)
-    (point : X × lift.Auxiliary) :
-    (p.liftConstraint lift decomposition).objective point =
+    (point : X × repr.Auxiliary) :
+    (p.replaceConstraint repr decomposition).objective point =
       p.objective point.1 := rfl
 
 @[simp]
-theorem liftConstraint_feasible
+theorem replaceConstraint_feasible
     {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source)
-    (point : X × lift.Auxiliary) :
-    (p.liftConstraint lift decomposition).feasible point ↔
+    (point : X × repr.Auxiliary) :
+    (p.replaceConstraint repr decomposition).feasible point ↔
       decomposition.remainder point.1 ∧
-        lift.target point.1 point.2 := Iff.rfl
+        repr.target point.1 point.2 := Iff.rfl
 
 /-- Pull an optimization problem back along a map of decision spaces. -/
 def pullback {X : Type u} {Y : Type v} {V : Type w}
@@ -192,11 +192,11 @@ structure FeasibleSurjection {X : Type u} {Y : Type v} {V : Type w}
 
 /-- Pointwise-equal objectives and pointwise-equivalent feasible predicates
 give a global equivalence via the identity map on decision points. -/
-def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
+def pointwiseEquiv {X : Type u} {V : Type v} [Preorder V]
     (p q : Problem X V)
     (objective_eq : ∀ x, p.objective x = q.objective x)
     (feasible_iff : ∀ x, p.feasible x ↔ q.feasible x) :
-    GlobalEquivalence p q where
+    GlobalEquiv p q where
   forward := {
     map := fun x => ⟨x.1, (feasible_iff x.1).mp x.2⟩
     objective_le := fun x => le_of_eq (objective_eq x.1).symm }
@@ -206,30 +206,30 @@ def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
 
 /-- Add a consequence of current feasibility, preserving decision points and
 objective values. -/
-def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+def addConstraintEquiv {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (implied : ∀ point, p.feasible point → constraint point) :
-    GlobalEquivalence p (p.addConstraint constraint) :=
-  pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
+    GlobalEquiv p (p.addConstraint constraint) :=
+  pointwiseEquiv p (p.addConstraint constraint) (fun _ => rfl)
     (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
 
 /-- Remove a constraint implied by the retained constraints, preserving decision
 points and objective values. -/
-def removeConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+def removeConstraintEquiv {X : Type u} {V : Type v} [Preorder V]
     {selected : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p selected)
     (implied : ∀ point, decomposition.remainder point → selected point) :
-    GlobalEquivalence p (p.removeConstraint decomposition) :=
-  pointwiseEquivalence p (p.removeConstraint decomposition) (fun _ => rfl)
+    GlobalEquiv p (p.removeConstraint decomposition) :=
+  pointwiseEquiv p (p.removeConstraint decomposition) (fun _ => rfl)
     (fun point => ⟨fun feasible => ((decomposition.feasible_iff point).mp feasible).1,
       fun retained => (decomposition.feasible_iff point).mpr ⟨retained, implied point retained⟩⟩)
 
 /-- Restrict to an added constraint using a feasible improvement map.
 The backward map is inclusion. -/
-def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
+def restrictionEquiv {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (repair : GlobalImprovement p (p.addConstraint constraint)) :
-    GlobalEquivalence p (p.addConstraint constraint) where
+    GlobalEquiv p (p.addConstraint constraint) where
   forward := repair
   backward := {
     map := fun point => ⟨point.1, point.2.1⟩
@@ -238,14 +238,14 @@ def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
 /-- Replacing a constraint by equivalent constraints with auxiliary variables
 preserves global optimization. The forward map chooses feasible auxiliary
 values; the backward map projects to the original coordinates. -/
-noncomputable def conditionalConstraintLiftEquivalence
+noncomputable def replaceConstraintUnderEquiv
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop} [Preorder V]
     (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (target : X → A → Prop)
     (source_iff_exists : ∀ x, decomposition.remainder x →
       (source x ↔ ∃ a, target x a)) :
-    GlobalEquivalence p (p.liftConstraintConditional decomposition target) where
+    GlobalEquiv p (p.replaceConstraintUnder decomposition target) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
@@ -266,34 +266,34 @@ noncomputable def conditionalConstraintLiftEquivalence
 
 /-- Replacing a constraint by an existentially equivalent predicate preserves
 global optimization. -/
-noncomputable def exactConstraintLiftEquivalence
+noncomputable def replaceConstraintEquiv
     {X : Type u} {V : Type v} {source : X → Prop} [Preorder V]
     (p : Problem X V)
-    (lift : ExactConstraintLift.{u, w} source)
+    (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    GlobalEquivalence p (p.liftConstraint lift decomposition) where
+    GlobalEquiv p (p.replaceConstraint repr decomposition) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
         (decomposition.feasible_iff x.1).mp x.2
-      have hexists : ∃ a, lift.target x.1 a :=
-        (lift.source_iff_exists x.1).mp hparts.2
+      have hexists : ∃ a, repr.target x.1 a :=
+        (repr.source_iff_exists x.1).mp hparts.2
       exact ⟨(x.1, Classical.choose hexists), hparts.1,
         Classical.choose_spec hexists⟩
     objective_le := fun _ => le_rfl }
   backward := {
     map := fun point => by
       have hsource : source point.1.1 :=
-        (lift.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
+        (repr.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
       exact ⟨point.1.1,
         (decomposition.feasible_iff point.1.1).mpr
           ⟨point.2.1, hsource⟩⟩
     objective_le := fun _ => le_rfl }
 
 /-- Pullback along a feasibly surjective map is a global equivalence. -/
-def pullbackEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+def pullbackEquiv {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     (p : Problem X V) (f : Y → X) (h : FeasibleSurjection p f) :
-    GlobalEquivalence p (p.pullback f) where
+    GlobalEquiv p (p.pullback f) where
   forward := {
     map := fun x =>
       ⟨h.preimage x, by
@@ -356,8 +356,8 @@ theorem restrictionImprovement_objective_eq
 end FeasibleSurjection
 
 /-- The epigraph construction preserves global optimization behavior. -/
-def epigraphEquivalence {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X V) : GlobalEquivalence p p.epigraph where
+def epigraphEquiv {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X V) : GlobalEquiv p p.epigraph where
   forward := {
     map := fun x => ⟨(x.1, p.objective x.1), x.2, le_rfl⟩
     objective_le := fun _ => le_rfl }
@@ -366,8 +366,8 @@ def epigraphEquivalence {X : Type u} {V : Type v} [Preorder V]
     objective_le := fun xt => xt.2.2 }
 
 /-- The hypograph construction preserves global maximization behavior. -/
-def hypographEquivalence {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X (OrderDual V)) : GlobalEquivalence p p.hypograph where
+def hypographEquiv {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X (OrderDual V)) : GlobalEquiv p p.hypograph where
   forward := {
     map := fun x => ⟨(x.1, p.objective x.1), x.2, le_rfl⟩
     objective_le := fun _ => le_rfl }

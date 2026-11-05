@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Polyhedral
-import Morew.Conic.SecondOrder.Representations
+import Morew.Conic.SecondOrder.Repr
 import Morew.Elab.Rewrite.Registry
 
 assert_not_imported Morew.Elab.Reformulation.Command

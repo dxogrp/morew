@@ -30,7 +30,7 @@ def logSource :=
 reformulation logBound : logSource := by
   hypograph value at (Real.log x) as rewardBound
 
-example : GlobalEquivalence logSource logBound := logBound.equivalence
+example : GlobalEquiv logSource logBound := logBound.equiv
 example (x value : ℝ) : logBound.objective (x, value) = -value := rfl
 example (x value : ℝ) : logBound.feasible (x, value) ↔
     1 ≤ x ∧ x ≤ 3 ∧ value ≤ Real.log x := Iff.rfl
@@ -51,7 +51,7 @@ def absSource := problem (x : ℝ) maximize -|x|
 reformulation absBound : absSource := by
   epigraph magnitude at (|x|)
 
-example : GlobalEquivalence absSource absBound := absBound.equivalence
+example : GlobalEquiv absSource absBound := absBound.equiv
 example (x magnitude : ℝ) : absBound.objective (x, magnitude) = -magnitude := rfl
 example (x magnitude : ℝ) : absBound.feasible (x, magnitude) ↔ |x| ≤ magnitude := Iff.rfl
 
@@ -108,8 +108,8 @@ reformulation parameterBound : (parameterSource c) := by
   hypograph t at (Real.log x)
 
 example (x t : ℝ) : (parameterBound c).objective (x, t) = c * t := rfl
-example : GlobalEquivalence (parameterSource c) (parameterBound c) :=
-  parameterBound.equivalence c hc
+example : GlobalEquiv (parameterSource c) (parameterBound c) :=
+  parameterBound.equiv c hc
 
 end Parameter
 
@@ -129,7 +129,7 @@ reformulation explicitBound : explicitSource := by
       change -Real.log x ≤ -t
       exact neg_le_neg bound)
 
-example : GlobalEquivalence explicitSource explicitBound := explicitBound.equivalence
+example : GlobalEquiv explicitSource explicitBound := explicitBound.equiv
 
 #guard_error_fragments ["cannot certify bound context"] in
 reformulation wrongLogDirection : logSource := by

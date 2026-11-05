@@ -40,7 +40,7 @@ reformulation epigraphForm : p := by
   epigraph t
 
 #printp epigraphForm
-#check epigraphForm.equivalence
+#check epigraphForm.equiv
 
 example : p.IsGlobalOptimum ⟨0, le_rfl⟩ := by
   -- The epigraph point `(0, 0)` satisfies both constraints.
@@ -55,14 +55,14 @@ example : p.IsGlobalOptimum ⟨0, le_rfl⟩ := by
     exact le_trans (sq_nonneg y.1.1) y.2.2
 
   -- The certificate's backward map recovers `x` and transfers optimality.
-  exact epigraphForm.equivalence.map_isGlobalOptimum_backward hz
+  exact epigraphForm.equiv.map_isGlobalOptimum_backward hz
 
 -- Name the epigraph constraint.
 reformulation labeledEpigraphForm : p := by
   epigraph t as objectiveBound
 
 #printp labeledEpigraphForm
-#check labeledEpigraphForm.equivalence
+#check labeledEpigraphForm.equiv
 
 end Epigraph
 
@@ -83,7 +83,7 @@ reformulation concreteEpigraph : (p 3) := by
   epigraph t
 
 #printp concreteEpigraph
-example : GlobalEquivalence (p 3) concreteEpigraph := concreteEpigraph.equivalence
+example : GlobalEquiv (p 3) concreteEpigraph := concreteEpigraph.equiv
 
 section
 
@@ -93,8 +93,8 @@ variable (shift : ℝ)
 reformulation shiftedEpigraph : (p shift) := by
   epigraph t
 
-example : GlobalEquivalence (p shift) (shiftedEpigraph shift) :=
-  shiftedEpigraph.equivalence shift
+example : GlobalEquiv (p shift) (shiftedEpigraph shift) :=
+  shiftedEpigraph.equiv shift
 
 end
 

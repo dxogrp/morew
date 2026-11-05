@@ -21,8 +21,8 @@ reformulation continued : (@partialRemoval X first second f) := by
   remove at second_order
 
 example : @continued X first second f = @completeRemoval X first second f := rfl
-example : GlobalEquivalence (@source X first second f) (@continued X first second f) :=
-  (@partialRemoval.equivalence X first second f).trans (@continued.equivalence X first second f)
+example : GlobalEquiv (@source X first second f) (@continued X first second f) :=
+  (@partialRemoval.equiv X first second f).trans (@continued.equiv X first second f)
 end
 
 section
@@ -34,8 +34,8 @@ reformulation continuedSquare : (@squareOperandRemoved first f) := by
 
 example (x : ℝ) : (@continuedSquare first f).objective x = f first x := rfl
 example (x : ℝ) : (@continuedSquare first f).feasible x ↔ True := Iff.rfl
-example : GlobalEquivalence (squareOperandSource first f) (@continuedSquare first f) :=
-  (@squareOperandRemoved.equivalence first f).trans (@continuedSquare.equivalence first f)
+example : GlobalEquiv (squareOperandSource first f) (@continuedSquare first f) :=
+  (@squareOperandRemoved.equiv first f).trans (@continuedSquare.equiv first f)
 end
 
 end

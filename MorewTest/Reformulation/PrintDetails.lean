@@ -77,7 +77,7 @@ run_cmd do
 example : exactReplay = target := rfl
 example : detailedExactReplay = registeredDetailed := rfl
 example : detailedDisplayReplay = registeredDetailed := rfl
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 section AlteredCast
 
@@ -157,7 +157,7 @@ run_cmd do
 
 example : exactReplay = applied := rfl
 example : displayReplay = applied := rfl
-example : GlobalEquivalence (source 0) applied := applied.equivalence
+example : GlobalEquiv (source 0) applied := applied.equiv
 
 end BinderTypes
 

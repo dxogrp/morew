@@ -34,8 +34,8 @@ reformulation targeted : source := by
 reformulation ready : source := by
   conic
 
-example : GlobalEquivalence source targeted := targeted.equivalence
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source targeted := targeted.equiv
+example : GlobalEquiv source ready := ready.equiv
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 example (x t : ℝ) : targeted.feasible (x, t) ↔ 1 ≤ t ∧ -2 ≤ x := Iff.rfl
 example (x t : ℝ) : ready.feasible (x, t) ↔
@@ -55,7 +55,7 @@ def overlapping :=
 reformulation ambiguous : overlapping := by
   conic at bound
 
-assert_not_exists ambiguous ambiguous.equivalence
+assert_not_exists ambiguous ambiguous.equiv
 
 reformulation chooseLeft : overlapping := by
   conic at bound using Conic.Power.rpowZeroEpigraph
@@ -67,8 +67,8 @@ reformulation chooseRight : overlapping := by
 reformulation overlapReady : overlapping := by
   conic
 
-example : GlobalEquivalence overlapping chooseLeft := chooseLeft.equivalence
-example : GlobalEquivalence overlapping chooseRight := chooseRight.equivalence
+example : GlobalEquiv overlapping chooseLeft := chooseLeft.equiv
+example : GlobalEquiv overlapping chooseRight := chooseRight.equiv
 example : overlapReady.conicForm.data.sense = .maximize := rfl
 
 end Endpoints
@@ -93,8 +93,8 @@ reformulation lifted : source := by
 reformulation ready : lifted := by
   conic
 
-example : GlobalEquivalence source lifted := lifted.equivalence
-example : GlobalEquivalence lifted ready := ready.equivalence
+example : GlobalEquiv source lifted := lifted.equiv
+example : GlobalEquiv lifted ready := ready.equiv
 example : Conic.Form ready := ready.conicForm
 example (x y a : ℝ) : lifted.feasible ((x, y), a) ↔
     0 ≤ x ∧ a + y ≤ 10 ∧ Real.rpow x (3 / 2) ≤ 20 ∧
@@ -116,7 +116,7 @@ def source :=
 reformulation target : source := by
   conic at bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x t previous u : ℝ) : target.feasible (((x, t), previous), u) ↔
     0 ≤ x ∧ previous = x ∧ 0 ≤ u ∧ t ≤ u ∧ (x, 1, u) ∈ POW (1 / 2) := Iff.rfl
 example (x t previous u : ℝ) : target.objective (((x, t), previous), u) = t := rfl

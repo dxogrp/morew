@@ -79,9 +79,9 @@ problem (x : Fin n → ℝ) (t : ℝ) (mean_aux : Fin n → ℝ)
 #guard_msgs in
 #printp targeted
 
-example : GlobalEquivalence (source n) (targeted n hn) := targeted.equivalence n hn
-example : GlobalEquivalence (source n) (ready n hn) :=
-  (targeted.equivalence n hn).trans (ready.equivalence n hn)
+example : GlobalEquiv (source n) (targeted n hn) := targeted.equiv n hn
+example : GlobalEquiv (source n) (ready n hn) :=
+  (targeted.equiv n hn).trans (ready.equiv n hn)
 example : Conic.Form (ready n hn) := ready.conicForm n hn
 example : (ready.conicForm n hn).data.toProblem = ready n hn :=
   (ready.conicForm n hn).represents
@@ -155,9 +155,9 @@ problem (x : Fin n → ℝ) (t : ℝ) (inverse_aux : Fin n → ℝ)
 #guard_msgs in
 #printp targeted
 
-example : GlobalEquivalence (source n) (targeted n hn) := targeted.equivalence n hn
-example : GlobalEquivalence (source n) (ready n hn) :=
-  (targeted.equivalence n hn).trans (ready.equivalence n hn)
+example : GlobalEquiv (source n) (targeted n hn) := targeted.equiv n hn
+example : GlobalEquiv (source n) (ready n hn) :=
+  (targeted.equiv n hn).trans (ready.equiv n hn)
 example : Conic.Form (ready n hn) := ready.conicForm n hn
 example : (ready.conicForm n hn).data.toProblem = ready n hn :=
   (ready.conicForm n hn).represents

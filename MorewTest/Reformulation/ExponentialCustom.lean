@@ -25,7 +25,7 @@ private theorem boundary (x : ℝ) : (0, 0, x) ∈ EXP ↔ 0 ≤ x := by simp
 
 def userIdentity (x : ℝ) : ℝ := x
 
-def graphRule : GraphRepresentation userIdentity where
+def graphRule : GraphRepr userIdentity where
   Auxiliary := Unit
   target x y _ :=
     let difference := y - x
@@ -36,18 +36,18 @@ def graphRule : GraphRepresentation userIdentity where
       forall_const]
     exact eq_comm.trans le_antisymm_iff
 
-def epigraphRule : EpigraphRepresentation Fn.softplus where
+def epigraphRule : EpigraphRepr Fn.softplus where
   Auxiliary := Fin 2 → ℝ
   target x t u := (∀ i : Fin 2, (![0, x] i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1
   source_iff_exists x t := Exponential.softplus_le_iff x t
 
-def hypographRule : HypographRepresentation userIdentity where
+def hypographRule : HypographRepr userIdentity where
   Auxiliary := Unit
   target x t _ := (0, 0, x - t) ∈ EXP
   source_iff_exists x t := by
     simp only [userIdentity, boundary, sub_nonneg, exists_const]
 
-def scalarAuxiliaryRule : ExactConstraintLift
+def scalarAuxiliaryRule : ConstraintRepr
     (fun point : ℝ × ℝ => Real.exp point.1 ≤ point.2) where
   Auxiliary := ℝ
   target point u := u = point.1 ∧
@@ -66,7 +66,7 @@ def graphSource :=
 reformulation graphTarget : graphSource := by
   conic at graph using graphRule
 
-example : GlobalEquivalence graphSource graphTarget := graphTarget.equivalence
+example : GlobalEquiv graphSource graphTarget := graphTarget.equiv
 
 example (x y : ℝ) : graphTarget.feasible (x, y) ↔
     (0, 0, y - x) ∈ EXP ∧ (∀ _ : Fin 1, (0, 0, x - y) ∈ EXP) := Iff.rfl
@@ -80,7 +80,7 @@ def epigraphSource :=
 reformulation epigraphTarget : epigraphSource := by
   conic at epi_row using epigraphRule
 
-example : GlobalEquivalence epigraphSource epigraphTarget := epigraphTarget.equivalence
+example : GlobalEquiv epigraphSource epigraphTarget := epigraphTarget.equiv
 
 example (x t : ℝ) (u : Fin 2 → ℝ) : epigraphTarget.feasible ((x, t), u) ↔
     (∀ i, (![0, x] i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 := Iff.rfl
@@ -94,7 +94,7 @@ def hypographSource :=
 reformulation hypographTarget : hypographSource := by
   conic at hypo_row using hypographRule
 
-example : GlobalEquivalence hypographSource hypographTarget := hypographTarget.equivalence
+example : GlobalEquiv hypographSource hypographTarget := hypographTarget.equiv
 
 example (x t : ℝ) : hypographTarget.feasible (x, t) ↔
     (0, 0, x - t) ∈ EXP := Iff.rfl
@@ -110,14 +110,14 @@ def source :=
 reformulation target : source := by
   conic at exponential using scalarAuxiliaryRule
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x t u : ℝ) : target.objective ((x, t), u) = x + t := rfl
 
 example (x t u : ℝ) : target.feasible ((x, t), u) ↔
     x * x ≤ 1 ∧ u = x ∧ (u, 1, t) ∈ EXP ∧ t ≤ 10 := Iff.rfl
 
-def emptyRule : ExactConstraintLift (fun _ : ℝ => True) where
+def emptyRule : ConstraintRepr (fun _ : ℝ => True) where
   Auxiliary := Unit
   target x _ := ∀ _ : Fin 0, (x, 1, x) ∈ EXP
   source_iff_exists _ := by simp
@@ -133,7 +133,7 @@ def emptySource :=
 reformulation emptyTarget : emptySource := by
   conic at empty using emptyRule
 
-example : GlobalEquivalence emptySource emptyTarget := emptyTarget.equivalence
+example : GlobalEquiv emptySource emptyTarget := emptyTarget.equiv
 
 example (x : ℝ) : emptyTarget.feasible x ↔
     x ≤ 1 ∧ (∀ _ : Fin 0, (x, 1, x) ∈ EXP) ∧ 0 ≤ x := Iff.rfl
@@ -151,7 +151,7 @@ elab "assert_atomic_exponential% " nested:command : command => do
   if let some name := MorewTest.newLocalDeclaration? before after then
     Lean.throwError m!"failed reformulation leaked auxiliary declaration {name}"
 
-#guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
+#guard_error_fragments ["constraint `after`: the constraint representation's input type does not match the decision type"] in
 assert_atomic_exponential%
 reformulation rollback : source certificate rollbackAlias := by
   conic at exponential using scalarAuxiliaryRule
@@ -168,7 +168,7 @@ def automaticSource :=
 reformulation noFallback : automaticSource := by
   conic at exponential using scalarAuxiliaryRule
 
-def unitEpigraph : EpigraphRepresentation Real.exp where
+def unitEpigraph : EpigraphRepr Real.exp where
   Auxiliary := Unit
   target x t _ := (x, 1, t) ∈ EXP
   source_iff_exists x t := by
@@ -185,7 +185,7 @@ def nonlinearSource :=
 reformulation nonlinearTarget : nonlinearSource := by
   conic at bad using unitEpigraph
 
-def uninspectableRule : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
+def uninspectableRule : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := Unit
   target x _ := ∀ _ : Fin 1, True ∧ (0, 0, x) ∈ EXP
   source_iff_exists _ := by simp
@@ -205,7 +205,7 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`rollback, `noFallback, `nonlinearTarget, `uninspectableTarget] do
     let full := `MorewTest.Reformulation.ExponentialCustom ++ name
-    if env.contains full || env.contains (full ++ `equivalence) then
+    if env.contains full || env.contains (full ++ `equiv) then
       Lean.throwError "failed custom rewrite emitted {full}"
     if (Morew.Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed custom rewrite registered presentation metadata"

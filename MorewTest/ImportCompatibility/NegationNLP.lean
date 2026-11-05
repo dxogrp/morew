@@ -17,8 +17,8 @@ noncomputable section
 
 reformulation continuedAbsolute : absoluteTarget := by nlp
 
-example : GlobalEquivalence absoluteSource continuedAbsolute :=
-  absoluteBound.equivalence.trans (absoluteTarget.equivalence.trans continuedAbsolute.equivalence)
+example : GlobalEquiv absoluteSource continuedAbsolute :=
+  absoluteBound.equiv.trans (absoluteTarget.equiv.trans continuedAbsolute.equiv)
 example : IsSmoothNLP continuedAbsolute := continuedAbsolute.isSmoothNLP
 example : continuedAbsolute.nlpForm.data.toProblem = continuedAbsolute :=
   continuedAbsolute.nlpForm.represents
@@ -26,8 +26,8 @@ example : continuedAbsolute.nlpForm.data.toProblem = continuedAbsolute :=
 reformulation continuedGraph : Graph.target := by nlp
 reformulation importedGraph : Graph.source := by nlp at bound
 
-example : GlobalEquivalence Graph.source continuedGraph :=
-  Graph.target.equivalence.trans continuedGraph.equivalence
+example : GlobalEquiv Graph.source continuedGraph :=
+  Graph.target.equiv.trans continuedGraph.equiv
 example : IsSmoothNLP continuedGraph := continuedGraph.isSmoothNLP
 example : continuedGraph.nlpForm.data.toProblem = continuedGraph := continuedGraph.nlpForm.represents
 example : importedGraph = Graph.target := rfl

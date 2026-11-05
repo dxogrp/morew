@@ -54,7 +54,7 @@ run_cmd liftTermElabM do
 
 namespace FixedParameters
 
-noncomputable def squareEpigraph : EpigraphRepresentation (fun x : ℝ => x ^ 2) where
+noncomputable def squareEpigraph : EpigraphRepr (fun x : ℝ => x ^ 2) where
   Auxiliary := Unit
   target x t _ := x ^ 2 ≤ t
   source_iff_exists _ _ := by simp only [exists_const]
@@ -62,20 +62,20 @@ noncomputable def squareEpigraph : EpigraphRepresentation (fun x : ℝ => x ^ 2)
 noncomputable def indexedAbs (n : Nat) (x : ℝ) : ℝ := |x - n|
 
 noncomputable def indexedAbsEpigraph (n : Nat) :
-    EpigraphRepresentation (indexedAbs n) where
+    EpigraphRepr (indexedAbs n) where
   Auxiliary := Unit
   target x t _ := x - n ≤ t ∧ -(x - n) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - n) t
 
 noncomputable def finAbs (i : Fin 3) (x : ℝ) : ℝ := indexedAbs i.val x
 
-noncomputable def finAbsEpigraph (i : Fin 3) : EpigraphRepresentation (finAbs i) :=
+noncomputable def finAbsEpigraph (i : Fin 3) : EpigraphRepr (finAbs i) :=
   indexedAbsEpigraph i.val
 
 noncomputable def flaggedAbs (flag : Bool) (x : ℝ) : ℝ :=
   indexedAbs (if flag then 0 else 1) x
 
-noncomputable def flaggedAbsEpigraph (flag : Bool) : EpigraphRepresentation (flaggedAbs flag) :=
+noncomputable def flaggedAbsEpigraph (flag : Bool) : EpigraphRepr (flaggedAbs flag) :=
   indexedAbsEpigraph (if flag then 0 else 1)
 
 structure Parameters where
@@ -86,7 +86,7 @@ noncomputable def parameterAbs (parameters : Parameters) (x : ℝ) : ℝ :=
   indexedAbs (parameters.count + if parameters.flag then 0 else 1) x
 
 noncomputable def parameterAbsEpigraph (parameters : Parameters) :
-    EpigraphRepresentation (parameterAbs parameters) :=
+    EpigraphRepr (parameterAbs parameters) :=
   indexedAbsEpigraph (parameters.count + if parameters.flag then 0 else 1)
 
 private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
@@ -168,7 +168,7 @@ run_cmd liftTermElabM do
 
 def natHelper (n : Nat) : Nat := n + 1
 
-def natHelperLift : ExactConstraintLift (fun n : Nat => n = natHelper 1) :=
+def natHelperRepr : ConstraintRepr (fun n : Nat => n = natHelper 1) :=
   .ofIff (fun n => n = 2) (fun _ => Iff.rfl)
 
 -- Even a closed, definitionally equal endpoint must preserve its represented
@@ -178,14 +178,14 @@ run_cmd liftTermElabM do
   withLocalDeclD `point (mkConst ``Nat) fun point => do
     let succeeded ← try
         discard <| Morew.Elab.Rewrite.Match.declaration point (mkApp source point)
-          ``natHelperLift pure
+          ``natHelperRepr pure
         pure true
       catch _ => pure false
     if succeeded then throwError "discrete parameter comparison unfolded an endpoint"
 
 end FixedParameters
 
-noncomputable def negativeIdentity : GraphRepresentation (fun x : ℝ => -x) where
+noncomputable def negativeIdentity : GraphRepr (fun x : ℝ => -x) where
   Auxiliary := Unit
   target x y _ := y = -x
   source_iff_exists _ _ := by simp only [exists_const]

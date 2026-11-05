@@ -284,12 +284,12 @@ private def materializeOccurrenceBound (state : ReformState)
       elabTermEnsuringType sourceSyntax (← inferType typed.canonical)
     synthesizeSyntheticMVarsNoPostponing
     let source ← instantiateMVars source
-    let sourceEquivalence ← if ← isDefEq typed.canonical source then
-        mkAppM ``Morew.GlobalEquivalence.refl #[typed.canonical]
+    let sourceEquiv ← if ← isDefEq typed.canonical source then
+        mkAppM ``Morew.GlobalEquiv.refl #[typed.canonical]
       else do
         let normalization ← checkedPointwiseNormalization state.sourceName
           typed.canonical source state.normalizationLemmas
-        pure normalization.equivalence
+        pure normalization.equiv
     let sourcePresentation ← typedPresentationFromExpression source state.view
     let direction := Lean.mkConst <| match direction with
       | .upper => ``Morew.BoundDirection.upper
@@ -311,13 +311,13 @@ private def materializeOccurrenceBound (state : ReformState)
     if contextProof.hasMVar || contextProof.hasSorry then
       throwError "bound context certificate contains incomplete evidence"
     checkWithKernel contextProof
-    let equivalence ← if let some decomposition := decomposition? then
-        mkAppM ``Morew.constraintBoundAtEquivalence
+    let equiv ← if let some decomposition := decomposition? then
+        mkAppM ``Morew.constraintBoundAtEquiv
           #[source, decomposition, selected.selected, selected.context, direction, contextProof]
       else
-        mkAppM ``Morew.objectiveBoundAtEquivalence
+        mkAppM ``Morew.objectiveBoundAtEquiv
           #[source, selected.selected, selected.context, direction, contextProof]
-    let naturalType ← whnf (← inferType equivalence)
+    let naturalType ← whnf (← inferType equiv)
     let natural := naturalType.getAppArgs.back!
     let targetSyntax ← liftMacroM selected.view.toTermSyntax
     let target ← elabTerm targetSyntax (some (← inferType natural))
@@ -335,14 +335,14 @@ private def materializeOccurrenceBound (state : ReformState)
       let left ← mkAppM ``Morew.Problem.feasible #[natural, point]
       let right ← mkAppM ``Morew.Problem.feasible #[target, point]
       mkForallFVars #[point] (mkApp2 (mkConst ``Iff) left right)
-    let normalization ← mkAppM ``Morew.pointwiseEquivalence
+    let normalization ← mkAppM ``Morew.pointwiseEquiv
       #[natural, target, objectiveEquality, ← proveRearrangement feasibleType]
-    let equivalence ← mkAppM ``Morew.GlobalEquivalence.trans #[equivalence, normalization]
-    let equivalence ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[sourceEquivalence, equivalence]
-    let equivalence ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[typed.normalization.equivalence, equivalence]
-    let primitive ← state.runner.liftEquivalence equivalence
+    let equiv ← mkAppM ``Morew.GlobalEquiv.trans #[equiv, normalization]
+    let equiv ← mkAppM ``Morew.GlobalEquiv.trans
+      #[sourceEquiv, equiv]
+    let equiv ← mkAppM ``Morew.GlobalEquiv.trans
+      #[typed.normalization.equiv, equiv]
+    let primitive ← state.runner.liftEquiv equiv
     let primitive ← instantiateMVars primitive
     checkWithKernel primitive
     -- Store the certificate as a constant to avoid repeated proof elaboration.

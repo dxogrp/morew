@@ -40,43 +40,43 @@ variable {X : Type u} {V : Type v} [Preorder V] {selected : X → Prop}
     (p : Problem X V) (decomposition : ConstraintDecomposition p selected)
     (implied : ∀ point, decomposition.remainder point → selected point)
 
-example : GlobalEquivalence p (p.removeConstraint decomposition) :=
-  removeConstraintEquivalence p decomposition implied
+example : GlobalEquiv p (p.removeConstraint decomposition) :=
+  removeConstraintEquiv p decomposition implied
 
 example (point : FeasiblePoint p) :
-    ((removeConstraintEquivalence p decomposition implied).forward.map point).1 = point.1 := rfl
+    ((removeConstraintEquiv p decomposition implied).forward.map point).1 = point.1 := rfl
 
 example (point : FeasiblePoint (p.removeConstraint decomposition)) :
-    ((removeConstraintEquivalence p decomposition implied).backward.map point).1 = point.1 := rfl
+    ((removeConstraintEquiv p decomposition implied).backward.map point).1 = point.1 := rfl
 
 example (point : FeasiblePoint p) :
     (p.removeConstraint decomposition).objective
-      ((removeConstraintEquivalence p decomposition implied).forward.map point).1 =
+      ((removeConstraintEquiv p decomposition implied).forward.map point).1 =
         p.objective point.1 := rfl
 
 example (point : FeasiblePoint (p.removeConstraint decomposition)) :
-    p.objective ((removeConstraintEquivalence p decomposition implied).backward.map point).1 =
+    p.objective ((removeConstraintEquiv p decomposition implied).backward.map point).1 =
       (p.removeConstraint decomposition).objective point.1 := rfl
 
 example (point : FeasiblePoint p) :
-    (removeConstraintEquivalence p decomposition implied).backward.map
-      ((removeConstraintEquivalence p decomposition implied).forward.map point) = point := rfl
+    (removeConstraintEquiv p decomposition implied).backward.map
+      ((removeConstraintEquiv p decomposition implied).forward.map point) = point := rfl
 
 example (point : FeasiblePoint (p.removeConstraint decomposition)) :
-    (removeConstraintEquivalence p decomposition implied).forward.map
-      ((removeConstraintEquivalence p decomposition implied).backward.map point) = point := rfl
+    (removeConstraintEquiv p decomposition implied).forward.map
+      ((removeConstraintEquiv p decomposition implied).backward.map point) = point := rfl
 
 -- The same implication certifies a maximum, using the dual objective order.
 private def dualDecomposition : ConstraintDecomposition p.orderDual selected where
   remainder := decomposition.remainder
   feasible_iff := decomposition.feasible_iff
 
-example : GlobalEquivalence p.orderDual
+example : GlobalEquiv p.orderDual
     (p.orderDual.removeConstraint (dualDecomposition p decomposition)) :=
-  removeConstraintEquivalence p.orderDual (dualDecomposition p decomposition) implied
+  removeConstraintEquiv p.orderDual (dualDecomposition p decomposition) implied
 
 example (point : FeasiblePoint p.orderDual) :
-    ((removeConstraintEquivalence p.orderDual
+    ((removeConstraintEquiv p.orderDual
       (dualDecomposition p decomposition) implied).forward.map point).1 = point.1 := rfl
 
 -- Sequential deletion requires a new implication from the updated remainder.
@@ -84,14 +84,14 @@ variable {nextSelected : X → Prop}
     (nextDecomposition : ConstraintDecomposition (p.removeConstraint decomposition) nextSelected)
     (nextImplied : ∀ point, nextDecomposition.remainder point → nextSelected point)
 
-example : GlobalEquivalence p
+example : GlobalEquiv p
     ((p.removeConstraint decomposition).removeConstraint nextDecomposition) :=
-  (removeConstraintEquivalence p decomposition implied).trans
-    (removeConstraintEquivalence _ nextDecomposition nextImplied)
+  (removeConstraintEquiv p decomposition implied).trans
+    (removeConstraintEquiv _ nextDecomposition nextImplied)
 
 example (point : FeasiblePoint p) :
-    (((removeConstraintEquivalence p decomposition implied).trans
-      (removeConstraintEquivalence _ nextDecomposition nextImplied)).forward.map point).1 =
+    (((removeConstraintEquiv p decomposition implied).trans
+      (removeConstraintEquiv _ nextDecomposition nextImplied)).forward.map point).1 =
         point.1 := rfl
 
 end Ordered
@@ -105,9 +105,9 @@ private def tautologyDecomposition :
   remainder _ := True
   feasible_iff _ := ⟨fun h => ⟨h, h⟩, And.left⟩
 
-example : GlobalEquivalence (Problem.mk objective (fun _ => True))
+example : GlobalEquiv (Problem.mk objective (fun _ => True))
     ((Problem.mk objective (fun _ => True)).removeConstraint (tautologyDecomposition objective)) :=
-  removeConstraintEquivalence _ _ (fun _ _ => True.intro)
+  removeConstraintEquiv _ _ (fun _ _ => True.intro)
 
 -- Contradictory retained constraints can justify any selected row, without
 -- inventing a feasible source point or requiring an inhabitant of `X`.
@@ -117,10 +117,10 @@ private def infeasibleDecomposition (selected : X → Prop) :
   feasible_iff _ := ⟨False.elim, And.left⟩
 
 example (selected : X → Prop) :
-    GlobalEquivalence (Problem.mk objective (fun _ => False))
+    GlobalEquiv (Problem.mk objective (fun _ => False))
       ((Problem.mk objective (fun _ => False)).removeConstraint
         (infeasibleDecomposition objective selected)) :=
-  removeConstraintEquivalence _ _ (fun _ impossible => False.elim impossible)
+  removeConstraintEquiv _ _ (fun _ impossible => False.elim impossible)
 
 -- Merely being infeasible is insufficient to discard the contradictory row
 -- itself: the proposed retained predicate here is `True`.

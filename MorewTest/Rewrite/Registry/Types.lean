@@ -19,28 +19,28 @@ namespace MorewTest.Rewrite.Registry.Types
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.Elab.Rewrite
 
-noncomputable def realPowerGraph (p : ℝ) : GraphRepresentation (fun x : ℝ => x ^ p) where
+noncomputable def realPowerGraph (p : ℝ) : GraphRepr (fun x : ℝ => x ^ p) where
   Auxiliary := Unit
   target x t _ := t = x ^ p
   source_iff_exists _ _ := by simp only [exists_const]
 
-noncomputable def natPowerGraph (n : ℕ) : GraphRepresentation (fun x : ℝ => x ^ n) where
+noncomputable def natPowerGraph (n : ℕ) : GraphRepr (fun x : ℝ => x ^ n) where
   Auxiliary := Unit
   target x t _ := t = x ^ n
   source_iff_exists _ _ := by simp only [exists_const]
 
 def genericPowerGraph {X Y Z : Type*} [HPow X Y Z] (p : Y) :
-    GraphRepresentation (fun x : X => x ^ p) where
+    GraphRepr (fun x : X => x ^ p) where
   Auxiliary := Unit
   target x t _ := t = x ^ p
   source_iff_exists _ _ := by simp only [exists_const]
 
-noncomputable def realPowerEpigraph (p : ℝ) : EpigraphRepresentation (fun x : ℝ => x ^ p) where
+noncomputable def realPowerEpigraph (p : ℝ) : EpigraphRepr (fun x : ℝ => x ^ p) where
   Auxiliary := Unit
   target x t _ := x ^ p ≤ t
   source_iff_exists _ _ := by simp only [exists_const]
 
-noncomputable def natPowerHypograph (n : ℕ) : HypographRepresentation (fun x : ℝ => x ^ n) where
+noncomputable def natPowerHypograph (n : ℕ) : HypographRepr (fun x : ℝ => x ^ n) where
   Auxiliary := Unit
   target x t _ := t ≤ x ^ n
   source_iff_exists _ _ := by simp only [exists_const]
@@ -54,14 +54,14 @@ def computedInput : Bool → Type
 def familyOperation (flag : Bool) {X : Type} (_ : X) : ℝ := if flag then 0 else 1
 
 noncomputable def familyGraph (flag : Bool) :
-    GraphRepresentation (fun x : computedInput flag => familyOperation flag x) where
+    GraphRepr (fun x : computedInput flag => familyOperation flag x) where
   Auxiliary := Unit
   target x t _ := t = familyOperation flag x
   source_iff_exists _ _ := by simp only [exists_const]
 
 def familyOutputOperation (flag : Bool) (x : computedInput flag) : computedInput flag := x
 
-def familyOutputGraph (flag : Bool) : GraphRepresentation (familyOutputOperation flag) where
+def familyOutputGraph (flag : Bool) : GraphRepr (familyOutputOperation flag) where
   Auxiliary := Unit
   target x t _ := t = familyOutputOperation flag x
   source_iff_exists _ _ := by simp only [exists_const]

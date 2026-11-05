@@ -34,8 +34,8 @@ reformulation symbolic : (source design response) := by
   epigraph t as residual
   conic
 
-example : GlobalEquivalence (source design response)
-    (symbolic rows columns design response) := symbolic.equivalence rows columns design response
+example : GlobalEquiv (source design response)
+    (symbolic rows columns design response) := symbolic.equiv rows columns design response
 
 example : IsConic (symbolic rows columns design response) :=
   symbolic.isConic rows columns design response
@@ -53,10 +53,10 @@ reformulation continued : (symbolic rows columns design response) := by
   epigraph value
   conic
 
-example : GlobalEquivalence (source design response)
+example : GlobalEquiv (source design response)
     (continued rows columns design response) :=
-  (symbolic.equivalence rows columns design response).trans
-    (continued.equivalence rows columns design response)
+  (symbolic.equiv rows columns design response).trans
+    (continued.equiv rows columns design response)
 
 end
 
@@ -76,8 +76,8 @@ reformulation concrete : (source (m := 2) (n := 3) ![![1, 2, 3], ![4, 5, 6]] ![7
 
 example : Problem ((Fin 3 → ℝ) × ℝ) ℝ := concrete
 example : concrete.conicForm.data.rowCount = 2 := rfl
-example : GlobalEquivalence (source ![![1, 2, 3], ![4, 5, 6]] ![7, 8]) concrete :=
-  concrete.equivalence
+example : GlobalEquiv (source ![![1, 2, 3], ![4, 5, 6]] ![7, 8]) concrete :=
+  concrete.equiv
 example : IsConic concrete := concrete.isConic
 
 /--
@@ -96,7 +96,7 @@ reformulation empty : (source (m := 0) (n := 3) 0 0) := by
   conic
 
 example : Problem ((Fin 3 → ℝ) × ℝ) ℝ := empty
-example : GlobalEquivalence (source (m := 0) (n := 3) 0 0) empty := empty.equivalence
+example : GlobalEquiv (source (m := 0) (n := 3) 0 0) empty := empty.equiv
 
 end LeastSquares
 
@@ -113,7 +113,7 @@ variable (limit : ℝ)
 reformulation target : (source limit) := by
   conic
 
-example : GlobalEquivalence (source limit) (target limit) := target.equivalence limit
+example : GlobalEquiv (source limit) (target limit) := target.equiv limit
 example : Problem ℝ (OrderDual ℝ) := target limit
 example : (target.conicForm limit).data.sense = .maximize := rfl
 
@@ -142,8 +142,8 @@ variable (β : Type v) [Preorder β] (minimum : β)
 reformulation target : (@source.{v} β _ minimum) := by
   epigraph t
 
-example : GlobalEquivalence (source minimum) (target β minimum) :=
-  target.equivalence β minimum
+example : GlobalEquiv (source minimum) (target β minimum) :=
+  target.equiv β minimum
 
 example (x t : β) : (target β minimum).feasible (x, t) ↔ minimum ≤ x ∧ x ≤ t :=
   Iff.rfl
@@ -168,17 +168,17 @@ def source : Problem (ULift.{u} Nat) Nat :=
   problem (x : ULift.{u} Nat)
     minimize x.down
 
-reformulation target : (source.{u}) certificate targetEquivalence := by
+reformulation target : (source.{u}) certificate targetEquiv := by
   epigraph t
 
 example : Problem (ULift.{u} Nat × Nat) Nat := target.{u}
-example : GlobalEquivalence source.{u} target.{u} := targetEquivalence.{u}
+example : GlobalEquiv source.{u} target.{u} := targetEquiv.{u}
 
-reformulation continued : (target.{u}) certificate continuedEquivalence := by
+reformulation continued : (target.{u}) certificate continuedEquiv := by
   epigraph upper
 
-example : GlobalEquivalence source.{u} continued.{u} :=
-  targetEquivalence.{u}.trans continuedEquivalence.{u}
+example : GlobalEquiv source.{u} continued.{u} :=
+  targetEquiv.{u}.trans continuedEquiv.{u}
 
 end ResultUniverse
 
@@ -201,7 +201,7 @@ variable [Evidence]
 reformulation target : (source Evidence.witness) := by
   conic
 
-example : GlobalEquivalence (source Evidence.witness) target := target.equivalence
+example : GlobalEquiv (source Evidence.witness) target := target.equiv
 example : Conic.Form target := target.conicForm
 example : IsConic target := target.isConic
 
@@ -215,8 +215,8 @@ variable (evidence : True)
 reformulation explicitTarget : (source evidence) := by
   conic
 
-example : GlobalEquivalence (source evidence) (explicitTarget evidence) :=
-  explicitTarget.equivalence evidence
+example : GlobalEquiv (source evidence) (explicitTarget evidence) :=
+  explicitTarget.equiv evidence
 example : Conic.Form (explicitTarget evidence) := explicitTarget.conicForm evidence
 example : IsConic (explicitTarget evidence) := explicitTarget.isConic evidence
 
@@ -234,19 +234,19 @@ variable (data other : Nat)
 -- Proof irrelevance may leave the target's data parameter unconstrained during
 -- matching. It must retain the actual source parameter instead of choosing the
 -- unrelated local parameter of the same type.
-reformulation parameterTarget : (parameterSource data) certificate parameterEquivalence := by
+reformulation parameterTarget : (parameterSource data) certificate parameterEquiv := by
   epigraph t
 
-example : GlobalEquivalence (parameterSource data) (parameterTarget data) :=
-  parameterTarget.equivalence data
-example : GlobalEquivalence (parameterSource data) (parameterTarget data) :=
-  parameterEquivalence data
+example : GlobalEquiv (parameterSource data) (parameterTarget data) :=
+  parameterTarget.equiv data
+example : GlobalEquiv (parameterSource data) (parameterTarget data) :=
+  parameterEquiv data
 
 reformulation parameterConic : (parameterSource data) := by
   conic
 
-example : GlobalEquivalence (parameterSource data) (parameterConic data) :=
-  parameterConic.equivalence data
+example : GlobalEquiv (parameterSource data) (parameterConic data) :=
+  parameterConic.equiv data
 example : Conic.Form (parameterConic data) := parameterConic.conicForm data
 example : IsConic (parameterConic data) := parameterConic.isConic data
 
@@ -295,12 +295,12 @@ private def checkGeneratedParameters (target aliasName terminal terminalAlias : 
   let nestedSources := if nestedSource then #[sourceName] else #[]
   for name in #[target, terminal] do
     checkParameterIdentity name (parameterType := parameterType)
-    checkParameterIdentity (name ++ `equivalence) (directSources.push name) #[]
+    checkParameterIdentity (name ++ `equiv) (directSources.push name) #[]
       parameterType nestedSources
-  checkParameterIdentity aliasName (directSources.push target) #[target ++ `equivalence]
+  checkParameterIdentity aliasName (directSources.push target) #[target ++ `equiv]
     parameterType nestedSources
   checkParameterIdentity terminalAlias (directSources.push terminal)
-    #[terminal ++ `equivalence] parameterType nestedSources
+    #[terminal ++ `equiv] parameterType nestedSources
   checkParameterIdentity (terminal ++ `conicForm) #[terminal] #[] parameterType
   checkParameterIdentity (terminal ++ `isConic) #[terminal] #[terminal ++ `conicForm]
     parameterType
@@ -311,21 +311,21 @@ variable (data : Bool)
 section
 variable (data : Nat)
 
-reformulation target : (parameterSource data) certificate targetEquivalence := by
+reformulation target : (parameterSource data) certificate targetEquiv := by
   epigraph t
 
-reformulation terminal : (parameterSource data) certificate terminalEquivalence := by
+reformulation terminal : (parameterSource data) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (parameterSource data) (target data) := targetEquivalence data
-example : GlobalEquivalence (parameterSource data) (terminal data) := terminalEquivalence data
+example : GlobalEquiv (parameterSource data) (target data) := targetEquiv data
+example : GlobalEquiv (parameterSource data) (terminal data) := terminalEquiv data
 example : Conic.Form (terminal data) := terminal.conicForm data
 example : IsConic (terminal data) := terminal.isConic data
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
 
 end DifferentTypes
 
@@ -335,21 +335,21 @@ variable (data : Nat)
 section
 variable (data : Nat)
 
-reformulation target : (parameterSource data) certificate targetEquivalence := by
+reformulation target : (parameterSource data) certificate targetEquiv := by
   epigraph t
 
-reformulation terminal : (parameterSource data) certificate terminalEquivalence := by
+reformulation terminal : (parameterSource data) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (parameterSource data) (target data) := targetEquivalence data
-example : GlobalEquivalence (parameterSource data) (terminal data) := terminalEquivalence data
+example : GlobalEquiv (parameterSource data) (target data) := targetEquiv data
+example : GlobalEquiv (parameterSource data) (terminal data) := terminalEquiv data
 example : Conic.Form (terminal data) := terminal.conicForm data
 example : IsConic (terminal data) := terminal.isConic data
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
 
 end InnerParameter
 
@@ -360,23 +360,23 @@ local notation "outerData" => data
 section
 variable (data : Nat)
 
-reformulation target : (parameterSource outerData) certificate targetEquivalence := by
+reformulation target : (parameterSource outerData) certificate targetEquiv := by
   epigraph t
 
-reformulation terminal : (parameterSource outerData) certificate terminalEquivalence := by
+reformulation terminal : (parameterSource outerData) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (parameterSource outerData) (target outerData) :=
-  targetEquivalence outerData
-example : GlobalEquivalence (parameterSource outerData) (terminal outerData) :=
-  terminalEquivalence outerData
+example : GlobalEquiv (parameterSource outerData) (target outerData) :=
+  targetEquiv outerData
+example : GlobalEquiv (parameterSource outerData) (terminal outerData) :=
+  terminalEquiv outerData
 example : Conic.Form (terminal outerData) := terminal.conicForm outerData
 example : IsConic (terminal outerData) := terminal.isConic outerData
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
 
 end OuterParameter
 
@@ -392,19 +392,19 @@ variable (data : Bool)
 section
 variable (data : Nat)
 
-reformulation target : (proofSource ⟨data, rfl⟩) certificate targetEquivalence := by
+reformulation target : (proofSource ⟨data, rfl⟩) certificate targetEquiv := by
   epigraph t
 
-reformulation terminal : (proofSource ⟨data, rfl⟩) certificate terminalEquivalence := by
+reformulation terminal : (proofSource ⟨data, rfl⟩) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (proofSource ⟨data, rfl⟩) (target data) := targetEquivalence data
+example : GlobalEquiv (proofSource ⟨data, rfl⟩) (target data) := targetEquiv data
 example : IsConic (terminal data) := terminal.isConic data
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
     (sourceName := ``proofSource) (nestedSource := true)
 
 end InlineProof
@@ -416,19 +416,19 @@ section
 variable (data : Nat → Nat)
 
 -- A retained parameter may occur in function position rather than as a leaf.
-reformulation target : (parameterSource (data 0)) certificate targetEquivalence := by
+reformulation target : (parameterSource (data 0)) certificate targetEquiv := by
   epigraph t
 
-reformulation terminal : (parameterSource (data 0)) certificate terminalEquivalence := by
+reformulation terminal : (parameterSource (data 0)) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (parameterSource (data 0)) (target data) := targetEquivalence data
+example : GlobalEquiv (parameterSource (data 0)) (target data) := targetEquiv data
 example : IsConic (terminal data) := terminal.isConic data
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
     (Lean.mkForall `_ .default (Lean.mkConst ``Nat) (Lean.mkConst ``Nat))
     (nestedSource := true)
 
@@ -449,21 +449,21 @@ variable [cfg : Config]
 -- Instance search would choose the inner instance, but the proof deliberately
 -- uses the outer one. Count and inspect parameters instead of using proof irrelevance.
 reformulation target : (proofSource ⟨(outerConfig).value, rfl⟩)
-    certificate targetEquivalence := by
+    certificate targetEquiv := by
   epigraph t
 
 reformulation terminal : (proofSource ⟨(outerConfig).value, rfl⟩)
-    certificate terminalEquivalence := by
+    certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (proofSource ⟨(outerConfig).value, rfl⟩) (@target outerConfig) :=
-  @targetEquivalence outerConfig
+example : GlobalEquiv (proofSource ⟨(outerConfig).value, rfl⟩) (@target outerConfig) :=
+  @targetEquiv outerConfig
 example : IsConic (@terminal outerConfig) := @terminal.isConic outerConfig
 
 end
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  checkGeneratedParameters ``target ``targetEquivalence ``terminal ``terminalEquivalence
+  checkGeneratedParameters ``target ``targetEquiv ``terminal ``terminalEquiv
     (Lean.mkConst ``Config) ``proofSource true
 
 end OuterInstance

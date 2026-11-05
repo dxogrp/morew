@@ -20,7 +20,7 @@ reformulation logarithmConic : transitiveSource := by
   hypograph t as logarithm_bound
   conic
 
-example : GlobalEquivalence transitiveSource logarithmConic := logarithmConic.equivalence
+example : GlobalEquiv transitiveSource logarithmConic := logarithmConic.equiv
 example : IsConic logarithmConic := logarithmConic.isConic
 example : logarithmConic.conicForm.data.toProblem = logarithmConic :=
   logarithmConic.conicForm.represents
@@ -35,8 +35,8 @@ reformulation absoluteNLP : interval := by
   nlp at abs_bound
   nlp
 
-example : GlobalEquivalence interval absoluteConic := absoluteConic.equivalence
-example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
+example : GlobalEquiv interval absoluteConic := absoluteConic.equiv
+example : GlobalEquiv interval absoluteNLP := absoluteNLP.equiv
 example : IsConic absoluteConic := absoluteConic.isConic
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
 
@@ -47,7 +47,7 @@ reformulation afterAuxiliary : SecondOrderCustom.source := by
     intro point _
     exact sq_nonneg point.2)
 
-example : GlobalEquivalence SecondOrderCustom.source afterAuxiliary := afterAuxiliary.equivalence
+example : GlobalEquiv SecondOrderCustom.source afterAuxiliary := afterAuxiliary.equiv
 example (x y u : ℝ) : afterAuxiliary.objective ((x, y), u) = x + y := rfl
 
 section
@@ -60,9 +60,9 @@ reformulation freshenedAuxiliary : SecondOrderCustom.source := by
     using (by intro _ _; exact ⟨rfl, rfl⟩)
   conic at auxiliary using SecondOrderCustom.auxiliaryRule
 
-example : GlobalEquivalence SecondOrderCustom.source
+example : GlobalEquiv SecondOrderCustom.source
     (freshenedAuxiliary auxiliary_aux auxiliary_aux_1) :=
-  freshenedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1
+  freshenedAuxiliary.equiv auxiliary_aux auxiliary_aux_1
 
 /--
 info: problem (x y auxiliary_aux_2 : ℝ)

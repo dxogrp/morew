@@ -35,8 +35,8 @@ reformulation continued : mixed := by
   epigraph t
   nlp at epigraph_t
 
-example : GlobalEquivalence source mixed := mixed.equivalence
-example : GlobalEquivalence mixed continued := continued.equivalence
+example : GlobalEquiv source mixed := mixed.equiv
+example : GlobalEquiv mixed continued := continued.equiv
 
 def affineSource := problem (x : ℝ) minimize x subject to cap : |x| ≤ 2
 

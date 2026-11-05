@@ -20,7 +20,7 @@ reformulation afterTerminal : terminalSource certificate afterTerminalAlias := b
   conic
   epigraph t at (x)
 
-assert_not_exists afterTerminal afterTerminal.equivalence afterTerminalAlias
+assert_not_exists afterTerminal afterTerminal.equiv afterTerminalAlias
 
 run_cmd do
   if (Syntax.getProblemView? (← Lean.getEnv)

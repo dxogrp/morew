@@ -48,8 +48,8 @@ reformulation conicNonnegLS : (nonnegLS A b) := by
 -- ANCHOR_END: conicNonnegLS
 
 -- ANCHOR: nonnegLSCertificate
-noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
-  conicNonnegLS.equivalence A b
+noncomputable example : GlobalEquiv (nonnegLS A b) (conicNonnegLS A b) :=
+  conicNonnegLS.equiv A b
 example : IsConic (conicNonnegLS A b) := conicNonnegLS.isConic A b
 -- ANCHOR_END: nonnegLSCertificate
 
@@ -86,7 +86,7 @@ reformulation quotientConic : p := by
 
 #printp p
 #printp quotientConic
-example : GlobalEquivalence p quotientConic := quotientConic.equivalence
+example : GlobalEquiv p quotientConic := quotientConic.equiv
 example : IsConic quotientConic := quotientConic.isConic
 
 end

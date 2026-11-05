@@ -40,14 +40,14 @@ reformulation negativeLogConic : negativeLog := by
 #printp negativeLog
 #printp negativeLogConic
 
-example : GlobalEquivalence negativeLog negativeLogConic := negativeLogConic.equivalence
+example : GlobalEquiv negativeLog negativeLogConic := negativeLogConic.equiv
 example : IsConic negativeLogConic := negativeLogConic.isConic
 
 -- The NLP keeps the logarithm and its domain constraints.
 reformulation negativeLogNLP : negativeLog := by nlp
 
 #printp negativeLogNLP
-example : GlobalEquivalence negativeLog negativeLogNLP := negativeLogNLP.equivalence
+example : GlobalEquiv negativeLog negativeLogNLP := negativeLogNLP.equiv
 example : IsSmoothNLP negativeLogNLP := negativeLogNLP.isSmoothNLP
 
 def negativeNorm :=
@@ -62,7 +62,7 @@ reformulation negativeNormConic : negativeNorm := by
 #printp negativeNorm
 #printp negativeNormConic
 
-example : GlobalEquivalence negativeNorm negativeNormConic := negativeNormConic.equivalence
+example : GlobalEquiv negativeNorm negativeNormConic := negativeNormConic.equiv
 example : IsConic negativeNormConic := negativeNormConic.isConic
 
 -- The same norm bound has a smooth polynomial representation for NLPs.
@@ -72,7 +72,7 @@ reformulation negativeNormNLP : negativeNorm := by
 
 #printp negativeNormNLP
 
-example : GlobalEquivalence negativeNorm negativeNormNLP := negativeNormNLP.equivalence
+example : GlobalEquiv negativeNorm negativeNormNLP := negativeNormNLP.equiv
 example : IsSmoothNLP negativeNormNLP := negativeNormNLP.isSmoothNLP
 
 end

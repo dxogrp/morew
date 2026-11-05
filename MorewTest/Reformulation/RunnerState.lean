@@ -118,17 +118,17 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "identity normalization changed feasibility"
     let proof := Lean.mkApp (Lean.mkConst ``Iff.rfl) left
     Lean.Meta.mkLambdaFVars #[point] proof
-  let equivalence ← Lean.Meta.mkAppM ``Morew.pointwiseEquivalence
+  let equiv ← Lean.Meta.mkAppM ``Morew.pointwiseEquiv
     #[semantic, canonical, objectiveEquality, feasibleIff]
   let normalization : PointwiseNormalization := {
     semantic
     canonical
     objectiveEquality
     feasibleIff
-    equivalence
+    equiv
   }
   normalization.check
-  let primitive ← globalEquivalenceRunner.reflexivity semantic
+  let primitive ← globalEquivRunner.reflexivity semantic
   Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
   let primitive ← Lean.instantiateMVars primitive
   let initial : RunnerState := {
@@ -158,7 +158,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     }
   }
   let malformedRejected ← try
-      discard <| initial.commit globalEquivalenceRunner malformedEvidence
+      discard <| initial.commit globalEquivRunner malformedEvidence
       pure false
     catch _ => pure true
   unless malformedRejected do
@@ -174,16 +174,16 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       value := Lean.mkConst ``True.intro
     }]
   }
-  let .ok committed ← initial.commit globalEquivalenceRunner result
+  let .ok committed ← initial.commit globalEquivRunner result
     | throwError "a valid typed identity step did not commit"
   unless committed.status == .terminal do
     throwError "typed commit discarded terminal status"
   unless committed.companions.size == 1 do
     throwError "typed commit discarded a companion declaration"
-  let finalCertificate ← committed.finalCertificate globalEquivalenceRunner
+  let finalCertificate ← committed.finalCertificate globalEquivRunner
   Lean.Meta.check finalCertificate
   let rejected ← try
-      discard <| committed.commit globalEquivalenceRunner result
+      discard <| committed.commit globalEquivRunner result
       pure false
     catch _ => pure true
   unless rejected do

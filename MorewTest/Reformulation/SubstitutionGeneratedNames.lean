@@ -34,7 +34,7 @@ def macroCoverage : FeasibleSurjection macroSource
 reformulation macroTarget : macroSource := by
   substitute x := u + shift using macroCoverage
 
-example : GlobalEquivalence macroSource macroTarget := macroTarget.equivalence
+example : GlobalEquiv macroSource macroTarget := macroTarget.equiv
 example (u y : ℝ) : macroTarget.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
 /--
@@ -50,7 +50,7 @@ info: problem (u y : ℝ)
 reformulation shadowed : macroSource := by
   substitute x := (fun shift : ℝ => shift) u + shift using macroCoverage
 
-example : GlobalEquivalence macroSource shadowed := shadowed.equivalence
+example : GlobalEquiv macroSource shadowed := shadowed.equiv
 example (u y : ℝ) : shadowed.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
 /-- error: substitution replacement uses model-local definition `loss`, which depends on the optimization variable being replaced -/
@@ -72,7 +72,7 @@ def generatedCoverage : FeasibleSurjection squareLift
 reformulation generatedTarget : squareLift := by
   substitute x := u + a using generatedCoverage
 
-example : GlobalEquivalence squareLift generatedTarget := generatedTarget.equivalence
+example : GlobalEquiv squareLift generatedTarget := generatedTarget.equiv
 example (u a : ℝ) : generatedTarget.objective (u, a) = a := rfl
 example (u a : ℝ) : generatedTarget.feasible (u, a) ↔ (u + a) ^ 2 ≤ a := Iff.rfl
 
@@ -85,7 +85,7 @@ reformulation generatedInScript : square := by
     intro point
     simp)
 
-example : GlobalEquivalence square generatedInScript := generatedInScript.equivalence
+example : GlobalEquiv square generatedInScript := generatedInScript.equiv
 example (u a : ℝ) : generatedInScript.feasible (u, a) ↔ (u + a) ^ 2 ≤ a := Iff.rfl
 
 structure Offset where
@@ -107,7 +107,7 @@ def recordCoverage : FeasibleSurjection recordSource
 reformulation projected : recordSource := by
   substitute x := u + shift.value using recordCoverage
 
-example : GlobalEquivalence recordSource projected := projected.equivalence
+example : GlobalEquiv recordSource projected := projected.equiv
 example (u y : ℝ) : projected.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
 private def shift : ℝ := 7
@@ -116,7 +116,7 @@ private def shift : ℝ := 7
 reformulation localWins : macroSource := by
   substitute x := u + shift using macroCoverage
 
-example : GlobalEquivalence macroSource localWins := localWins.equivalence
+example : GlobalEquiv macroSource localWins := localWins.equiv
 example (u y : ℝ) : localWins.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
 macro "withCapturedShift " value:term : term => `($value + shift)
@@ -130,7 +130,7 @@ def capturedCoverage : FeasibleSurjection macroSource
 reformulation captured : macroSource := by
   substitute x := withCapturedShift u using capturedCoverage
 
-example : GlobalEquivalence macroSource captured := captured.equivalence
+example : GlobalEquiv macroSource captured := captured.equiv
 example (u y : ℝ) : captured.objective (u, y) = (u + 7) ^ 2 := rfl
 
 end

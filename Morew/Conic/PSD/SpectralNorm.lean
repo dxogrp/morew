@@ -31,7 +31,7 @@ private theorem block_quadratic {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ)
     Matrix.dotProduct_transpose_mulVec, smul_eq_mul]
   ring
 
-private theorem block_posSemidef_iff {m n : Nat}
+private theorem block_psd_iff {m n : Nat}
     (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ) :
     (Matrix.fromBlocks (t • 1) A A.transpose (t • 1)).PosSemidef ↔
       ∀ (u : Fin m → ℝ) (v : Fin n → ℝ),
@@ -56,7 +56,7 @@ the correct meaning when both matrix dimensions are zero. -/
 theorem spectralNorm_le_iff {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ) :
     ‖A‖ ≤ t ↔ 0 ≤ t ∧
       (fromBlocksFin (t • 1) A A.transpose (t • 1)).PosSemidef := by
-  rw [posSemidef_fromBlocksFin_iff, block_posSemidef_iff]
+  rw [psd_fromBlocksFin_iff, block_psd_iff]
   constructor
   · intro h
     have ht : 0 ≤ t := (norm_nonneg A).trans h

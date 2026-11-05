@@ -30,14 +30,14 @@ def source :=
       positive : b ≥ 1 / 2
       logarithm : Real.log b ≥ t
       nonnegative : 0 ≤ a
-      last : Fn.relativeEntropy a b ≤ t
+      last : Fn.relEntr a b ≤ t
 
 reformulation target : source := by
   conic at first
   conic at logarithm
   conic at last
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (a b t : ℝ) : target.objective ((a, b), t) = a ^ 2 := rfl
 
@@ -73,7 +73,7 @@ reformulation reverseTarget : reverseSource := by
   conic at log
   conic at entropy
 
-example : GlobalEquivalence reverseSource reverseTarget := reverseTarget.equivalence
+example : GlobalEquiv reverseSource reverseTarget := reverseTarget.equiv
 
 example (a b t : ℝ) : reverseTarget.feasible ((a, b), t) ↔
     (a, 1, t) ∈ EXP ∧ (t, 1, b) ∈ EXP ∧ (-t, a, b) ∈ EXP ∧
@@ -84,14 +84,14 @@ def constantDomainSource :=
     minimize t
     subject to
       logarithm : t ≤ Real.log (3 / 2)
-      entropy : Fn.relativeEntropy 0 2 ≤ t
+      entropy : Fn.relEntr 0 2 ≤ t
 
 reformulation constantDomainTarget : constantDomainSource := by
   conic at logarithm
   conic at entropy
 
-example : GlobalEquivalence constantDomainSource constantDomainTarget :=
-  constantDomainTarget.equivalence
+example : GlobalEquiv constantDomainSource constantDomainTarget :=
+  constantDomainTarget.equiv
 
 example (t : ℝ) : constantDomainTarget.feasible t ↔
     (t, 1, 3 / 2) ∈ EXP ∧ (-t, 0, 2) ∈ EXP := Iff.rfl
@@ -100,7 +100,7 @@ def affineDomainSource :=
   problem (a b t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy (2 * a + 1) (b + 1) ≤ t / 2
+      entropy : Fn.relEntr (2 * a + 1) (b + 1) ≤ t / 2
       logarithm : t - 1 ≤ Real.log (b + 1)
       domain : 0 ≤ 2 * a + 1 ∧ 1 ≤ b + 1
 
@@ -108,8 +108,8 @@ reformulation affineDomainTarget : affineDomainSource := by
   conic at entropy
   conic at logarithm
 
-example : GlobalEquivalence affineDomainSource affineDomainTarget :=
-  affineDomainTarget.equivalence
+example : GlobalEquiv affineDomainSource affineDomainTarget :=
+  affineDomainTarget.equiv
 
 example (a b t : ℝ) : affineDomainTarget.feasible ((a, b), t) ↔
     (-(t / 2), 2 * a + 1, b + 1) ∈ EXP ∧ (t - 1, 1, b + 1) ∈ EXP ∧
@@ -135,7 +135,7 @@ reformulation target : source := by
   conic at logarithm
   conic at entropy
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (a b t : ℝ) : target.feasible ((a, b), t) ↔
     -1 ≤ b ∧ (t, 1, b) ∈ EXP ∧
@@ -153,7 +153,7 @@ def symbolicSource :=
   problem (a b t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy a b ≤ t
+      entropy : Fn.relEntr a b ≤ t
       nonnegative : 0 ≤ a
       denominator : Parameter.epsilon ≤ b
 
@@ -161,7 +161,7 @@ include hε in
 reformulation symbolicTarget : symbolicSource := by
   conic at entropy
 
-example : GlobalEquivalence symbolicSource symbolicTarget := symbolicTarget.equivalence hε
+example : GlobalEquiv symbolicSource symbolicTarget := symbolicTarget.equiv hε
 
 end
 
@@ -180,7 +180,7 @@ def namedSource :=
 reformulation namedTarget : namedSource := by
   conic at lse
 
-example : GlobalEquivalence namedSource namedTarget := namedTarget.equivalence
+example : GlobalEquiv namedSource namedTarget := namedTarget.equiv
 
 example (xs u : Fin 2 → ℝ) (t : ℝ) : namedTarget.feasible ((xs, t), u) ↔
     Real.exp (xs 0 ^ 2) ≤ 100 ∧
@@ -208,7 +208,7 @@ def rawSource :=
 reformulation rawTarget : rawSource := by
   conic at lse
 
-example : GlobalEquivalence rawSource rawTarget := rawTarget.equivalence
+example : GlobalEquiv rawSource rawTarget := rawTarget.equiv
 
 example (xs u : Fin 1 → ℝ) (t : ℝ) : rawTarget.feasible ((xs, t), u) ↔
     (∀ i, (xs i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 := Iff.rfl
@@ -222,7 +222,7 @@ def softplusSource :=
 reformulation softplusTarget : softplusSource := by
   conic at loss
 
-example : GlobalEquivalence softplusSource softplusTarget := softplusTarget.equivalence
+example : GlobalEquiv softplusSource softplusTarget := softplusTarget.equiv
 
 example (x t : ℝ) (u : Fin 2 → ℝ) : softplusTarget.feasible ((x, t), u) ↔
     (∀ i, (![0, 2 * x - 1] i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 := Iff.rfl
@@ -255,7 +255,7 @@ def rawSoftplusSource :=
 reformulation rawSoftplusTarget : rawSoftplusSource := by
   conic at loss
 
-example : GlobalEquivalence rawSoftplusSource rawSoftplusTarget := rawSoftplusTarget.equivalence
+example : GlobalEquiv rawSoftplusSource rawSoftplusTarget := rawSoftplusTarget.equiv
 
 -- Printing the original problem retains the native spelling used by its author.
 /--
@@ -312,7 +312,7 @@ include hn in
 reformulation positiveTarget : source := by
   conic at lse
 
-example : GlobalEquivalence source positiveTarget := positiveTarget.equivalence hn
+example : GlobalEquiv source positiveTarget := positiveTarget.equiv hn
 
 example (xs u : Fin Dimension.size → ℝ) (t : ℝ) :
     positiveTarget.feasible ((xs, t), u) ↔
@@ -327,7 +327,7 @@ variable [Dimension] [NeZero Dimension.size]
 reformulation neZeroTarget : source := by
   conic at lse
 
-example : GlobalEquivalence source neZeroTarget := neZeroTarget.equivalence
+example : GlobalEquiv source neZeroTarget := neZeroTarget.equiv
 
 end
 
@@ -338,7 +338,7 @@ variable [Dimension] [Nonempty (Fin Dimension.size)]
 reformulation nonemptyTarget : source := by
   conic at lse
 
-example : GlobalEquivalence source nonemptyTarget := nonemptyTarget.equivalence
+example : GlobalEquiv source nonemptyTarget := nonemptyTarget.equiv
 
 end
 
@@ -358,7 +358,7 @@ reformulation target : source := by
   conic at loss
   conic at labels.cap
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (a x t : ℝ) (u : Fin 2 → ℝ) : target.feasible (((a, x), t), u) ↔
     a ≤ x ∧ (∀ i, (![0, x] i - t, 1, u i) ∈ EXP) ∧
@@ -393,7 +393,7 @@ reformulation fallbackTarget : fallbackSource := by
   conic at square
   conic at absolute
 
-example : GlobalEquivalence fallbackSource fallbackTarget := fallbackTarget.equivalence
+example : GlobalEquiv fallbackSource fallbackTarget := fallbackTarget.equiv
 
 example (x : ℝ) : fallbackTarget.feasible x ↔
     (Real.log 2, 1 / 2, ![x]) ∈ RSOC 1 ∧ x ≤ Real.exp 2 ∧ -x ≤ Real.exp 2 := Iff.rfl
@@ -413,7 +413,7 @@ reformulation mixedTarget : mixedSource := by
   conic at exponential
   conic at softplus
 
-example : GlobalEquivalence mixedSource mixedTarget := mixedTarget.equivalence
+example : GlobalEquiv mixedSource mixedTarget := mixedTarget.equiv
 
 example (x t : ℝ) (u : Fin 2 → ℝ) : mixedTarget.feasible ((x, t), u) ↔
     x ≤ 5 ∧ -x ≤ 5 ∧ (25, 1 / 2, ![x]) ∈ RSOC 1 ∧
@@ -434,8 +434,8 @@ reformulation substitutionTarget : substitutionSource := by
   substitute x := Real.exp u
   epigraph t as value
 
-example : GlobalEquivalence substitutionSource substitutionTarget :=
-  substitutionTarget.equivalence
+example : GlobalEquiv substitutionSource substitutionTarget :=
+  substitutionTarget.equiv
 
 example (u t : ℝ) : substitutionTarget.feasible (u, t) ↔
     (Real.exp u, 1, 10) ∈ EXP ∧ u ≤ t := Iff.rfl
@@ -449,8 +449,8 @@ reformulation epigraphTarget : expObjective := by
 reformulation continued : epigraphTarget := by
   epigraph value as objectiveBound
 
-example : GlobalEquivalence expObjective continued :=
-  epigraphTarget.equivalence.trans continued.equivalence
+example : GlobalEquiv expObjective continued :=
+  epigraphTarget.equiv.trans continued.equiv
 
 example (x t value : ℝ) : continued.feasible ((x, t), value) ↔
     (x, 1, t) ∈ EXP ∧ t ≤ value := Iff.rfl
@@ -465,7 +465,7 @@ reformulation hypographTarget : logObjective := by
   hypograph t as value
   conic at value
 
-example : GlobalEquivalence logObjective hypographTarget := hypographTarget.equivalence
+example : GlobalEquiv logObjective hypographTarget := hypographTarget.equiv
 
 example (x t : ℝ) : hypographTarget.feasible (x, t) ↔
     1 ≤ x ∧ (t, 1, x) ∈ EXP := Iff.rfl

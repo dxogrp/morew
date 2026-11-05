@@ -56,7 +56,7 @@ reformulation q : p := by
   epigraph t
 ```
 
-This declares `q` and `q.equivalence`, a certificate of global equivalence with
+This declares `q` and `q.equiv`, a certificate of global equivalence with
 `p`. Parentheses select an applied problem family:
 
 ```
@@ -174,7 +174,7 @@ tag := "certificates"
   * Declaration
   * Meaning
 *
-  * `q.equivalence`
+  * `q.equiv`
   * The global equivalence between the source and `q`.
 *
   * `q.conicForm` or `q.nlpForm`
@@ -194,7 +194,7 @@ The target data also records whether the objective is minimized or maximized.
 ## Global equivalence
 
 For minimization problems $`p` and $`q` with feasible sets $`X_p` and $`X_q`
-and real-valued objectives $`f_p` and $`f_q`, a `GlobalEquivalence p q` contains maps
+and real-valued objectives $`f_p` and $`f_q`, a `GlobalEquiv p q` contains maps
 $`F:X_p\to X_q` and $`G:X_q\to X_p` satisfying
 
 $$`f_q(F(x))\leq f_p(x)\quad(x\in X_p),\qquad
@@ -204,7 +204,7 @@ The problems have the same optimal value, and these maps transfer optimal
 solutions in either direction.
 Maximization uses the reversed objective order, represented in Lean by `OrderDual`.
 
-Given `e : GlobalEquivalence p q` and a proof `hy` that a feasible point of `q`
+Given `e : GlobalEquiv p q` and a proof `hy` that a feasible point of `q`
 is optimal, `e.map_isGlobalOptimum_backward hy` proves optimality of its image in
 `p`.
 
@@ -222,6 +222,6 @@ reformulation q : p := by
 reformulation r : q := by
   ...
 
-example : GlobalEquivalence p r :=
-  q.equivalence.trans r.equivalence
+example : GlobalEquiv p r :=
+  q.equiv.trans r.equiv
 ```

@@ -73,9 +73,9 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else if name == `Morew.Conic.fromBlocksFin then some 2
     else if name == `Morew.Conic.SymmetricMatrix.toMatrix then some 1
     else if name == `Morew.Conic.lowerTriangularMatrix then some 1
-    else if ([`Morew.Fn.lambdaMax, `Morew.Fn.matrixFrac, `Morew.Fn.logDet].contains name)
+    else if ([`Morew.Fn.lambdaMax, `Morew.Fn.matFrac, `Morew.Fn.logDet].contains name)
       then some 1
-    else if name == `Morew.Fn.nuclearNorm then some 2
+    else if name == `Morew.Fn.normNuc then some 2
     else if ([``WithLp.toLp, ``WithLp.ofLp].contains name) then some 2
     else if ([``LE.le, ``GE.ge, ``LT.lt].contains name) then some 2
     else if name == ``Eq then some 1

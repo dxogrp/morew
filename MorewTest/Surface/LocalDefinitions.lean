@@ -75,7 +75,7 @@ def repeatedValues (offset : ℝ) :=
 reformulation lifted : namedModel := by
   epigraph t
 
-example : GlobalEquivalence namedModel lifted := lifted.equivalence
+example : GlobalEquiv namedModel lifted := lifted.equiv
 
 example (x t : ℝ) : lifted.objective (x, t) = t := rfl
 example (x t : ℝ) : lifted.feasible (x, t) ↔

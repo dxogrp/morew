@@ -86,7 +86,7 @@ def oneSource :=
     minimize t
     subject to bound : Fn.norm1 x ≤ t
 
-def customOne {n : Nat} : EpigraphRepresentation (fun x : Fin n → ℝ => Fn.norm1 x) :=
+def customOne {n : Nat} : EpigraphRepr (fun x : Fin n → ℝ => Fn.norm1 x) :=
   Rewrite.fnNorm1Epigraph
 
 section Ambiguous

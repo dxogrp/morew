@@ -64,10 +64,10 @@ private partial def exposeTarget (point body : Expr) : MetaM Expr := do
   let body ← structural point body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
-    | some ``Morew.ExactConstraintLift.target => some 3
-    | some ``Morew.GraphRepresentation.target => some 4
-    | some ``Morew.EpigraphRepresentation.target => some 5
-    | some ``Morew.HypographRepresentation.target => some 5
+    | some ``Morew.ConstraintRepr.target => some 3
+    | some ``Morew.GraphRepr.target => some 4
+    | some ``Morew.EpigraphRepr.target => some 5
+    | some ``Morew.HypographRepr.target => some 5
     | _ => none
   if let some prefixSize := prefixSize? then
     let args := body.getAppArgs
@@ -117,7 +117,7 @@ private def finish (source domain : Expr) (certificate : Morew.Elab.Rewrite.Plan
     return (rows, targetIff, feasible)
   let prepared : Morew.Elab.Rewrite.Plan.Result := {
     certificate, auxiliary?, nextDomain, rowPredicates, targetIff }
-  prepared.checkTargetIff "internal error: target decomposition changed the exact lift"
+  prepared.checkTargetIff "internal error: target decomposition changed the constraint representation"
   let certified ← match ← Rows.certifyRows feasible rowPredicates with
     | .ok certified => pure certified
     | .error error => throwError "generated row certification failed: {error.reason}"
@@ -175,13 +175,13 @@ private def planCore (source : Expr) (retained : Array Expr)
       return .ok (← finishDeclaration name finishCertificate)
     if let some rule := rule? then
       -- Use typed matching to check graph and bound records' operation instances.
-      unless (← whnf (← inferType rule)).isAppOfArity ``Morew.ExactConstraintLift 2 do
+      unless (← whnf (← inferType rule)).isAppOfArity ``Morew.ConstraintRepr 2 do
         return .ok (← matchAndFinish source domain retained
           (fun point body prove accept =>
             Morew.Elab.Rewrite.Match.rule point body rule accept prove) finishCertificate)
       let direct : Except Exception Result ← State.withIsolatedMVars do
         try return .ok (← finishCertificate
-          (.exact (← Morew.Elab.Rewrite.Plan.checkLift source rule)))
+          (.exact (← Morew.Elab.Rewrite.Plan.checkRepr source rule)))
         catch exception => return .error exception
       match direct with
       | .ok result => return .ok result

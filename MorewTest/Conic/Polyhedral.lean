@@ -14,7 +14,7 @@ language. Tests cover symbolic finite sets and dimensions, including empty
 norm carriers and bounds below zero.
 -/
 
-assert_not_exists Morew.ExactConstraintLift Morew.Syntax.ProblemView
+assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
 namespace MorewTest.Conic.Polyhedral
 

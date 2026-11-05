@@ -36,8 +36,8 @@ reformulation conicRemoved : absolute := by
 
 example : IsSmoothNLP nlpRemoved := nlpRemoved.isSmoothNLP
 example : IsConic conicRemoved := conicRemoved.isConic
-example : GlobalEquivalence absolute nlpRemoved := nlpRemoved.equivalence
-example : GlobalEquivalence absolute conicRemoved := conicRemoved.equivalence
+example : GlobalEquiv absolute nlpRemoved := nlpRemoved.equiv
+example : GlobalEquiv absolute conicRemoved := conicRemoved.equiv
 example : nlpRemoved.nlpForm.data.toProblem = nlpRemoved := nlpRemoved.nlpForm.represents
 example : conicRemoved.conicForm.data.toProblem = conicRemoved := conicRemoved.conicForm.represents
 

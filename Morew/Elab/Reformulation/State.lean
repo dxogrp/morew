@@ -33,9 +33,9 @@ def certificateTransTerm (runner : CertificateRunner)
   `($trans $left $right)
 
 /-- Convert an equivalence proof to the selected certificate relation. -/
-def liftCertificateEquivalence (runner : CertificateRunner)
+def liftCertificateEquiv (runner : CertificateRunner)
     (proofTerm : TSyntax `term) : MacroM (TSyntax `term) := do
-  match runner.liftEquivalence? with
+  match runner.liftEquiv? with
   | none => pure proofTerm
   | some liftName =>
       let lift := namedTerm liftName

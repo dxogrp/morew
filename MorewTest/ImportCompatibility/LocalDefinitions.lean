@@ -25,7 +25,7 @@ example (x t : ℝ) : applied.feasible (x, t) ↔
 reformulation continued : (Defined.generated 3) := by
   epigraph s
 
-example : GlobalEquivalence (Defined.generated 3) continued := continued.equivalence
+example : GlobalEquiv (Defined.generated 3) continued := continued.equiv
 
 section
 

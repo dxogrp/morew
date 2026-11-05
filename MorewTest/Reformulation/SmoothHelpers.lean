@@ -38,7 +38,7 @@ def source :=
 reformulation target : (source offset) := by
   nlp
 
-example : GlobalEquivalence (source offset) (target offset) := target.equivalence offset
+example : GlobalEquiv (source offset) (target offset) := target.equiv offset
 example : NLP.Form (target offset) := target.nlpForm offset
 example : IsSmoothNLP (target offset) := target.isSmoothNLP offset
 example : (target.nlpForm offset).data.toProblem = target offset :=
@@ -71,7 +71,7 @@ reformulation continued : (target offset) := by
   epigraph t at first as square_bound
   nlp
 
-example : GlobalEquivalence (target offset) (continued offset) := continued.equivalence offset
+example : GlobalEquiv (target offset) (continued offset) := continued.equiv offset
 example : NLP.Form (continued offset) := continued.nlpForm offset
 example (x y t : ℝ) : (continued offset).objective ((x, y), t) =
     t + smoothSquare x + y ^ 2 := rfl
@@ -96,7 +96,7 @@ end
 -- or to its emitted problem, equivalence, form, and representability certificates.
 example : ℝ → Problem (ℝ × ℝ) ℝ := source
 example : ℝ → Problem (ℝ × ℝ) ℝ := target
-example : ∀ offset, GlobalEquivalence (source offset) (target offset) := target.equivalence
+example : ∀ offset, GlobalEquiv (source offset) (target offset) := target.equiv
 example : ∀ offset, NLP.Form (target offset) := target.nlpForm
 example : ∀ offset, IsSmoothNLP (target offset) := target.isSmoothNLP
 
@@ -115,8 +115,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless (value.find? (·.isConstOf ``smoothSquare)).isSome &&
         (value.find? (·.isConstOf ``smoothShift)).isSome do
       Lean.throwError "smooth helper certification expanded the emitted semantic definition"
-  for name in #[``target.equivalence, ``target.nlpForm, ``target.isSmoothNLP,
-      ``continued.equivalence, ``continued.nlpForm] do
+  for name in #[``target.equiv, ``target.nlpForm, ``target.isSmoothNLP,
+      ``continued.equiv, ``continued.nlpForm] do
     let info ← Lean.getConstInfo name
     let some value := info.value? (allowOpaque := true)
       | Lean.throwError "missing smooth-helper certificate"
@@ -147,7 +147,7 @@ def lateFailure :=
 
 #guard_error_fragments ["constraint `later`"] in
 assert_smooth_helper_atomic%
-reformulation lateTarget : lateFailure certificate lateEquivalence := by
+reformulation lateTarget : lateFailure certificate lateEquiv := by
   nlp at first
   nlp
 
@@ -161,7 +161,7 @@ def budgetFailure :=
 set_option morew.smooth.maxExpansionDepth 1 in
 #guard_error_fragments ["morew.smooth.maxExpansionDepth", "limit 1"] in
 assert_smooth_helper_atomic%
-reformulation budgetTarget : budgetFailure certificate budgetEquivalence := by
+reformulation budgetTarget : budgetFailure certificate budgetEquiv := by
   nlp at first
   nlp
 
@@ -174,7 +174,7 @@ def bodyFailure :=
 
 #guard_error_fragments ["objective", "not globally smooth"] in
 assert_smooth_helper_atomic%
-reformulation bodyTarget : bodyFailure certificate bodyEquivalence := by
+reformulation bodyTarget : bodyFailure certificate bodyEquiv := by
   nlp at first
   nlp
 

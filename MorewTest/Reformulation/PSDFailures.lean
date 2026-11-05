@@ -12,10 +12,10 @@ import MorewTest.Reformulation.PSD.Fixtures
 # PSD diagnostic context and transactional failure
 -/
 
-namespace MorewTest.Reformulation.PositiveSemidefiniteFailures
+namespace MorewTest.Reformulation.PSDFailures
 
 open Morew Morew.Conic
-open MorewTest.Reformulation.PositiveSemidefinite
+open MorewTest.Reformulation.PSD
 noncomputable section
 
 #guard_error_fragments ["type mismatch", "Fin 2", "Fin 3"] in
@@ -152,4 +152,4 @@ example : (target.conicForm A).data.rowCount = 2 := rfl
 end Freshening
 
 end
-end MorewTest.Reformulation.PositiveSemidefiniteFailures
+end MorewTest.Reformulation.PSDFailures

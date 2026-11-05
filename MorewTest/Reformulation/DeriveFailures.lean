@@ -29,7 +29,7 @@ elab "assert_derive_atomic% " target:ident aliasName:ident " in " nested:command
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed derivation changed declarations or certificate helpers"
-  for name in #[target, target ++ `equivalence, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName] do
     if after.contains name then Lean.throwError m!"failed derivation emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome then
       Lean.throwError m!"failed derivation registered presentation metadata for {name}"
@@ -208,7 +208,7 @@ run_cmd do
 reformulation failedAfterDerive : unrestricted certificate failedAfterDeriveAlias := by
   derive self : x ≤ x using selfBound
 
-example : GlobalEquivalence unrestricted failedAfterDerive := failedAfterDeriveAlias
+example : GlobalEquiv unrestricted failedAfterDerive := failedAfterDeriveAlias
 
 end
 end MorewTest.Reformulation.DeriveFailures
@@ -253,7 +253,7 @@ elab "assert_derive_isolated% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "rejected incomplete derivation changed declarations"
-  for name in #[target, target ++ `equivalence] do
+  for name in #[target, target ++ `equiv] do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       throwError "rejected incomplete derivation retained an output or its metadata"
 
@@ -303,7 +303,7 @@ reformulation latePlaceholder : source := by
 reformulation latePlaceholder : source := by
   derive first : True using derive_completed%
 
-example : GlobalEquivalence source latePlaceholder := latePlaceholder.equivalence
+example : GlobalEquiv source latePlaceholder := latePlaceholder.equiv
 example (x : ℝ) : latePlaceholder.feasible x ↔ True := Iff.rfl
 
 end

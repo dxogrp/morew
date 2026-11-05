@@ -20,8 +20,8 @@ noncomputable section
 reformulation surroundingWhole : Defined.surrounding := by
   epigraph t
 
-example : GlobalEquivalence Defined.surrounding surroundingWhole :=
-  surroundingWhole.equivalence
+example : GlobalEquiv Defined.surrounding surroundingWhole :=
+  surroundingWhole.equiv
 example (x t : ℝ) : surroundingWhole.feasible (x, t) ↔
     (x + 2) + (x + 2) ≤ t := Iff.rfl
 
@@ -46,8 +46,8 @@ info: problem (x t : ℝ)
 reformulation irreducibleWhole : Defined.irreducible := by
   epigraph t
 
-example : GlobalEquivalence Defined.irreducible irreducibleWhole :=
-  irreducibleWhole.equivalence
+example : GlobalEquiv Defined.irreducible irreducibleWhole :=
+  irreducibleWhole.equiv
 example (x t : ℝ) : irreducibleWhole.feasible (x, t) ↔
     (x + 2) + (x + 2) ≤ t := Iff.rfl
 

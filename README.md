@@ -28,8 +28,8 @@ reformulation conicNonnegLS : (nonnegLS A b) := by
   rename residualBound_conic_1 to residualCone
   conic
 
-noncomputable example : GlobalEquivalence (nonnegLS A b) (conicNonnegLS A b) :=
-  conicNonnegLS.equivalence A b
+noncomputable example : GlobalEquiv (nonnegLS A b) (conicNonnegLS A b) :=
+  conicNonnegLS.equiv A b
 
 #printp conicNonnegLS
 ```

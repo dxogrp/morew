@@ -35,7 +35,7 @@ elab "assert_rename_atomic% " target:ident aliasName:ident " in " nested:command
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed renaming changed declarations or certificate helpers"
-  for name in #[target, target ++ `equivalence, aliasName,
+  for name in #[target, target ++ `equiv, aliasName,
       target ++ `conicForm, target ++ `isConic,
       target ++ `nlpForm, target ++ `isSmoothNLP] do
     if after.contains name then Lean.throwError m!"failed renaming emitted {name}"
@@ -120,7 +120,7 @@ reformulation contextualRoundTrip : affine := by
   rename «rename» to cap
 
 example : contextualRoundTrip = affine := rfl
-example : GlobalEquivalence affine contextualRoundTrip := contextualRoundTrip.equivalence
+example : GlobalEquiv affine contextualRoundTrip := contextualRoundTrip.equiv
 
 run_cmd do
   let some view := Morew.Syntax.getProblemDisplayView? (← Lean.getEnv) ``contextualRoundTrip

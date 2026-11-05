@@ -74,12 +74,12 @@ reformulation occupiedTarget : identitySource := by
   epigraph t
 
 run_cmd do
-  if (← Lean.getEnv).contains `MorewTest.Surface.occupiedTarget.equivalence then
+  if (← Lean.getEnv).contains `MorewTest.Surface.occupiedTarget.equiv then
     Lean.throwError "a target-name collision emitted the canonical certificate"
 
-def dottedCollisionTarget.equivalence := 0
+def dottedCollisionTarget.equiv := 0
 
-/-- error: `MorewTest.Surface.dottedCollisionTarget.equivalence` has already been declared -/
+/-- error: `MorewTest.Surface.dottedCollisionTarget.equiv` has already been declared -/
 #guard_msgs in
 reformulation dottedCollisionTarget : identitySource := by
   epigraph t
@@ -102,7 +102,7 @@ reformulation aliasCollisionTarget : identitySource
 run_cmd do
   let env ← Lean.getEnv
   if env.contains `MorewTest.Surface.aliasCollisionTarget ||
-      env.contains `MorewTest.Surface.aliasCollisionTarget.equivalence then
+      env.contains `MorewTest.Surface.aliasCollisionTarget.equiv then
     Lean.throwError "an alias collision emitted reformulation declarations"
   if (Morew.Syntax.getProblemView? env `MorewTest.Surface.aliasCollisionTarget).isSome then
     Lean.throwError "an alias collision emitted target metadata"
@@ -116,15 +116,15 @@ reformulation duplicateTargetAlias : identitySource
 /-- error: certificate alias names the same declaration as the canonical certificate -/
 #guard_msgs in
 reformulation duplicateCertificateAlias : identitySource
-    certificate duplicateCertificateAlias.equivalence := by
+    certificate duplicateCertificateAlias.equiv := by
   epigraph t
 
 run_cmd do
   let env ← Lean.getEnv
   if env.contains `MorewTest.Surface.duplicateTargetAlias ||
-      env.contains `MorewTest.Surface.duplicateTargetAlias.equivalence ||
+      env.contains `MorewTest.Surface.duplicateTargetAlias.equiv ||
       env.contains `MorewTest.Surface.duplicateCertificateAlias ||
-      env.contains `MorewTest.Surface.duplicateCertificateAlias.equivalence then
+      env.contains `MorewTest.Surface.duplicateCertificateAlias.equiv then
     Lean.throwError "duplicate output names emitted reformulation declarations"
   if (Morew.Syntax.getProblemView? env `MorewTest.Surface.duplicateTargetAlias).isSome ||
       (Morew.Syntax.getProblemView? env
@@ -141,7 +141,7 @@ reformulation invalidCertificateTarget : identitySource := by
 run_cmd do
   let env ← Lean.getEnv
   if env.contains `MorewTest.Surface.invalidCertificateTarget ||
-      env.contains `MorewTest.Surface.invalidCertificateTarget.equivalence then
+      env.contains `MorewTest.Surface.invalidCertificateTarget.equiv then
     Lean.throwError "a certificate elaboration failure emitted reformulation declarations"
   if (Morew.Syntax.getProblemView? env `MorewTest.Surface.invalidCertificateTarget).isSome then
     Lean.throwError "a certificate elaboration failure emitted target metadata"
@@ -149,8 +149,8 @@ run_cmd do
 reformulation validAfterCertificateFailure : identitySource := by
   epigraph t
 
-example : GlobalEquivalence identitySource validAfterCertificateFailure :=
-  validAfterCertificateFailure.equivalence
+example : GlobalEquiv identitySource validAfterCertificateFailure :=
+  validAfterCertificateFailure.equiv
 
 def notAProblem := 1
 

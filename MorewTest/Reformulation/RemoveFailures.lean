@@ -24,7 +24,7 @@ elab "assert_remove_atomic% " target:ident aliasName:ident " in " nested:command
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed removal changed declarations or certificate helpers"
-  for name in #[target, target ++ `equivalence, aliasName,
+  for name in #[target, target ++ `equiv, aliasName,
       target ++ `conicForm, target ++ `isConic,
       target ++ `nlpForm, target ++ `isSmoothNLP] do
     if after.contains name then Lean.throwError m!"failed removal emitted {name}"
@@ -193,8 +193,8 @@ reformulation ambientExplicit : (ambient threshold) := by
   remove at selected using (fun _ _ => hthreshold)
 
 example (x : ℝ) : ambientExplicit.feasible x ↔ True := Iff.rfl
-example : GlobalEquivalence (ambient threshold) ambientExplicit :=
-  ambientExplicit.equivalence threshold hthreshold
+example : GlobalEquiv (ambient threshold) ambientExplicit :=
+  ambientExplicit.equiv threshold hthreshold
 end
 
 private abbrev strictLE : LE ℝ := ⟨fun a b => a < b⟩
@@ -285,7 +285,7 @@ elab "assert_remove_isolated% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "rejected incomplete removal changed declarations"
-  for name in #[target, target ++ `equivalence] do
+  for name in #[target, target ++ `equiv] do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       throwError "rejected incomplete removal retained an output or its metadata"
 
@@ -321,29 +321,29 @@ reformulation latePlaceholder : source := by
 reformulation latePlaceholder : source := by
   remove at last using remove_completed%
 
-example : GlobalEquivalence source latePlaceholder := latePlaceholder.equivalence
+example : GlobalEquiv source latePlaceholder := latePlaceholder.equiv
 example (n : Nat) : latePlaceholder.feasible n ↔ n ≤ 3 ∧ n ≤ 3 := Iff.rfl
 
 -- A distinct runner relation checks composition of the primitive equivalence
 -- through the configured relation.
 structure TestRelation (left right : Problem Nat Nat) where
-  equivalence : GlobalEquivalence left right
+  equiv : GlobalEquiv left right
 
 def TestRelation.reflexivity (p : Problem Nat Nat) : TestRelation p p :=
-  ⟨GlobalEquivalence.refl p⟩
+  ⟨GlobalEquiv.refl p⟩
 
 def TestRelation.transitivity {left middle right : Problem Nat Nat}
     (first : TestRelation left middle) (second : TestRelation middle right) :
-    TestRelation left right := ⟨first.equivalence.trans second.equivalence⟩
+    TestRelation left right := ⟨first.equiv.trans second.equiv⟩
 
-def TestRelation.ofEquivalence {left right : Problem Nat Nat}
-    (witness : GlobalEquivalence left right) : TestRelation left right := ⟨witness⟩
+def TestRelation.ofEquiv {left right : Problem Nat Nat}
+    (witness : GlobalEquiv left right) : TestRelation left right := ⟨witness⟩
 
 private def testRunner : CertificateRunner := {
   relation := ``TestRelation
   refl := ``TestRelation.reflexivity
   trans := ``TestRelation.transitivity
-  liftEquivalence? := some ``TestRelation.ofEquivalence
+  liftEquiv? := some ``TestRelation.ofEquiv
 }
 
 private def initialState : CommandElabM ReformState := do

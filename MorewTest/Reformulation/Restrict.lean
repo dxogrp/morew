@@ -31,7 +31,7 @@ def sortingRepair : GlobalImprovement symmetric
 reformulation ordered : symmetric := by
   restrict ordered : x ≤ y using sortingRepair
 
-example : GlobalEquivalence symmetric ordered := ordered.equivalence
+example : GlobalEquiv symmetric ordered := ordered.equiv
 example : symmetric.feasible (2, 1) := by constructor <;> norm_num
 example : ¬ ordered.feasible (2, 1) := by norm_num [ordered]
 example (x y : ℝ) : ordered.objective (x, y) = x + y := rfl
@@ -66,7 +66,7 @@ def intervalAbsRepair : GlobalImprovement maximum
 reformulation nonnegativeMaximum : maximum := by
   restrict nonnegative : 0 ≤ x using (intervalAbsRepair)
 
-example : GlobalEquivalence maximum nonnegativeMaximum := nonnegativeMaximum.equivalence
+example : GlobalEquiv maximum nonnegativeMaximum := nonnegativeMaximum.equiv
 example (x : ℝ) : nonnegativeMaximum.feasible x ↔ -1 ≤ x ∧ x ≤ 1 ∧ 0 ≤ x := Iff.rfl
 example : ¬ nonnegativeMaximum.feasible (-1) := by norm_num [nonnegativeMaximum]
 example : (intervalAbsRepair.map ⟨-1, by constructor <;> norm_num⟩).1 = 1 := by
@@ -97,7 +97,7 @@ def squareAbsRepair : GlobalImprovement squareLine
 reformulation nonnegativeLine : squareLine := by
   restrict nonnegative : 0 ≤ x using squareAbsRepair
 
-example : GlobalEquivalence squareLine nonnegativeLine := nonnegativeLine.equivalence
+example : GlobalEquiv squareLine nonnegativeLine := nonnegativeLine.equiv
 example (x : ℝ) : nonnegativeLine.feasible x ↔ 0 ≤ x := Iff.rfl
 
 /--
@@ -116,7 +116,7 @@ reformulation squaredCoordinates : squareLine := by
   substitute x := u ^ 2
   epigraph t as objective_bound
 
-example : GlobalEquivalence squareLine squaredCoordinates := squaredCoordinates.equivalence
+example : GlobalEquiv squareLine squaredCoordinates := squaredCoordinates.equiv
 example (u t : ℝ) : squaredCoordinates.objective (u, t) = t := rfl
 example (u t : ℝ) : squaredCoordinates.feasible (u, t) ↔ (u ^ 2) ^ 2 ≤ t := Iff.rfl
 
@@ -140,7 +140,7 @@ reformulation squaredExplicitly : squareLine := by
   epigraph t as objective_bound
 
 example : squaredExplicitly = squaredCoordinates := rfl
-example : GlobalEquivalence squareLine squaredExplicitly := squaredExplicitly.equivalence
+example : GlobalEquiv squareLine squaredExplicitly := squaredExplicitly.equiv
 
 def nonnegativeSource :=
   problem (x : ℝ)
@@ -163,7 +163,7 @@ reformulation principalCoordinates : nonnegativeSource := by
   substitute x := u ^ 2
   restrict branch : 0 ≤ u using principalRepair
 
-example : GlobalEquivalence nonnegativeSource principalCoordinates := principalCoordinates.equivalence
+example : GlobalEquiv nonnegativeSource principalCoordinates := principalCoordinates.equiv
 example : ordinaryCoordinates.feasible 2 := True.intro
 example : ordinaryCoordinates.feasible (-2) := True.intro
 example : ordinaryCoordinates.IsGlobalOptimum ⟨2, True.intro⟩ := by
@@ -208,18 +208,18 @@ reformulation middleBranch : middleSource := by
   substitute x := u ^ 2 using middleCoverage
   restrict branch : 0 ≤ u using middleRepair
 
-example : GlobalEquivalence middleSource middleBranch := middleBranch.equivalence
+example : GlobalEquiv middleSource middleBranch := middleBranch.equiv
 example (a u b : ℝ) : middleBranch.objective ((a, u), b) =
     (u ^ 2 - 4) ^ 2 + a ^ 2 + b ^ 2 := rfl
 example (a u b : ℝ) : middleBranch.feasible ((a, u), b) ↔ 0 ≤ u := Iff.rfl
 example (point : FeasiblePoint middleSource) :
-    (middleBranch.equivalence.forward.map point).1.1.1 = point.1.1.1 := rfl
+    (middleBranch.equiv.forward.map point).1.1.1 = point.1.1.1 := rfl
 example (point : FeasiblePoint middleSource) :
-    (middleBranch.equivalence.forward.map point).1.2 = point.1.2 := rfl
+    (middleBranch.equiv.forward.map point).1.2 = point.1.2 := rfl
 example (point : FeasiblePoint middleBranch) :
-    (middleBranch.equivalence.backward.map point).1.1.1 = point.1.1.1 := rfl
+    (middleBranch.equiv.backward.map point).1.1.1 = point.1.1.1 := rfl
 example (point : FeasiblePoint middleBranch) :
-    (middleBranch.equivalence.backward.map point).1.2 = point.1.2 := rfl
+    (middleBranch.equiv.backward.map point).1.2 = point.1.2 := rfl
 
 def zeroCapRepair : GlobalImprovement squareLine
     (squareLine.addConstraint (fun x => |x| ≤ 1)) where
@@ -244,7 +244,7 @@ reformulation combined : squareLine := by
     map := fun _ => ⟨0, ⟨True.intro, by norm_num⟩⟩
     objective_le := fun point => by simpa [squareLine, Problem.addConstraint] using sq_nonneg point.1 }
 
-example : GlobalEquivalence squareLine successive := successive.equivalence
+example : GlobalEquiv squareLine successive := successive.equiv
 example (x : ℝ) : successive.feasible x ↔ combined.feasible x := Iff.rfl
 
 /--
@@ -292,7 +292,7 @@ reformulation afterEpigraph : squareLine := by
     have bound : point.1.1 ^ 2 ≤ point.1.2 := point.2.2
     nlinarith [sq_nonneg point.1.1])
 
-example : GlobalEquivalence squareLine afterEpigraph := afterEpigraph.equivalence
+example : GlobalEquiv squareLine afterEpigraph := afterEpigraph.equiv
 example (x t : ℝ) : afterEpigraph.feasible (x, t) ↔ x ^ 2 ≤ t ∧ x = 0 := Iff.rfl
 
 def shiftedFamily (offset : ℝ) :=
@@ -313,8 +313,8 @@ variable (offset : ℝ)
 reformulation shiftedRestricted : (shiftedFamily offset) := by
   restrict branch : 0 ≤ shifted using shiftedRepair offset
 
-example : GlobalEquivalence (shiftedFamily offset) (shiftedRestricted offset) :=
-  shiftedRestricted.equivalence offset
+example : GlobalEquiv (shiftedFamily offset) (shiftedRestricted offset) :=
+  shiftedRestricted.equiv offset
 example (x : ℝ) : (shiftedRestricted offset).feasible x ↔ 0 ≤ x + offset := Iff.rfl
 
 /--
@@ -338,7 +338,7 @@ def dependentDefinitions :=
 reformulation dependentRestricted : dependentDefinitions := by
   restrict branch : 0 ≤ samples 0 using squareAbsRepair
 
-example : GlobalEquivalence dependentDefinitions dependentRestricted := dependentRestricted.equivalence
+example : GlobalEquiv dependentDefinitions dependentRestricted := dependentRestricted.equiv
 example (x : ℝ) : dependentRestricted.feasible x ↔ 0 ≤ x := Iff.rfl
 
 section
@@ -351,7 +351,7 @@ reformulation proofOnlyParameter : squareLine := by
   epigraph proofOnly
   substitute x := u
 
-example : GlobalEquivalence squareLine proofOnlyParameter := proofOnlyParameter.equivalence proofOnly
+example : GlobalEquiv squareLine proofOnlyParameter := proofOnlyParameter.equiv proofOnly
 example (u t : ℝ) : proofOnlyParameter.feasible (u, t) ↔ 0 ≤ u ∧ u ^ 2 ≤ t := Iff.rfl
 end
 
@@ -365,8 +365,8 @@ reformulation anonymousInstance : (genericSource (α := α)) := by
     map := fun point => ⟨point.1, ⟨point.2, add_zero _⟩⟩
     objective_le := fun _ => le_rfl }
 
-example : GlobalEquivalence (genericSource (α := α)) (anonymousInstance (α := α)) :=
-  anonymousInstance.equivalence
+example : GlobalEquiv (genericSource (α := α)) (anonymousInstance (α := α)) :=
+  anonymousInstance.equiv
 example (x : α) : (anonymousInstance (α := α)).feasible x ↔ x = x ∧ x + 0 = x := Iff.rfl
 
 /--

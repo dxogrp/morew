@@ -27,7 +27,7 @@ def linear :=
 reformulation linearTarget : linear := by
   conic
 
-example : GlobalEquivalence linear linearTarget := linearTarget.equivalence
+example : GlobalEquiv linear linearTarget := linearTarget.equiv
 example : Conic.Form linearTarget := linearTarget.conicForm
 example : IsConic linearTarget := linearTarget.isConic
 example : linearTarget.conicForm.data.toProblem = linearTarget :=
@@ -183,8 +183,8 @@ example : IsConic logSquaredTarget := logSquaredTarget.isConic
 reformulation continued : logSquaredTarget := by
   epigraph value as objectiveBound
   conic
-example : GlobalEquivalence logSquared continued :=
-  logSquaredTarget.equivalence.trans continued.equivalence
+example : GlobalEquiv logSquared continued :=
+  logSquaredTarget.equiv.trans continued.equiv
 
 def logMaximum :=
   problem (x : ℝ)
@@ -277,9 +277,9 @@ def auxiliarySource :=
 reformulation auxiliaryTarget : auxiliarySource := by
   conic
 
-example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
-example : GlobalEquivalence source selectedTarget := selectedTarget.equivalence
-example : GlobalEquivalence auxiliarySource auxiliaryTarget := auxiliaryTarget.equivalence
+example : GlobalEquiv source automaticTarget := automaticTarget.equiv
+example : GlobalEquiv source selectedTarget := selectedTarget.equiv
+example : GlobalEquiv auxiliarySource auxiliaryTarget := auxiliaryTarget.equiv
 
 -- Ordinary certificate use needs only finiteness, without an ambient enumeration.
 local instance : Finite Parameter.Index := by

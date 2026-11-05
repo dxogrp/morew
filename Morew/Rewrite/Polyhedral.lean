@@ -21,14 +21,14 @@ namespace Morew.Rewrite
 open scoped ENNReal
 
 /-- The absolute-value epigraph as two inequalities. -/
-noncomputable def absEpigraph : EpigraphRepresentation (fun a : ℝ => |a|) where
+noncomputable def absEpigraph : EpigraphRepr (fun a : ℝ => |a|) where
   Auxiliary := Unit
   target a t _ := a ≤ t ∧ -a ≤ t
   source_iff_exists a t := by
     simpa only [exists_const] using Polyhedral.abs_le_iff a t
 
 /-- The positive-part epigraph, including nonnegativity of the bound. -/
-noncomputable def posEpigraph : EpigraphRepresentation (fun a : ℝ => a⁺) where
+noncomputable def posEpigraph : EpigraphRepr (fun a : ℝ => a⁺) where
   Auxiliary := Unit
   target a t _ := a ≤ t ∧ 0 ≤ t
   source_iff_exists a t := by
@@ -36,7 +36,7 @@ noncomputable def posEpigraph : EpigraphRepresentation (fun a : ℝ => a⁺) whe
 
 /-- The epigraph of the maximum of two real values. -/
 noncomputable def maxEpigraph :
-    EpigraphRepresentation (fun p : ℝ × ℝ => max p.1 p.2) where
+    EpigraphRepr (fun p : ℝ × ℝ => max p.1 p.2) where
   Auxiliary := Unit
   target p t _ := p.1 ≤ t ∧ p.2 ≤ t
   source_iff_exists p t := by
@@ -44,7 +44,7 @@ noncomputable def maxEpigraph :
 
 /-- The hypograph of the minimum of two real values. -/
 noncomputable def minHypograph :
-    HypographRepresentation (fun p : ℝ × ℝ => min p.1 p.2) where
+    HypographRepr (fun p : ℝ × ℝ => min p.1 p.2) where
   Auxiliary := Unit
   target p t _ := t ≤ p.1 ∧ t ≤ p.2
   source_iff_exists p t := by
@@ -52,7 +52,7 @@ noncomputable def minHypograph :
 
 /-- The epigraph of a maximum over a nonempty finite support. -/
 noncomputable def finsetSupEpigraph {ι : Type*} (s : Finset ι) (hs : s.Nonempty) :
-    EpigraphRepresentation (fun f : ι → ℝ => s.sup' hs f) where
+    EpigraphRepr (fun f : ι → ℝ => s.sup' hs f) where
   Auxiliary := Unit
   target f t _ := (fun j : Fin s.card => f (s.equivFin.symm j)) ≤ (fun _ => t)
   source_iff_exists f t := by
@@ -60,7 +60,7 @@ noncomputable def finsetSupEpigraph {ι : Type*} (s : Finset ι) (hs : s.Nonempt
 
 /-- The hypograph of a minimum over a nonempty finite support. -/
 noncomputable def finsetInfHypograph {ι : Type*} (s : Finset ι) (hs : s.Nonempty) :
-    HypographRepresentation (fun f : ι → ℝ => s.inf' hs f) where
+    HypographRepr (fun f : ι → ℝ => s.inf' hs f) where
   Auxiliary := Unit
   target f t _ := (fun _ : Fin s.card => t) ≤ (fun j => f (s.equivFin.symm j))
   source_iff_exists f t := by
@@ -68,14 +68,14 @@ noncomputable def finsetInfHypograph {ι : Type*} (s : Finset ι) (hs : s.Nonemp
 
 /-- The one-norm epigraph using an auxiliary coordinatewise bound. -/
 noncomputable def norm1Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖) where
+    EpigraphRepr (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖) where
   Auxiliary := Fin n → ℝ
   target v t u := v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t
   source_iff_exists v t := Polyhedral.norm_toLp_one_le_iff v t
 
 /-- The infinity-norm epigraph of a finite real function. -/
 noncomputable def normInfEpigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖v‖) where
+    EpigraphRepr (fun v : Fin n → ℝ => ‖v‖) where
   Auxiliary := Unit
   target v t _ := 0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t)
   source_iff_exists v t := by
@@ -83,7 +83,7 @@ noncomputable def normInfEpigraph {n : Nat} :
 
 /-- The `WithLp ∞` norm has the same epigraph inequalities. -/
 noncomputable def normInfToLpEpigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp ∞ v‖) where
+    EpigraphRepr (fun v : Fin n → ℝ => ‖WithLp.toLp ∞ v‖) where
   Auxiliary := Unit
   target v t _ := 0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t)
   source_iff_exists v t := by
@@ -91,12 +91,12 @@ noncomputable def normInfToLpEpigraph {n : Nat} :
 
 /-- The epigraph of `Fn.norm1` represented by linear inequalities with an auxiliary vector. -/
 noncomputable def fnNorm1Epigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.norm1 v) :=
+    EpigraphRepr (fun v : Fin n → ℝ => Fn.norm1 v) :=
   norm1Epigraph
 
 /-- The named infinity norm retains its scalar bound, including for empty vectors. -/
 noncomputable def fnNormInfEpigraph {n : Nat} :
-    EpigraphRepresentation (fun v : Fin n → ℝ => Fn.normInf v) :=
+    EpigraphRepr (fun v : Fin n → ℝ => Fn.normInf v) :=
   normInfEpigraph
 
 end Morew.Rewrite

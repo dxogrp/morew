@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.PSD.NuclearNorm
-import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.Repr
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.NormNum
 
@@ -31,17 +31,17 @@ private theorem completion_entry_bound {m n : Nat}
     dotProduct_add] at h
   linarith
 
-example : Fn.nuclearNorm (!![-3] : Matrix (Fin 1) (Fin 1) ℝ) = 3 := by
-  rw [nuclearNorm_singleton]
+example : Fn.normNuc (!![-3] : Matrix (Fin 1) (Fin 1) ℝ) = 3 := by
+  rw [normNuc_singleton]
   norm_num
 
-example : Fn.nuclearNorm (!![3] : Matrix (Fin 1) (Fin 1) ℝ) = 3 := by
-  rw [nuclearNorm_singleton]
+example : Fn.normNuc (!![3] : Matrix (Fin 1) (Fin 1) ℝ) = 3 := by
+  rw [normNuc_singleton]
   norm_num
 
 -- Two nonzero singular values distinguish the nuclear norm from both the
 -- Euclidean operator norm (four) and the Frobenius norm (five).
-example : Fn.nuclearNorm (Matrix.diagonal ![3, 4]) = 7 := by
+example : Fn.normNuc (Matrix.diagonal ![3, 4]) = 7 := by
   let A : Matrix (Fin 2) (Fin 2) ℝ := Matrix.diagonal ![3, 4]
   let w₀ : Fin 2 ⊕ Fin 2 → ℝ := Sum.elim ![1, 0] ![1, 0]
   let w₁ : Fin 2 ⊕ Fin 2 → ℝ := Sum.elim ![0, 1] ![0, 1]
@@ -55,19 +55,19 @@ example : Fn.nuclearNorm (Matrix.diagonal ![3, 4]) = 7 := by
     ext i j
     rcases i with i | i <;> rcases j with j | j <;>
       fin_cases i <;> fin_cases j <;> norm_num [A, w₀, w₁, Matrix.vecMulVec]
-  have upper := nuclearNorm_le_half_trace A hb
+  have upper := normNuc_le_half_trace A hb
   norm_num [A, Matrix.trace, Fin.sum_univ_succ] at upper
-  have lower₀ := completion_entry_bound A _ _ (nuclearWitness_block_posSemidef A) 0 0
-  have lower₁ := completion_entry_bound A _ _ (nuclearWitness_block_posSemidef A) 1 1
+  have lower₀ := completion_entry_bound A _ _ (nuclearWitness_block_psd A) 0 0
+  have lower₁ := completion_entry_bound A _ _ (nuclearWitness_block_psd A) 1 1
   have hw := trace_nuclearLeftWitness A
   have hv := trace_nuclearRightWitness A
   simp only [Matrix.trace, Fin.sum_univ_two, Matrix.diag_apply] at hw hv
   norm_num [A] at lower₀ lower₁
-  change Fn.nuclearNorm A = 7
+  change Fn.normNuc A = 7
   linarith
 
 -- This rank-deficient 2 × 3 matrix has one nonzero singular value.
-example : Fn.nuclearNorm (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3 := by
+example : Fn.normNuc (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3 := by
   let A : Matrix (Fin 2) (Fin 3) ℝ := !![3, 0, 0; 0, 0, 0]
   let W : Matrix (Fin 2) (Fin 2) ℝ := Matrix.diagonal ![3, 0]
   let V : Matrix (Fin 3) (Fin 3) ℝ := Matrix.diagonal ![3, 0, 0]
@@ -79,9 +79,9 @@ example : Fn.nuclearNorm (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3
     ext i j
     rcases i with i | i <;> rcases j with j | j <;>
       fin_cases i <;> fin_cases j <;> norm_num [A, W, V, w, Matrix.vecMulVec]
-  have upper := nuclearNorm_le_half_trace A hb
+  have upper := normNuc_le_half_trace A hb
   norm_num [W, V, Matrix.trace, Fin.sum_univ_succ] at upper
-  have witness := nuclearWitness_block_posSemidef A
+  have witness := nuclearWitness_block_psd A
   have lower := completion_entry_bound A _ _ witness 0 0
   have hw₁ := witness.diag_nonneg (i := Sum.inl 1)
   have hv₁ := witness.diag_nonneg (i := Sum.inr 1)
@@ -92,55 +92,55 @@ example : Fn.nuclearNorm (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3
   simp only [Matrix.fromBlocks_apply₁₁] at hw₁
   simp only [Matrix.fromBlocks_apply₂₂] at hv₁ hv₂
   norm_num [A] at lower
-  change Fn.nuclearNorm A = 3
+  change Fn.normNuc A = 3
   linarith
 
 example {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) :
     (nuclearLeftWitness A).toMatrix.trace + (nuclearRightWitness A).toMatrix.trace =
-      2 * Fn.nuclearNorm A := by
+      2 * Fn.normNuc A := by
   rw [trace_nuclearLeftWitness, trace_nuclearRightWitness]
   ring
 
 example (A : Matrix (Fin 2) (Fin 3) ℝ) (t : ℝ) :
-    Fn.nuclearNorm A ≤ t ↔ ∃ W : SymmetricMatrix 2, ∃ V : SymmetricMatrix 3,
+    Fn.normNuc A ≤ t ↔ ∃ W : SymmetricMatrix 2, ∃ V : SymmetricMatrix 3,
       SymmetricMatrix.fromBlocks W A V ∈ PSD 5 ∧
         (W.toMatrix.trace + V.toMatrix.trace) / 2 ≤ t :=
-  nuclearNorm_le_iff A t
+  normNuc_le_iff A t
 
 example (A : Matrix (Fin 3) (Fin 2) ℝ) (W : SymmetricMatrix 3) (V : SymmetricMatrix 2)
     (h : SymmetricMatrix.fromBlocks W A V ∈ PSD 5) :
-    2 * Fn.nuclearNorm A ≤ W.toMatrix.trace + V.toMatrix.trace := by
+    2 * Fn.normNuc A ≤ W.toMatrix.trace + V.toMatrix.trace := by
   have hc : (Matrix.fromBlocks W.toMatrix A A.transpose V.toMatrix).PosSemidef := by
-    rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-      posSemidef_fromBlocksFin_iff] at h
+    rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+      psd_fromBlocksFin_iff] at h
     exact h
-  have hb := nuclearNorm_le_half_trace A hc
+  have hb := normNuc_le_half_trace A hc
   linarith
 
 example (n : Nat) (A : Matrix (Fin 0) (Fin n) ℝ) (t : ℝ) :
-    (∃ aux, (nuclearNormEpigraph (m := 0) (n := n)).target A t aux) ↔ 0 ≤ t := by
-  rw [← nuclearNormEpigraph.source_iff_exists]
+    (∃ aux, (normNucEpigraph (m := 0) (n := n)).target A t aux) ↔ 0 ≤ t := by
+  rw [← normNucEpigraph.source_iff_exists]
   simp
 
 example (m : Nat) (A : Matrix (Fin m) (Fin 0) ℝ) (t : ℝ) :
-    (∃ aux, (nuclearNormEpigraph (m := m) (n := 0)).target A t aux) ↔ 0 ≤ t := by
-  rw [← nuclearNormEpigraph.source_iff_exists]
+    (∃ aux, (normNucEpigraph (m := m) (n := 0)).target A t aux) ↔ 0 ≤ t := by
+  rw [← normNucEpigraph.source_iff_exists]
   simp
 
 example (A : Matrix (Fin 0) (Fin 0) ℝ) :
-    ¬ ∃ aux, (nuclearNormEpigraph (m := 0) (n := 0)).target A (-1) aux := by
-  rw [← nuclearNormEpigraph.source_iff_exists]
+    ¬ ∃ aux, (normNucEpigraph (m := 0) (n := 0)).target A (-1) aux := by
+  rw [← normNucEpigraph.source_iff_exists]
   simp
 
 example (m n : Nat) :
-    ∃ aux, (nuclearNormEpigraph (m := m) (n := n)).target 0 0 aux := by
-  rw [← nuclearNormEpigraph.source_iff_exists]
+    ∃ aux, (normNucEpigraph (m := m) (n := n)).target 0 0 aux := by
+  rw [← normNucEpigraph.source_iff_exists]
   simp
 
 example (A : Matrix (Fin 2) (Fin 3) ℝ) :
-    ¬ ∃ aux, (nuclearNormEpigraph (m := 2) (n := 3)).target A (-1) aux := by
-  rw [← nuclearNormEpigraph.source_iff_exists]
-  have h := Fn.nuclearNorm_nonneg A
+    ¬ ∃ aux, (normNucEpigraph (m := 2) (n := 3)).target A (-1) aux := by
+  rw [← normNucEpigraph.source_iff_exists]
+  have h := Fn.normNuc_nonneg A
   linarith
 
 end

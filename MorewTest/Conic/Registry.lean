@@ -99,7 +99,7 @@ run_cmd liftTermElabM do
 noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
 
 @[morew_conic]
-noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
+noncomputable def pairAbsRule : EpigraphRepr pairAbs where
   Auxiliary := Unit
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
@@ -108,7 +108,7 @@ noncomputable def pairAbsRule : EpigraphRepresentation pairAbs where
 noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.2 + p.2|
 
 @[morew_conic]
-noncomputable def nestedPairAbsRule : EpigraphRepresentation nestedPairAbs where
+noncomputable def nestedPairAbsRule : EpigraphRepr nestedPairAbs where
   Auxiliary := Unit
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
@@ -132,7 +132,7 @@ run_cmd liftTermElabM do
 noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 @[morew_conic]
-noncomputable def boundedRule : ExactConstraintLift bounded :=
+noncomputable def boundedRule : ConstraintRepr bounded :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
 
 run_cmd liftTermElabM do
@@ -156,14 +156,14 @@ run_cmd liftTermElabM do
   reject (← `(fun x : ℝ => bounded (x + 1))) "does not match"
     (rule? := some concreteRule)
   reject (← `(fun p : ℝ × ℝ => bounded (p.1 + 1)))
-    "exact representation input is not the decision space" (rule? := some concreteRule)
+    "constraint representation's input type does not match the decision type" (rule? := some concreteRule)
 
 section QuantifiedHelperOpacity
 
 private noncomputable def hiddenAbs (x : ℝ) : ℝ := |x|
 
 private noncomputable def quantifiedAbsRule :
-    ExactConstraintLift (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
+    ConstraintRepr (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
     intro x
     simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
@@ -202,13 +202,13 @@ end StructuralHelperOpacity
 private noncomputable def nonnegativeAbs (x : ℝ) : ℝ := |x|
 
 private noncomputable def nonnegativeAbsGraph :
-    GraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+    GraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
   Auxiliary := ℝ
   target x y u := u = x.val ∧ y = u
   source_iff_exists x y := by simp [nonnegativeAbs, abs_of_nonneg x.property]
 
 private noncomputable def nonnegativeAbsEpigraph :
-    EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
   Auxiliary := ℝ
   target x t u := u = x.val ∧ u ≤ t
   source_iff_exists x t := by simp [nonnegativeAbs, abs_of_nonneg x.property]
@@ -236,7 +236,7 @@ noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x
 
 /-- Domain restriction is checked through a subtype, with no trusted metadata. -/
 noncomputable def positiveLogRule :
-    HypographRepresentation (fun x : {x : ℝ // 0 < x} => positiveLog x.1) :=
+    HypographRepr (fun x : {x : ℝ // 0 < x} => positiveLog x.1) :=
   Conic.Exponential.logHypograph
 
 run_cmd liftTermElabM do
@@ -252,7 +252,7 @@ run_cmd liftTermElabM do
 
 /-- Retained subtype evidence supports a uniform nontrivial auxiliary. -/
 noncomputable def positiveLogWithAuxiliary :
-    HypographRepresentation (fun x : {x : ℝ // 0 < x} => positiveLog x.1) where
+    HypographRepr (fun x : {x : ℝ // 0 < x} => positiveLog x.1) where
   Auxiliary := ℝ
   target x t u := (t, 1, x.1) ∈ EXP ∧ u = 0
   source_iff_exists x t := by
@@ -303,7 +303,7 @@ run_cmd liftTermElabM do
 
 /-- Target-local proof lets must remain available to the affine consumer. -/
 noncomputable def quotientWithProofLet (c : ℝ) (h : c = 1) :
-    EpigraphRepresentation (fun x : ℝ => x / c) where
+    EpigraphRepr (fun x : ℝ => x / c) where
   Auxiliary := Unit
   target x t _ :=
     let _nonzero : c ≠ 0 := by simpa only [h] using (one_ne_zero : (1 : ℝ) ≠ 0)
@@ -316,9 +316,9 @@ run_cmd liftTermElabM do
     match ← Morew.Elab.Conic.Rewrite.planDeclaration source ``quotientWithProofLet with
     | .error error => throwError "target-local nonzero evidence was lost: {error.reason}"
     | .ok result =>
-      let .exact lift := result.certificate
+      let .exact repr := result.certificate
         | throwError "independent target proof unexpectedly used retained rows"
-      checkWithKernel lift
+      checkWithKernel repr
       for row in result.certifiedRows do checkWithKernel row.pointwiseIff
 
 noncomputable def positiveShift (c x : ℝ) : ℝ := Real.log c + x
@@ -326,7 +326,7 @@ noncomputable def positiveShift (c x : ℝ) : ℝ := Real.log c + x
 /-- Scalar proof parameters use the same retained-margin policy as subtype inputs. -/
 @[morew_conic]
 noncomputable def positiveShiftRule (c : ℝ) (hc : 0 < c) :
-    HypographRepresentation (positiveShift c) where
+    HypographRepr (positiveShift c) where
   Auxiliary := Unit
   target x t _ := (t - x, 1, c) ∈ EXP
   source_iff_exists x t := by
@@ -335,7 +335,7 @@ noncomputable def positiveShiftRule (c : ℝ) (hc : 0 < c) :
 
 /-- Declaration proof parameters use the same contextual auxiliary support. -/
 noncomputable def positiveShiftAuxiliary (c : ℝ) (hc : 0 < c) :
-    HypographRepresentation (positiveShift c) where
+    HypographRepr (positiveShift c) where
   Auxiliary := ℝ
   target x t u := (t - x, 1, c) ∈ EXP ∧ u = 0
   source_iff_exists x t := by
@@ -360,7 +360,7 @@ run_cmd liftTermElabM do
 noncomputable def graphShift (x : ℝ) : ℝ := x + 1
 
 @[morew_conic]
-noncomputable def graphShiftRule : GraphRepresentation graphShift where
+noncomputable def graphShiftRule : GraphRepr graphShift where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists _ _ := by simp only [graphShift, exists_const]

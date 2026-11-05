@@ -42,14 +42,14 @@ private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "terminal planning leaked scratch metavariables"
   let target ← result.presentation.canonicalProblem
-  let expected ← mkAppM ``Morew.GlobalEquivalence #[← source.canonicalProblem, target]
-  unless ← isDefEq (← inferType result.equivalence) expected do
+  let expected ← mkAppM ``Morew.GlobalEquiv #[← source.canonicalProblem, target]
+  unless ← isDefEq (← inferType result.equiv) expected do
     throwError "terminal equivalence has wrong endpoints"
   let formType ← whnf (← inferType result.form)
   unless formType.isAppOfArity ``Morew.NLP.Form 5 &&
       (← isDefEq formType.getAppArgs.back! target) do
     throwError "terminal form represents a different problem"
-  for proof in #[result.form, result.equivalence] do
+  for proof in #[result.form, result.equiv] do
     if proof.hasMVar || proof.hasSorry then throwError "terminal certificate is incomplete"
     checkWithKernel proof
   return result

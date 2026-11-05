@@ -28,11 +28,11 @@ reformulation conicTarget : (source center) := by
 reformulation nlpTarget : (source center) := by
   nlp at bound
 
-example : GlobalEquivalence (source center) (conicTarget center) :=
-  conicTarget.equivalence center
+example : GlobalEquiv (source center) (conicTarget center) :=
+  conicTarget.equiv center
 
-example : GlobalEquivalence (source center) (nlpTarget center) :=
-  nlpTarget.equivalence center
+example : GlobalEquiv (source center) (nlpTarget center) :=
+  nlpTarget.equiv center
 
 example (x t : ℝ) : (conicTarget center).feasible (x, t) ↔
     0 ≤ x ∧ x - center ≤ t ∧ -(x - center) ≤ t ∧ t ≤ 10 := Iff.rfl
@@ -114,11 +114,11 @@ reformulation explicitConic : (source center) := by
 reformulation explicitNLP : (source center) := by
   nlp at bound using shiftedAbsEpigraph
 
-example : GlobalEquivalence (source center) (explicitConic center) :=
-  explicitConic.equivalence center
+example : GlobalEquiv (source center) (explicitConic center) :=
+  explicitConic.equiv center
 
-example : GlobalEquivalence (source center) (explicitNLP center) :=
-  explicitNLP.equivalence center
+example : GlobalEquiv (source center) (explicitNLP center) :=
+  explicitNLP.equiv center
 
 end Unregistered
 
@@ -127,8 +127,8 @@ reformulation restored : (source center) := by
   nlp at bound
   conic
 
-example : GlobalEquivalence (source center) (restored center) :=
-  restored.equivalence center
+example : GlobalEquiv (source center) (restored center) :=
+  restored.equiv center
 
 -- Overlapping successful rules produce ambiguity; explicit selection resolves it.
 def overlapping :=
@@ -144,7 +144,7 @@ error: constraint `bound`: ambiguous exact conic rules: Morew.Rewrite.maxEpigrap
 reformulation ambiguous : overlapping := by
   conic at bound
 
-assert_not_exists ambiguous ambiguous.equivalence
+assert_not_exists ambiguous ambiguous.equiv
 
 reformulation upper : overlapping := by
   conic at bound using Rewrite.maxEpigraph
@@ -152,8 +152,8 @@ reformulation upper : overlapping := by
 reformulation lower : overlapping := by
   conic at bound using Rewrite.minHypograph
 
-example : GlobalEquivalence overlapping upper := upper.equivalence
-example : GlobalEquivalence overlapping lower := lower.equivalence
+example : GlobalEquiv overlapping upper := upper.equiv
+example : GlobalEquiv overlapping lower := lower.equiv
 
 -- Terminal validation still accepts an already affine row directly.
 reformulation alreadyAffine : overlapping := by
@@ -181,11 +181,11 @@ reformulation selectedDecisionCenterConic : decisionCenterSource := by
 reformulation selectedDecisionCenterNLP : decisionCenterSource := by
   nlp at bound using shiftedAbsEpigraph
 
-example : GlobalEquivalence decisionCenterSource decisionCenterConic :=
-  decisionCenterConic.equivalence
+example : GlobalEquiv decisionCenterSource decisionCenterConic :=
+  decisionCenterConic.equiv
 
-example : GlobalEquivalence decisionCenterSource decisionCenterNLP :=
-  decisionCenterNLP.equivalence
+example : GlobalEquiv decisionCenterSource decisionCenterNLP :=
+  decisionCenterNLP.equiv
 
 example (x shift t : ℝ) : decisionCenterConic.feasible ((x, shift), t) ↔
     x - shift ≤ t ∧ -(x - shift) ≤ t := Iff.rfl
@@ -209,7 +209,7 @@ noncomputable def source :=
     subject to
       bound : |x| ≤ 3
 
-noncomputable def modelRule : ExactConstraintLift source.feasible :=
+noncomputable def modelRule : ConstraintRepr source.feasible :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
     (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
 
@@ -224,9 +224,9 @@ reformulation namedReady : source := by
 reformulation namedNLP : source := by
   nlp at bound using modelRule
 
-example : GlobalEquivalence source ready := ready.equivalence
-example : GlobalEquivalence source namedReady := namedReady.equivalence
-example : GlobalEquivalence source namedNLP := namedNLP.equivalence
+example : GlobalEquiv source ready := ready.equiv
+example : GlobalEquiv source namedReady := namedReady.equiv
+example : GlobalEquiv source namedNLP := namedNLP.equiv
 
 example (x : ℝ) : ready.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl
 example (x : ℝ) : namedReady.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl

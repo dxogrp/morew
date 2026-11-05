@@ -31,7 +31,7 @@ open Morew Morew.Conic
 noncomputable section
 
 def schurCertificate {m n : Nat} (A : SymmetricMatrix m) (hA : A.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
       (Matrix.diagonal (fun _ : Fin n => p.2) - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
   .ofIff (fun p =>
     SymmetricMatrix.fromBlocks A p.1
@@ -57,7 +57,7 @@ reformulation schurConic : (schurModel A) := by
 
 #printp schurConic
 
-example : GlobalEquivalence (schurModel A) (schurConic A) := schurConic.equivalence A hA
+example : GlobalEquiv (schurModel A) (schurConic A) := schurConic.equiv A hA
 example : (schurConic.conicForm A).data.toProblem = schurConic A :=
   (schurConic.conicForm A).represents
 example : IsConic (schurConic A) := schurConic.isConic A

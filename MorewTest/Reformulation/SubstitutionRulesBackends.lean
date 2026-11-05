@@ -20,7 +20,7 @@ reformulation squaredConic : nonnegative := by
   epigraph t
   conic
 example : IsConic squaredConic := squaredConic.isConic
-example : GlobalEquivalence nonnegative squaredConic := squaredConic.equivalence
+example : GlobalEquiv nonnegative squaredConic := squaredConic.equiv
 
 reformulation squaredNLP : nonnegative := by
   substitute x := u ^ 2

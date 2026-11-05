@@ -30,7 +30,7 @@ noncomputable section
 
 def p :=
   problem (a b : ℝ)
-    minimize Fn.relativeEntropy a b
+    minimize Fn.relEntr a b
     subject to
       numerator : 0 ≤ a
       denominator : 1 ≤ b
@@ -42,7 +42,7 @@ reformulation entropyConic : p := by
 
 #printp p
 #printp entropyConic
-example : GlobalEquivalence p entropyConic := entropyConic.equivalence
+example : GlobalEquiv p entropyConic := entropyConic.equiv
 example : IsConic entropyConic := entropyConic.isConic
 
 end
@@ -75,7 +75,7 @@ reformulation selectedConic : p := by
   conic
 
 #printp selectedConic
-example : GlobalEquivalence p selectedConic := selectedConic.equivalence
+example : GlobalEquiv p selectedConic := selectedConic.equiv
 example : IsConic selectedConic := selectedConic.isConic
 
 -- `conic` can also select the softplus rule automatically.
@@ -85,7 +85,7 @@ reformulation automaticConic : p := by
 
 #printp automaticConic
 #check automaticConic.conicForm.data
-example : GlobalEquivalence p automaticConic := automaticConic.equivalence
+example : GlobalEquiv p automaticConic := automaticConic.equiv
 example : automaticConic.conicForm.data.toProblem = automaticConic :=
   automaticConic.conicForm.represents
 example : IsConic automaticConic := automaticConic.isConic

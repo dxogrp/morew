@@ -506,10 +506,10 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
 
   let current := state.semantic
   let nextSemantic ← liftMacroM `(Morew.Problem.pullback $current $mapTerm)
-  let primitiveEquivalence ← liftMacroM `(
-    Morew.pullbackEquivalence $current $mapTerm $stepCertificate)
+  let primitiveEquiv ← liftMacroM `(
+    Morew.pullbackEquiv $current $mapTerm $stepCertificate)
   let primitive ← liftMacroM <|
-    liftCertificateEquivalence state.runner primitiveEquivalence
+    liftCertificateEquiv state.runner primitiveEquiv
   pure {
     view := newView
     semantic := nextSemantic

@@ -4,12 +4,12 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Polyhedral
-import Morew.Conic.SecondOrder.Representations
-import Morew.Conic.Exponential.Representations
-import Morew.Conic.Power.Representations
+import Morew.Conic.SecondOrder.Repr
+import Morew.Conic.Exponential.Repr
+import Morew.Conic.Power.Repr
 import Morew.Conic.Power.Norm
 import Morew.Conic.Power.GeometricMean
-import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.Repr
 import Morew.Elab.Rewrite.Registry
 
 /-! Install built-in conic rules via `morew_conic`. Local attribute removal excludes a rule.
@@ -17,12 +17,12 @@ Automatic selection prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
 when both certify; explicit selection bypasses this preference. -/
 
 attribute [morew_conic]
-  Morew.Conic.positiveDefiniteLift
+  Morew.Conic.posDefRepr
   Morew.Conic.MatrixFraction.epigraph
   Morew.Conic.MatrixFraction.nativeEpigraph
   Morew.Conic.Spectral.lambdaMaxEpigraph
   Morew.Conic.Spectral.spectralNormEpigraph
-  Morew.Conic.Spectral.nuclearNormEpigraph
+  Morew.Conic.Spectral.normNucEpigraph
   Morew.Conic.LogDet.hypograph
   Morew.Conic.LogDet.nativeHypograph
   Morew.Rewrite.absEpigraph
@@ -50,8 +50,8 @@ attribute [morew_conic]
   Morew.Conic.Exponential.logSumExpNativeEpigraph
   Morew.Conic.Exponential.softplusEpigraph
   Morew.Conic.Exponential.softplusNativeEpigraph
-  Morew.Conic.Exponential.relativeEntropyEpigraph
-  Morew.Conic.Exponential.relativeEntropyNativeEpigraph
+  Morew.Conic.Exponential.relEntrEpigraph
+  Morew.Conic.Exponential.relEntrNativeEpigraph
   Morew.Conic.Power.normEpigraph
   Morew.Conic.Power.geoMeanHypograph
   Morew.Conic.Power.invProdEpigraph

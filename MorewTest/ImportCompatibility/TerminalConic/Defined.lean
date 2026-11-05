@@ -33,13 +33,13 @@ def minimumSource :=
       logarithm : t ≤ Real.log y
 
 include hn hε in
-reformulation minimumTarget : minimumSource certificate minimumEquivalence := by
+reformulation minimumTarget : minimumSource certificate minimumEquiv := by
   conic
 
-example : GlobalEquivalence minimumSource minimumTarget :=
-  minimumTarget.equivalence hn hε
+example : GlobalEquiv minimumSource minimumTarget :=
+  minimumTarget.equiv hn hε
 
-example : GlobalEquivalence minimumSource minimumTarget := minimumEquivalence hn hε
+example : GlobalEquiv minimumSource minimumTarget := minimumEquiv hn hε
 
 def maximumSource :=
   problem (y t : ℝ)
@@ -49,10 +49,10 @@ def maximumSource :=
       logarithm : t ≤ Real.log y
 
 include hε in
-reformulation maximumTarget : maximumSource certificate maximumEquivalence := by
+reformulation maximumTarget : maximumSource certificate maximumEquiv := by
   conic
 
-example : GlobalEquivalence maximumSource maximumTarget := maximumTarget.equivalence hε
+example : GlobalEquiv maximumSource maximumTarget := maximumTarget.equiv hε
 
 end
 
@@ -75,7 +75,7 @@ variable [hne : NeZero Parameter.size]
 reformulation nonzeroTarget : dimensionSource := by
   conic
 
-example : GlobalEquivalence dimensionSource nonzeroTarget := nonzeroTarget.equivalence
+example : GlobalEquiv dimensionSource nonzeroTarget := nonzeroTarget.equiv
 
 -- Keep the same instance when the represented problem actually uses it.
 def coordinateSource :=
@@ -99,7 +99,7 @@ variable [hne : Nonempty (Fin Parameter.size)]
 reformulation nonemptyTarget : dimensionSource := by
   conic
 
-example : GlobalEquivalence dimensionSource nonemptyTarget := nonemptyTarget.equivalence
+example : GlobalEquiv dimensionSource nonemptyTarget := nonemptyTarget.equiv
 
 end NonemptyDimension
 

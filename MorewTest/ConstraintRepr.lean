@@ -12,7 +12,7 @@ import Mathlib.Data.Real.Basic
 Test the semantic API independently of the reformulation command and its metadata.
 -/
 
-namespace MorewTest.ExactConstraintLift
+namespace MorewTest.ConstraintRepr
 
 open Morew
 
@@ -20,22 +20,22 @@ noncomputable section
 
 /-! A pointwise equivalence gives an exact representation with `Unit` auxiliary data. -/
 
-def zeroSymmetryLift : ExactConstraintLift (fun x : ℤ => x = 0) :=
-  ExactConstraintLift.ofIff
+def zeroSymmetryRepr : ConstraintRepr (fun x : ℤ => x = 0) :=
+  ConstraintRepr.ofIff
     (fun x : ℤ => 0 = x)
     fun x =>
       ⟨fun h : x = 0 => h.symm, fun h : 0 = x => h.symm⟩
 
-example : zeroSymmetryLift.Auxiliary = Unit := rfl
+example : zeroSymmetryRepr.Auxiliary = Unit := rfl
 
 example (x : ℤ) :
-    zeroSymmetryLift.target x () ↔ 0 = x :=
+    zeroSymmetryRepr.target x () ↔ 0 = x :=
   Iff.rfl
 
 /-! A one-auxiliary representation of the epigraph of the square function. -/
 
-def squareEpigraphRepresentation :
-    EpigraphRepresentation (fun x : ℤ => x ^ 2) where
+def squareEpigraphRepr :
+    EpigraphRepr (fun x : ℤ => x ^ 2) where
   Auxiliary := ℤ
   target x t a := a = x ^ 2 ∧ a ≤ t
   source_iff_exists x t := by
@@ -45,9 +45,9 @@ def squareEpigraphRepresentation :
     · rintro ⟨a, rfl, h⟩
       exact h
 
-def squareEpigraphLift :
-    ExactConstraintLift (fun point : ℤ × ℤ => point.1 ^ 2 ≤ point.2) :=
-  squareEpigraphRepresentation.toExactConstraintLift Prod.fst Prod.snd
+def squareConstraintRepr :
+    ConstraintRepr (fun point : ℤ × ℤ => point.1 ^ 2 ≤ point.2) :=
+  squareEpigraphRepr.toConstraintRepr Prod.fst Prod.snd
 
 def squareBoundProblem : Problem (ℤ × ℤ) ℤ where
   objective point := point.1 + point.2
@@ -59,16 +59,16 @@ def squareBoundDecomposition :
   remainder point := point.1 ≤ 10
   feasible_iff _ := Iff.rfl
 
-def liftedSquareBoundProblem : Problem ((ℤ × ℤ) × ℤ) ℤ :=
-  squareBoundProblem.liftConstraint
-    squareEpigraphLift
+def replacedSquareBoundProblem : Problem ((ℤ × ℤ) × ℤ) ℤ :=
+  squareBoundProblem.replaceConstraint
+    squareConstraintRepr
     (decomposition := squareBoundDecomposition)
 
-def squareBoundEquivalence :
-    GlobalEquivalence squareBoundProblem liftedSquareBoundProblem :=
-  exactConstraintLiftEquivalence
+def squareBoundEquiv :
+    GlobalEquiv squareBoundProblem replacedSquareBoundProblem :=
+  replaceConstraintEquiv
     squareBoundProblem
-    squareEpigraphLift
+    squareConstraintRepr
     squareBoundDecomposition
 
 def squareBoundPoint : FeasiblePoint squareBoundProblem :=
@@ -77,31 +77,31 @@ def squareBoundPoint : FeasiblePoint squareBoundProblem :=
     decide⟩
 
 example :
-    (squareBoundEquivalence.forward.map squareBoundPoint).1.1 =
+    (squareBoundEquiv.forward.map squareBoundPoint).1.1 =
       squareBoundPoint.1 :=
   rfl
 
 example :
-    liftedSquareBoundProblem.objective
-        (squareBoundEquivalence.forward.map squareBoundPoint).1 =
+    replacedSquareBoundProblem.objective
+        (squareBoundEquiv.forward.map squareBoundPoint).1 =
       squareBoundProblem.objective squareBoundPoint.1 :=
   rfl
 
-example (point : FeasiblePoint liftedSquareBoundProblem) :
-    (squareBoundEquivalence.backward.map point).1 = point.1.1 :=
+example (point : FeasiblePoint replacedSquareBoundProblem) :
+    (squareBoundEquiv.backward.map point).1 = point.1.1 :=
   rfl
 
-example (point : FeasiblePoint liftedSquareBoundProblem) :
+example (point : FeasiblePoint replacedSquareBoundProblem) :
     squareBoundProblem.objective
-        (squareBoundEquivalence.backward.map point).1 =
-      liftedSquareBoundProblem.objective point.1 :=
+        (squareBoundEquiv.backward.map point).1 =
+      replacedSquareBoundProblem.objective point.1 :=
   rfl
 
 /-! Graph conversion works for both orientations of the graph equation, and
 hypograph conversion preserves its inequality orientation. -/
 
-def successorGraphRepresentation :
-    GraphRepresentation (fun x : ℤ => x + 1) where
+def successorGraphRepr :
+    GraphRepr (fun x : ℤ => x + 1) where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists x y := by
@@ -111,20 +111,20 @@ def successorGraphRepresentation :
     · rintro ⟨_, h⟩
       exact h
 
-example : ExactConstraintLift
+example : ConstraintRepr
     (fun point : ℤ × ℤ => point.2 = point.1 + 1) :=
-  successorGraphRepresentation.toExactConstraintLift Prod.fst Prod.snd
+  successorGraphRepr.toConstraintRepr Prod.fst Prod.snd
 
-example : ExactConstraintLift
+example : ConstraintRepr
     (fun point : ℤ × ℤ => point.1 + 1 = point.2) :=
-  successorGraphRepresentation.toExactConstraintLiftSymm Prod.fst Prod.snd
+  successorGraphRepr.toConstraintReprSymm Prod.fst Prod.snd
 
-example : ExactConstraintLift
+example : ConstraintRepr
     (fun point : ℤ => point = (point - 1) + 1) :=
-  successorGraphRepresentation.toExactConstraintLift (fun point => point - 1) id
+  successorGraphRepr.toConstraintRepr (fun point => point - 1) id
 
-def squareHypographRepresentation :
-    HypographRepresentation (fun x : ℤ => x ^ 2) where
+def squareHypographRepr :
+    HypographRepr (fun x : ℤ => x ^ 2) where
   Auxiliary := Unit
   target x t _ := t ≤ x ^ 2
   source_iff_exists x t := by
@@ -134,13 +134,13 @@ def squareHypographRepresentation :
     · rintro ⟨_, h⟩
       exact h
 
-example : ExactConstraintLift
+example : ConstraintRepr
     (fun point : ℤ × ℤ => point.2 ≤ point.1 ^ 2) :=
-  squareHypographRepresentation.toExactConstraintLift Prod.fst Prod.snd
+  squareHypographRepr.toConstraintRepr Prod.fst Prod.snd
 
 /-! Auxiliary values need not be unique. -/
 
-def nonuniqueProductLift : ExactConstraintLift (fun x : ℤ => x = 0) where
+def nonuniqueProductRepr : ConstraintRepr (fun x : ℤ => x = 0) where
   Auxiliary := ℤ × Bool
   target x _ := x = 0
   source_iff_exists x := by
@@ -151,15 +151,15 @@ def nonuniqueProductLift : ExactConstraintLift (fun x : ℤ => x = 0) where
       exact h
 
 example :
-    nonuniqueProductLift.target 0 (0, false) ∧
-      nonuniqueProductLift.target 0 (1, true) ∧
+    nonuniqueProductRepr.target 0 (0, false) ∧
+      nonuniqueProductRepr.target 0 (1, true) ∧
       ((0 : ℤ), false) ≠ (1, true) := by
-  simp [nonuniqueProductLift]
+  simp [nonuniqueProductRepr]
 
 /-! Infeasibility is transported in both directions by the equivalence. -/
 
-def impossibleLift : ExactConstraintLift (fun _ : ℤ => False) :=
-  ExactConstraintLift.ofIff (fun _ : ℤ => False) fun _ => Iff.rfl
+def impossibleRepr : ConstraintRepr (fun _ : ℤ => False) :=
+  ConstraintRepr.ofIff (fun _ : ℤ => False) fun _ => Iff.rfl
 
 def impossibleProblem : Problem ℤ ℤ where
   objective x := x
@@ -170,27 +170,27 @@ def impossibleDecomposition :
   remainder _ := True
   feasible_iff _ := Iff.rfl
 
-def liftedImpossibleProblem : Problem (ℤ × Unit) ℤ :=
-  impossibleProblem.liftConstraint
-    impossibleLift
+def replacedImpossibleProblem : Problem (ℤ × Unit) ℤ :=
+  impossibleProblem.replaceConstraint
+    impossibleRepr
     impossibleDecomposition
 
-def impossibleEquivalence :
-    GlobalEquivalence impossibleProblem liftedImpossibleProblem :=
-  exactConstraintLiftEquivalence
+def impossibleEquiv :
+    GlobalEquiv impossibleProblem replacedImpossibleProblem :=
+  replaceConstraintEquiv
     impossibleProblem
-    impossibleLift
+    impossibleRepr
     impossibleDecomposition
 
 example :
     impossibleProblem.HasFeasiblePoint ↔
-      liftedImpossibleProblem.HasFeasiblePoint :=
-  impossibleEquivalence.hasFeasiblePoint_iff
+      replacedImpossibleProblem.HasFeasiblePoint :=
+  impossibleEquiv.hasFeasiblePoint_iff
 
-example : ¬ liftedImpossibleProblem.HasFeasiblePoint := by
+example : ¬ replacedImpossibleProblem.HasFeasiblePoint := by
   intro h
   have sourceHasPoint : impossibleProblem.HasFeasiblePoint :=
-    impossibleEquivalence.hasFeasiblePoint_iff.mpr h
+    impossibleEquiv.hasFeasiblePoint_iff.mpr h
   obtain ⟨point⟩ := sourceHasPoint
   exact point.2.2
 
@@ -201,8 +201,8 @@ def nonconvexProblem : Problem ℝ ℝ where
   objective x := x
   feasible x := True ∧ x ^ 2 = 1
 
-def nonconvexLift : ExactConstraintLift (fun x : ℝ => x ^ 2 = 1) :=
-  ExactConstraintLift.ofIff
+def nonconvexRepr : ConstraintRepr (fun x : ℝ => x ^ 2 = 1) :=
+  ConstraintRepr.ofIff
     (fun x : ℝ => x * x = 1)
     fun x => by
       simp only [pow_two]
@@ -213,15 +213,15 @@ def nonconvexDecomposition :
   remainder _ := True
   feasible_iff _ := Iff.rfl
 
-def liftedNonconvexProblem :=
-  nonconvexProblem.liftConstraint
-    nonconvexLift
+def replacedNonconvexProblem :=
+  nonconvexProblem.replaceConstraint
+    nonconvexRepr
     nonconvexDecomposition
 
-example : GlobalEquivalence nonconvexProblem liftedNonconvexProblem :=
-  exactConstraintLiftEquivalence
+example : GlobalEquiv nonconvexProblem replacedNonconvexProblem :=
+  replaceConstraintEquiv
     nonconvexProblem
-    nonconvexLift
+    nonconvexRepr
     nonconvexDecomposition
 
 /-! Independently certified representations compose by transitivity. -/
@@ -230,8 +230,8 @@ def twoConstraintProblem : Problem ℤ ℤ where
   objective x := x
   feasible x := x ≤ 0 ∧ x = 0
 
-def firstSequentialLift : ExactConstraintLift (fun x : ℤ => x = 0) :=
-  ExactConstraintLift.ofIff
+def firstSequentialRepr : ConstraintRepr (fun x : ℤ => x = 0) :=
+  ConstraintRepr.ofIff
     (fun x : ℤ => 0 = x)
     fun x =>
       ⟨fun h : x = 0 => h.symm, fun h : 0 = x => h.symm⟩
@@ -242,46 +242,46 @@ def firstSequentialDecomposition :
   remainder x := x ≤ 0
   feasible_iff _ := Iff.rfl
 
-def afterFirstLift : Problem (ℤ × Unit) ℤ :=
-  twoConstraintProblem.liftConstraint
-    firstSequentialLift
+def afterFirstReplacement : Problem (ℤ × Unit) ℤ :=
+  twoConstraintProblem.replaceConstraint
+    firstSequentialRepr
     firstSequentialDecomposition
 
-def firstSequentialEquivalence :
-    GlobalEquivalence twoConstraintProblem afterFirstLift :=
-  exactConstraintLiftEquivalence
+def firstSequentialEquiv :
+    GlobalEquiv twoConstraintProblem afterFirstReplacement :=
+  replaceConstraintEquiv
     twoConstraintProblem
-    firstSequentialLift
+    firstSequentialRepr
     firstSequentialDecomposition
 
-def secondSequentialLift :
-    ExactConstraintLift (fun point : ℤ × Unit => 0 = point.1) :=
-  ExactConstraintLift.ofIff
+def secondSequentialRepr :
+    ConstraintRepr (fun point : ℤ × Unit => 0 = point.1) :=
+  ConstraintRepr.ofIff
     (fun point : ℤ × Unit => point.1 = 0)
     fun point =>
       ⟨fun h : 0 = point.1 => h.symm, fun h : point.1 = 0 => h.symm⟩
 
 def secondSequentialDecomposition :
-    ConstraintDecomposition afterFirstLift
+    ConstraintDecomposition afterFirstReplacement
       (fun point : ℤ × Unit => 0 = point.1) where
   remainder point := point.1 ≤ 0
   feasible_iff _ := Iff.rfl
 
-def afterSecondLift : Problem ((ℤ × Unit) × Unit) ℤ :=
-  afterFirstLift.liftConstraint
-    secondSequentialLift
+def afterSecondReplacement : Problem ((ℤ × Unit) × Unit) ℤ :=
+  afterFirstReplacement.replaceConstraint
+    secondSequentialRepr
     secondSequentialDecomposition
 
-def secondSequentialEquivalence :
-    GlobalEquivalence afterFirstLift afterSecondLift :=
-  exactConstraintLiftEquivalence
-    afterFirstLift
-    secondSequentialLift
+def secondSequentialEquiv :
+    GlobalEquiv afterFirstReplacement afterSecondReplacement :=
+  replaceConstraintEquiv
+    afterFirstReplacement
+    secondSequentialRepr
     secondSequentialDecomposition
 
-example : GlobalEquivalence twoConstraintProblem afterSecondLift :=
-  firstSequentialEquivalence.trans secondSequentialEquivalence
+example : GlobalEquiv twoConstraintProblem afterSecondReplacement :=
+  firstSequentialEquiv.trans secondSequentialEquiv
 
 end
 
-end MorewTest.ExactConstraintLift
+end MorewTest.ConstraintRepr

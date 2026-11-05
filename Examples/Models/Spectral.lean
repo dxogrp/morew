@@ -38,8 +38,8 @@ reformulation largestEigenvalueConic : largestEigenvalueModel := by
 
 #printp largestEigenvalueConic
 
-example : GlobalEquivalence largestEigenvalueModel largestEigenvalueConic :=
-  largestEigenvalueConic.equivalence
+example : GlobalEquiv largestEigenvalueModel largestEigenvalueConic :=
+  largestEigenvalueConic.equiv
 example : IsConic largestEigenvalueConic := largestEigenvalueConic.isConic
 
 /-!
@@ -69,8 +69,8 @@ reformulation operatorNormConic : operatorNormModel := by
 
 #printp operatorNormConic
 
-example : GlobalEquivalence operatorNormModel operatorNormConic :=
-  operatorNormConic.equivalence
+example : GlobalEquiv operatorNormModel operatorNormConic :=
+  operatorNormConic.equiv
 example : IsConic operatorNormConic := operatorNormConic.isConic
 
 /-!
@@ -85,21 +85,21 @@ For a 2 × 3 matrix variable `A`, nuclear-norm completion is
 -/
 
 -- The nuclear-norm bound uses half the sum of two auxiliary matrix traces.
-def nuclearNormModel :=
+def normNucModel :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
-    minimize Fn.nuclearNorm A
+    minimize Fn.normNuc A
     subject to
       firstEntry : A 0 0 = 1
       secondEntry : A 1 1 = 1
 
-reformulation nuclearNormConic : nuclearNormModel := by
+reformulation normNucConic : normNucModel := by
   epigraph t as nuclear_bound
   conic
 
-#printp nuclearNormConic
+#printp normNucConic
 
-example : GlobalEquivalence nuclearNormModel nuclearNormConic := nuclearNormConic.equivalence
-example : IsConic nuclearNormConic := nuclearNormConic.isConic
+example : GlobalEquiv normNucModel normNucConic := normNucConic.equiv
+example : IsConic normNucConic := normNucConic.isConic
 
 /-!
 The matrix-fraction model has a vector variable `x ∈ ℝ²` and a symmetric
@@ -117,7 +117,7 @@ The matrix-fraction model has a vector variable `x ∈ ℝ²` and a symmetric
 
 def matrixFractionModel :=
   problem (x : Fin 2 → ℝ) (P : SymmetricMatrix 2)
-    minimize Fn.matrixFrac x P.toMatrix
+    minimize Fn.matFrac x P.toMatrix
     subject to
       domain : P.toMatrix.PosDef
       normalization : P.toMatrix.trace = 2
@@ -132,8 +132,8 @@ reformulation matrixFractionConic : matrixFractionModel := by
 
 #printp matrixFractionConic
 
-example : GlobalEquivalence matrixFractionModel matrixFractionConic :=
-  matrixFractionConic.equivalence
+example : GlobalEquiv matrixFractionModel matrixFractionConic :=
+  matrixFractionConic.equiv
 example : IsConic matrixFractionConic := matrixFractionConic.isConic
 
 end

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Syntax
-import Morew.Conic.SecondOrder.Representations
+import Morew.Conic.SecondOrder.Repr
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-! # Shared auxiliary second-order certificate and its source problem -/
@@ -17,7 +17,7 @@ noncomputable section
 
 def userSquare (x : ℝ) : ℝ := x ^ 2
 
-def auxiliaryRule : ExactConstraintLift
+def auxiliaryRule : ConstraintRepr
     (fun point : ℝ × ℝ => userSquare point.1 ≤ point.2) where
   Auxiliary := ℝ
   target point u := u = point.1 ∧

@@ -30,7 +30,7 @@ def missingDomain :=
   problem (x : Fin 2 → ℝ) (P : SymmetricMatrix 2) (t : ℝ)
     minimize t
     subject to
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 #guard_error_fragments ["bound", "positive-definiteness", "matrix argument"] in
 assert_fraction_atomic%
@@ -45,7 +45,7 @@ def semidefiniteDomain :=
     minimize t
     subject to
       domain : P.toMatrix.PosSemidef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 #guard_error_fragments ["bound", "positive-definiteness"] in
 assert_fraction_atomic%
@@ -55,7 +55,7 @@ def singularPivot :=
   problem (x : Fin 1 → ℝ) (t : ℝ)
     minimize t
     subject to
-      bound : Fn.matrixFrac x (0 : Matrix (Fin 1) (Fin 1) ℝ) ≤ t
+      bound : Fn.matFrac x (0 : Matrix (Fin 1) (Fin 1) ℝ) ≤ t
 
 #guard_error_fragments ["bound", "positive-definiteness"] in
 assert_fraction_atomic%
@@ -66,7 +66,7 @@ def wrongPivot :=
     minimize t
     subject to
       domain : Q.toMatrix.PosDef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 #guard_error_fragments ["bound", "positive-definiteness"] in
 assert_fraction_atomic%
@@ -77,7 +77,7 @@ def zeroMargin :=
     minimize t
     subject to
       margin : (P.toMatrix - (0 : ℝ) • 1).PosSemidef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 #guard_error_fragments ["bound", "positive-definiteness"] in
 assert_fraction_atomic%
@@ -88,7 +88,7 @@ def nonlinearVector :=
     minimize t
     subject to
       domain : P.toMatrix.PosDef
-      bound : Fn.matrixFrac ![z ^ 2] P.toMatrix ≤ t
+      bound : Fn.matFrac ![z ^ 2] P.toMatrix ≤ t
 
 #guard_error_fragments ["bound", "power"] in
 assert_fraction_atomic%
@@ -99,7 +99,7 @@ def nonlinearPivot :=
     minimize t
     subject to
       domain : (Matrix.diagonal ![z ^ 2 + 1]).PosDef
-      bound : Fn.matrixFrac ![1] (Matrix.diagonal ![z ^ 2 + 1]) ≤ t
+      bound : Fn.matFrac ![1] (Matrix.diagonal ![z ^ 2 + 1]) ≤ t
 
 #guard_error_fragments ["bound", "power"] in
 assert_fraction_atomic%
@@ -114,7 +114,7 @@ def reversed :=
     minimize t
     subject to
       domain : P.toMatrix.PosDef
-      bound : t ≤ Fn.matrixFrac x P.toMatrix
+      bound : t ≤ Fn.matFrac x P.toMatrix
 
 #guard_error_fragments ["bound", "bound polarity"] in
 assert_fraction_atomic%
@@ -125,7 +125,7 @@ def equality :=
     minimize t
     subject to
       domain : P.toMatrix.PosDef
-      bound : Fn.matrixFrac x P.toMatrix = t
+      bound : Fn.matFrac x P.toMatrix = t
 
 #guard_error_fragments ["bound", "bound polarity"] in
 assert_fraction_atomic%
@@ -138,7 +138,7 @@ def missingGlobalSymmetry :=
     minimize t
     subject to
       domain : P.PosDef
-      bound : Fn.matrixFrac x P ≤ t
+      bound : Fn.matFrac x P ≤ t
 
 #guard_error_fragments ["bound", "global matrix symmetry"] in
 assert_fraction_atomic%
@@ -149,12 +149,12 @@ def validSource :=
     minimize t
     subject to
       domain : P.toMatrix.PosDef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 /-- A downstream alias participates in ordinary exact-rule selection. -/
 def customMatrixFracEpigraph {n : Nat} :
-    EpigraphRepresentation (fun p : (Fin n → ℝ) ×
-      {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matrixFrac p.1 p.2.1) :=
+    EpigraphRepr (fun p : (Fin n → ℝ) ×
+      {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matFrac p.1 p.2.1) :=
   Conic.MatrixFraction.epigraph
 
 section Ambiguity
@@ -170,13 +170,13 @@ reformulation selectedExplicitly : validSource := by
   conic at bound using customMatrixFracEpigraph
   conic
 
-example : GlobalEquivalence validSource selectedExplicitly := selectedExplicitly.equivalence
+example : GlobalEquiv validSource selectedExplicitly := selectedExplicitly.equiv
 example : IsConic selectedExplicitly := selectedExplicitly.isConic
 
 end Ambiguity
 
 reformulation recovered : validSource := by conic
-example : GlobalEquivalence validSource recovered := recovered.equivalence
+example : GlobalEquiv validSource recovered := recovered.equiv
 example : IsConic recovered := recovered.isConic
 
 assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedSemidefinite

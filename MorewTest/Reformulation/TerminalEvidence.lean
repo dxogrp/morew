@@ -96,7 +96,7 @@ elab "assert_evidence_atomic% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "malformed terminal evidence leaked declarations"
-  for suffix in #[Name.anonymous, `equivalence, `conicForm, `isConic, `nlpForm, `isSmoothNLP] do
+  for suffix in #[Name.anonymous, `equiv, `conicForm, `isConic, `nlpForm, `isSmoothNLP] do
     let name := targetName ++ suffix
     if after.contains name then throwError "malformed terminal evidence emitted {name}"
     if (Syntax.getProblemView? after name).isSome ||

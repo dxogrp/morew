@@ -37,11 +37,11 @@ reformulation transformed : original := by
   substitute x := Real.exp u
   epigraph t
 
-/-- info: MorewTest.Surface.transformed.equivalence : GlobalEquivalence original transformed -/
+/-- info: MorewTest.Surface.transformed.equiv : GlobalEquiv original transformed -/
 #guard_msgs in
-#check transformed.equivalence
+#check transformed.equiv
 
-example : GlobalEquivalence original transformed := transformed.equivalence
+example : GlobalEquiv original transformed := transformed.equiv
 
 example (u t : ℝ) : transformed.objective (u, t) = t := rfl
 
@@ -72,12 +72,12 @@ reformulation boundedHypograph : boundedMaximum
     certificate maximumCertified := by
   hypograph t
 
-example : GlobalEquivalence boundedMaximum boundedHypograph := maximumCertified
+example : GlobalEquiv boundedMaximum boundedHypograph := maximumCertified
 
-example : GlobalEquivalence boundedMaximum boundedHypograph :=
-  boundedHypograph.equivalence
+example : GlobalEquiv boundedMaximum boundedHypograph :=
+  boundedHypograph.equiv
 
-example : maximumCertified = boundedHypograph.equivalence := rfl
+example : maximumCertified = boundedHypograph.equiv := rfl
 
 example (x y t : ℝ) :
     boundedHypograph.feasible ((x, y), t) ↔
@@ -106,8 +106,8 @@ reformulation transformedMaximum : logarithmicMaximum := by
   substitute x := Real.exp u
   hypograph t
 
-example : GlobalEquivalence logarithmicMaximum transformedMaximum :=
-  transformedMaximum.equivalence
+example : GlobalEquiv logarithmicMaximum transformedMaximum :=
+  transformedMaximum.equiv
 
 example (u t : ℝ) : transformedMaximum.objective (u, t) = t := rfl
 
@@ -153,8 +153,8 @@ def nonconvex :=
 reformulation nonconvexEpigraph : nonconvex := by
   epigraph t
 
-example : GlobalEquivalence nonconvex nonconvexEpigraph :=
-  nonconvexEpigraph.equivalence
+example : GlobalEquiv nonconvex nonconvexEpigraph :=
+  nonconvexEpigraph.equiv
 
 /--
 info: problem (x t : ℝ)
@@ -175,8 +175,8 @@ def identityCoverage :
 reformulation identityTarget : identitySource := by
   substitute x := u using identityCoverage
 
-example : GlobalEquivalence identitySource identityTarget :=
-  identityTarget.equivalence
+example : GlobalEquiv identitySource identityTarget :=
+  identityTarget.equiv
 
 example (u : ℝ) : identityTarget.objective u = u ^ 2 := rfl
 
@@ -185,11 +185,11 @@ example (u : ℝ) : identityTarget.objective u = u ^ 2 := rfl
 reformulation identityEpigraph : identityTarget := by
   epigraph t
 
-example : GlobalEquivalence identityTarget identityEpigraph :=
-  identityEpigraph.equivalence
+example : GlobalEquiv identityTarget identityEpigraph :=
+  identityEpigraph.equiv
 
-example : GlobalEquivalence identitySource identityEpigraph :=
-  identityTarget.equivalence.trans identityEpigraph.equivalence
+example : GlobalEquiv identitySource identityEpigraph :=
+  identityTarget.equiv.trans identityEpigraph.equiv
 
 /--
 info: problem (u : ℝ)

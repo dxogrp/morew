@@ -32,7 +32,7 @@ reformulation sameName : orderedSource := by
 
 example : ordered = orderedSource := rfl
 example : sameName = orderedSource := rfl
-example : GlobalEquivalence orderedSource ordered := ordered.equivalence
+example : GlobalEquiv orderedSource ordered := ordered.equiv
 
 /--
 info: problem (x : ℝ)
@@ -82,7 +82,7 @@ reformulation maximumBound : maximum := by
 
 example (u t : ℝ) : maximumBound.objective (u, t) = t := rfl
 example (u t : ℝ) : maximumBound.feasible (u, t) ↔ 0 ≤ u ∧ t ≤ u := Iff.rfl
-example : GlobalEquivalence maximum maximumBound := maximumBound.equivalence
+example : GlobalEquiv maximum maximumBound := maximumBound.equiv
 
 def Positive (x : ℝ) : Prop := 0 < x
 
@@ -105,8 +105,8 @@ reformulation removedLabelReused : positiveSource := by
 
 example (u v t : ℝ) : removedLabelReused.feasible ((u, v), t) ↔
     Real.exp u ≤ 3 ∧ u + v ≤ t := Iff.rfl
-example : GlobalEquivalence positiveSource removedLabelReused :=
-  removedLabelReused.equivalence
+example : GlobalEquiv positiveSource removedLabelReused :=
+  removedLabelReused.equiv
 
 reformulation renamedAliasRemoved : positiveSource := by
   rename second to domain_x
@@ -175,8 +175,8 @@ reformulation zeroContinued : zero := by
   rename positive to square_bound
 
 example : zeroBoundRemoved = renamedZeroBoundRemoved := rfl
-example : GlobalEquivalence zero zeroBoundRemoved := zeroBoundRemoved.equivalence
-example : GlobalEquivalence zero renamedZeroBoundRemoved := renamedZeroBoundRemoved.equivalence
+example : GlobalEquiv zero zeroBoundRemoved := zeroBoundRemoved.equiv
+example : GlobalEquiv zero renamedZeroBoundRemoved := renamedZeroBoundRemoved.equiv
 example (x u : ℝ) : zeroBoundRemoved.objective (x, u) = u ^ 2 := rfl
 example (x u : ℝ) : zeroBoundRemoved.feasible (x, u) ↔ True := Iff.rfl
 example (x u s : ℝ) : zeroContinued.feasible ((x, u), s) ↔ u ^ 2 ≤ s := Iff.rfl
@@ -203,7 +203,7 @@ reformulation principalBound : taggedZero := by
   rename branch to nonnegative
 
 example (x u : ℝ) : principalBound.feasible (x, u) ↔ True ∧ 0 ≤ u := Iff.rfl
-example : GlobalEquivalence taggedZero principalBound := principalBound.equivalence
+example : GlobalEquiv taggedZero principalBound := principalBound.equiv
 
 def absoluteSource :=
   problem (x : ℝ)
@@ -213,7 +213,7 @@ def absoluteSource :=
       magnitude : |x| ≤ 3
       after : x ≤ 5
 
-def upperLift : ExactConstraintLift (fun x : ℝ => x ≤ 3) :=
+def upperRepr : ConstraintRepr (fun x : ℝ => x ≤ 3) :=
   .ofIff (fun x => x ≤ 3) (fun _ => Iff.rfl)
 
 def lowerSource :=

@@ -37,8 +37,8 @@ example : domainReplay = loweredDomainNLP := rfl
 
 reformulation continued : loweredDomainNLP := by nlp
 
-example : GlobalEquivalence loweredDomain continued :=
-  loweredDomainNLP.equivalence.trans continued.equivalence
+example : GlobalEquiv loweredDomain continued :=
+  loweredDomainNLP.equiv.trans continued.equiv
 example : continued.nlpForm.data.toProblem = continued := continued.nlpForm.represents
 
 end

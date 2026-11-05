@@ -20,19 +20,19 @@ open Morew Morew.Elab.Reformulation
 
 noncomputable section
 
-def trueLift : ExactConstraintLift (fun _ : ℝ => True) :=
-  ExactConstraintLift.ofIff (fun _ => True) (fun _ => Iff.rfl)
+def trueRepr : ConstraintRepr (fun _ : ℝ => True) :=
+  ConstraintRepr.ofIff (fun _ => True) (fun _ => Iff.rfl)
 
-def falseLift : ExactConstraintLift (fun _ : ℝ => False) :=
-  ExactConstraintLift.ofIff (fun _ => False) (fun _ => Iff.rfl)
+def falseRepr : ConstraintRepr (fun _ : ℝ => False) :=
+  ConstraintRepr.ofIff (fun _ => False) (fun _ => Iff.rfl)
 
-def symmetryLift : ExactConstraintLift (fun x : ℝ => x = 0) :=
-  ExactConstraintLift.ofIff (fun x => 0 = x) (fun _ => eq_comm)
+def symmetryRepr : ConstraintRepr (fun x : ℝ => x = 0) :=
+  ConstraintRepr.ofIff (fun x => 0 = x) (fun _ => eq_comm)
 
-def pairLift : ExactConstraintLift (fun x : ℝ => x ≤ 2 ∧ -x ≤ 2) :=
-  ExactConstraintLift.ofIff (fun x => x ≤ 2 ∧ -x ≤ 2) (fun _ => Iff.rfl)
+def pairRepr : ConstraintRepr (fun x : ℝ => x ≤ 2 ∧ -x ≤ 2) :=
+  ConstraintRepr.ofIff (fun x => x ≤ 2 ∧ -x ≤ 2) (fun _ => Iff.rfl)
 
-def witnessLift : ExactConstraintLift (fun x : ℝ => x ≤ 2) where
+def witnessRepr : ConstraintRepr (fun x : ℝ => x ≤ 2) where
   Auxiliary := ℝ
   target x a := a = x ∧ a ≤ 2
   source_iff_exists x := by
@@ -42,7 +42,7 @@ def witnessLift : ExactConstraintLift (fun x : ℝ => x ≤ 2) where
     · rintro ⟨a, rfl, h⟩
       exact h
 
-def unusedAuxiliaryLift : ExactConstraintLift (fun _ : ℝ => True) where
+def unusedAuxiliaryRepr : ConstraintRepr (fun _ : ℝ => True) where
   Auxiliary := ℝ
   target _ _ := True
   source_iff_exists _ := ⟨fun _ => ⟨0, trivial⟩, fun _ => trivial⟩
@@ -53,7 +53,7 @@ private def checkedTerm (term : TSyntax `term) : TermElabM Expr := do
   instantiateMVars expression
 
 private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
-    (liftSyntax : TSyntax `term) (auxiliarySyntax? : Option (TSyntax `term))
+    (reprSyntax : TSyntax `term) (auxiliarySyntax? : Option (TSyntax `term))
     (newRows : Array (TSyntax `term)) (targetIffSyntax expectedSyntax : TSyntax `term)
     (sense : ObjectiveSense := .minimize) : TermElabM Unit := do
   let domain := Lean.mkConst ``Real
@@ -79,34 +79,34 @@ private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
   let nextDomain ← match auxiliary? with
     | none => pure domain
     | some auxiliary => mkAppM ``Prod #[domain, auxiliary]
-  let lift ← checkedTerm liftSyntax
+  let repr ← checkedTerm reprSyntax
   let rows ← newRows.mapM checkedTerm
   let targetIff ← checkedTerm targetIffSyntax
   let result ← Morew.Elab.Reformulation.Replace.applyReplacement presentation index {
-    certificate := .exact lift, auxiliary?, nextDomain, rowPredicates := rows, targetIff }
+    certificate := .exact repr, auxiliary?, nextDomain, rowPredicates := rows, targetIff }
   let expected ← checkedTerm expectedSyntax
   unless ← isDefEq result.targetProblem expected do
     throwError "rewrite produced the wrong target problem"
   let source ← presentation.canonicalProblem
   let order ← synthInstance (← mkAppM ``Preorder #[valueType])
-  let expectedType ← mkAppOptM ``GlobalEquivalence
+  let expectedType ← mkAppOptM ``GlobalEquiv
     #[some domain, some nextDomain, some valueType, some order, some source, some expected]
-  unless ← isDefEq (← inferType result.equivalence) expectedType do
+  unless ← isDefEq (← inferType result.equiv) expectedType do
     throwError "rewrite equivalence has the wrong endpoints or optimization order"
   checkWithKernel result.targetProblem
-  checkWithKernel result.equivalence
+  checkWithKernel result.equiv
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   -- Removing the only row must result in `True`, with no `Unit` decision binder.
-  checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueLift)) none #[]
+  checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueRepr)) none #[]
     (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun x : ℝ => x) (fun _ => True)))
   -- A custom `Unit` target may also retain a literal `True` or `False` row.
-  checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueLift)) none
+  checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueRepr)) none
     #[← `(fun _ : ℝ => True)]
     (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun x : ℝ => x) (fun _ => True)))
-  checkRewrite #[← `(fun _ : ℝ => False)] 0 (← `(falseLift)) none
+  checkRewrite #[← `(fun _ : ℝ => False)] 0 (← `(falseRepr)) none
     #[← `(fun _ : ℝ => False)]
     (← `(fun _ : ℝ => (Iff.rfl : False ↔ False)))
     (← `(Problem.mk (fun x : ℝ => x) (fun _ => False)))
@@ -114,16 +114,16 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 run_cmd Lean.Elab.Command.liftTermElabM do
   let first ← `(fun x : ℝ => x ≤ 3 ∧ 0 ≤ x)
   let last ← `(fun x : ℝ => x ≤ 7)
-  checkRewrite #[first, ← `(fun _ : ℝ => True), last] 1 (← `(trueLift)) none #[]
+  checkRewrite #[first, ← `(fun _ : ℝ => True), last] 1 (← `(trueRepr)) none #[]
     (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun x : ℝ => x) (fun x => (x ≤ 3 ∧ 0 ≤ x) ∧ x ≤ 7)))
   checkRewrite #[first, ← `(fun x : ℝ => x = 0), last] 1
-    (← `(symmetryLift)) none #[← `(fun x : ℝ => 0 = x)]
+    (← `(symmetryRepr)) none #[← `(fun x : ℝ => 0 = x)]
     (← `(fun x : ℝ => (Iff.rfl : 0 = x ↔ 0 = x)))
     (← `(Problem.mk (fun x : ℝ => x)
       (fun x => (x ≤ 3 ∧ 0 ≤ x) ∧ 0 = x ∧ x ≤ 7)))
   checkRewrite #[first, ← `(fun x : ℝ => x ≤ 2 ∧ -x ≤ 2), last] 1
-    (← `(pairLift)) none #[← `(fun x : ℝ => x ≤ 2), ← `(fun x : ℝ => -x ≤ 2)]
+    (← `(pairRepr)) none #[← `(fun x : ℝ => x ≤ 2), ← `(fun x : ℝ => -x ≤ 2)]
     (← `(fun x : ℝ => (Iff.rfl : (x ≤ 2 ∧ -x ≤ 2) ↔ (x ≤ 2 ∧ -x ≤ 2))))
     (← `(Problem.mk (fun x : ℝ => x)
       (fun x => (x ≤ 3 ∧ 0 ≤ x) ∧ x ≤ 2 ∧ -x ≤ 2 ∧ x ≤ 7)))
@@ -133,18 +133,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let first ← `(fun x : ℝ => x ≤ 3 ∧ 0 ≤ x)
     let last ← `(fun x : ℝ => x ≤ 7)
     checkRewrite #[first, ← `(fun x : ℝ => x ≤ 2), last] 1
-      (← `(witnessLift)) (some (← `(ℝ)))
+      (← `(witnessRepr)) (some (← `(ℝ)))
       #[← `(fun p : ℝ × ℝ => p.2 = p.1), ← `(fun p : ℝ × ℝ => p.2 ≤ 2)]
       (← `(fun p : ℝ × ℝ =>
         (Iff.rfl : (p.2 = p.1 ∧ p.2 ≤ 2) ↔ (p.2 = p.1 ∧ p.2 ≤ 2))))
       (← `(Problem.mk (fun p : ℝ × ℝ => p.1)
         (fun p => (p.1 ≤ 3 ∧ 0 ≤ p.1) ∧ p.2 = p.1 ∧ p.2 ≤ 2 ∧ p.1 ≤ 7))) sense
     checkRewrite #[← `(fun x : ℝ => x = 0)] 0
-      (← `(symmetryLift)) none #[← `(fun x : ℝ => 0 = x)]
+      (← `(symmetryRepr)) none #[← `(fun x : ℝ => 0 = x)]
       (← `(fun x : ℝ => (Iff.rfl : 0 = x ↔ 0 = x)))
       (← `(Problem.mk (fun x : ℝ => x) (fun x => 0 = x))) sense
   checkRewrite #[← `(fun _ : ℝ => True)] 0
-    (← `(unusedAuxiliaryLift)) (some (← `(ℝ))) #[]
+    (← `(unusedAuxiliaryRepr)) (some (← `(ℝ))) #[]
     (← `(fun _ : ℝ × ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun p : ℝ × ℝ => p.1) (fun _ => True)))
 
@@ -172,11 +172,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (fun x => (0 ≤ x ∧ x ≤ 3) ∧ True)))
   unless ← isDefEq result.targetProblem expected do
     throwError "contextual replacement changed retained row boundaries"
-  let expectedType ← mkAppM ``GlobalEquivalence
+  let expectedType ← mkAppM ``GlobalEquiv
     #[← presentation.canonicalProblem, expected]
-  unless ← isDefEq (← inferType result.equivalence) expectedType do
+  unless ← isDefEq (← inferType result.equiv) expectedType do
     throwError "contextual replacement has the wrong equivalence endpoints"
-  checkWithKernel result.equivalence
+  checkWithKernel result.equiv
   let invalid ← checkedTerm (← `(fun (x : ℝ) (h : x ≤ 5) =>
     (show x ≤ 5 ↔ True from ⟨fun _ => trivial, fun _ => h⟩)))
   let rejected ← try
@@ -220,12 +220,12 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless ← isDefEq result.targetProblem expected do
       throwError "conditional auxiliary replacement changed retained rows or coordinates"
     let order ← synthInstance (← mkAppM ``Preorder #[valueType])
-    let expectedType ← mkAppOptM ``GlobalEquivalence
+    let expectedType ← mkAppOptM ``GlobalEquiv
       #[some domain, some nextDomain, some valueType, some order,
         some (← presentation.canonicalProblem), some expected]
-    unless ← isDefEq (← inferType result.equivalence) expectedType do
+    unless ← isDefEq (← inferType result.equiv) expectedType do
       throwError "conditional auxiliary equivalence has the wrong endpoints or optimization order"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
     let invalid ← checkedTerm (← `(fun (x : ℝ) (_h : x ≤ 5) =>
       (show x ≤ 5 ↔ ∃ a : ℝ, a = x from ⟨fun _ => ⟨x, rfl⟩, fun _ => _h⟩)))
     let rejected ← try
@@ -246,7 +246,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let feasible ← checkedTerm (← `(fun x : ℝ => (x ≤ 3 ∧ 0 ≤ x) ∧ True))
     unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[objective, feasible]) do
       throwError "conditional Unit replacement changed the decision domain"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
     -- An unused non-`Unit` auxiliary is still part of the exact decision layout.
     let target ← checkedTerm (← `(fun (_ : ℝ) (_ : ℝ) => True))
     let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
@@ -259,7 +259,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let feasible ← checkedTerm (← `(fun p : ℝ × ℝ => (p.1 ≤ 3 ∧ 0 ≤ p.1) ∧ True))
     unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[nextObjective, feasible]) do
       throwError "conditional replacement dropped unused auxiliary coordinates"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
 
 end
 

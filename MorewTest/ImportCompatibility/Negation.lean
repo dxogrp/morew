@@ -16,8 +16,8 @@ noncomputable section
 
 reformulation continuedLog : logTarget := by conic
 
-example : GlobalEquivalence logSource continuedLog :=
-  logBound.equivalence.trans (logTarget.equivalence.trans continuedLog.equivalence)
+example : GlobalEquiv logSource continuedLog :=
+  logBound.equiv.trans (logTarget.equiv.trans continuedLog.equiv)
 example : IsConic continuedLog := continuedLog.isConic
 example : continuedLog.conicForm.data.toProblem = continuedLog :=
   continuedLog.conicForm.represents
@@ -39,8 +39,8 @@ variable (n : Nat)
 
 reformulation continuedNorm : (normBound n) := by conic
 
-example : GlobalEquivalence (normSource n) (continuedNorm n) :=
-  (normBound.equivalence n).trans (continuedNorm.equivalence n)
+example : GlobalEquiv (normSource n) (continuedNorm n) :=
+  (normBound.equiv n).trans (continuedNorm.equiv n)
 example : IsConic (continuedNorm n) := continuedNorm.isConic n
 example : (continuedNorm.conicForm n).data.sense = .maximize := rfl
 

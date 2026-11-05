@@ -38,7 +38,7 @@ def minimum :=
 reformulation minimumTarget : minimum := by
   conic
 
-example : GlobalEquivalence minimum minimumTarget := minimumTarget.equivalence
+example : GlobalEquiv minimum minimumTarget := minimumTarget.equiv
 example : IsConic minimumTarget := minimumTarget.isConic
 example : minimumTarget.conicForm.data.sense = .minimize := rfl
 example : minimumTarget.conicForm.data.rowCount = 2 := rfl
@@ -71,8 +71,8 @@ def maximum :=
 reformulation maximumTarget : (maximum offset) := by
   conic
 
-example : GlobalEquivalence (maximum offset) (maximumTarget offset) :=
-  maximumTarget.equivalence offset
+example : GlobalEquiv (maximum offset) (maximumTarget offset) :=
+  maximumTarget.equiv offset
 example : IsConic (maximumTarget offset) := maximumTarget.isConic offset
 example : (maximumTarget.conicForm offset).data.sense = .maximize := rfl
 
@@ -93,8 +93,8 @@ info: problem (x : ℝ)
 reformulation importedTarget : (AffineHelperSource.source 2 3) := by
   conic
 
-example : GlobalEquivalence (AffineHelperSource.source 2 3) importedTarget :=
-  importedTarget.equivalence
+example : GlobalEquiv (AffineHelperSource.source 2 3) importedTarget :=
+  importedTarget.equiv
 example : IsConic importedTarget := importedTarget.isConic
 example (x : ℝ) : importedTarget.objective x = cost 2 3 x := rfl
 example (x : ℝ) : importedTarget.feasible x ↔
@@ -133,7 +133,7 @@ reformulation nativeAtomsTarget : nativeAtoms := by
   conic at exponential
   conic
 
-example : GlobalEquivalence nativeAtoms nativeAtomsTarget := nativeAtomsTarget.equivalence
+example : GlobalEquiv nativeAtoms nativeAtomsTarget := nativeAtomsTarget.equiv
 example : IsConic nativeAtomsTarget := nativeAtomsTarget.isConic
 example : nativeAtomsTarget.conicForm.data.rowCount = 4 := rfl
 example (x t : ℝ) : nativeAtomsTarget.feasible (x, t) ↔
@@ -158,10 +158,10 @@ namespace TypedPlans
 open Lean Lean.Meta
 
 private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
-  let .exact lift := result.certificate
-    | throwError "finite evidence changed an unconditional lift into a contextual lift"
-  discard <| Morew.Elab.Rewrite.Plan.checkLift source lift
-  for proof in #[lift, result.targetIff] do
+  let .exact repr := result.certificate
+    | throwError "finite evidence made an unconditional representation contextual"
+  discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
+  for proof in #[repr, result.targetIff] do
     if proof.hasMVar || proof.hasSorry then throwError "incomplete helper plan"
   checkWithKernel result.targetIff
   for row in result.certifiedRows do
@@ -204,9 +204,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite infimum-coordinate plan failed: {error.reason}"
 
-def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
-    ExactConstraintLift (fun (_x : ι → ℝ) => True) :=
-  ExactConstraintLift.ofIff
+def helperTargetRepr {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
+    ConstraintRepr (fun (_x : ι → ℝ) => True) :=
+  ConstraintRepr.ofIff
     (fun x => finiteDot e a x = finiteDot e a x)
     (fun _ => ⟨fun _ => rfl, fun _ => True.intro⟩)
 
@@ -214,7 +214,7 @@ def helperTargetLift {ι : Type} (e : Fin 2 ≃ ι) (a : ι → ℝ) :
 -- representation's target contains a helper carrying the needed enumeration.
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
-    (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetLift e a)))
+    (a : ι → ℝ) => ((fun (_x : ι → ℝ) => True), helperTargetRepr e a)))
   lambdaBoundedTelescope expression 3 fun _ pair => do
     let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
@@ -255,7 +255,7 @@ namespace HiddenFinite
 
 class Parameter where
   Index : Type
-  equivalence : Fin 2 ≃ Index
+  equiv : Fin 2 ≃ Index
   coefficients : Index → ℝ
 
 variable [Parameter]
@@ -264,10 +264,10 @@ variable [Parameter]
 -- inside the imported helper in a different row from the objective and abs.
 def anotherRow :=
   problem (x : Parameter.Index → ℝ) (t : ℝ)
-    minimize x (Parameter.equivalence 0)
+    minimize x (Parameter.equiv 0)
     subject to
-      absolute : |x (Parameter.equivalence 0)| ≤ t
-      witness : finiteDot Parameter.equivalence Parameter.coefficients x ≤ 10
+      absolute : |x (Parameter.equiv 0)| ≤ t
+      witness : finiteDot Parameter.equiv Parameter.coefficients x ≤ 10
 
 reformulation anotherRowTarget : anotherRow := by
   conic
@@ -276,8 +276,8 @@ reformulation selectedRowTarget : anotherRow := by
   conic at absolute
   conic
 
-example : GlobalEquivalence anotherRow anotherRowTarget := anotherRowTarget.equivalence
-example : GlobalEquivalence anotherRow selectedRowTarget := selectedRowTarget.equivalence
+example : GlobalEquiv anotherRow anotherRowTarget := anotherRowTarget.equiv
+example : GlobalEquiv anotherRow selectedRowTarget := selectedRowTarget.equiv
 
 -- The left operand also needs finiteness before the helper on the right is
 -- independently certified; discovery must inspect the complete source row.
@@ -285,15 +285,15 @@ def oppositeOperand :=
   problem (x : Parameter.Index → ℝ)
     minimize (0 : ℝ)
     subject to
-      absolute : |x (Parameter.equivalence 0)| ≤
-        finiteDot Parameter.equivalence Parameter.coefficients x
+      absolute : |x (Parameter.equiv 0)| ≤
+        finiteDot Parameter.equiv Parameter.coefficients x
 
 reformulation oppositeOperandTarget : oppositeOperand := by
   conic at absolute
   conic
 
-example : GlobalEquivalence oppositeOperand oppositeOperandTarget :=
-  oppositeOperandTarget.equivalence
+example : GlobalEquiv oppositeOperand oppositeOperandTarget :=
+  oppositeOperandTarget.equiv
 
 -- Native nonlinear heads remain recognition boundaries, but evidence discovery
 -- must still reach the affine coordinate stored underneath the absolute value.
@@ -301,18 +301,18 @@ def nativeCoordinate :=
   problem (x : Parameter.Index → ℝ)
     minimize (0 : ℝ)
     subject to
-      absolute : |finiteDot Parameter.equivalence Parameter.coefficients x| ≤ 1
+      absolute : |finiteDot Parameter.equiv Parameter.coefficients x| ≤ 1
 
 reformulation nativeCoordinateTarget : nativeCoordinate := by
   conic
 
-example : GlobalEquivalence nativeCoordinate nativeCoordinateTarget :=
-  nativeCoordinateTarget.equivalence
+example : GlobalEquiv nativeCoordinate nativeCoordinateTarget :=
+  nativeCoordinateTarget.equiv
 
 -- Form notation needs only finiteness after the commands have demonstrated
 -- that they recover the helper's evidence themselves.
 local instance : Finite Parameter.Index := by
-  let := Fintype.ofEquiv (Fin 2) Parameter.equivalence
+  let := Fintype.ofEquiv (Fin 2) Parameter.equiv
   infer_instance
 
 example : IsConic anotherRowTarget := anotherRowTarget.isConic
@@ -326,8 +326,8 @@ example : anotherRowTarget.conicForm.data.toProblem = anotherRowTarget :=
   anotherRowTarget.conicForm.represents
 
 example (x : Parameter.Index → ℝ) (t : ℝ) : anotherRowTarget.feasible (x, t) ↔
-    t - x (Parameter.equivalence 0) ∈ ℝ₊ ∧ t + x (Parameter.equivalence 0) ∈ ℝ₊ ∧
-      10 - finiteDot Parameter.equivalence Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
+    t - x (Parameter.equiv 0) ∈ ℝ₊ ∧ t + x (Parameter.equiv 0) ∈ ℝ₊ ∧
+      10 - finiteDot Parameter.equiv Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
 
 end HiddenFinite
 

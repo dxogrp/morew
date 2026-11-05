@@ -44,7 +44,7 @@ theorem exists_triangular_block {X : Matrix (Fin n) (Fin n) ℝ} (hX : X.PosDef)
       Matrix.mul_assoc, Matrix.inv_mul_cancel_left_of_invertible] using hfactor
   refine ⟨Z, hZ, fun i => hZdiag i ▸ hd i, ?_, ?_⟩
   · simp only [hZdiag]
-    rw [posSemidef_fromBlocksFin_iff]
+    rw [psd_fromBlocksFin_iff]
     have h := (Matrix.PosDef.fromBlocks₂₂ X Z hD).mpr
       (show (X - Z * D⁻¹ * Z.transpose).PosSemidef by
         rw [hschur, sub_self]
@@ -74,7 +74,7 @@ theorem posDef_and_prod_le_det_of_triangular_block
   have hdiff : (X - Q).PosSemidef := by
     apply (Matrix.PosDef.fromBlocks₂₂ X Z hD).mp
     simpa only [Matrix.conjTranspose_eq_transpose_of_trivial] using
-      (posSemidef_fromBlocksFin_iff _ _ _ _).mp hblock
+      (psd_fromBlocksFin_iff _ _ _ _).mp hblock
   have hX : X.PosDef := by
     simpa only [add_sub_cancel] using hQ.add_posSemidef hdiff
   have hdetQ : Q.det = ∏ i, Z i i := by

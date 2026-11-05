@@ -30,7 +30,7 @@ reformulation scalarTarget : scalarSource := by
   conic at first
   conic at last
 
-example : GlobalEquivalence scalarSource scalarTarget := scalarTarget.equivalence
+example : GlobalEquiv scalarSource scalarTarget := scalarTarget.equiv
 
 example (x t : ℝ) : scalarTarget.objective (x, t) = x ^ 2 := rfl
 
@@ -83,7 +83,7 @@ reformulation target : source := by
   conic at squaredNorm
   conic at infinity
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (v : Fin Dimension.size → ℝ) (t : ℝ) : target.feasible (v, t) ↔
     (∑ i, Real.exp (v i)) ≤ 100 ∧
@@ -104,7 +104,7 @@ reformulation nativeTarget : nativeSource := by
   conic at squared
   hypograph value
 
-example : GlobalEquivalence nativeSource nativeTarget := nativeTarget.equivalence
+example : GlobalEquiv nativeSource nativeTarget := nativeTarget.equiv
 
 example (z : EuclideanSpace ℝ (Fin Dimension.size)) (t value : ℝ) :
     nativeTarget.feasible ((z, t), value) ↔
@@ -146,7 +146,7 @@ def source :=
 reformulation target : source := by
   conic at residual
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x : Fin Parameter.columns → ℝ) (t : ℝ) : target.feasible (x, t) ↔
     (t, fun i => (∑ j, Parameter.matrix i j * x j) - Parameter.offset i) ∈
@@ -173,7 +173,7 @@ reformulation target : source := by
   conic at wrapped
   conic at native
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x y t : ℝ) (v : Fin 2 → ℝ) (z : EuclideanSpace ℝ (Fin 2)) :
     target.feasible ((((x, y), t), v), z) ↔
@@ -197,7 +197,7 @@ def nestedSource :=
 reformulation nestedTarget : nestedSource := by
   conic at quotient
 
-example : GlobalEquivalence nestedSource nestedTarget := nestedTarget.equivalence
+example : GlobalEquiv nestedSource nestedTarget := nestedTarget.equiv
 
 example (x y t : ℝ) : nestedTarget.feasible ((x, y), t) ↔
     -1 ≤ y ∧ (t, y / 2, ![x]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
@@ -223,7 +223,7 @@ def constantSource :=
 reformulation constantTarget : constantSource := by
   conic at quotient
 
-example : GlobalEquivalence constantSource constantTarget := constantTarget.equivalence
+example : GlobalEquiv constantSource constantTarget := constantTarget.equiv
 
 class Parameter where
   epsilon : ℝ
@@ -243,8 +243,8 @@ include hε in
 reformulation symbolicTarget : symbolicSource := by
   conic at quotient
 
-example : GlobalEquivalence symbolicSource symbolicTarget :=
-  symbolicTarget.equivalence hε
+example : GlobalEquiv symbolicSource symbolicTarget :=
+  symbolicTarget.equiv hε
 
 end
 
@@ -266,7 +266,7 @@ reformulation emptyTarget : emptySource := by
   conic at square
   conic at quotient
 
-example : GlobalEquivalence emptySource emptyTarget := emptyTarget.equivalence
+example : GlobalEquiv emptySource emptyTarget := emptyTarget.equiv
 
 example : ¬ emptyTarget.HasFeasiblePoint := by
   rintro ⟨⟨v, y⟩, h⟩
@@ -297,7 +297,7 @@ reformulation singleTarget : singleSource := by
   conic at norm
   conic at square
 
-example : GlobalEquivalence singleSource singleTarget := singleTarget.equivalence
+example : GlobalEquiv singleSource singleTarget := singleTarget.equiv
 
 /--
 info: problem (v : Fin 1 → ℝ)
@@ -369,8 +369,8 @@ reformulation twoFirst : source := by
   conic at two
   conic at one
 
-example : GlobalEquivalence source oneFirst := oneFirst.equivalence
-example : GlobalEquivalence source twoFirst := twoFirst.equivalence
+example : GlobalEquiv source oneFirst := oneFirst.equiv
+example : GlobalEquiv source twoFirst := twoFirst.equiv
 
 example (v u : Fin 2 → ℝ) (t : ℝ) : oneFirst.feasible ((v, t), u) ↔
     v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t ∧
@@ -399,7 +399,7 @@ reformulation target : source := by
   substitute x := Real.exp u
   epigraph t as value
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u t : ℝ) : target.feasible (u, t) ↔
     (25, 1 / 2, ![Real.exp u]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
@@ -416,8 +416,8 @@ reformulation epigraphTarget : quadraticObjective := by
 reformulation continued : epigraphTarget := by
   epigraph value as objectiveBound
 
-example : GlobalEquivalence quadraticObjective continued :=
-  epigraphTarget.equivalence.trans continued.equivalence
+example : GlobalEquiv quadraticObjective continued :=
+  epigraphTarget.equiv.trans continued.equiv
 
 example (x t value : ℝ) : continued.feasible ((x, t), value) ↔
     (t, 1 / 2, ![x - 2]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
@@ -443,7 +443,7 @@ reformulation target : source := by
   conic at labels.cap
   conic at «cap value»
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 /--
 info: problem (x : ℝ)

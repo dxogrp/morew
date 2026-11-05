@@ -18,7 +18,7 @@ namespace InstanceSafety
 
 def affineAtom (x : ℝ) : ℝ := x + 1
 
-def affineGraph : GraphRepresentation affineAtom where
+def affineGraph : GraphRepr affineAtom where
   Auxiliary := Unit
   target x y _ := y = x + 1
   source_iff_exists _ _ := by simp only [affineAtom, exists_const]
@@ -133,8 +133,8 @@ reformulation mixedDirectAndSignedReady : mixedDirectAndSigned := by conic
 
 example : IsConic mixedDirectAndSignedReady := mixedDirectAndSignedReady.isConic
 example : mixedDirectAndSignedReady.conicForm.data.rowCount = 3 := rfl
-example : GlobalEquivalence mixedDirectAndSigned mixedDirectAndSignedReady :=
-  mixedDirectAndSignedReady.equivalence
+example : GlobalEquiv mixedDirectAndSigned mixedDirectAndSignedReady :=
+  mixedDirectAndSignedReady.equiv
 
 def mixedProofLet :=
   problem (x t : ℝ)
@@ -147,7 +147,7 @@ reformulation mixedProofLetReady : mixedProofLet := by conic
 
 example : IsConic mixedProofLetReady := mixedProofLetReady.isConic
 example : mixedProofLetReady.conicForm.data.rowCount = 3 := rfl
-example : GlobalEquivalence mixedProofLet mixedProofLetReady := mixedProofLetReady.equivalence
+example : GlobalEquiv mixedProofLet mixedProofLetReady := mixedProofLetReady.equiv
 
 def terminalChangedNegation :=
   problem (x t : ℝ)

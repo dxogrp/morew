@@ -52,7 +52,7 @@ reformulation target : source := by
   substitute x := u using coverage
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u : Box) (t : Nat) : target.objective (u, t) = t := rfl
 
@@ -63,8 +63,8 @@ reformulation automaticTarget : automaticSource := by
   epigraph t
   substitute x := Real.exp u
 
-example : GlobalEquivalence automaticSource automaticTarget :=
-  automaticTarget.equivalence
+example : GlobalEquiv automaticSource automaticTarget :=
+  automaticTarget.equiv
 
 example (box : Box) (u t : ℝ) :
     automaticTarget.objective ((box, u), t) = t := rfl
@@ -101,8 +101,8 @@ reformulation target : Provider.source := by
   substitute x := u using Provider.coverage
   epigraph t
 
-example : GlobalEquivalence (Provider.source (α := β)) target :=
-  target.equivalence
+example : GlobalEquiv (Provider.source (α := β)) target :=
+  target.equiv
 
 example (u : β) (t : Nat) : target.objective (u, t) = t := rfl
 
@@ -126,7 +126,7 @@ macro "contextGeneratedSubstitution " target:ident : command =>
 
 contextGeneratedSubstitution target
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u : ℝ) : target.objective u = u := rfl
 example (u : ℝ) : target.feasible u ↔ True := Iff.rfl
@@ -134,7 +134,7 @@ example (u : ℝ) : target.feasible u ↔ True := Iff.rfl
 reformulation bounded : target := by
   epigraph t
 
-example : GlobalEquivalence target bounded := bounded.equivalence
+example : GlobalEquiv target bounded := bounded.equiv
 
 example (u t : ℝ) : bounded.objective (u, t) = t := rfl
 example (u t : ℝ) : bounded.feasible (u, t) ↔ u ≤ t := Iff.rfl
@@ -165,7 +165,7 @@ reformulation manualTarget : source := by
   epigraph t as sum_bound
   substitute y := Real.exp v
 
-example : GlobalEquivalence source manualTarget := manualTarget.equivalence
+example : GlobalEquiv source manualTarget := manualTarget.equiv
 
 example (u v t : ℝ) : manualTarget.objective ((u, v), t) = t := rfl
 
@@ -177,8 +177,8 @@ reformulation automaticTarget : source := by
   substitute x := Real.exp u
   epigraph t as sum_bound
 
-example : GlobalEquivalence source automaticTarget :=
-  automaticTarget.equivalence
+example : GlobalEquiv source automaticTarget :=
+  automaticTarget.equiv
 
 example (u v t : ℝ) : automaticTarget.objective ((u, v), t) = t := rfl
 
@@ -218,7 +218,7 @@ reformulation manualTarget : source := by
   epigraph t as positive_x
   substitute y := Real.exp v
 
-example : GlobalEquivalence source manualTarget := manualTarget.equivalence
+example : GlobalEquiv source manualTarget := manualTarget.equiv
 
 example (u v t : ℝ) :
     manualTarget.feasible ((u, v), t) ↔ True ∧ u + v ≤ t := Iff.rfl
@@ -229,7 +229,7 @@ reformulation automaticTarget : source := by
   substitute y := Real.exp v
   epigraph s as positive_y
 
-example : GlobalEquivalence source automaticTarget := automaticTarget.equivalence
+example : GlobalEquiv source automaticTarget := automaticTarget.equiv
 
 example (u v t s : ℝ) :
     automaticTarget.feasible (((u, v), t), s) ↔
@@ -257,7 +257,7 @@ reformulation target : source := by
   substitute x := reverse u using coverage
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u : Fin 2) (t : Nat) : target.objective (u, t) = t := rfl
 
@@ -283,7 +283,7 @@ def coverage :
 reformulation target : source := by
   substitute x := (fun z : ℝ => z) u using coverage
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (u : ℝ) : target.objective u = u := rfl
 
 end ScopedBinderInference
@@ -310,7 +310,7 @@ open Witnesses
 reformulation reused : source := by
   substitute x := u using reused
 
-example : GlobalEquivalence source reused := reused.equivalence
+example : GlobalEquiv source reused := reused.equiv
 
 end CertificateNameCapture
 
@@ -335,7 +335,7 @@ reformulation target : source := by
   substitute x := u using identityCoverage
   epigraph t as objective_bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u t : Nat) :
     target.feasible (u, t) ↔ Nat.add u 1 ≤ t := Iff.rfl
@@ -365,7 +365,7 @@ example : (2 + 3 : Nat) = 0 := rfl
 reformulation target : source := by
   epigraph t as objective_bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl

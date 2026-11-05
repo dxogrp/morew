@@ -61,7 +61,7 @@ def tagBackward : GlobalImprovement taggedMinimum naturalMinimum where
   map := fun x => ⟨x.1.1, trivial⟩
   objective_le := fun _ => le_rfl
 
-def tagEquivalence : GlobalEquivalence naturalMinimum taggedMinimum where
+def tagEquiv : GlobalEquiv naturalMinimum taggedMinimum where
   forward := tagForward
   backward := tagBackward
 
@@ -77,8 +77,8 @@ def doubleTagBackward : GlobalImprovement doublyTaggedMinimum taggedMinimum wher
   map := fun x => ⟨x.1.1, trivial⟩
   objective_le := fun _ => le_rfl
 
-def doubleTagEquivalence :
-    GlobalEquivalence taggedMinimum doublyTaggedMinimum where
+def doubleTagEquiv :
+    GlobalEquiv taggedMinimum doublyTaggedMinimum where
   forward := doubleTagForward
   backward := doubleTagBackward
 
@@ -88,17 +88,17 @@ example : GlobalImprovement naturalMinimum naturalMinimum :=
 example : GlobalImprovement naturalMinimum doublyTaggedMinimum :=
   tagForward.trans doubleTagForward
 
-example : GlobalEquivalence naturalMinimum naturalMinimum :=
-  GlobalEquivalence.refl naturalMinimum
+example : GlobalEquiv naturalMinimum naturalMinimum :=
+  GlobalEquiv.refl naturalMinimum
 
-example : GlobalEquivalence taggedMinimum naturalMinimum :=
-  tagEquivalence.symm
+example : GlobalEquiv taggedMinimum naturalMinimum :=
+  tagEquiv.symm
 
-example : GlobalEquivalence naturalMinimum doublyTaggedMinimum :=
-  tagEquivalence.trans doubleTagEquivalence
+example : GlobalEquiv naturalMinimum doublyTaggedMinimum :=
+  tagEquiv.trans doubleTagEquiv
 
 example : GlobalImprovement naturalMinimum taggedMinimum :=
-  tagEquivalence.toGlobalImprovement
+  tagEquiv.toGlobalImprovement
 
 /-! ## Preservation results -/
 
@@ -109,7 +109,7 @@ example : taggedMinimum.HasFeasiblePoint :=
   tagForward.map_hasFeasiblePoint naturalMinimum_hasFeasiblePoint
 
 example : naturalMinimum.HasFeasiblePoint ↔ taggedMinimum.HasFeasiblePoint :=
-  tagEquivalence.hasFeasiblePoint_iff
+  tagEquiv.hasFeasiblePoint_iff
 
 def taggedZero : FeasiblePoint taggedMinimum := ⟨(0, ()), trivial⟩
 
@@ -119,23 +119,23 @@ theorem taggedZero_isGlobalOptimum :
   exact Nat.zero_le y.1.1
 
 example : taggedMinimum.IsGlobalOptimum (tagForward.map naturalZero) :=
-  tagEquivalence.map_isGlobalOptimum naturalZero_isGlobalOptimum
+  tagEquiv.map_isGlobalOptimum naturalZero_isGlobalOptimum
 
 example : naturalMinimum.IsGlobalOptimum (tagBackward.map taggedZero) :=
-  tagEquivalence.map_isGlobalOptimum_backward taggedZero_isGlobalOptimum
+  tagEquiv.map_isGlobalOptimum_backward taggedZero_isGlobalOptimum
 
 example : naturalMinimum.HasGlobalOptimum ↔ taggedMinimum.HasGlobalOptimum :=
-  tagEquivalence.hasGlobalOptimum_iff
+  tagEquiv.hasGlobalOptimum_iff
 
 example :
     taggedMinimum.objective (tagForward.map naturalZero).1 =
       naturalMinimum.objective naturalZero.1 :=
-  tagEquivalence.objective_eq_of_isGlobalOptimum naturalZero_isGlobalOptimum
+  tagEquiv.objective_eq_of_isGlobalOptimum naturalZero_isGlobalOptimum
 
 example :
     naturalMinimum.objective naturalZero.1 =
       taggedMinimum.objective taggedZero.1 :=
-  tagEquivalence.objective_eq_of_optima
+  tagEquiv.objective_eq_of_optima
     naturalZero_isGlobalOptimum taggedZero_isGlobalOptimum
 
 theorem zero_isLowerBound : naturalMinimum.IsObjectiveLowerBound 0 := by
@@ -143,12 +143,12 @@ theorem zero_isLowerBound : naturalMinimum.IsObjectiveLowerBound 0 := by
   exact Nat.zero_le x.1
 
 example : taggedMinimum.IsObjectiveLowerBound 0 :=
-  (tagEquivalence.isObjectiveLowerBound_iff 0).mp zero_isLowerBound
+  (tagEquiv.isObjectiveLowerBound_iff 0).mp zero_isLowerBound
 
 example :
     naturalMinimum.IsObjectiveLowerBound 0 ↔
       taggedMinimum.IsObjectiveLowerBound 0 :=
-  tagEquivalence.isObjectiveLowerBound_iff 0
+  tagEquiv.isObjectiveLowerBound_iff 0
 
 /-! ## Unboundedness -/
 
@@ -165,7 +165,7 @@ def taggedIntegerLine : Problem (Int × Unit) Int where
   objective := fun x => x.1
   feasible := fun _ => True
 
-def integerLineEquivalence : GlobalEquivalence integerLine taggedIntegerLine where
+def integerLineEquiv : GlobalEquiv integerLine taggedIntegerLine where
   forward := {
     map := fun x => ⟨(x.1, ()), trivial⟩
     objective_le := fun _ => le_rfl
@@ -180,10 +180,10 @@ theorem integerLine_isUnbounded : integerLine.IsUnbounded := by
   exact ⟨⟨bound - 1, trivial⟩, sub_one_lt bound⟩
 
 example : taggedIntegerLine.IsUnbounded :=
-  integerLineEquivalence.forward.map_isUnbounded integerLine_isUnbounded
+  integerLineEquiv.forward.map_isUnbounded integerLine_isUnbounded
 
 example : integerLine.IsUnbounded ↔ taggedIntegerLine.IsUnbounded :=
-  integerLineEquivalence.isUnbounded_iff
+  integerLineEquiv.isUnbounded_iff
 
 /-! ## A nonconvex objective -/
 
@@ -202,8 +202,8 @@ theorem doubleWellOne_isGlobalOptimum :
   change 0 ≤ (y.1 ^ 2 - 1) ^ 2
   exact sq_nonneg (y.1 ^ 2 - 1)
 
-example : GlobalEquivalence doubleWell doubleWell :=
-  GlobalEquivalence.refl doubleWell
+example : GlobalEquiv doubleWell doubleWell :=
+  GlobalEquiv.refl doubleWell
 
 example : doubleWell.HasGlobalOptimum :=
   ⟨doubleWellOne, doubleWellOne_isGlobalOptimum⟩

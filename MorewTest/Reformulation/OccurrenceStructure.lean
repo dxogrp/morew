@@ -26,7 +26,7 @@ def duplicated :=
 reformulation duplicatedLift : duplicated := by
   epigraph t at loss
 
-example : GlobalEquivalence duplicated duplicatedLift := duplicatedLift.equivalence
+example : GlobalEquiv duplicated duplicatedLift := duplicatedLift.equiv
 example (x t : ℝ) : duplicatedLift.objective (x, t) = t + t := rfl
 example (x t : ℝ) : duplicatedLift.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
 
@@ -62,8 +62,8 @@ def unusedDefinition :=
 reformulation unusedDefinitionLift : unusedDefinition := by
   epigraph t at (x ^ 2)
 
-example : GlobalEquivalence unusedDefinition unusedDefinitionLift :=
-  unusedDefinitionLift.equivalence
+example : GlobalEquiv unusedDefinition unusedDefinitionLift :=
+  unusedDefinitionLift.equiv
 example : unusedDefinitionLift = controlLift := rfl
 example (x t : ℝ) : unusedDefinitionLift.objective (x, t) = t + t := rfl
 example (x t : ℝ) : unusedDefinitionLift.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
@@ -81,8 +81,8 @@ reformulation substitutedControl : positiveControl := by
 reformulation substitutedControlLift : substitutedControl := by
   epigraph t at (u)
 
-example : GlobalEquivalence substitutedControl substitutedControlLift :=
-  substitutedControlLift.equivalence
+example : GlobalEquiv substitutedControl substitutedControlLift :=
+  substitutedControlLift.equiv
 example (u t : ℝ) : substitutedControlLift.objective (u, t) = t + t := rfl
 
 def erased :=
@@ -93,7 +93,7 @@ def erased :=
 reformulation erasedLift : erased := by
   epigraph t at loss
 
-example : GlobalEquivalence erased erasedLift := erasedLift.equivalence
+example : GlobalEquiv erased erasedLift := erasedLift.equiv
 example (x t : ℝ) : erasedLift.objective (x, t) = 0 := rfl
 example (x t : ℝ) : erasedLift.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
 
@@ -105,7 +105,7 @@ def innerLet :=
 reformulation innerLetLift : innerLet := by
   epigraph t at loss
 
-example : GlobalEquivalence innerLet innerLetLift := innerLetLift.equivalence
+example : GlobalEquiv innerLet innerLetLift := innerLetLift.equiv
 example (x t : ℝ) : innerLetLift.objective (x, t) = t + t := rfl
 example (x t : ℝ) : innerLetLift.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
 
@@ -119,7 +119,7 @@ def constraint :=
 reformulation constraintLift : constraint := by
   epigraph t at loss in cap
 
-example : GlobalEquivalence constraint constraintLift := constraintLift.equivalence
+example : GlobalEquiv constraint constraintLift := constraintLift.equiv
 example (x t : ℝ) : constraintLift.objective (x, t) = x := rfl
 example (x t : ℝ) : constraintLift.feasible (x, t) ↔
     t + t ≤ 10 ∧ x ^ 2 ≤ t := Iff.rfl
@@ -157,8 +157,8 @@ reformulation appliedLift : (Defined.family offset) := by
 
 end
 
-example (offset : ℝ) : GlobalEquivalence (Defined.family offset) (appliedLift offset) :=
-  appliedLift.equivalence offset
+example (offset : ℝ) : GlobalEquiv (Defined.family offset) (appliedLift offset) :=
+  appliedLift.equiv offset
 example (offset x t : ℝ) : (appliedLift offset).objective (x, t) =
     (t + t) + (x - offset) ^ 2 := rfl
 example (offset x t : ℝ) : (appliedLift offset).feasible (x, t) ↔
@@ -168,8 +168,8 @@ example (offset x t : ℝ) : (appliedLift offset).feasible (x, t) ↔
 reformulation generatedLift : (Defined.generated 2) := by
   epigraph t at loss
 
-example : GlobalEquivalence (Defined.generated 2) generatedLift :=
-  generatedLift.equivalence
+example : GlobalEquiv (Defined.generated 2) generatedLift :=
+  generatedLift.equiv
 example (x t : ℝ) : generatedLift.objective (x, t) =
     (t + t) + (x - 2) ^ 2 := rfl
 
@@ -177,7 +177,7 @@ example (x t : ℝ) : generatedLift.objective (x, t) =
 reformulation continued : generatedLift := by
   epigraph s at loss in cap
 
-example : GlobalEquivalence generatedLift continued := continued.equivalence
+example : GlobalEquiv generatedLift continued := continued.equiv
 example (x t s : ℝ) : continued.objective ((x, t), s) =
     (t + t) + (x - 2) ^ 2 := rfl
 example (x t s : ℝ) : continued.feasible ((x, t), s) ↔

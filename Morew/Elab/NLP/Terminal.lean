@@ -27,7 +27,7 @@ structure Result where
   /-- Final typed presentation retaining accepted comparison predicates. -/
   presentation : PresentationState
   /-- Exact equivalence from the incoming canonical problem. -/
-  equivalence : Expr
+  equiv : Expr
   /-- Checked smooth-NLP data representing the final canonical problem. -/
   form : Expr
   /-- Original presentation index of each final entry. -/
@@ -41,7 +41,7 @@ structure Result where
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
-  equivalence := result.equivalence.replaceFVars oldVars newVars
+  equiv := result.equiv.replaceFVars oldVars newVars
   form := result.form.replaceFVars oldVars newVars
   auxiliaries := result.auxiliaries.map fun (origin, type) =>
     (origin, type.replaceFVars oldVars newVars)
@@ -49,7 +49,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private structure Work where
   presentation : PresentationState
-  equivalence : Expr
+  equiv : Expr
   rowOrigins : Array Nat
   certifiedRows : Array (Option Rows.Result)
   replacedIndices : Array Nat := #[]
@@ -73,7 +73,7 @@ private def backwardFeasibility (old : PresentationState) (nextDomain : Expr)
     (auxiliary? : Option Expr) (replacement : Replace.RewriteResult) : MetaM Expr := do
   let nextFeasible ← mkAppM ``Morew.Problem.feasible #[replacement.targetProblem]
   let oldFeasible ← feasibility old
-  let backward ← mkAppM ``Morew.GlobalEquivalence.backward #[replacement.equivalence]
+  let backward ← mkAppM ``Morew.GlobalEquiv.backward #[replacement.equiv]
   let map ← mkAppM ``Morew.GlobalImprovement.map #[backward]
   withLocalDeclD `point nextDomain fun point =>
     withLocalDeclD `feasible (mkApp nextFeasible point) fun hypothesis => do
@@ -122,10 +122,10 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
              constraints := splice retained index entries }
   unless ← isDefEq (← presentation.canonicalProblem) replacement.targetProblem do
     throwError "terminal NLP presentation does not match the checked replacement"
-  let equivalence ← instantiateMVars (← mkAppM ``Morew.GlobalEquivalence.trans
-    #[work.equivalence, replacement.equivalence])
+  let equiv ← instantiateMVars (← mkAppM ``Morew.GlobalEquiv.trans
+    #[work.equiv, replacement.equiv])
   return {
-    presentation, equivalence
+    presentation, equiv
     rowOrigins := splice work.rowOrigins index (rows.map fun _ => origin)
     certifiedRows := splice retainedCertificates index certificates
     replacedIndices := if work.replacedIndices.contains origin then work.replacedIndices
@@ -236,7 +236,7 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
   let canonical ← presentation.canonicalProblem
   let work : Work := {
     presentation
-    equivalence := ← mkAppM ``Morew.GlobalEquivalence.refl #[canonical]
+    equiv := ← mkAppM ``Morew.GlobalEquiv.refl #[canonical]
     rowOrigins := presentation.constraints.mapIdx fun index _ => index
     certifiedRows := presentation.constraints.map fun _ => none }
   let work ← match ← lower presentation work reduce? with
@@ -264,10 +264,10 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
       let reason ← addMessageContext
         m!"not certified as a smooth NLP by the available rules: {error.reason}; {suggestion}"
       return .error { error with reason }
-  checkWithKernel work.equivalence
+  checkWithKernel work.equiv
   checkWithKernel form
   return .ok {
-    presentation := work.presentation, equivalence := work.equivalence, form
+    presentation := work.presentation, equiv := work.equiv, form
     rowOrigins := work.rowOrigins
     replacedIndices := work.replacedIndices.qsort (· < ·)
     auxiliaries := work.auxiliaries }

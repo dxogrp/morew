@@ -26,28 +26,28 @@ variable {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (repair : GlobalImprovement p (p.addConstraint constraint))
 
-example : GlobalEquivalence p (p.addConstraint constraint) :=
-  restrictionEquivalence p constraint repair
+example : GlobalEquiv p (p.addConstraint constraint) :=
+  restrictionEquiv p constraint repair
 
 example (point : FeasiblePoint p) :
-    (restrictionEquivalence p constraint repair).forward.map point = repair.map point := rfl
+    (restrictionEquiv p constraint repair).forward.map point = repair.map point := rfl
 
 example (point : FeasiblePoint (p.addConstraint constraint)) :
-    ((restrictionEquivalence p constraint repair).backward.map point).1 = point.1 := rfl
+    ((restrictionEquiv p constraint repair).backward.map point).1 = point.1 := rfl
 
 example (point : FeasiblePoint p) :
-    constraint ((restrictionEquivalence p constraint repair).forward.map point).1 :=
+    constraint ((restrictionEquiv p constraint repair).forward.map point).1 :=
   (repair.map point).2.2
 
 example (dualRepair : GlobalImprovement p.orderDual (p.orderDual.addConstraint constraint)) :
-    GlobalEquivalence p.orderDual (p.orderDual.addConstraint constraint) :=
-  restrictionEquivalence p.orderDual constraint dualRepair
+    GlobalEquiv p.orderDual (p.orderDual.addConstraint constraint) :=
+  restrictionEquiv p.orderDual constraint dualRepair
 
 -- An infeasible problem needs no inhabitant or repair choice in its domain.
 example (objective : X → V) (condition : X → Prop) :
-    GlobalEquivalence (Problem.mk objective (fun _ => False))
+    GlobalEquiv (Problem.mk objective (fun _ => False))
       ((Problem.mk objective (fun _ => False)).addConstraint condition) :=
-  restrictionEquivalence _ _ {
+  restrictionEquiv _ _ {
     map := fun point => False.elim point.2
     objective_le := fun point => False.elim point.2 }
 
@@ -72,8 +72,8 @@ example : (zeroRepair.map ⟨1, True.intro⟩).1 = 0 := rfl
 example : minimum.objective (zeroRepair.map ⟨1, True.intro⟩).1 < minimum.objective 1 :=
   Nat.zero_lt_one
 
-example : GlobalEquivalence minimum (minimum.addConstraint (· = 0)) :=
-  restrictionEquivalence minimum _ zeroRepair
+example : GlobalEquiv minimum (minimum.addConstraint (· = 0)) :=
+  restrictionEquiv minimum _ zeroRepair
 
 private def maximum : Problem Nat (OrderDual Nat) where
   objective := id
@@ -84,8 +84,8 @@ private def topRepair : GlobalImprovement maximum (maximum.addConstraint (· = 2
   objective_le point := point.2
 
 -- The same API reads the objective inequality in the maximization order.
-example : GlobalEquivalence maximum (maximum.addConstraint (· = 2)) :=
-  restrictionEquivalence maximum _ topRepair
+example : GlobalEquiv maximum (maximum.addConstraint (· = 2)) :=
+  restrictionEquiv maximum _ topRepair
 
 example : (topRepair.map ⟨0, Nat.zero_le 2⟩).1 = 2 := rfl
 
@@ -101,7 +101,7 @@ private def toggleRepair : GlobalImprovement flat (flat.addConstraint (fun _ => 
   objective_le _ := Nat.le_refl 0
 
 -- Even points already satisfying the restriction need not be fixed.
-example : (restrictionEquivalence flat _ toggleRepair).forward.map ⟨false, True.intro⟩ =
+example : (restrictionEquiv flat _ toggleRepair).forward.map ⟨false, True.intro⟩ =
     ⟨true, True.intro, True.intro⟩ := rfl
 
 end Dominance
@@ -123,9 +123,9 @@ example (point : FeasiblePoint (p.pullback f)) :
       (p.pullback f).objective point.1 :=
   coverage.restrictionImprovement_objective_eq constraint admissible point
 
-example : GlobalEquivalence p ((p.pullback f).addConstraint constraint) :=
-  (pullbackEquivalence p f coverage).trans
-    (restrictionEquivalence _ _ (coverage.restrictionImprovement constraint admissible))
+example : GlobalEquiv p ((p.pullback f).addConstraint constraint) :=
+  (pullbackEquiv p f coverage).trans
+    (restrictionEquiv _ _ (coverage.restrictionImprovement constraint admissible))
 
 private def branchSource : Problem Nat Nat where
   objective := id

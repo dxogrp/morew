@@ -9,7 +9,7 @@ import Morew.Rewrite.Basic
 
 /-! # Shared PSD sources and Schur certificate for success and failure tests -/
 
-namespace MorewTest.Reformulation.PositiveSemidefinite
+namespace MorewTest.Reformulation.PSD
 
 open Morew Morew.Conic
 
@@ -25,12 +25,12 @@ def diagonalSource :=
 
 /-- A reusable exact certificate, with no global automatic registration. -/
 def schurRule (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef) :
-    ExactConstraintLift (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
+    ConstraintRepr (fun p : Matrix (Fin 1) (Fin 1) ℝ × ℝ =>
       (Matrix.diagonal ![p.2] - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
   .ofIff (fun p =>
     (fromBlocksFin A.toMatrix p.1 p.1.transpose (Matrix.diagonal ![p.2])).PosSemidef) (by
       intro p
-      simpa only [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
+      simpa only [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
         SymmetricMatrix.toMatrix_ofMatrix] using
         schurComplement_mem_iff A p.1
           (SymmetricMatrix.ofMatrix (Matrix.diagonal ![p.2]) (Matrix.isSymm_diagonal _)) hA)
@@ -43,4 +43,4 @@ def schurSource (A : SymmetricMatrix 1) :=
       remaining : |t| ≤ 5
 
 end
-end MorewTest.Reformulation.PositiveSemidefinite
+end MorewTest.Reformulation.PSD

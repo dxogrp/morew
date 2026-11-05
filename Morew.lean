@@ -7,7 +7,7 @@ import Morew.Conic.Cone
 import Morew.Conic.Exponential
 import Morew.Conic.Exponential.Basic
 import Morew.Conic.Exponential.Cone
-import Morew.Conic.Exponential.Representations
+import Morew.Conic.Exponential.Repr
 import Morew.Conic.PSD
 import Morew.Conic.PSD.Determinant
 import Morew.Conic.PSD.LDL
@@ -15,8 +15,8 @@ import Morew.Conic.PSD.LambdaMax
 import Morew.Conic.PSD.LogDet
 import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.NuclearNorm
-import Morew.Conic.PSD.PositiveDefinite
-import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.PosDef
+import Morew.Conic.PSD.Repr
 import Morew.Conic.PSD.SingularVectors
 import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.PSD.Triangular
@@ -26,9 +26,9 @@ import Morew.Conic.Power.Basic
 import Morew.Conic.Power.Cone
 import Morew.Conic.Power.GeometricMean
 import Morew.Conic.Power.Norm
-import Morew.Conic.Power.Representations
+import Morew.Conic.Power.Repr
 import Morew.Conic.SecondOrder
-import Morew.Conic.SecondOrder.Representations
+import Morew.Conic.SecondOrder.Repr
 import Morew.Core
 import Morew.Elab.Affine
 import Morew.Elab.Affine.Expansion

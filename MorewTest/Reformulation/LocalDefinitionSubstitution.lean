@@ -29,7 +29,7 @@ def source :=
 reformulation transformed : source := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence source transformed := transformed.equivalence
+example : GlobalEquiv source transformed := transformed.equiv
 example (u : ℝ) : transformed.objective u = u + u := rfl
 example (u : ℝ) : transformed.feasible u ↔ u ≤ 5 := Iff.rfl
 
@@ -48,13 +48,13 @@ reformulation boundedFirst : source := by
   epigraph t
   substitute x := Real.exp u
 
-example : GlobalEquivalence source boundedFirst := boundedFirst.equivalence
+example : GlobalEquiv source boundedFirst := boundedFirst.equiv
 example (u t : ℝ) : boundedFirst.feasible (u, t) ↔ u ≤ 5 ∧ u + u ≤ t := Iff.rfl
 
 reformulation boundedAfter : transformed := by
   epigraph t
 
-example : GlobalEquivalence transformed boundedAfter := boundedAfter.equivalence
+example : GlobalEquiv transformed boundedAfter := boundedAfter.equiv
 
 def shiftedSource :=
   problem (x y : ℝ)
@@ -78,7 +78,7 @@ def shiftedCoverage : FeasibleSurjection shiftedSource
 reformulation shifted : shiftedSource := by
   substitute x := u + shift using shiftedCoverage
 
-example : GlobalEquivalence shiftedSource shifted := shifted.equivalence
+example : GlobalEquiv shiftedSource shifted := shifted.equiv
 example (u y : ℝ) : shifted.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
 run_cmd do
@@ -102,7 +102,7 @@ def identityCoverage : FeasibleSurjection typedSource (fun u : ℝ => u) where
 reformulation typedTarget : typedSource := by
   substitute x := u using identityCoverage
 
-example : GlobalEquivalence typedSource typedTarget := typedTarget.equivalence
+example : GlobalEquiv typedSource typedTarget := typedTarget.equiv
 
 def proofSource :=
   problem (x : ℝ)
@@ -117,7 +117,7 @@ def proofSource :=
 reformulation proofTarget : proofSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence proofSource proofTarget := proofTarget.equivalence
+example : GlobalEquiv proofSource proofTarget := proofTarget.equiv
 example (u : ℝ) : proofTarget.objective u = u := by
   simp [proofTarget]
 
@@ -135,8 +135,8 @@ def chainedProofSource :=
 reformulation chainedProofTarget : chainedProofSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence chainedProofSource chainedProofTarget :=
-  chainedProofTarget.equivalence
+example : GlobalEquiv chainedProofSource chainedProofTarget :=
+  chainedProofTarget.equiv
 example (u : ℝ) : chainedProofTarget.objective u = Real.exp u + Real.exp u := by
   simp [chainedProofTarget]
 
@@ -144,8 +144,8 @@ reformulation chainedProofBound : chainedProofSource := by
   substitute x := Real.exp u
   epigraph a at loss
 
-example : GlobalEquivalence chainedProofSource chainedProofBound :=
-  chainedProofBound.equivalence
+example : GlobalEquiv chainedProofSource chainedProofBound :=
+  chainedProofBound.equiv
 
 example (u a : ℝ) : chainedProofBound.objective (u, a) = a + Real.exp u := by
   simp [chainedProofBound]
@@ -165,8 +165,8 @@ def fixedSubtypeSource :=
 reformulation fixedSubtypeTarget : fixedSubtypeSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence fixedSubtypeSource fixedSubtypeTarget :=
-  fixedSubtypeTarget.equivalence
+example : GlobalEquiv fixedSubtypeSource fixedSubtypeTarget :=
+  fixedSubtypeTarget.equiv
 example (u : ℝ) : fixedSubtypeTarget.objective u = u := by
   simp [fixedSubtypeTarget]
 example (u : ℝ) : fixedSubtypeTarget.feasible u := by
@@ -197,8 +197,8 @@ def fixedRecordSource :=
 reformulation fixedRecordTarget : fixedRecordSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence fixedRecordSource fixedRecordTarget :=
-  fixedRecordTarget.equivalence
+example : GlobalEquiv fixedRecordSource fixedRecordTarget :=
+  fixedRecordTarget.equiv
 example (u : ℝ) : fixedRecordTarget.objective u = u := by
   simp [fixedRecordTarget]
 
@@ -217,8 +217,8 @@ def inlineObjectiveSource :=
 reformulation inlineObjectiveTarget : inlineObjectiveSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence inlineObjectiveSource inlineObjectiveTarget :=
-  inlineObjectiveTarget.equivalence
+example : GlobalEquiv inlineObjectiveSource inlineObjectiveTarget :=
+  inlineObjectiveTarget.equiv
 example (u : ℝ) : inlineObjectiveTarget.objective u = Real.exp u := rfl
 example (u : ℝ) : inlineObjectiveTarget.feasible u := True.intro
 
@@ -233,15 +233,15 @@ def inlineMaxObjectiveSource :=
 reformulation inlineMaxObjectiveTarget : inlineMaxObjectiveSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence inlineMaxObjectiveSource inlineMaxObjectiveTarget :=
-  inlineMaxObjectiveTarget.equivalence
+example : GlobalEquiv inlineMaxObjectiveSource inlineMaxObjectiveTarget :=
+  inlineMaxObjectiveTarget.equiv
 example (u : ℝ) : inlineMaxObjectiveTarget.objective u = Real.exp u := rfl
 
 reformulation inlineObjectiveLifted : inlineObjectiveTarget := by
   epigraph t at (dependentValue loss ⟨Real.exp u, (Real.log_exp (Real.exp u)).symm⟩)
 
-example : GlobalEquivalence inlineObjectiveTarget inlineObjectiveLifted :=
-  inlineObjectiveLifted.equivalence
+example : GlobalEquiv inlineObjectiveTarget inlineObjectiveLifted :=
+  inlineObjectiveLifted.equiv
 example (u t : ℝ) : inlineObjectiveLifted.objective (u, t) = t := rfl
 example (u t : ℝ) : inlineObjectiveLifted.feasible (u, t) ↔ Real.exp u ≤ t := Iff.rfl
 
@@ -256,8 +256,8 @@ def inlineConstraintSource :=
 reformulation inlineConstraintTarget : inlineConstraintSource := by
   substitute x := Real.exp u
 
-example : GlobalEquivalence inlineConstraintSource inlineConstraintTarget :=
-  inlineConstraintTarget.equivalence
+example : GlobalEquiv inlineConstraintSource inlineConstraintTarget :=
+  inlineConstraintTarget.equiv
 example (u : ℝ) : inlineConstraintTarget.objective u = u := by
   simp [inlineConstraintTarget]
 example (u : ℝ) : inlineConstraintTarget.feasible u ↔ Real.exp u ≤ 10 := Iff.rfl
@@ -269,8 +269,8 @@ reformulation inlineConstraintLifted : inlineConstraintSource := by
   substitute x := Real.exp u
   epigraph t at (dependentValue loss ⟨Real.exp u, (Real.log_exp (Real.exp u)).symm⟩) in cap
 
-example : GlobalEquivalence inlineConstraintSource inlineConstraintLifted :=
-  inlineConstraintLifted.equivalence
+example : GlobalEquiv inlineConstraintSource inlineConstraintLifted :=
+  inlineConstraintLifted.equiv
 example (u t : ℝ) : inlineConstraintLifted.objective (u, t) = u := by
   simp [inlineConstraintLifted]
 example (u t : ℝ) : inlineConstraintLifted.feasible (u, t) ↔

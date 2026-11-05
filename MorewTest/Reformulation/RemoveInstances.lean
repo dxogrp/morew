@@ -41,8 +41,8 @@ example (x : X) : (@partialRemoval X first second f).feasible x ↔
     @GE.ge X second.toLE x x ∧ @LE.le X first.toLE x (f second x) := Iff.rfl
 example (x : X) : (@completeRemoval X first second f).feasible x ↔
     @LE.le X first.toLE x (f second x) := Iff.rfl
-example : GlobalEquivalence (@source X first second f) (@completeRemoval X first second f) :=
-  @completeRemoval.equivalence X first second f
+example : GlobalEquiv (@source X first second f) (@completeRemoval X first second f) :=
+  @completeRemoval.equiv X first second f
 end
 
 -- These models capture the ordinary real order before any shadowing instance
@@ -73,9 +73,9 @@ reformulation squareOperandRemoved : (squareOperandSource shadow f) := by
 example (x : ℝ) : squareRemoved.feasible x ↔ True := Iff.rfl
 example (x : ℝ) : (@squareOperandRemoved shadow f).feasible x ↔ True := Iff.rfl
 example (x : ℝ) : (@squareOperandRemoved shadow f).objective x = f shadow x := rfl
-example : GlobalEquivalence squareSource squareRemoved := squareRemoved.equivalence
-example : GlobalEquivalence (squareOperandSource shadow f) (@squareOperandRemoved shadow f) :=
-  squareOperandRemoved.equivalence f
+example : GlobalEquiv squareSource squareRemoved := squareRemoved.equiv
+example : GlobalEquiv (squareOperandSource shadow f) (@squareOperandRemoved shadow f) :=
+  squareOperandRemoved.equiv f
 end
 
 end

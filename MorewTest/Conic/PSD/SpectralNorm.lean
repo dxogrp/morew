@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.PSD.SpectralNorm
-import Morew.Conic.PSD.Representations
+import Morew.Conic.PSD.Repr
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.NormNum
 

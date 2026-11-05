@@ -31,7 +31,7 @@ reformulation scalarTarget : scalarSource := by
   nlp at maximum
   nlp at minimum
 
-example : GlobalEquivalence scalarSource scalarTarget := scalarTarget.equivalence
+example : GlobalEquiv scalarSource scalarTarget := scalarTarget.equiv
 
 example (x y t : ℝ) : scalarTarget.objective ((x, y), t) = |x| := rfl
 
@@ -69,7 +69,7 @@ reformulation maximizingTarget : maximizing := by
   nlp at upper
   nlp at lower
 
-example : GlobalEquivalence maximizing maximizingTarget := maximizingTarget.equivalence
+example : GlobalEquiv maximizing maximizingTarget := maximizingTarget.equiv
 example : Problem (ℝ × ℝ) (OrderDual ℝ) := maximizingTarget
 example (x t : ℝ) : maximizingTarget.objective (x, t) = x ^ 3 := rfl
 
@@ -83,8 +83,8 @@ reformulation namedObjective : absoluteObjective := by
   epigraph t as objective_bound
   nlp at objective_bound using Rewrite.absEpigraph
 
-example : GlobalEquivalence absoluteObjective defaultObjective := defaultObjective.equivalence
-example : GlobalEquivalence absoluteObjective namedObjective := namedObjective.equivalence
+example : GlobalEquiv absoluteObjective defaultObjective := defaultObjective.equiv
+example : GlobalEquiv absoluteObjective namedObjective := namedObjective.equiv
 
 def components :=
   problem (x y : ℝ)
@@ -99,7 +99,7 @@ reformulation componentTarget : components := by
   epigraph a at (|x|) in budget as abs_bound
   nlp at abs_bound
 
-example : GlobalEquivalence components componentTarget := componentTarget.equivalence
+example : GlobalEquiv components componentTarget := componentTarget.equiv
 
 /--
 info: problem (x y a : ℝ)
@@ -132,7 +132,7 @@ reformulation vectorTarget : (vectorSource n) := by
   nlp at explicitInfinity
   nlp at euclidean
 
-example : GlobalEquivalence (vectorSource n) (vectorTarget n) := vectorTarget.equivalence n
+example : GlobalEquiv (vectorSource n) (vectorTarget n) := vectorTarget.equiv n
 
 def oneNormSource :=
   problem (v : Fin n → ℝ) (t : ℝ)
@@ -143,7 +143,7 @@ def oneNormSource :=
 reformulation oneNormTarget : (oneNormSource n) := by
   nlp at norm
 
-example : GlobalEquivalence (oneNormSource n) (oneNormTarget n) := oneNormTarget.equivalence n
+example : GlobalEquiv (oneNormSource n) (oneNormTarget n) := oneNormTarget.equiv n
 
 end Vectors
 
@@ -168,8 +168,8 @@ reformulation finiteTarget : (finiteSource s hs a) := by
   nlp at largest
   nlp at smallest
 
-example : GlobalEquivalence (finiteSource s hs a) (finiteTarget s a) :=
-  finiteTarget.equivalence s hs a
+example : GlobalEquiv (finiteSource s hs a) (finiteTarget s a) :=
+  finiteTarget.equiv s hs a
 
 end FiniteExtrema
 
@@ -193,7 +193,7 @@ reformulation target : source := by
   nlp at labels.cap
   nlp at «cap value»
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 /--
 info: problem (budget_aux : ℝ) (v budget_aux_2 : Fin 1 → ℝ)
@@ -220,7 +220,7 @@ macro "nlpMacro " target:ident : command =>
 
 nlpMacro macroTarget
 
-example : GlobalEquivalence macroSource macroTarget := macroTarget.equivalence
+example : GlobalEquiv macroSource macroTarget := macroTarget.equiv
 
 end Names
 

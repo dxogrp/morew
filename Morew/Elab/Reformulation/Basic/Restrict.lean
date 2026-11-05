@@ -42,7 +42,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel proof
       pure proof
-    let addition ← mkAppM ``Morew.restrictionEquivalence
+    let addition ← mkAppM ``Morew.restrictionEquiv
       #[typed.semantic, predicate, improvement]
     Rows.Append.finish restrictStyle state typed name proposition
       predicate propositionSyntax addition
