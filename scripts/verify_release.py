@@ -138,7 +138,7 @@ def latest_successful_run(
             if type(run.get(key)) is not int or run[key] < 1:
                 raise VerificationError(f"GitHub returned a matching run without a valid {key}.")
         matching.append(run)
-    guidance = "Wait for ordinary CI on main to pass at this exact commit, then rerun the release workflow."
+    guidance = "Wait for ordinary CI on main to pass at this exact commit, then rerun the workflow."
     if not matching:
         raise VerificationError(f"No matching {workflow} run exists for {sha}. {guidance}")
     latest = max(matching, key=lambda run: (run["run_number"], run["run_attempt"]))

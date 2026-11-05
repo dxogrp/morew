@@ -55,5 +55,5 @@ jobs:
           lake check-lint
           lake lint
 
-      - name: Test release automation
+      - name: Test automation
         run: python3 -B -m unittest discover -s scripts/tests -v
