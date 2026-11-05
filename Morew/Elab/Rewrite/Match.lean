@@ -211,21 +211,21 @@ def expose (expression : Expr) : MetaM Expr := do
     if reduced != value then return .visit reduced
     return .continue)
 
-private inductive ExactInput where
+private inductive ConstraintInput where
   | infer | whole | subtypeWhole
   deriving BEq
 
 private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
-    (reverseGraph : Bool) (exactInput : ExactInput)
+    (reverseGraph : Bool) (constraintInput : ConstraintInput)
     (view? : Option Comparison.View := none) : MetaM (Except Exception Result) := do
   let (parameters, _, type) ← forallMetaTelescopeReducing (← inferType originalRule)
   let type ← whnf type
   let rule := mkAppN originalRule parameters
   let (family, inputType, _) ← Registry.repr type
-  if view?.isSome && family == .exact then
+  if view?.isSome && family == .constraint then
     throwError "comparison adaptation requires a graph, epigraph, or hypograph representation"
-  let (input, proofArguments) ← if family == .exact then
-      match exactInput with
+  let (input, proofArguments) ← if family == .constraint then
+      match constraintInput with
       | .whole => do
         unless ← isDefEq inputType (← inferType point) do
           throwError "the exact representation input is not the decision space"
@@ -235,7 +235,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
     else inputValue inputType
   let prefixArgs := type.getAppArgs.map some
   let proof ← match family with
-    | .exact => do
+    | .constraint => do
       mkAppOptM ``Morew.ConstraintRepr.source_iff_exists
         (prefixArgs ++ #[some rule, some input])
     | .graph =>
@@ -289,7 +289,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
   catch error => return .error error
 
 private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
-    (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
+    (accept : Result → MetaM α) (prove? : Prove) (constraintInput : ConstraintInput) : MetaM α := do
   -- Report the furthest failure stage: matching, domain validation, then target certification.
   let result : Except (Nat × Exception) α ← State.withIsolatedMVars do
     let tryAttempt := fun reverse inputMode view? => State.withIsolatedMVars do
@@ -300,7 +300,7 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
         | .error exception => return .error (1, exception)
       try return .ok (← accept matched)
       catch exception => return .error (2, exception)
-    match ← tryAttempt false exactInput none with
+    match ← tryAttempt false constraintInput none with
     | .ok value => return .ok value
     | .error original =>
       let expression ← prepare
@@ -310,25 +310,25 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
         let mut failure := original
         if family == .graph then
           -- Preserve both direct graph orientations before adapting any signs.
-          match ← tryAttempt true exactInput none with
+          match ← tryAttempt true constraintInput none with
           | .ok value => return .ok value
           | .error next =>
             if failure.1 < next.1 then failure := next
         for view in (← Comparison.signedViews sourceBody
             (fun e => Registry.structural e)).toList.drop 1 do
           for reverse in (if family == .graph then [false, true] else [false]) do
-            match ← tryAttempt reverse exactInput (some view) with
+            match ← tryAttempt reverse constraintInput (some view) with
             | .ok value => return .ok value
             | .error next =>
               if failure.1 < next.1 then failure := next
         return .error failure
-      let subtypeWhole := family == .exact &&
+      let subtypeWhole := family == .constraint &&
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
           !(← isDefEq inputType (← inferType point))
-      if exactInput == .whole && subtypeWhole then
+      if constraintInput == .whole && subtypeWhole then
         -- Retry subtype conditions on the same complete decision point.
         return ← tryAttempt false .subtypeWhole none
-      if family == .exact && exactInput == .infer then
+      if family == .constraint && constraintInput == .infer then
         -- Retain whole-input matching for unused coordinates and subtype conditions.
         match ← tryAttempt false
             (if subtypeWhole then .subtypeWhole else .whole) none with

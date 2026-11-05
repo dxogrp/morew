@@ -38,7 +38,7 @@ inductive Target where
 
 /-- The source orientation recorded by a representation. -/
 inductive Family where
-  | exact | graph | epigraph | hypograph
+  | constraint | graph | epigraph | hypograph
   deriving BEq, Inhabited, Repr
 
 /-- Lookup metadata; check types and certificates on every use. -/
@@ -113,7 +113,7 @@ def repr (type : Expr) : MetaM (Family × Expr × Expr) := do
   let type ← whnf type
   let args := type.getAppArgs
   if type.isAppOfArity ``Morew.ConstraintRepr 2 then
-    return (.exact, args[0]!, args[1]!)
+    return (.constraint, args[0]!, args[1]!)
   if type.isAppOfArity ``Morew.GraphRepr 3 then
     return (.graph, args[0]!, args[2]!)
   if type.isAppOfArity ``Morew.EpigraphRepr 4 then
@@ -141,13 +141,13 @@ private def entry (declaration : Name) : MetaM Entry := do
   forallTelescopeReducing type fun _ body => do
     let body ← whnf body
     let (family, input, represented) ← repr body
-    let outputHead? ← if family == .exact then pure none else fixedTypeHead? body.getAppArgs[1]!
+    let outputHead? ← if family == .constraint then pure none else fixedTypeHead? body.getAppArgs[1]!
     withLocalDeclD `input input fun input => do
       let body ← structural (mkApp represented input)
       let .const head _ := body.getAppFn
         | throwError "cannot register {declaration}: the represented source has no fixed operation head: {body}; reduced type is {← whnf (← inferType (← mkConstWithFreshMVarLevels declaration))}"
-      let head := if family == .exact && head == ``GE.ge then ``LE.le else head
-      let typeArgumentHeads ← if family == .exact then pure #[] else typeArgumentHeads body
+      let head := if family == .constraint && head == ``GE.ge then ``LE.le else head
+      let typeArgumentHeads ← if family == .constraint then pure #[] else typeArgumentHeads body
       return { declaration, family, head, outputHead?, typeArgumentHeads }
 
 private def makeExtension (name : Name) : IO (SimpleScopedEnvExtension Entry (Array Entry)) :=
@@ -239,7 +239,7 @@ def candidates (target : Target) (source : Expr) : MetaM (Array Name) := do
     -- Deduplicate sorted declarations across comparison views.
     return (← entries target).filterMap fun entry =>
       let compatible := match entry.family with
-        | .exact => sourceHead == some entry.head
+        | .constraint => sourceHead == some entry.head
         | .epigraph => epigraphs.any (compatibleOperation entry)
         | .hypograph => hypographs.any (compatibleOperation entry)
         | .graph => graphs.any (compatibleOperation entry)
