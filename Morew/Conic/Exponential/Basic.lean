@@ -28,17 +28,17 @@ theorem le_log_iff (a t : ℝ) (ha : 0 < a) :
   exact Real.le_log_iff_exp_le ha
 
 /-- At a zero first argument, the relative-entropy formula agrees with the cone boundary. -/
-theorem relativeEntropy_zero_le_iff (b t : ℝ) (hb : 0 ≤ b) :
-    Fn.relativeEntropy 0 b ≤ t ↔ (-t, 0, b) ∈ EXP := by
-  simp [Fn.relativeEntropy, Cone.mem_exponential, hb]
+theorem relEntr_zero_le_iff (b t : ℝ) (hb : 0 ≤ b) :
+    Fn.relEntr 0 b ≤ t ↔ (-t, 0, b) ∈ EXP := by
+  simp [Fn.relEntr, Cone.mem_exponential, hb]
 
 /-- Relative entropy has an exponential-cone epigraph for `a ≥ 0` and `b > 0`. -/
-theorem relativeEntropy_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
-    Fn.relativeEntropy a b ≤ t ↔ (-t, a, b) ∈ EXP := by
+theorem relEntr_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
+    Fn.relEntr a b ≤ t ↔ (-t, a, b) ∈ EXP := by
   rcases eq_or_lt_of_le ha with hzero | hpos
   · subst a
-    exact relativeEntropy_zero_le_iff b t hb.le
-  rw [Fn.relativeEntropy, Cone.mem_exponential]
+    exact relEntr_zero_le_iff b t hb.le
+  rw [Fn.relEntr, Cone.mem_exponential]
   simp only [hpos, true_and, hpos.ne', false_and, or_false]
   rw [mul_comm a, ← le_div_iff₀ hpos,
     mul_comm a, ← le_div_iff₀ hpos, ← Real.le_log_iff_exp_le (div_pos hb hpos),

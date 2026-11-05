@@ -88,7 +88,7 @@ theorem singularValue_smul_leftSingularVector (i : PositiveSingularIndex A) :
   simp [leftSingularVector, smul_smul, ne_of_gt i.property]
 
 theorem sum_positive_singularValues :
-    (∑ i : PositiveSingularIndex A, singularValue A i.val) = Fn.nuclearNorm A := by
+    (∑ i : PositiveSingularIndex A, singularValue A i.val) = Fn.normNuc A := by
   classical
   rw [← Finset.sum_subtype (Finset.univ.filter fun i => 0 < singularValue A i) (by simp)]
   change _ = ∑ i : Fin n, singularValue A i
@@ -135,8 +135,8 @@ theorem matrix_eq_sum_positive :
     mul_comm, mul_left_comm, mul_assoc, dotProduct_comm] using h
 
 /-- In one dimension, the nuclear norm is the absolute value of the entry. -/
-theorem nuclearNorm_singleton (A : Matrix (Fin 1) (Fin 1) ℝ) :
-    Fn.nuclearNorm A = |A 0 0| := by
+theorem normNuc_singleton (A : Matrix (Fin 1) (Fin 1) ℝ) :
+    Fn.normNuc A = |A 0 0| := by
   have hlin : Matrix.toEuclideanLin A (rightSingularBasis A 0) =
       A 0 0 • rightSingularBasis A 0 := by
     ext i
@@ -146,6 +146,6 @@ theorem nuclearNorm_singleton (A : Matrix (Fin 1) (Fin 1) ℝ) :
   have h := norm_image_rightSingularBasis A 0
   change ‖Matrix.toEuclideanLin A (rightSingularBasis A 0)‖ = singularValue A 0 at h
   rw [hlin, norm_smul, (rightSingularBasis A).orthonormal.norm_eq_one, mul_one] at h
-  simpa [Fn.nuclearNorm, singularValue] using h.symm
+  simpa [Fn.normNuc, singularValue] using h.symm
 
 end Morew.Conic.Spectral

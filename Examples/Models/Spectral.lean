@@ -85,21 +85,21 @@ For a 2 × 3 matrix variable `A`, nuclear-norm completion is
 -/
 
 -- The nuclear-norm bound uses half the sum of two auxiliary matrix traces.
-def nuclearNormModel :=
+def normNucModel :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
-    minimize Fn.nuclearNorm A
+    minimize Fn.normNuc A
     subject to
       firstEntry : A 0 0 = 1
       secondEntry : A 1 1 = 1
 
-reformulation nuclearNormConic : nuclearNormModel := by
+reformulation normNucConic : normNucModel := by
   epigraph t as nuclear_bound
   conic
 
-#printp nuclearNormConic
+#printp normNucConic
 
-example : GlobalEquivalence nuclearNormModel nuclearNormConic := nuclearNormConic.equivalence
-example : IsConic nuclearNormConic := nuclearNormConic.isConic
+example : GlobalEquivalence normNucModel normNucConic := normNucConic.equivalence
+example : IsConic normNucConic := normNucConic.isConic
 
 /-!
 The matrix-fraction model has a vector variable `x ∈ ℝ²` and a symmetric
@@ -117,7 +117,7 @@ The matrix-fraction model has a vector variable `x ∈ ℝ²` and a symmetric
 
 def matrixFractionModel :=
   problem (x : Fin 2 → ℝ) (P : SymmetricMatrix 2)
-    minimize Fn.matrixFrac x P.toMatrix
+    minimize Fn.matFrac x P.toMatrix
     subject to
       domain : P.toMatrix.PosDef
       normalization : P.toMatrix.trace = 2

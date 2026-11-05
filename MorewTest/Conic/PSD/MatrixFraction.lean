@@ -24,10 +24,10 @@ open Matrix Morew.Conic
 
 example (n : Nat) (x : Fin n → ℝ) (P : Matrix (Fin n) (Fin n) ℝ)
     (hP : P.PosDef) (t : ℝ) :
-    Morew.Fn.matrixFrac x P ≤ t ↔
+    Morew.Fn.matFrac x P ≤ t ↔
       (fromBlocksFin P (fun (i : Fin n) (_ : Fin 1) => x i) (fun _ : Fin 1 => x)
         (Matrix.diagonal (fun _ : Fin 1 => t))).PosSemidef :=
-  Morew.Conic.MatrixFraction.matrixFrac_le_iff x P hP t
+  Morew.Conic.MatrixFraction.matFrac_le_iff x P hP t
 
 example (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :
     P.PosDef ↔ ∃ W : SymmetricMatrix n,
@@ -39,13 +39,13 @@ example (n : Nat) (P W : Matrix (Fin n) (Fin n) ℝ)
   posDef_of_fromBlocksFin_identity_posSemidef P W h
 
 example (x p : ℝ) :
-    Morew.Fn.matrixFrac ![x] (Matrix.diagonal (fun _ : Fin 1 => p)) = x ^ 2 / p := by
-  simp [Morew.Fn.matrixFrac, Matrix.mulVec, dotProduct,
+    Morew.Fn.matFrac ![x] (Matrix.diagonal (fun _ : Fin 1 => p)) = x ^ 2 / p := by
+  simp [Morew.Fn.matFrac, Matrix.mulVec, dotProduct,
     pow_two, div_eq_mul_inv]
   ring
 
 example (x : Fin 0 → ℝ) (P : Matrix (Fin 0) (Fin 0) ℝ) (t : ℝ) :
-    Morew.Fn.matrixFrac x P ≤ t ↔ 0 ≤ t := by simp
+    Morew.Fn.matFrac x P ≤ t ↔ 0 ≤ t := by simp
 
 example (P : Matrix (Fin 0) (Fin 0) ℝ) :
     ∃ W : SymmetricMatrix 0, (fromBlocksFin P 1 1 W.toMatrix).PosSemidef := by
@@ -54,8 +54,8 @@ example (P : Matrix (Fin 0) (Fin 0) ℝ) :
   rw [hP]
   exact Matrix.PosDef.one
 
-example : Morew.Fn.matrixFrac ![1] (0 : Matrix (Fin 1) (Fin 1) ℝ) = 0 := by
-  simp [Morew.Fn.matrixFrac]
+example : Morew.Fn.matFrac ![1] (0 : Matrix (Fin 1) (Fin 1) ℝ) = 0 := by
+  simp [Morew.Fn.matFrac]
 
 example (t : ℝ) :
     ¬ (fromBlocksFin (0 : Matrix (Fin 1) (Fin 1) ℝ) 1 1

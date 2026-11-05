@@ -15,7 +15,7 @@ affine row certifier. Both successful and failed attempts preserve caller state.
 -/
 
 assert_not_exists Morew.Elab.Conic.normalizeRow Morew.Elab.Conic.Plan.Result
-  Morew.Elab.Conic.Rewrite.planUnique Morew.Conic.Spectral.nuclearNorm_le_iff
+  Morew.Elab.Conic.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
   Morew.Conic.LogDet.hypograph_iff
 
 namespace MorewTest.Conic.Nonnegative

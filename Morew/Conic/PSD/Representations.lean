@@ -37,13 +37,13 @@ namespace Morew.Conic.MatrixFraction
 /-- Matrix-fractional epigraph on positive-definite inputs. -/
 noncomputable def epigraph {n : Nat} :
     EpigraphRepresentation (fun p : (Fin n → ℝ) ×
-      {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matrixFrac p.1 p.2.1) where
+      {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matFrac p.1 p.2.1) where
   Auxiliary := Unit
   target p t _ :=
     (fromBlocksFin p.2.1 (fun (i : Fin n) (_ : Fin 1) => p.1 i) (fun _ : Fin 1 => p.1)
       (Matrix.diagonal (fun _ : Fin 1 => t))).PosSemidef
   source_iff_exists p t := by
-    simpa only [exists_const] using matrixFrac_le_iff p.1 p.2.1 p.2.2 t
+    simpa only [exists_const] using matFrac_le_iff p.1 p.2.1 p.2.2 t
 
 /-- The matrix-fractional epigraph for `x ⬝ᵥ (P⁻¹ *ᵥ x)`. -/
 noncomputable def nativeEpigraph {n : Nat} :
@@ -74,13 +74,13 @@ noncomputable def spectralNormEpigraph {m n : Nat} :
     simpa only [exists_const] using spectralNorm_le_iff A t
 
 /-- A semidefinite representation of the nuclear-norm epigraph. -/
-noncomputable def nuclearNormEpigraph {m n : Nat} :
-    EpigraphRepresentation (Fn.nuclearNorm (m := m) (n := n)) where
+noncomputable def normNucEpigraph {m n : Nat} :
+    EpigraphRepresentation (Fn.normNuc (m := m) (n := n)) where
   Auxiliary := SymmetricMatrix m × SymmetricMatrix n
   target A t aux := SymmetricMatrix.fromBlocks aux.1 A aux.2 ∈ PSD (m + n) ∧
     (aux.1.toMatrix.trace + aux.2.toMatrix.trace) / 2 ≤ t
   source_iff_exists A t := by
-    simpa only [Prod.exists] using nuclearNorm_le_iff A t
+    simpa only [Prod.exists] using normNuc_le_iff A t
 
 end Morew.Conic.Spectral
 

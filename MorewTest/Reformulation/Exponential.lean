@@ -30,7 +30,7 @@ def source :=
       positive : b ≥ 1 / 2
       logarithm : Real.log b ≥ t
       nonnegative : 0 ≤ a
-      last : Fn.relativeEntropy a b ≤ t
+      last : Fn.relEntr a b ≤ t
 
 reformulation target : source := by
   conic at first
@@ -84,7 +84,7 @@ def constantDomainSource :=
     minimize t
     subject to
       logarithm : t ≤ Real.log (3 / 2)
-      entropy : Fn.relativeEntropy 0 2 ≤ t
+      entropy : Fn.relEntr 0 2 ≤ t
 
 reformulation constantDomainTarget : constantDomainSource := by
   conic at logarithm
@@ -100,7 +100,7 @@ def affineDomainSource :=
   problem (a b t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy (2 * a + 1) (b + 1) ≤ t / 2
+      entropy : Fn.relEntr (2 * a + 1) (b + 1) ≤ t / 2
       logarithm : t - 1 ≤ Real.log (b + 1)
       domain : 0 ≤ 2 * a + 1 ∧ 1 ≤ b + 1
 
@@ -153,7 +153,7 @@ def symbolicSource :=
   problem (a b t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy a b ≤ t
+      entropy : Fn.relEntr a b ≤ t
       nonnegative : 0 ≤ a
       denominator : Parameter.epsilon ≤ b
 

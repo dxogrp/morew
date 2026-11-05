@@ -94,7 +94,7 @@ positive real numbers, respectively.
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
-  * [`Fn.relativeEntropy x y`](api/Morew/Fn/Exponential.html#Morew.Fn.relativeEntropy)
+  * [`Fn.relEntr x y`](api/Morew/Fn/Exponential.html#Morew.Fn.relEntr)
   * $`x\log(x/y)`
   * $`x\in\mathbf{R}_+`, $`y\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
@@ -254,13 +254,13 @@ $`B-A\in\mathbf{S}_+^n`.
   * {functionSymbol convex}[]
   * {functionSymbol notMonotone}[]
 *
-  * [`Fn.nuclearNorm A`](api/Morew/Fn/Matrix.html#Morew.Fn.nuclearNorm)
+  * [`Fn.normNuc A`](api/Morew/Fn/Matrix.html#Morew.Fn.normNuc)
   * $`\sum_i\sigma_i(A)`
   * $`A\in\mathbf{R}^{m\times n}`
   * {functionSymbol convex}[]
   * {functionSymbol notMonotone}[]
 *
-  * [`Fn.matrixFrac x P`](api/Morew/Fn/Matrix.html#Morew.Fn.matrixFrac)
+  * [`Fn.matFrac x P`](api/Morew/Fn/Matrix.html#Morew.Fn.matFrac)
   * $`x^{\mathsf T}P^{-1}x`
   * $`x\in\mathbf{R}^n`, $`P\in\mathbf{S}_{++}^n`
   * {functionSymbol convex}[]

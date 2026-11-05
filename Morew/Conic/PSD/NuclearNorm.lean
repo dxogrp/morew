@@ -71,7 +71,7 @@ noncomputable def nuclearRightWitness : SymmetricMatrix n :=
       intro i j
       simp [Matrix.sum_apply, Matrix.vecMulVec_apply, mul_comm])
 
-theorem trace_nuclearLeftWitness : (nuclearLeftWitness A).toMatrix.trace = Fn.nuclearNorm A := by
+theorem trace_nuclearLeftWitness : (nuclearLeftWitness A).toMatrix.trace = Fn.normNuc A := by
   classical
   change (∑ i : PositiveSingularIndex A, singularValue A i.val •
     Matrix.vecMulVec (leftSingularVector A i).ofLp (leftSingularVector A i).ofLp).trace = _
@@ -79,7 +79,7 @@ theorem trace_nuclearLeftWitness : (nuclearLeftWitness A).toMatrix.trace = Fn.nu
     (leftSingularVector_orthonormal A).norm_eq_one, one_pow, smul_eq_mul, mul_one]
   exact sum_positive_singularValues A
 
-theorem trace_nuclearRightWitness : (nuclearRightWitness A).toMatrix.trace = Fn.nuclearNorm A := by
+theorem trace_nuclearRightWitness : (nuclearRightWitness A).toMatrix.trace = Fn.normNuc A := by
   classical
   change (∑ i : PositiveSingularIndex A, singularValue A i.val •
     Matrix.vecMulVec (rightSingularBasis A i.val).ofLp
@@ -130,10 +130,10 @@ private theorem singular_cross (i : PositiveSingularIndex A) :
 
 /-- Every positive-semidefinite block completion bounds the nuclear norm by
 half the sum of its diagonal-block traces. -/
-theorem nuclearNorm_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
+theorem normNuc_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
     {V : Matrix (Fin n) (Fin n) ℝ}
     (hB : (Matrix.fromBlocks W A A.transpose V).PosSemidef) :
-    Fn.nuclearNorm A ≤ (W.trace + V.trace) / 2 := by
+    Fn.normNuc A ≤ (W.trace + V.trace) / 2 := by
   classical
   have hW : W.PosSemidef := by
     convert hB.submatrix Sum.inl using 1
@@ -166,8 +166,8 @@ theorem nuclearNorm_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
   linarith
 
 /-- The nuclear-norm epigraph uses two auxiliary symmetric matrices and a half-trace bound. -/
-theorem nuclearNorm_le_iff (t : ℝ) :
-    Fn.nuclearNorm A ≤ t ↔ ∃ W : SymmetricMatrix m, ∃ V : SymmetricMatrix n,
+theorem normNuc_le_iff (t : ℝ) :
+    Fn.normNuc A ≤ t ↔ ∃ W : SymmetricMatrix m, ∃ V : SymmetricMatrix n,
       SymmetricMatrix.fromBlocks W A V ∈ PSD (m + n) ∧
         (W.toMatrix.trace + V.toMatrix.trace) / 2 ≤ t := by
   constructor
@@ -181,6 +181,6 @@ theorem nuclearNorm_le_iff (t : ℝ) :
   · rintro ⟨W, V, hB, ht⟩
     rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
       posSemidef_fromBlocksFin_iff] at hB
-    exact (nuclearNorm_le_half_trace A hB).trans ht
+    exact (normNuc_le_half_trace A hB).trans ht
 
 end Morew.Conic.Spectral

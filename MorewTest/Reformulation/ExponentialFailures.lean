@@ -95,7 +95,7 @@ def entropyMissingNumeratorDomain :=
     minimize t
     subject to
       margin : 1 ≤ b
-      entropy : Fn.relativeEntropy a b ≤ t
+      entropy : Fn.relEntr a b ≤ t
 
 /-- error: constraint `entropy`: -/
 #guard_msgs (substring := true) in
@@ -106,7 +106,7 @@ def entropyZeroDenominator :=
   problem (t : ℝ)
     minimize t
     subject to
-      entropy : Fn.relativeEntropy 0 0 ≤ t
+      entropy : Fn.relEntr 0 0 ≤ t
 
 /-- error: constraint `entropy`: -/
 #guard_msgs (substring := true) in

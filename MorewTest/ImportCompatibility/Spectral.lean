@@ -83,8 +83,8 @@ end FiniteOnly
 
 namespace Shadow
 
-def Fn.matrixFrac (x : ℝ) : ℝ := x + 100
-def Fn.nuclearNorm (x : ℝ) : ℝ := x + 200
+def Fn.matFrac (x : ℝ) : ℝ := x + 100
+def Fn.normNuc (x : ℝ) : ℝ := x + 200
 def SymmetricMatrix.fromBlocks (x : ℝ) : ℝ := x + 300
 
 run_cmd do

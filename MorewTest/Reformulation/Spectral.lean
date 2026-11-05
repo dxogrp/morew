@@ -94,7 +94,7 @@ example : GlobalEquivalence (nuclearSource m n) (nuclearChained (m := m) (n := n
 
 def nuclearObjective :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ)
-    minimize Fn.nuclearNorm A
+    minimize Fn.normNuc A
     subject to
       anchor : A 0 0 = 1
 
@@ -106,7 +106,7 @@ def nuclearCollision :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ) (bound_aux t : ℝ)
     maximize bound_aux
     subject to
-      bound : Fn.nuclearNorm A ≤ t
+      bound : Fn.normNuc A ≤ t
 
 reformulation nuclearCollisionTarget : nuclearCollision := by conic
 
@@ -131,7 +131,7 @@ def affineSource (m n : Nat) (B : Matrix (Fin m) (Fin n) ℝ) :=
     minimize t
     subject to
       operator : ‖(2 : ℝ) • A + B‖ ≤ t + 1
-      nuclear : Fn.nuclearNorm A.transpose ≤ t
+      nuclear : Fn.normNuc A.transpose ≤ t
 
 variable (B : Matrix (Fin m) (Fin n) ℝ)
 

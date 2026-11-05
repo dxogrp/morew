@@ -207,7 +207,7 @@ def entropyWithoutNumeratorMargin :=
     minimize t
     subject to
       denominator : 1 ≤ b
-      entropy : Fn.relativeEntropy a b ≤ t
+      entropy : Fn.relEntr a b ≤ t
 
 #guard_error_fragments ["terminal conic validation is uncertified: constraint `entropy`:"] in
 assert_terminal_atomic%

@@ -48,8 +48,8 @@ def groupedSource (n : Nat) :=
   problem (x : Fin n → ℝ) (P : SymmetricMatrix n) (t : ℝ)
     minimize t
     subject to
-      group : (let pivot := P.toMatrix; pivot.PosDef ∧ Fn.matrixFrac x pivot ≤ t)
-      another : Fn.matrixFrac (2 • x) P.toMatrix ≤ 2 * t
+      group : (let pivot := P.toMatrix; pivot.PosDef ∧ Fn.matFrac x pivot ≤ t)
+      another : Fn.matFrac (2 • x) P.toMatrix ≤ 2 * t
 
 reformulation groupedTarget : (groupedSource n) := by conic
 example : (groupedTarget.conicForm n).data.rowCount = 3 := rfl
@@ -59,7 +59,7 @@ def marginSource (n : Nat) (epsilon : ℝ) :=
     minimize t
     subject to
       margin : (P.toMatrix - epsilon • 1).PosSemidef
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 variable (epsilon : ℝ) (h : 0 < epsilon)
 
@@ -70,7 +70,7 @@ example : GlobalEquivalence (marginSource n epsilon) (marginTarget n epsilon) :=
 def fixedSource (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :=
   problem (x : Fin n → ℝ) (t : ℝ)
     minimize t
-    subject to bound : Fn.matrixFrac x P ≤ t
+    subject to bound : Fn.matFrac x P ≤ t
 
 -- Independent domain evidence also certifies the global symmetry of the
 -- resulting Schur block, including conjunctions beneath universal binders.
@@ -116,7 +116,7 @@ def witnessedSource (n : Nat) :=
     minimize t
     subject to
       witness : SymmetricMatrix.fromBlocks P 1 W ∈ PSD (n + n)
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 reformulation witnessedTarget : (witnessedSource n) := by conic
 example : (witnessedTarget.conicForm n).data.rowCount = 2 := rfl
@@ -126,7 +126,7 @@ def bundledMarginSource (n : Nat) :=
     minimize t
     subject to
       margin : P - (2 : ℝ) • SymmetricMatrix.ofMatrix 1 Matrix.isSymm_one ∈ PSD n
-      bound : Fn.matrixFrac x P.toMatrix ≤ t
+      bound : Fn.matFrac x P.toMatrix ≤ t
 
 reformulation bundledMarginTarget : (bundledMarginSource n) := by conic
 example : GlobalEquivalence (bundledMarginSource n) (bundledMarginTarget n) :=

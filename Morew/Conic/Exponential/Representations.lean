@@ -51,19 +51,19 @@ noncomputable def softplusNativeEpigraph :
     EpigraphRepresentation (fun a : ℝ => Real.log (1 + Real.exp a)) :=
   softplusEpigraph
 
-/-- The epigraph of `Fn.relativeEntropy` for `a ≥ 0` and `b > 0`. -/
-noncomputable def relativeEntropyEpigraph :
+/-- The epigraph of `Fn.relEntr` for `a ≥ 0` and `b > 0`. -/
+noncomputable def relEntrEpigraph :
     EpigraphRepresentation (fun p : {a : ℝ // 0 ≤ a} × {b : ℝ // 0 < b} =>
-      Fn.relativeEntropy p.1.1 p.2.1) where
+      Fn.relEntr p.1.1 p.2.1) where
   Auxiliary := Unit
   target p t _ := (-t, p.1.1, p.2.1) ∈ EXP
   source_iff_exists p t := by
-    simpa only [exists_const] using relativeEntropy_le_iff p.1.1 p.2.1 t p.1.2 p.2.2
+    simpa only [exists_const] using relEntr_le_iff p.1.1 p.2.1 t p.1.2 p.2.2
 
 /-- The relative-entropy epigraph for `a * Real.log (a / b)`. -/
-noncomputable def relativeEntropyNativeEpigraph :
+noncomputable def relEntrNativeEpigraph :
     EpigraphRepresentation (fun p : {a : ℝ // 0 ≤ a} × {b : ℝ // 0 < b} =>
       p.1.1 * Real.log (p.1.1 / p.2.1)) :=
-  relativeEntropyEpigraph
+  relEntrEpigraph
 
 end Morew.Conic.Exponential

@@ -85,7 +85,7 @@ run_cmd liftTermElabM do
   expectUnique (← `(fun x : ℝ => Real.exp 0 ≤ Real.log x)) 1 #[margin]
   expectUnique (← `(fun p : ℝ × ℝ => Morew.Fn.softplus p.1 ≤ p.2)) 2
   expectUnique (← `(fun p : ℝ × ℝ => Real.log (1 + Real.exp p.1) ≤ p.2)) 2
-  expectUnique (← `(fun t : ℝ => Morew.Fn.relativeEntropy 0 2 ≤ t)) 1
+  expectUnique (← `(fun t : ℝ => Morew.Fn.relEntr 0 2 ≤ t)) 1
 
 -- Recognizing additional smooth atoms must not register new conic rules.
 run_cmd liftTermElabM do

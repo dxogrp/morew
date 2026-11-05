@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic
 
 assert_not_exists Morew.Conic.Spectral.lambdaMax_le_iff
-  Morew.Conic.Spectral.spectralNorm_le_iff Morew.Conic.Spectral.nuclearNorm_le_iff
+  Morew.Conic.Spectral.spectralNorm_le_iff Morew.Conic.Spectral.normNuc_le_iff
   Morew.Conic.LogDet.hypograph_iff
 
 /-!

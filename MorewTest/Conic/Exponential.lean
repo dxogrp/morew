@@ -29,22 +29,22 @@ example (a t : ℝ) (ha : 0 < a) :
 
 example (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     a * Real.log (a / b) ≤ t ↔ (-t, a, b) ∈ EXP :=
-  relativeEntropy_le_iff a b t ha hb
+  relEntr_le_iff a b t ha hb
 
 example (b t : ℝ) (hb : 0 ≤ b) :
-    Fn.relativeEntropy 0 b ≤ t ↔ (-t, 0, b) ∈ EXP :=
-  relativeEntropy_zero_le_iff b t hb
+    Fn.relEntr 0 b ≤ t ↔ (-t, 0, b) ∈ EXP :=
+  relEntr_zero_le_iff b t hb
 
-example (t : ℝ) : Fn.relativeEntropy 0 0 ≤ t ↔ (-t, 0, 0) ∈ EXP :=
-  relativeEntropy_zero_le_iff 0 t le_rfl
+example (t : ℝ) : Fn.relEntr 0 0 ≤ t ↔ (-t, 0, 0) ∈ EXP :=
+  relEntr_zero_le_iff 0 t le_rfl
 
 /-! Totalized logarithm and entropy values extend beyond their modeling domains. -/
 
 example : (0 : ℝ) ≤ Real.log 0 := by simp
 example : ¬ ((0 : ℝ), 1, 0) ∈ EXP := by norm_num
-example : Fn.relativeEntropy 1 0 ≤ 0 := by simp [Fn.relativeEntropy]
+example : Fn.relEntr 1 0 ≤ 0 := by simp [Fn.relEntr]
 example : ¬ (-(0 : ℝ), 1, 0) ∈ EXP := by norm_num
-example : Fn.relativeEntropy 1 (-1) ≤ 0 := by simp [Fn.relativeEntropy]
+example : Fn.relEntr 1 (-1) ≤ 0 := by simp [Fn.relEntr]
 example : ¬ (-(0 : ℝ), 1, -1) ∈ EXP := by norm_num
 
 /-! Finite representations retain one grouped row and one scalar sum. -/

@@ -22,7 +22,7 @@ attribute [morew_conic]
   Morew.Conic.MatrixFraction.nativeEpigraph
   Morew.Conic.Spectral.lambdaMaxEpigraph
   Morew.Conic.Spectral.spectralNormEpigraph
-  Morew.Conic.Spectral.nuclearNormEpigraph
+  Morew.Conic.Spectral.normNucEpigraph
   Morew.Conic.LogDet.hypograph
   Morew.Conic.LogDet.nativeHypograph
   Morew.Rewrite.absEpigraph
@@ -50,8 +50,8 @@ attribute [morew_conic]
   Morew.Conic.Exponential.logSumExpNativeEpigraph
   Morew.Conic.Exponential.softplusEpigraph
   Morew.Conic.Exponential.softplusNativeEpigraph
-  Morew.Conic.Exponential.relativeEntropyEpigraph
-  Morew.Conic.Exponential.relativeEntropyNativeEpigraph
+  Morew.Conic.Exponential.relEntrEpigraph
+  Morew.Conic.Exponential.relEntrNativeEpigraph
   Morew.Conic.Power.normEpigraph
   Morew.Conic.Power.geoMeanHypograph
   Morew.Conic.Power.invProdEpigraph

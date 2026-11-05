@@ -139,10 +139,10 @@ run_cmd liftTermElabM do
   expectPlan (← `(fun p : ℝ × ℝ => p.2 ≥ Real.exp p.1))
   expectPlan (← `(fun t : ℝ => t ≤ Real.log (3 / 2)))
   expectPlan (← `(fun (a : ℝ) (_ : 0 < a) => fun t : ℝ => t ≤ Real.log a)) 2
-  expectPlan (← `(fun t : ℝ => Morew.Fn.relativeEntropy 0 2 ≤ t))
+  expectPlan (← `(fun t : ℝ => Morew.Fn.relEntr 0 2 ≤ t))
   expectPlan (← `(fun t : ℝ => (1 / 2 : ℝ) * Real.log ((1 / 2) / 2) ≤ t))
   expectPlan (← `(fun (a b : ℝ) (_ : 0 ≤ a) (_ : 0 < b) =>
-    fun t : ℝ => Morew.Fn.relativeEntropy a b ≤ t)) 4
+    fun t : ℝ => Morew.Fn.relEntr a b ≤ t)) 4
   expectPlan (← `(fun p : ℝ × ℝ => Morew.Fn.softplus (2 * p.1 - 1) ≤ p.2))
     (auxiliary := true)
   expectPlan (← `(fun p : ℝ × ℝ => Real.log (1 + Real.exp p.1) ≤ p.2))
@@ -199,13 +199,13 @@ run_cmd liftTermElabM do
   contextCase (← `(fun (ε : ℝ) (_ : 0 < ε) =>
     ((fun p : ℝ × ℝ => p.2 ≤ Real.log p.1), #[fun p : ℝ × ℝ => ε ≤ p.1]))) 2
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ × ℝ =>
-    Morew.Fn.relativeEntropy p.1 p.2.1 ≤ p.2.2)
+    Morew.Fn.relEntr p.1 p.2.1 ≤ p.2.2)
     #[fun p : ℝ × ℝ × ℝ => 0 ≤ p.1, fun p : ℝ × ℝ × ℝ => 1 ≤ p.2.1]))
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ × ℝ =>
     p.2.2 ≥ p.1 * Real.log (p.1 / p.2.1))
     #[fun p : ℝ × ℝ × ℝ => p.1 ≥ 0 ∧ (p.1 ^ 2 ≤ 100 ∧ p.2.1 ≥ 1)]))
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
-    Morew.Fn.relativeEntropy 0 p.1 ≤ p.2)
+    Morew.Fn.relEntr 0 p.1 ≤ p.2)
     #[fun p : ℝ × ℝ => 1 ≤ p.1]))
   contextCase (← `(fun a : ℝ =>
     ((fun p : ℝ × ℝ => p.2 ≤ Real.log p.1),
@@ -228,7 +228,7 @@ run_cmd liftTermElabM do
   contextCase (← `(Prod.mk (fun x : ℝ =>
     Morew.Fn.logSumExp (0 : Fin 0 → ℝ) ≤ Real.log x)
     #[fun x : ℝ => 1 ≤ x]))
-  contextCase (← `(Prod.mk (fun x : ℝ => Morew.Fn.relativeEntropy (-1) 0 ≤ Real.log x)
+  contextCase (← `(Prod.mk (fun x : ℝ => Morew.Fn.relEntr (-1) 0 ≤ Real.log x)
     #[fun x : ℝ => 1 ≤ x]))
   contextCase (← `(Prod.mk (fun x : ℝ => (-1 : ℝ) * Real.log ((-1) / 0) ≤ Real.log x)
     #[fun x : ℝ => 1 ≤ x]))
@@ -242,8 +242,8 @@ run_cmd liftTermElabM do
   expectRejected (← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)) "margin"
   expectRejected (← `(fun t : ℝ => t ≤ Real.log 0)) "margin"
   expectRejected (← `(fun p : ℝ × ℝ × ℝ =>
-    Morew.Fn.relativeEntropy p.1 p.2.1 ≤ p.2.2)) "nonnegative"
-  expectRejected (← `(fun t : ℝ => Morew.Fn.relativeEntropy 0 0 ≤ t)) "margin"
+    Morew.Fn.relEntr p.1 p.2.1 ≤ p.2.2)) "nonnegative"
+  expectRejected (← `(fun t : ℝ => Morew.Fn.relEntr 0 0 ≤ t)) "margin"
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)
     #[fun p : ℝ × ℝ => 0 < p.1])) (failure? := some "margin")
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)
@@ -257,7 +257,7 @@ run_cmd liftTermElabM do
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)
     #[fun p : ℝ × ℝ => @LE.le ℝ ⟨fun _ _ => True⟩ 1 p.1])) (failure? := some "margin")
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ × ℝ =>
-    Morew.Fn.relativeEntropy p.1 p.2.1 ≤ p.2.2)
+    Morew.Fn.relEntr p.1 p.2.1 ≤ p.2.2)
     #[fun p : ℝ × ℝ × ℝ => 0 < p.1, fun p : ℝ × ℝ × ℝ => 1 ≤ p.2.1]))
     (failure? := some "nonnegative")
   expectRejected (← `(fun p : (Fin 0 → ℝ) × ℝ => Morew.Fn.logSumExp p.1 ≤ p.2)) "nonempty"

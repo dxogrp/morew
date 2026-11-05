@@ -36,7 +36,7 @@ def nuclearSource (m n : Nat) :=
   problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
     minimize t
     subject to
-      bound : Fn.nuclearNorm A ≤ t
+      bound : Fn.normNuc A ≤ t
 
 reformulation nuclearTarget : (nuclearSource m n) := by conic
 reformulation nuclearIntermediate : (nuclearSource m n) := by conic at bound

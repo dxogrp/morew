@@ -27,7 +27,7 @@ noncomputable def softplus (a : ℝ) : ℝ :=
 /-- The total real formula for relative entropy. Its conic epigraph requires
 `0 ≤ a` and `0 < b`, including the boundary `a = 0`. The formula evaluates to
 zero when `b = 0`. -/
-noncomputable def relativeEntropy (a b : ℝ) : ℝ :=
+noncomputable def relEntr (a b : ℝ) : ℝ :=
   a * Real.log (a / b)
 
 end Morew.Fn

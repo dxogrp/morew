@@ -30,7 +30,7 @@ noncomputable section
 
 def p :=
   problem (a b : ℝ)
-    minimize Fn.relativeEntropy a b
+    minimize Fn.relEntr a b
     subject to
       numerator : 0 ≤ a
       denominator : 1 ≤ b

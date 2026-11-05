@@ -164,7 +164,7 @@ end FrobeniusNorm
 def reverseNuclear :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ) (t : ℝ)
     minimize t
-    subject to bound : t ≤ Fn.nuclearNorm A
+    subject to bound : t ≤ Fn.normNuc A
 
 #guard_error_fragments ["bound", "bound polarity"] in
 assert_spectral_atomic%
@@ -173,7 +173,7 @@ reformulation rejectedReverseNuclear : reverseNuclear := by conic at bound
 def equalityNuclear :=
   problem (A : Matrix (Fin 2) (Fin 3) ℝ) (t : ℝ)
     minimize t
-    subject to bound : Fn.nuclearNorm A = t
+    subject to bound : Fn.normNuc A = t
 
 #guard_error_fragments ["bound", "bound polarity"] in
 assert_spectral_atomic%
@@ -182,14 +182,14 @@ reformulation rejectedEqualityNuclear : equalityNuclear := by conic at bound
 def nonlinearNuclear :=
   problem (x t : ℝ)
     minimize t
-    subject to bound : Fn.nuclearNorm !![x ^ 2, 0] ≤ t
+    subject to bound : Fn.normNuc !![x ^ 2, 0] ≤ t
 
 #guard_error_fragments ["bound", "power"] in
 assert_spectral_atomic%
 reformulation rejectedNonlinearNuclear : nonlinearNuclear := by conic at bound
 
 #guard_error_fragments ["type mismatch", "ℂ", "ℝ"] in
-example (A : Matrix (Fin 2) (Fin 3) ℂ) : ℝ := Fn.nuclearNorm A
+example (A : Matrix (Fin 2) (Fin 3) ℂ) : ℝ := Fn.normNuc A
 
 def reverseLargest :=
   problem (A : SymmetricMatrix 2) (t : ℝ)
