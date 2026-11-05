@@ -156,7 +156,7 @@ run_cmd liftTermElabM do
   reject (← `(fun x : ℝ => bounded (x + 1))) "does not match"
     (rule? := some concreteRule)
   reject (← `(fun p : ℝ × ℝ => bounded (p.1 + 1)))
-    "exact representation input is not the decision space" (rule? := some concreteRule)
+    "constraint representation's input type does not match the decision type" (rule? := some concreteRule)
 
 section QuantifiedHelperOpacity
 

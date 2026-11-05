@@ -36,7 +36,7 @@ inductive Target where
   | conic | nlp
   deriving BEq, Inhabited
 
-/-- The source orientation recorded by a representation. -/
+/-- The kind of source condition described by a representation. -/
 inductive Family where
   | constraint | graph | epigraph | hypograph
   deriving BEq, Inhabited, Repr

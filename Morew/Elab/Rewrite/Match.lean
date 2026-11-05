@@ -52,7 +52,7 @@ private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
   if ← isDefEq type (← inferType point) then return (point, #[])
   let type ← whnf type
   unless type.isAppOfArity ``Subtype 2 do
-    throwError "the exact representation subtype carrier is not the decision space"
+    throwError "the constraint representation's underlying input type does not match the decision type"
   let (value, proofs) ← subtypeInputValue point type.getAppArgs[0]! (depth + 1)
   let proof ← mkFreshExprMVar (mkApp type.getAppArgs[1]! value)
   let input ← mkAppOptM ``Subtype.mk
@@ -228,7 +228,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
       match constraintInput with
       | .whole => do
         unless ← isDefEq inputType (← inferType point) do
-          throwError "the exact representation input is not the decision space"
+          throwError "the constraint representation's input type does not match the decision type"
         pure (point, #[])
       | .subtypeWhole => subtypeInputValue point inputType
       | .infer => inputValue inputType

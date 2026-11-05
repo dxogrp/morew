@@ -151,7 +151,7 @@ elab "assert_atomic_exponential% " nested:command : command => do
   if let some name := MorewTest.newLocalDeclaration? before after then
     Lean.throwError m!"failed reformulation leaked auxiliary declaration {name}"
 
-#guard_error_fragments ["constraint `after`: the exact representation input is not the decision space"] in
+#guard_error_fragments ["constraint `after`: the constraint representation's input type does not match the decision type"] in
 assert_atomic_exponential%
 reformulation rollback : source certificate rollbackAlias := by
   conic at exponential using scalarAuxiliaryRule
