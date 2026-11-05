@@ -48,7 +48,10 @@ See [Examples](Examples) for more models and reformulations.
 
 ## Documentation
 
-Build and preview the guide, examples, and API reference from the repository root:
+Read the [manual](https://dxogrp.github.io/morew/) and
+[API reference](https://dxogrp.github.io/morew/api/).
+
+To build and preview the guide, examples, and API reference from the repository root:
 
 ```sh
 make docs

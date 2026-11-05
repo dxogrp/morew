@@ -3,7 +3,7 @@ import MorewManual
 
 open Verso.Genre Manual
 
-def main := manualMain (%doc MorewManual) (config := {
+private def config : RenderConfig := {
   emitTeX := false
   emitHtmlSingle := .no
   emitHtmlMulti := .immediately
@@ -32,4 +32,17 @@ def main := manualMain (%doc MorewManual) (config := {
       white-space: nowrap;
     }
   " }
-})
+}
+
+open Verso.Output.Html in
+def main (args : List String) : IO UInt32 := do
+  let result ← IO.Process.output { cmd := "git", args := #["rev-parse", "HEAD"] }
+  if result.exitCode != 0 then
+    throw <| IO.userError "Cannot read the documentation source commit."
+  let commit := result.stdout.trimAscii.toString
+  let shortCommit := (commit.take 7).toString
+  let sourceUrl := s!"https://github.com/dxogrp/morew/tree/{commit}"
+  manualMain (%doc MorewManual) (options := args) (config := { config with
+    sourceLink := some sourceUrl
+    extraContents := #[{{<p><small>"Source commit: "<a href={{sourceUrl}}>{{shortCommit}}</a></small></p>}}]
+  })

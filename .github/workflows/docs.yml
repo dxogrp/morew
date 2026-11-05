@@ -1,0 +1,97 @@
+name: Documentation deployment
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: morew-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and check documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      source_sha: ${{ steps.prerequisites.outputs.source_sha }}
+
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Require main and successful CI for this commit
+        id: prerequisites
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/check_docs.py ci
+
+      - name: Cache Morew build artifacts
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: .lake/build
+          key: morew-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-${{ github.sha }}
+          restore-keys: |
+            morew-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-
+
+      - name: Set up Lean and fetch Mathlib artifacts
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1.7.0
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+          use-github-cache: false
+
+      - name: Build documentation
+        run: make docs
+
+      - name: Check documentation
+        run: python3 -B scripts/check_docs.py site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: build/docs
+          include-hidden-files: true
+
+  deploy:
+    name: Deploy documentation
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+      - name: Summarize deployment
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          {
+            echo '### Documentation deployed'
+            echo
+            printf 'Source commit: `%s`\n\n' "$SOURCE_SHA"
+            printf '[Published documentation](%s)\n' "$PAGE_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

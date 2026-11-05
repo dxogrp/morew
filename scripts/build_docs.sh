@@ -11,11 +11,10 @@ LAKE_ARTIFACT_CACHE=false lake build --wfail Examples:literate
 LAKE_ARTIFACT_CACHE=false lake build --wfail morewManual
 rm -rf -- .lake/build/manual
 lake exe morewManual --output .lake/build/manual
-rm -rf -- .lake/build/doc
-rm -f -- .lake/build/doc-data/Morew--library.docs_built{,.trace,.hash}
-rm -f -- .lake/build/doc-data/references.json{,.trace,.hash}
-rm -f -- .lake/build/doc-data/declaration-data-*.bmp .lake/build/doc-data/backrefs-*.json
-LAKE_ARTIFACT_CACHE=false DOCGEN_SRC=vscode lake build Morew:docs
+# Source URLs in the documentation database are not tracked by Lake.
+rm -rf -- .lake/build/doc .lake/build/doc-data
+rm -f -- .lake/build/api-docs.db .lake/build/api-docs.db-shm .lake/build/api-docs.db-wal
+LAKE_ARTIFACT_CACHE=false DOCGEN_SRC=github lake build Morew:docs
 
 mkdir -p "$repo_root/build"
 staging_dir=$(mktemp -d "$repo_root/build/docs.XXXXXX")
