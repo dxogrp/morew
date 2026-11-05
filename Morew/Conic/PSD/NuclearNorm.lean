@@ -88,7 +88,7 @@ theorem trace_nuclearRightWitness : (nuclearRightWitness A).toMatrix.trace = Fn.
     (rightSingularBasis A).orthonormal.norm_eq_one, one_pow, smul_eq_mul, mul_one]
   exact sum_positive_singularValues A
 
-theorem nuclearWitness_block_posSemidef :
+theorem nuclearWitness_block_psd :
     (Matrix.fromBlocks (nuclearLeftWitness A).toMatrix A A.transpose
       (nuclearRightWitness A).toMatrix).PosSemidef := by
   classical
@@ -173,14 +173,14 @@ theorem normNuc_le_iff (t : ℝ) :
   constructor
   · intro h
     refine ⟨nuclearLeftWitness A, nuclearRightWitness A, ?_, ?_⟩
-    · rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-        posSemidef_fromBlocksFin_iff]
-      exact nuclearWitness_block_posSemidef A
+    · rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+        psd_fromBlocksFin_iff]
+      exact nuclearWitness_block_psd A
     · rw [trace_nuclearLeftWitness, trace_nuclearRightWitness]
       linarith
   · rintro ⟨W, V, hB, ht⟩
-    rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-      posSemidef_fromBlocksFin_iff] at hB
+    rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+      psd_fromBlocksFin_iff] at hB
     exact (normNuc_le_half_trace A hB).trans ht
 
 end Morew.Conic.Spectral

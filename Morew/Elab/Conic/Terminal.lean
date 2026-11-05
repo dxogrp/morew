@@ -233,7 +233,7 @@ private partial def lower (original : PresentationState) (work : Work)
               let carrier ← Expr.reduceStructure source.getAppArgs[3]!
               unless carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 do return false
               return (← Expr.reduceStructure carrier.getAppArgs[0]!).isAppOfArity
-                ``Morew.Conic.Cone.positiveSemidefinite 1
+                ``Morew.Conic.Cone.psd 1
             if nativePSD &&
                 (← Registry.candidates .conic predicate).isEmpty then
               pure directError

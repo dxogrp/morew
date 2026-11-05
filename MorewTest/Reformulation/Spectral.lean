@@ -44,13 +44,13 @@ example : GlobalEquiv (conjoinedLargestSource n P) (conjoinedLargest n P hP) :=
   conjoinedLargest.equiv n hn P hP
 end Symmetric
 
-section PositiveDefinite
+section PosDef
 variable (hP : P.PosDef ∧ True)
 reformulation conjoinedPositiveLargest : (conjoinedLargestSource n P) := by conic
 example : GlobalEquiv (conjoinedLargestSource n P)
     (conjoinedPositiveLargest n P hP) :=
   conjoinedPositiveLargest.equiv n hn P hP
-end PositiveDefinite
+end PosDef
 
 section Universal
 variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)

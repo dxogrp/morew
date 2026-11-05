@@ -10,10 +10,10 @@ import MorewTest.Reformulation.PSD
 # Imported PSD proof reconstruction and continued reformulations
 -/
 
-namespace MorewTest.ImportCompatibility.PositiveSemidefinite
+namespace MorewTest.ImportCompatibility.PSD
 
 open Morew Morew.Conic
-open MorewTest.Reformulation.PositiveSemidefinite
+open MorewTest.Reformulation.PSD
 noncomputable section
 
 reformulation continued : diagonalTarget := by conic
@@ -127,4 +127,4 @@ run_cmd do
     Lean.throwError "continued PSD certification changed the printed matrix or labels"
 
 end
-end MorewTest.ImportCompatibility.PositiveSemidefinite
+end MorewTest.ImportCompatibility.PSD

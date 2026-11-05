@@ -17,7 +17,7 @@ zero-dimensional blocks test the canonical indexing convention.
 
 assert_not_exists Morew.ConstraintRepr Morew.Syntax.ProblemView
 
-namespace MorewTest.Conic.PositiveSemidefinite
+namespace MorewTest.Conic.PSD
 
 noncomputable section
 
@@ -26,8 +26,8 @@ open Morew.Conic
 example (n : Nat) : NormedAddCommGroup (SymmetricMatrix n) := inferInstance
 example (n : Nat) : NormedSpace ℝ (SymmetricMatrix n) := inferInstance
 example (n : Nat) : FiniteDimensional ℝ (SymmetricMatrix n) := inferInstance
-example (n : Nat) : (Cone.positiveSemidefinite n).Space = SymmetricMatrix n := rfl
-example (n : Nat) : PSD n = (Cone.positiveSemidefinite n).carrier := rfl
+example (n : Nat) : (Cone.psd n).Space = SymmetricMatrix n := rfl
+example (n : Nat) : PSD n = (Cone.psd n).carrier := rfl
 
 example (n : Nat) (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     (SymmetricMatrix.ofMatrix M hM).toMatrix = M := rfl
@@ -52,14 +52,14 @@ example (n : Nat) (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
 example (n : Nat) : (0 : SymmetricMatrix n) ∈ PSD n := Matrix.PosSemidef.zero
 
 example (n : Nat) (M N : SymmetricMatrix n) (hM : M ∈ PSD n) (hN : N ∈ PSD n) :
-    M + N ∈ PSD n := (Cone.positiveSemidefinite n).carrier.add_mem hM hN
+    M + N ∈ PSD n := (Cone.psd n).carrier.add_mem hM hN
 
 example (n : Nat) (M : SymmetricMatrix n) (hM : M ∈ PSD n) (c : ℝ) (hc : 0 < c) :
-    c • M ∈ PSD n := (Cone.positiveSemidefinite n).carrier.smul_mem hc hM
+    c • M ∈ PSD n := (Cone.psd n).carrier.smul_mem hc hM
 
 example (n : Nat) :
-    Convex ℝ (↑(Cone.positiveSemidefinite n).carrier : Set (Cone.positiveSemidefinite n).Space) :=
-  (Cone.positiveSemidefinite n).carrier.convex
+    Convex ℝ (↑(Cone.psd n).carrier : Set (Cone.psd n).Space) :=
+  (Cone.psd n).carrier.convex
 
 example (M : SymmetricMatrix 0) : M ∈ PSD 0 := by
   have hM : M = 0 := Subsingleton.elim _ _
@@ -163,7 +163,7 @@ example : ((0 : Matrix (Fin 1) (Fin 1) ℝ) - !![1].transpose *
 example : SymmetricMatrix.fromBlocks (0 : SymmetricMatrix 1) !![1]
     (0 : SymmetricMatrix 1) ∉ PSD 2 := by
   intro h
-  have h' := (Cone.mem_positiveSemidefinite _).mp h
+  have h' := (Cone.mem_psd _).mp h
   have heq : (SymmetricMatrix.fromBlocks (0 : SymmetricMatrix 1) !![1] 0).toMatrix =
       !![0, 1; 1, 0] := by
     ext i j
@@ -173,4 +173,4 @@ example : SymmetricMatrix.fromBlocks (0 : SymmetricMatrix 1) !![1]
   norm_num [Matrix.mulVec, dotProduct, Fin.sum_univ_succ] at hquad
 
 end
-end MorewTest.Conic.PositiveSemidefinite
+end MorewTest.Conic.PSD

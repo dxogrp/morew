@@ -19,10 +19,10 @@ open Matrix
 
 /-- A positive-semidefinite block with identity off-diagonal blocks has a
 positive-definite upper-left block. -/
-theorem posDef_of_fromBlocksFin_identity_posSemidef {n : Nat}
+theorem posDef_of_fromBlocksFin_identity_psd {n : Nat}
     (P W : Matrix (Fin n) (Fin n) ℝ)
     (h : (fromBlocksFin P 1 1 W).PosSemidef) : P.PosDef := by
-  have hB := (posSemidef_fromBlocksFin_iff P 1 1 W).mp h
+  have hB := (psd_fromBlocksFin_iff P 1 1 W).mp h
   have hP : P.PosSemidef := by
     have he : (Matrix.fromBlocks P 1 1 W).submatrix Sum.inl Sum.inl = P := by
       ext i j
@@ -57,6 +57,6 @@ theorem posDef_iff_exists_identity_block {n : Nat}
       (by simpa [A, W] using (Matrix.PosSemidef.zero (n := Fin n) (R := ℝ)))
     simpa [A, W, SymmetricMatrix.fromBlocks] using h
   · rintro ⟨W, hW⟩
-    exact posDef_of_fromBlocksFin_identity_posSemidef P W.toMatrix hW
+    exact posDef_of_fromBlocksFin_identity_psd P W.toMatrix hW
 
 end Morew.Conic

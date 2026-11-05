@@ -16,7 +16,7 @@ Native predicates become actual symmetric-cone memberships. Schur certificates
 use the ordinary explicit and locally registered exact-rule interfaces.
 -/
 
-namespace MorewTest.Reformulation.PositiveSemidefinite
+namespace MorewTest.Reformulation.PSD
 
 open Morew Morew.Conic
 
@@ -259,7 +259,7 @@ def rightSchurRule (D : SymmetricMatrix 1) (hD : D.toMatrix.PosDef) :
   .ofIff (fun p =>
     (fromBlocksFin (Matrix.diagonal ![p.2]) p.1 p.1.transpose D.toMatrix).PosSemidef) (by
       intro p
-      simpa only [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
+      simpa only [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
         SymmetricMatrix.toMatrix_ofMatrix] using
         schurComplement_mem_iff_right
           (SymmetricMatrix.ofMatrix (Matrix.diagonal ![p.2]) (Matrix.isSymm_diagonal _))
@@ -448,4 +448,4 @@ run_cmd do
 example : mixedMembershipReplay = mixedMembershipTarget := rfl
 
 end
-end MorewTest.Reformulation.PositiveSemidefinite
+end MorewTest.Reformulation.PSD

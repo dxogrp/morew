@@ -102,7 +102,7 @@ example (p t : ℝ) :
 example (p : ℝ) (hp : 0 < p) :
     HasLift (Matrix.diagonal (fun _ : Fin 1 => p)) (Real.log p) := by
   refine ⟨fun _ => p, fun _ => Real.log p, ?_, ?_, by simp⟩
-  · rw [posSemidef_fromBlocksFin_iff]
+  · rw [psd_fromBlocksFin_iff]
     let v : Fin 1 ⊕ Fin 1 → ℝ := fun _ => 1
     have h : (Matrix.vecMulVec v v).PosSemidef := by
       simpa using Matrix.posSemidef_vecMulVec_self_star v

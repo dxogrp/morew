@@ -103,13 +103,13 @@ private theorem normalizeMembership
   change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
   rw [h x]
 
-private def canonicalPositiveSemidefinite (n : Nat)
+private def canonicalPSD (n : Nat)
     (value : Matrix (Fin n) (Fin n) ℝ) : Prop := value.PosSemidef
 
-private theorem positiveSemidefiniteMembership {n : Nat}
+private theorem psdMembership {n : Nat}
     (value : Matrix (Fin n) (Fin n) ℝ) (symmetric : value.IsSymm) :
     value.PosSemidef ↔ Morew.Conic.SymmetricMatrix.ofMatrix value symmetric ∈
-      (Morew.Conic.Cone.positiveSemidefinite n).carrier := Iff.rfl
+      (Morew.Conic.Cone.psd n).carrier := Iff.rfl
 
 private def canonicalScalarZeroMembership (value : ℝ) : Prop :=
   value ∈ ({0} : Set ℝ)
@@ -246,7 +246,7 @@ private def membershipData (point body : Expr) (label? : Option Name)
       cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
       cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3 ||
       cone.isAppOfArity ``Morew.Conic.Cone.exponentialProduct 1 ||
-      cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 do
+      cone.isAppOfArity ``Morew.Conic.Cone.psd 1 do
     return .error (← rowError body m!"unsupported cone {cone}" label?)
   let power := cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
     cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3
@@ -269,12 +269,12 @@ private def membershipData (point body : Expr) (label? : Option Name)
 
 /-- Recover matrix coordinates of standard PSD predicates or canonical PSD membership.
 Check scalar and membership instances. -/
-def positiveSemidefiniteValue? (point body : Expr) : MetaM (Option Expr) := do
+def psdValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     if (← hasUnresolved body) || (← Evidence.hasPlaceholders body) then return .error ()
     if body.isAppOfArity ``Membership.mem 5 then
       let .ok (cone, value) ← membershipData point body none | return .error ()
-      unless cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 do return .error ()
+      unless cone.isAppOfArity ``Morew.Conic.Cone.psd 1 do return .error ()
       let value ← Expr.reduceStructure value
       if value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3 then
         return .ok value.getAppArgs[1]!
@@ -289,7 +289,7 @@ def positiveSemidefiniteValue? (point body : Expr) : MetaM (Option Expr) := do
         (← isDefEq row column) && (← whnf scalar).isConstOf ``Real do return .error ()
     let n := row.getAppArgs[0]!
     if ← Expr.depends point n then return .error ()
-    let canonical := (mkAppN (← getConstInfo ``canonicalPositiveSemidefinite).value!
+    let canonical := (mkAppN (← getConstInfo ``canonicalPSD).value!
       #[n, value]).headBeta
     let arguments := body.getAppArgs
     let expected := canonical.getAppArgs
@@ -379,7 +379,7 @@ private def normalizeZeroMembershipRow (predicate domain point body : Expr)
     return (constraint, pointwiseIff)
   return .ok { constraint, pointwiseIff }
 
-private def normalizePositiveSemidefiniteRow (predicate domain point body : Expr)
+private def normalizePSDRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let value := body.getAppArgs.back!
@@ -395,7 +395,7 @@ private def normalizePositiveSemidefiniteRow (predicate domain point body : Expr
   let n := row.getAppArgs[0]!
   if ← Expr.depends point n then
     return .error (← rowError body "PSD matrix dimension depends on the decision point" label?)
-  let canonical := (mkAppN (← getConstInfo ``canonicalPositiveSemidefinite).value!
+  let canonical := (mkAppN (← getConstInfo ``canonicalPSD).value!
     #[n, value]).headBeta
   let arguments := body.getAppArgs
   let canonicalArguments := canonical.getAppArgs
@@ -415,7 +415,7 @@ private def normalizePositiveSemidefiniteRow (predicate domain point body : Expr
   let some symmetric ← Symmetry.prove? point value
     | return .error (← rowError value
         m!"missing global matrix symmetry: required ∀ point, ({source} point).IsSymm; supply an all-point symmetry proof or a structurally symmetric expression" label?)
-  let cone ← mkAppM ``Morew.Conic.Cone.positiveSemidefinite #[n]
+  let cone ← mkAppM ``Morew.Conic.Cone.psd #[n]
   let target ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
   let (constraint, membershipIff) ← Space.withCanonicalConeSpaces domain target do
     let certificate ← Affine.Space.withCanonicalSpaces #[domain, ← inferType value, target] do
@@ -429,7 +429,7 @@ private def normalizePositiveSemidefiniteRow (predicate domain point body : Expr
       (← mkAppM ``Morew.Conic.SymmetricMatrix.ofMatrix #[value, mkApp symmetric point])
     return (← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.mk #[cone, map]),
       ← instantiateMVars (← mkAppM ``normalizeMembership #[cone, map, lifted, correct]))
-  let conversion ← mkAppM ``positiveSemidefiniteMembership #[value, mkApp symmetric point]
+  let conversion ← mkAppM ``psdMembership #[value, mkApp symmetric point]
   let normalizedBody := (← inferType conversion).getAppArgs[1]!
   let normalized ← mkLambdaFVars #[point] normalizedBody
   let normalizationProof ← mkLambdaFVars #[point] conversion
@@ -581,7 +581,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
     -- Preserve the typed relation while reducing local lets and applications.
     withPredicateLets point (mkApp predicate point) fun body => do
       if body.isAppOf ``Matrix.PosSemidef then
-        return ← normalizePositiveSemidefiniteRow predicate domain point body provider label?
+        return ← normalizePSDRow predicate domain point body provider label?
       if body.isAppOfArity ``Membership.mem 5 then
         if (← whnfUntil body.getAppArgs[1]! ``Set).isSome then
           unless (← Expr.reduceStructure body.getAppArgs[3]!).isAppOfArity

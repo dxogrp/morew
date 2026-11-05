@@ -17,7 +17,7 @@ Automatic selection prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
 when both certify; explicit selection bypasses this preference. -/
 
 attribute [morew_conic]
-  Morew.Conic.positiveDefiniteLift
+  Morew.Conic.posDefRepr
   Morew.Conic.MatrixFraction.epigraph
   Morew.Conic.MatrixFraction.nativeEpigraph
   Morew.Conic.Spectral.lambdaMaxEpigraph

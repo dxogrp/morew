@@ -15,7 +15,7 @@ proofs are rejected without changing caller metavariables. Row certificates keep
 the original ordinary matrix predicate exactly.
 -/
 
-namespace MorewTest.Conic.PositiveSemidefiniteElab
+namespace MorewTest.Conic.PSDElab
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Conic MorewTest.Affine
@@ -248,4 +248,4 @@ run_cmd Lean.Elab.Command.liftTermElabM do
           throwError "missing contextual unresolved PSD diagnostic: {diagnostic}"
       if ← hole.mvarId!.isAssigned then throwError "PSD recognition assigned a caller instance hole"
 
-end MorewTest.Conic.PositiveSemidefiniteElab
+end MorewTest.Conic.PSDElab

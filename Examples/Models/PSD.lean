@@ -48,20 +48,20 @@ For a symmetric 2 × 2 matrix variable `P`, the trace problem is
 ```
 -/
 
-def positiveDefiniteModel :=
+def posDefModel :=
   problem (P : SymmetricMatrix 2)
     minimize P.toMatrix.trace
     subject to
       domain : P.toMatrix.PosDef
       lower : (P.toMatrix - 1).PosSemidef
 
-reformulation positiveDefiniteConic : positiveDefiniteModel := by conic
+reformulation posDefConic : posDefModel := by conic
 
-#printp positiveDefiniteConic
+#printp posDefConic
 
-example : GlobalEquiv positiveDefiniteModel positiveDefiniteConic :=
-  positiveDefiniteConic.equiv
-example : IsConic positiveDefiniteConic := positiveDefiniteConic.isConic
+example : GlobalEquiv posDefModel posDefConic :=
+  posDefConic.equiv
+example : IsConic posDefConic := posDefConic.isConic
 
 end
 end Examples.Models.PSD

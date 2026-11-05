@@ -57,8 +57,8 @@ example : Fn.normNuc (Matrix.diagonal ![3, 4]) = 7 := by
       fin_cases i <;> fin_cases j <;> norm_num [A, w₀, w₁, Matrix.vecMulVec]
   have upper := normNuc_le_half_trace A hb
   norm_num [A, Matrix.trace, Fin.sum_univ_succ] at upper
-  have lower₀ := completion_entry_bound A _ _ (nuclearWitness_block_posSemidef A) 0 0
-  have lower₁ := completion_entry_bound A _ _ (nuclearWitness_block_posSemidef A) 1 1
+  have lower₀ := completion_entry_bound A _ _ (nuclearWitness_block_psd A) 0 0
+  have lower₁ := completion_entry_bound A _ _ (nuclearWitness_block_psd A) 1 1
   have hw := trace_nuclearLeftWitness A
   have hv := trace_nuclearRightWitness A
   simp only [Matrix.trace, Fin.sum_univ_two, Matrix.diag_apply] at hw hv
@@ -81,7 +81,7 @@ example : Fn.normNuc (!![3, 0, 0; 0, 0, 0] : Matrix (Fin 2) (Fin 3) ℝ) = 3 := 
       fin_cases i <;> fin_cases j <;> norm_num [A, W, V, w, Matrix.vecMulVec]
   have upper := normNuc_le_half_trace A hb
   norm_num [W, V, Matrix.trace, Fin.sum_univ_succ] at upper
-  have witness := nuclearWitness_block_posSemidef A
+  have witness := nuclearWitness_block_psd A
   have lower := completion_entry_bound A _ _ witness 0 0
   have hw₁ := witness.diag_nonneg (i := Sum.inl 1)
   have hv₁ := witness.diag_nonneg (i := Sum.inr 1)
@@ -111,8 +111,8 @@ example (A : Matrix (Fin 3) (Fin 2) ℝ) (W : SymmetricMatrix 3) (V : SymmetricM
     (h : SymmetricMatrix.fromBlocks W A V ∈ PSD 5) :
     2 * Fn.normNuc A ≤ W.toMatrix.trace + V.toMatrix.trace := by
   have hc : (Matrix.fromBlocks W.toMatrix A A.transpose V.toMatrix).PosSemidef := by
-    rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-      posSemidef_fromBlocksFin_iff] at h
+    rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+      psd_fromBlocksFin_iff] at h
     exact h
   have hb := normNuc_le_half_trace A hc
   linarith

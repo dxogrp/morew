@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD.PositiveDefinite
+import Morew.Conic.PSD.PosDef
 import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.LambdaMax
 import Morew.Conic.PSD.SpectralNorm
@@ -24,7 +24,7 @@ open scoped Matrix Matrix.Norms.L2Operator
 namespace Morew.Conic
 
 /-- Exact closed-cone representation of the open positive-definite domain. -/
-noncomputable def positiveDefiniteLift {n : Nat} :
+noncomputable def posDefRepr {n : Nat} :
     ConstraintRepr (fun P : Matrix (Fin n) (Fin n) ℝ => P.PosDef) where
   Auxiliary := SymmetricMatrix n
   target P W := (fromBlocksFin P 1 1 W.toMatrix).PosSemidef

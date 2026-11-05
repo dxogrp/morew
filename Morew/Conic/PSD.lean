@@ -103,7 +103,7 @@ end SymmetricMatrix
 namespace Cone
 
 /-- The positive-semidefinite cone in the real symmetric-matrix space. -/
-noncomputable def positiveSemidefinite (n : Nat) : Cone where
+noncomputable def psd (n : Nat) : Cone where
   Space := SymmetricMatrix n
   carrier := {
     carrier := {M | M.toMatrix.PosSemidef}
@@ -116,15 +116,15 @@ noncomputable def positiveSemidefinite (n : Nat) : Cone where
 
 /-- Cone membership is equivalent to positive semidefiniteness. -/
 @[simp]
-theorem mem_positiveSemidefinite {n : Nat} (M : SymmetricMatrix n) :
-    M ∈ (positiveSemidefinite n).carrier ↔ M.toMatrix.PosSemidef := Iff.rfl
+theorem mem_psd {n : Nat} (M : SymmetricMatrix n) :
+    M ∈ (psd n).carrier ↔ M.toMatrix.PosSemidef := Iff.rfl
 
 end Cone
 
 set_option quotPrecheck false in
 /-- The positive-semidefinite cone of symmetric `n × n` matrices. -/
 notation:max (name := psdCarrier) "PSD " n:arg =>
-  (Morew.Conic.Cone.positiveSemidefinite n).carrier
+  (Morew.Conic.Cone.psd n).carrier
 
 section Blocks
 
@@ -162,7 +162,7 @@ theorem fromBlocksFin_apply₂₂ (i j : Fin n) :
   simp [fromBlocksFin, Matrix.reindex_apply]
 
 /-- Block reindexing preserves positive semidefiniteness. -/
-theorem posSemidef_fromBlocksFin_iff :
+theorem psd_fromBlocksFin_iff :
     (fromBlocksFin A B C D).PosSemidef ↔
       (Matrix.fromBlocks A B C D).PosSemidef :=
   Matrix.posSemidef_submatrix_equiv finSumFinEquiv.symm
@@ -197,8 +197,8 @@ theorem schurComplement_mem_iff {m n : Nat} (A : SymmetricMatrix m)
     (D.toMatrix - B.transpose * A.toMatrix⁻¹ * B).PosSemidef ↔
       SymmetricMatrix.fromBlocks A B D ∈ PSD (m + n) := by
   let := hA.isUnit.invertible
-  rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-    posSemidef_fromBlocksFin_iff]
+  rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+    psd_fromBlocksFin_iff]
   simpa only [Matrix.conjTranspose_eq_transpose_of_trivial] using
     (Matrix.PosDef.fromBlocks₁₁ B D.toMatrix hA).symm
 
@@ -210,8 +210,8 @@ theorem schurComplement_mem_iff_right {m n : Nat} (A : SymmetricMatrix m)
     (A.toMatrix - B * D.toMatrix⁻¹ * B.transpose).PosSemidef ↔
       SymmetricMatrix.fromBlocks A B D ∈ PSD (m + n) := by
   let := hD.isUnit.invertible
-  rw [Cone.mem_positiveSemidefinite, SymmetricMatrix.toMatrix_fromBlocks,
-    posSemidef_fromBlocksFin_iff]
+  rw [Cone.mem_psd, SymmetricMatrix.toMatrix_fromBlocks,
+    psd_fromBlocksFin_iff]
   simpa only [Matrix.conjTranspose_eq_transpose_of_trivial] using
     (Matrix.PosDef.fromBlocks₂₂ A.toMatrix B hD).symm
 

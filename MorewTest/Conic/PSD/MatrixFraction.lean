@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.Repr
-import Morew.Conic.PSD.PositiveDefinite
+import Morew.Conic.PSD.PosDef
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Ring
 
@@ -32,11 +32,11 @@ example (n : Nat) (x : Fin n → ℝ) (P : Matrix (Fin n) (Fin n) ℝ)
 example (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :
     P.PosDef ↔ ∃ W : SymmetricMatrix n,
       (fromBlocksFin P 1 1 W.toMatrix).PosSemidef :=
-  positiveDefiniteLift.source_iff_exists P
+  posDefRepr.source_iff_exists P
 
 example (n : Nat) (P W : Matrix (Fin n) (Fin n) ℝ)
     (h : (fromBlocksFin P 1 1 W).PosSemidef) : P.PosDef :=
-  posDef_of_fromBlocksFin_identity_posSemidef P W h
+  posDef_of_fromBlocksFin_identity_psd P W h
 
 example (x p : ℝ) :
     Morew.Fn.matFrac ![x] (Matrix.diagonal (fun _ : Fin 1 => p)) = x ^ 2 / p := by
@@ -61,7 +61,7 @@ example (t : ℝ) :
     ¬ (fromBlocksFin (0 : Matrix (Fin 1) (Fin 1) ℝ) 1 1
       (Matrix.diagonal (fun _ : Fin 1 => t))).PosSemidef := by
   intro h
-  have hP := posDef_of_fromBlocksFin_identity_posSemidef _ _ h
+  have hP := posDef_of_fromBlocksFin_identity_psd _ _ h
   have hpositive := hP.diag_pos (i := 0)
   simp at hpositive
 

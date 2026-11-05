@@ -63,11 +63,11 @@ private def delabConeCarrier : Delab := do
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
-    cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
+    cone.isAppOfArity ``Morew.Conic.Cone.psd 1
   -- Retain subexpression positions for fixed dimension references.
   let dimension ← withAppArg <| withAppArg do
     -- Syntax used to reconstruct expressions retains the original numeral instances and constructors.
-    if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
+    if cone.isAppOfArity ``Morew.Conic.Cone.psd 1 &&
         !(← getOptions).getBool `pp.explicit then
       if let some n ← psdDimensionLiteral? (← getExpr) then
         if (← getOptions).getBool compactPSDOption ||
@@ -78,7 +78,7 @@ private def delabConeCarrier : Delab := do
     `(SOC $dimension)
   else if cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 then
     `(RSOC $dimension)
-  else if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 then
+  else if cone.isAppOfArity ``Morew.Conic.Cone.psd 1 then
     `(PSD $dimension)
   else
     `(ℝ₊^$dimension)
@@ -161,7 +161,7 @@ private def delabPowerConeMembership : Delab := do
 
 private def presentationPSDMembership (n : Nat)
     (value : Morew.Conic.SymmetricMatrix n) : Prop :=
-  value ∈ (Morew.Conic.Cone.positiveSemidefinite n).carrier
+  value ∈ (Morew.Conic.Cone.psd n).carrier
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Morew.Conic.SymmetricMatrix.ofMatrix]
@@ -200,7 +200,7 @@ private def delabCompactPSDMembership : Delab := do
   let carrier := args[3]!.consumeMData
   guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
   let cone := carrier.getAppArgs[0]!.consumeMData
-  guard <| cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
+  guard <| cone.isAppOfArity ``Morew.Conic.Cone.psd 1
   let canonical := (mkAppN (← getConstInfo ``presentationPSDMembership).value!
     #[cone.getAppArgs[0]!, args[4]!]).headBeta
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
