@@ -31,7 +31,7 @@ jobs:
         id: prerequisites
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 -B scripts/verify_docs.py
+        run: python3 -B scripts/check_docs.py ci
 
       - name: Cache Morew build artifacts
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
@@ -55,7 +55,7 @@ jobs:
         run: make docs
 
       - name: Check documentation
-        run: python3 -B scripts/check_docs.py
+        run: python3 -B scripts/check_docs.py site
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
