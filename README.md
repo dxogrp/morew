@@ -51,15 +51,12 @@ See [Examples](Examples) for more models and reformulations.
 Read the [manual](https://dxogrp.github.io/morew/) and
 [API reference](https://dxogrp.github.io/morew/api/).
 
-Build and preview the guide, examples, and API reference from the repository root:
+To build and preview the guide, examples, and API reference from the repository root:
 
 ```sh
 make docs
 make preview
 ```
-
-To publish the current documentation, run the **Documentation deployment** workflow
-from `main` after CI passes. Each deployment replaces the previous site.
 
 ## License
 

@@ -10,7 +10,7 @@ htmlSplit := .never
 %%%
 
 The [complete API reference](api/) includes declaration types, docstrings,
-search, and links to source files on GitHub.
+search, and links to source files in the Morew repository.
 
 - [Core](api/Morew/Core.html): optimization problems, feasible points, and global equivalence.
 - [Functions](api/Morew/Fn.html): vector norms, powers, exponential functions, and matrix functions.
