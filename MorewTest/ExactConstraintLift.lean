@@ -64,8 +64,8 @@ def liftedSquareBoundProblem : Problem ((ℤ × ℤ) × ℤ) ℤ :=
     squareEpigraphLift
     (decomposition := squareBoundDecomposition)
 
-def squareBoundEquivalence :
-    GlobalEquivalence squareBoundProblem liftedSquareBoundProblem :=
+def squareBoundEquiv :
+    GlobalEquiv squareBoundProblem liftedSquareBoundProblem :=
   exactConstraintLiftEquivalence
     squareBoundProblem
     squareEpigraphLift
@@ -77,23 +77,23 @@ def squareBoundPoint : FeasiblePoint squareBoundProblem :=
     decide⟩
 
 example :
-    (squareBoundEquivalence.forward.map squareBoundPoint).1.1 =
+    (squareBoundEquiv.forward.map squareBoundPoint).1.1 =
       squareBoundPoint.1 :=
   rfl
 
 example :
     liftedSquareBoundProblem.objective
-        (squareBoundEquivalence.forward.map squareBoundPoint).1 =
+        (squareBoundEquiv.forward.map squareBoundPoint).1 =
       squareBoundProblem.objective squareBoundPoint.1 :=
   rfl
 
 example (point : FeasiblePoint liftedSquareBoundProblem) :
-    (squareBoundEquivalence.backward.map point).1 = point.1.1 :=
+    (squareBoundEquiv.backward.map point).1 = point.1.1 :=
   rfl
 
 example (point : FeasiblePoint liftedSquareBoundProblem) :
     squareBoundProblem.objective
-        (squareBoundEquivalence.backward.map point).1 =
+        (squareBoundEquiv.backward.map point).1 =
       liftedSquareBoundProblem.objective point.1 :=
   rfl
 
@@ -175,8 +175,8 @@ def liftedImpossibleProblem : Problem (ℤ × Unit) ℤ :=
     impossibleLift
     impossibleDecomposition
 
-def impossibleEquivalence :
-    GlobalEquivalence impossibleProblem liftedImpossibleProblem :=
+def impossibleEquiv :
+    GlobalEquiv impossibleProblem liftedImpossibleProblem :=
   exactConstraintLiftEquivalence
     impossibleProblem
     impossibleLift
@@ -185,12 +185,12 @@ def impossibleEquivalence :
 example :
     impossibleProblem.HasFeasiblePoint ↔
       liftedImpossibleProblem.HasFeasiblePoint :=
-  impossibleEquivalence.hasFeasiblePoint_iff
+  impossibleEquiv.hasFeasiblePoint_iff
 
 example : ¬ liftedImpossibleProblem.HasFeasiblePoint := by
   intro h
   have sourceHasPoint : impossibleProblem.HasFeasiblePoint :=
-    impossibleEquivalence.hasFeasiblePoint_iff.mpr h
+    impossibleEquiv.hasFeasiblePoint_iff.mpr h
   obtain ⟨point⟩ := sourceHasPoint
   exact point.2.2
 
@@ -218,7 +218,7 @@ def liftedNonconvexProblem :=
     nonconvexLift
     nonconvexDecomposition
 
-example : GlobalEquivalence nonconvexProblem liftedNonconvexProblem :=
+example : GlobalEquiv nonconvexProblem liftedNonconvexProblem :=
   exactConstraintLiftEquivalence
     nonconvexProblem
     nonconvexLift
@@ -247,8 +247,8 @@ def afterFirstLift : Problem (ℤ × Unit) ℤ :=
     firstSequentialLift
     firstSequentialDecomposition
 
-def firstSequentialEquivalence :
-    GlobalEquivalence twoConstraintProblem afterFirstLift :=
+def firstSequentialEquiv :
+    GlobalEquiv twoConstraintProblem afterFirstLift :=
   exactConstraintLiftEquivalence
     twoConstraintProblem
     firstSequentialLift
@@ -272,15 +272,15 @@ def afterSecondLift : Problem ((ℤ × Unit) × Unit) ℤ :=
     secondSequentialLift
     secondSequentialDecomposition
 
-def secondSequentialEquivalence :
-    GlobalEquivalence afterFirstLift afterSecondLift :=
+def secondSequentialEquiv :
+    GlobalEquiv afterFirstLift afterSecondLift :=
   exactConstraintLiftEquivalence
     afterFirstLift
     secondSequentialLift
     secondSequentialDecomposition
 
-example : GlobalEquivalence twoConstraintProblem afterSecondLift :=
-  firstSequentialEquivalence.trans secondSequentialEquivalence
+example : GlobalEquiv twoConstraintProblem afterSecondLift :=
+  firstSequentialEquiv.trans secondSequentialEquiv
 
 end
 

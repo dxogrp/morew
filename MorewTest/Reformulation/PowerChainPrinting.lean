@@ -167,7 +167,7 @@ run_cmd do
   checkMathematical ``projected
     #["floorRow_aux[0] = (bundle.1)[0]", "(bundle.1)[j + 1]"]
 
-example : GlobalEquivalence projectedSource projected := projected.equivalence
+example : GlobalEquiv projectedSource projected := projected.equiv
 
 -- A natural subtraction inside a dimension must be evaluated before its result
 -- enters the real-valued exponent. Retain that cast in the mathematical view.
@@ -190,8 +190,8 @@ run_cmd do
 
 example : (1 / ((((0 : ℕ) - 2 + 3 : ℕ) : ℝ) + 1) : ℝ) = 1 / 4 := by norm_num
 example : (1 / ((0 : ℝ) - 2 + 3 + 1) : ℝ) = 1 / 2 := by norm_num
-example : GlobalEquivalence (compoundSource n m) (compoundReady n m) :=
-  (compound.equivalence n m).trans (compoundReady.equivalence n m)
+example : GlobalEquiv (compoundSource n m) (compoundReady n m) :=
+  (compound.equiv n m).trans (compoundReady.equiv n m)
 example : (compoundReady.conicForm n m).data.toProblem = compoundReady n m :=
   (compoundReady.conicForm n m).represents
 

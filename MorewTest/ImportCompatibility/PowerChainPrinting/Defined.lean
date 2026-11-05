@@ -35,7 +35,7 @@ reformulation registeredDetailed : (source n) := by
   conic at floorRow
   conic at ceilingRow
 
-example : GlobalEquivalence (source n) (lowered n hn) := lowered.equivalence n hn
+example : GlobalEquiv (source n) (lowered n hn) := lowered.equiv n hn
 
 end
 end MorewTest.ImportCompatibility.PowerChainPrinting.Defined

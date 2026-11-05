@@ -21,7 +21,7 @@ noncomputable section
 private def assertAbsent (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
-  for name in #[target, target ++ `equivalence, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName] do
     if env.contains name then
       Lean.throwError "failed occurrence lift emitted declaration `{name}`"
   if (Morew.Syntax.getProblemView? env target).isSome then
@@ -215,7 +215,7 @@ reformulation lateFailure : source certificate lateFailureAlias := by
   epigraph t at loss as shared
   epigraph s at penalty as recovered
 
-example : GlobalEquivalence source lateFailure := lateFailureAlias
+example : GlobalEquiv source lateFailure := lateFailureAlias
 
 end
 end MorewTest.Reformulation.OccurrenceFailures

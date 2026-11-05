@@ -26,8 +26,8 @@ reformulation absoluteNLP : squareLine := by
   nlp at abs_cap
   nlp
 
-example : GlobalEquivalence squareLine absoluteConic := absoluteConic.equivalence
-example : GlobalEquivalence squareLine absoluteNLP := absoluteNLP.equivalence
+example : GlobalEquiv squareLine absoluteConic := absoluteConic.equiv
+example : GlobalEquiv squareLine absoluteNLP := absoluteNLP.equiv
 example : IsConic absoluteConic := absoluteConic.isConic
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
 example : absoluteConic.conicForm.data.toProblem = absoluteConic := absoluteConic.conicForm.represents
@@ -45,9 +45,9 @@ reformulation freshenedAuxiliary : SecondOrderCustom.source := by
       objective_le := fun _ => le_rfl }
   conic at auxiliary using SecondOrderCustom.auxiliaryRule
 
-example : GlobalEquivalence SecondOrderCustom.source
+example : GlobalEquiv SecondOrderCustom.source
     (freshenedAuxiliary auxiliary_aux auxiliary_aux_1) :=
-  freshenedAuxiliary.equivalence auxiliary_aux auxiliary_aux_1
+  freshenedAuxiliary.equiv auxiliary_aux auxiliary_aux_1
 
 /--
 info: problem (x y auxiliary_aux_2 : ℝ)

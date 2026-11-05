@@ -45,8 +45,8 @@ reformulation powerTargeted : (normSource n 2) := by
 reformulation power : (powerTargeted n) := by
   conic
 
-example : GlobalEquivalence (normSource n 2) (defaultTargeted n) := defaultTargeted.equivalence n
-example : GlobalEquivalence (normSource n 2) (defaultTerminal n) := defaultTerminal.equivalence n
+example : GlobalEquiv (normSource n 2) (defaultTargeted n) := defaultTargeted.equiv n
+example : GlobalEquiv (normSource n 2) (defaultTerminal n) := defaultTerminal.equiv n
 example : (defaultTerminal.conicForm n).data.toProblem = defaultTerminal n :=
   (defaultTerminal.conicForm n).represents
 example : IsConic (defaultTerminal n) := defaultTerminal.isConic n
@@ -57,12 +57,12 @@ example (x : Fin n → ℝ) (t : ℝ) : (defaultTargeted n).feasible (x, t) ↔
 example : defaultTargeted n = soc n := rfl
 example : defaultTerminal n = soc n := rfl
 
-example : GlobalEquivalence (normSource n 2) (soc n) := soc.equivalence n
-example : GlobalEquivalence (normSource n 2) (power n) :=
-  (powerTargeted.equivalence n).trans (power.equivalence n)
-example : GlobalEquivalence (soc n) (power n) :=
-  (soc.equivalence n).symm.trans
-    ((powerTargeted.equivalence n).trans (power.equivalence n))
+example : GlobalEquiv (normSource n 2) (soc n) := soc.equiv n
+example : GlobalEquiv (normSource n 2) (power n) :=
+  (powerTargeted.equiv n).trans (power.equiv n)
+example : GlobalEquiv (soc n) (power n) :=
+  (soc.equiv n).symm.trans
+    ((powerTargeted.equiv n).trans (power.equiv n))
 example : (soc.conicForm n).data.toProblem = soc n := (soc.conicForm n).represents
 example : (power.conicForm n).data.toProblem = power n := (power.conicForm n).represents
 example : IsConic (soc n) := soc.isConic n
@@ -128,9 +128,9 @@ assert_l2_ambiguity_atomic%
 reformulation customAmbiguousTerminal : (normSource n 2) certificate customTerminalAlias := by
   conic
 
-assert_not_exists customAmbiguousTargeted customAmbiguousTargeted.equivalence
+assert_not_exists customAmbiguousTargeted customAmbiguousTargeted.equiv
   customAmbiguousTargeted.conicForm customTargetedAlias
-  customAmbiguousTerminal customAmbiguousTerminal.equivalence
+  customAmbiguousTerminal customAmbiguousTerminal.equiv
   customAmbiguousTerminal.conicForm customTerminalAlias
 
 end CustomAmbiguity
@@ -149,8 +149,8 @@ reformulation threeHalves : (normSource n (3 / 2)) := by
 reformulation three : (normSource n 3) := by
   conic
 
-example : GlobalEquivalence (normSource n 1) (one n) := one.equivalence n
-example : GlobalEquivalence (normSource n (3 / 2)) (threeHalves n) := threeHalves.equivalence n
+example : GlobalEquiv (normSource n 1) (one n) := one.equiv n
+example : GlobalEquiv (normSource n (3 / 2)) (threeHalves n) := threeHalves.equiv n
 example : (threeHalves.conicForm n).data.rowCount = 3 := rfl
 example : (three.conicForm n).data.rowCount = 3 := rfl
 
@@ -171,7 +171,7 @@ include hp in
 reformulation symbolic : (normSource n p) := by
   conic
 
-example : GlobalEquivalence (normSource n p) (symbolic n p hp) := symbolic.equivalence n p hp
+example : GlobalEquiv (normSource n p) (symbolic n p hp) := symbolic.equiv n p hp
 example : Conic.Form (symbolic n p hp) := symbolic.conicForm n p hp
 
 variable (q : ℝ) (hq : 1 < q)
@@ -180,8 +180,8 @@ include hq in
 reformulation realExponent : (normSource n (ENNReal.ofReal q)) := by
   conic
 
-example : GlobalEquivalence (normSource n (ENNReal.ofReal q)) (realExponent n q hq) :=
-  realExponent.equivalence n q hq
+example : GlobalEquiv (normSource n (ENNReal.ofReal q)) (realExponent n q hq) :=
+  realExponent.equiv n q hq
 
 variable (hsqrt : 1 < Real.sqrt 2)
 

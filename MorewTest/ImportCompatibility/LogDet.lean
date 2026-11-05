@@ -21,9 +21,9 @@ reformulation continued : (MorewTest.Reformulation.LogDet.domainIntermediate n) 
   conic at bound
   conic
 
-example : GlobalEquivalence (MorewTest.Reformulation.LogDet.source n) (continued n) :=
-  (MorewTest.Reformulation.LogDet.domainIntermediate.equivalence n).trans
-    (continued.equivalence n hn)
+example : GlobalEquiv (MorewTest.Reformulation.LogDet.source n) (continued n) :=
+  (MorewTest.Reformulation.LogDet.domainIntermediate.equiv n).trans
+    (continued.equiv n hn)
 
 -- Packed triangular auxiliaries need no ambient matrix norm at the use site.
 def importedForm : Conic.Form (continued n) := continued.conicForm n
@@ -37,10 +37,10 @@ reformulation nativeContinued :
   conic at bound using Morew.Conic.LogDet.nativeHypograph
   conic
 
-example : GlobalEquivalence (MorewTest.Reformulation.LogDet.reverseSource n)
+example : GlobalEquiv (MorewTest.Reformulation.LogDet.reverseSource n)
     (nativeContinued n) :=
-  (MorewTest.Reformulation.LogDet.nativeDomainIntermediate.equivalence n).trans
-    (nativeContinued.equivalence n hn)
+  (MorewTest.Reformulation.LogDet.nativeDomainIntermediate.equiv n).trans
+    (nativeContinued.equiv n hn)
 example : IsConic (nativeContinued n) := nativeContinued.isConic n
 
 namespace Shadow

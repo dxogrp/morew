@@ -33,8 +33,8 @@ reformulation nlpRows : absoluteSource := by
 example (x : ℝ) : conicRows.feasible x ↔
     -5 ≤ x ∧ x ≤ 3 ∧ -x ≤ 3 ∧ x ≤ 5 := Iff.rfl
 example : nlpRows = conicRows := rfl
-example : GlobalEquivalence absoluteSource conicRows := conicRows.equivalence
-example : GlobalEquivalence absoluteSource nlpRows := nlpRows.equivalence
+example : GlobalEquiv absoluteSource conicRows := conicRows.equiv
+example : GlobalEquiv absoluteSource nlpRows := nlpRows.equiv
 
 reformulation conicTerminal : absoluteSource := by
   rename magnitude to cap
@@ -62,7 +62,7 @@ reformulation vectorConic : vectorSource := by
   conic
 
 example : IsConic vectorConic := vectorConic.isConic
-example : GlobalEquivalence vectorSource vectorConic := vectorConic.equivalence
+example : GlobalEquiv vectorSource vectorConic := vectorConic.equiv
 
 run_cmd do
   for (name, expected) in #[

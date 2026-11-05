@@ -43,10 +43,10 @@ reformulation ready : imported := by
   conic at mean
   conic
 
-example : GlobalEquivalence (Defined.lowered 3 (by decide)) imported := imported.equivalence
-example : GlobalEquivalence (Defined.source 3) ready :=
-  (Defined.lowered.equivalence 3 (by decide)).trans
-    (imported.equivalence.trans ready.equivalence)
+example : GlobalEquiv (Defined.lowered 3 (by decide)) imported := imported.equiv
+example : GlobalEquiv (Defined.source 3) ready :=
+  (Defined.lowered.equiv 3 (by decide)).trans
+    (imported.equiv.trans ready.equiv)
 example : Conic.Form ready := ready.conicForm
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 example : IsConic ready := ready.isConic

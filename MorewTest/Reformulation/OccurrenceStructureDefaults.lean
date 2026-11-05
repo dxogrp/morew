@@ -31,7 +31,7 @@ set_option pp.structureInstances.defaults false in
 reformulation lifted : source := by
   epigraph t at loss
 
-example : GlobalEquivalence source lifted := lifted.equivalence
+example : GlobalEquiv source lifted := lifted.equiv
 example (x t : ℝ) : lifted.objective (x, t) = 0 := rfl
 example (x t : ℝ) : lifted.feasible (x, t) ↔ (0 : ℝ) ≤ 1 ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -40,7 +40,7 @@ set_option pp.structureInstances.defaults false in
 reformulation continued : lifted := by
   epigraph s at loss in cap
 
-example : GlobalEquivalence lifted continued := continued.equivalence
+example : GlobalEquiv lifted continued := continued.equiv
 example (x t s : ℝ) : continued.feasible ((x, t), s) ↔
     (0 : ℝ) ≤ 1 ∧ x ^ 2 ≤ t ∧ x ^ 2 ≤ s := Iff.rfl
 
@@ -48,7 +48,7 @@ example (x t s : ℝ) : continued.feasible ((x, t), s) ↔
 reformulation expressionLift : source := by
   epigraph t at ((fun _ : ℝ => (0 : ℝ)) loss)
 
-example : GlobalEquivalence source expressionLift := expressionLift.equivalence
+example : GlobalEquiv source expressionLift := expressionLift.equiv
 example (x t : ℝ) : expressionLift.objective (x, t) = t := rfl
 example (x t : ℝ) : expressionLift.feasible (x, t) ↔
     (0 : ℝ) ≤ 1 ∧ 0 ≤ t := Iff.rfl

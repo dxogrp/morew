@@ -19,7 +19,7 @@ reformulation principalImported : ordinaryCoordinates := by
     simpa only [ordinaryCoordinates, nonnegativeSource, Problem.pullback,
       Problem.addConstraint, sq_nonneg, true_and] using principalRepair)
 
-example : GlobalEquivalence ordinaryCoordinates principalImported := principalImported.equivalence
+example : GlobalEquiv ordinaryCoordinates principalImported := principalImported.equiv
 example : principalImported = principalCoordinates := rfl
 
 reformulation continued : successive := by
@@ -31,7 +31,7 @@ reformulation continued : successive := by
       change (0 : ℝ) ^ 2 ≤ point.1 ^ 2
       simpa using sq_nonneg point.1)
 
-example : GlobalEquivalence squareLine continued := successive.equivalence.trans continued.equivalence
+example : GlobalEquiv squareLine continued := successive.equiv.trans continued.equiv
 example (x : ℝ) : continued.feasible x ↔ |x| ≤ 1 ∧ 0 ≤ x ∧ x = 0 := Iff.rfl
 
 section
@@ -47,8 +47,8 @@ reformulation continuedFamily : (shiftedRestricted offset) := by
       simpa using sq_nonneg (point.1 + offset))
   substitute x := u
 
-example : GlobalEquivalence (shiftedFamily offset) (continuedFamily offset) :=
-  (shiftedRestricted.equivalence offset).trans (continuedFamily.equivalence offset)
+example : GlobalEquiv (shiftedFamily offset) (continuedFamily offset) :=
+  (shiftedRestricted.equiv offset).trans (continuedFamily.equiv offset)
 example (u : ℝ) : (continuedFamily offset).feasible u ↔
     0 ≤ u + offset ∧ u + offset ≤ 1 := Iff.rfl
 end
@@ -60,7 +60,7 @@ reformulation renamed : Hygiene.target := by
   substitute x := u
   derive original_branch : Restrict.Hygiene.branch u using (by intro point hp; exact hp)
 
-example : GlobalEquivalence squareLine renamed := Hygiene.target.equivalence.trans renamed.equivalence
+example : GlobalEquiv squareLine renamed := Hygiene.target.equiv.trans renamed.equiv
 example (u : ℝ) : renamed.feasible u ↔
     Restrict.Hygiene.branch u ∧ Restrict.Hygiene.branch u := Iff.rfl
 

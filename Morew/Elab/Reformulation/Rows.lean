@@ -117,9 +117,9 @@ structure Materialization where
 def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : Nat)
     (data : Materialization) (allocation : NameAllocation) : TermElabM SurfaceStepResult := do
   let replacement := data.replacement
-  let exact ← mkAppM ``Morew.GlobalEquivalence.trans
-    #[typed.normalization.equivalence, replacement.equivalence]
-  let primitive ← state.runner.liftEquivalence exact
+  let exact ← mkAppM ``Morew.GlobalEquiv.trans
+    #[typed.normalization.equiv, replacement.equiv]
+  let primitive ← state.runner.liftEquiv exact
   let predicates := typed.presentation.constraints.map (·.predicate) ++ data.rowPredicates
   let candidates := predicates.toList.zipIdx.map fun (predicate, index) =>
     (Name.mkSimple s!"{style.family}_row_{index}", predicate)
@@ -243,10 +243,10 @@ def finish (style : Style) (state : ReformState)
     synthesizeSyntheticMVarsNoPostponing
     let reassociation ← instantiateMVars reassociation
     mkLambdaFVars #[point] (← mkAppM ``Iff.trans #[normalized, reassociation])
-  let normalization ← mkAppM ``Morew.pointwiseEquivalence
+  let normalization ← mkAppM ``Morew.pointwiseEquiv
     #[natural, next, typed.normalization.objectiveEquality, feasibleIff]
-  let exact ← mkAppM ``Morew.GlobalEquivalence.trans #[addition, normalization]
-  let primitive ← state.runner.liftEquivalence exact
+  let exact ← mkAppM ``Morew.GlobalEquiv.trans #[addition, normalization]
+  let primitive ← state.runner.liftEquiv exact
   let primitive ← withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
     Rows.storeCertificate style.certificateKind primitive [
       (Name.mkSimple (style.family ++ "_constraint"), predicate),

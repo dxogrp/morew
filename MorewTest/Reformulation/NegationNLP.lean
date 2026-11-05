@@ -48,8 +48,8 @@ reformulation absoluteReady : absoluteSource := by
   hypograph t
   nlp
 
-example : GlobalEquivalence absoluteSource absoluteTarget :=
-  absoluteBound.equivalence.trans absoluteTarget.equivalence
+example : GlobalEquiv absoluteSource absoluteTarget :=
+  absoluteBound.equiv.trans absoluteTarget.equiv
 example : IsSmoothNLP absoluteReady := absoluteReady.isSmoothNLP
 example : absoluteReady.nlpForm.data.sense = .maximize := rfl
 example : absoluteReady.nlpForm.data.toProblem = absoluteReady := absoluteReady.nlpForm.represents
@@ -123,7 +123,7 @@ attribute [local morew_nlp] negativeAbsHypograph
 #guard_error_fragments ["ambiguous exact NLP rules", "negativeAbsHypograph", "absEpigraph"] in
 reformulation boundAmbiguous : absoluteBound := by nlp at hypograph_t
 
-assert_not_exists boundAmbiguous boundAmbiguous.equivalence
+assert_not_exists boundAmbiguous boundAmbiguous.equiv
 
 reformulation boundDirect : absoluteBound := by nlp at hypograph_t using negativeAbsHypograph
 reformulation boundDerived : absoluteBound := by nlp at hypograph_t using Rewrite.absEpigraph
@@ -168,7 +168,7 @@ def missing :=
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
 reformulation rejectedMissing : missing := by nlp at bound
 
-assert_not_exists rejectedMissing rejectedMissing.equivalence
+assert_not_exists rejectedMissing rejectedMissing.equiv
 
 def guardedIdentity (x : ℝ) : ℝ := x
 
@@ -188,7 +188,7 @@ def selectedPremise :=
 reformulation rejectedSelectedPremise : selectedPremise := by
   nlp at bound using guardedHypograph
 
-assert_not_exists rejectedSelectedPremise rejectedSelectedPremise.equivalence
+assert_not_exists rejectedSelectedPremise rejectedSelectedPremise.equiv
 
 end Domain
 
@@ -219,7 +219,7 @@ reformulation selected : source := by nlp at bound using absoluteGraph
 reformulation applied : source := by nlp at bound using (absoluteGraph)
 reformulation ready : source := by nlp
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example : IsSmoothNLP ready := ready.isSmoothNLP
 example : ready.nlpForm.data.rowCount = 2 := rfl
 example (x y : ℝ) : target.feasible (x, y) ↔
@@ -282,7 +282,7 @@ attribute [local morew_nlp] negativeAbsoluteGraph
 #guard_error_fragments ["ambiguous exact NLP rules", "absoluteGraph", "negativeAbsoluteGraph"] in
 reformulation ambiguous : source := by nlp at bound
 
-assert_not_exists ambiguous ambiguous.equivalence
+assert_not_exists ambiguous ambiguous.equiv
 
 reformulation direct : source := by nlp at bound using negativeAbsoluteGraph
 reformulation derived : source := by nlp at bound using absoluteGraph
@@ -301,7 +301,7 @@ attribute [local morew_nlp] negativeAbsoluteGraph absoluteGraph
 #guard_error_fragments ["ambiguous exact NLP rules", "absoluteGraph", "negativeAbsoluteGraph"] in
 reformulation ambiguousReverse : source := by nlp at bound
 
-assert_not_exists ambiguousReverse ambiguousReverse.equivalence
+assert_not_exists ambiguousReverse ambiguousReverse.equiv
 
 end ReverseRegistration
 
@@ -379,7 +379,7 @@ def unsmoothedGraph : GraphRepresentation (fun x : ℝ => |x|) where
 #guard_error_fragments ["constraint `bound`", "generated row certification failed"] in
 reformulation rejectedTarget : source := by nlp at bound using unsmoothedGraph
 
-assert_not_exists rejectedTarget rejectedTarget.equivalence
+assert_not_exists rejectedTarget rejectedTarget.equiv
 
 end Graph
 
@@ -393,7 +393,7 @@ def nonsmoothTarget :=
 #guard_error_fragments ["constraint `bound`", "generated row certification failed"] in
 reformulation rejectedNonsmooth : nonsmoothTarget := by nlp at bound using Rewrite.absEpigraph
 
-assert_not_exists rejectedNonsmooth rejectedNonsmooth.equivalence
+assert_not_exists rejectedNonsmooth rejectedNonsmooth.equiv
 
 def alteredNeg :=
   problem (x t : ℝ)

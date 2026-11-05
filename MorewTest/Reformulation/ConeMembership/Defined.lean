@@ -30,7 +30,7 @@ variable (offset : ℝ)
 reformulation target : (source offset) := by
   conic
 
-example : GlobalEquivalence (source offset) (target offset) := target.equivalence offset
+example : GlobalEquiv (source offset) (target offset) := target.equiv offset
 example : (target.conicForm offset).data.toProblem = target offset :=
   (target.conicForm offset).represents
 

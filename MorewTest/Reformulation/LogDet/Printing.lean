@@ -20,7 +20,7 @@ set_option morew.affine.maxExpansionSteps 0 in
 set_option morew.affine.maxExpansionNodes 0 in
 reformulation helpersDisabled : (source 2) := by conic
 
-example : GlobalEquivalence (source 2) helpersDisabled := helpersDisabled.equivalence
+example : GlobalEquiv (source 2) helpersDisabled := helpersDisabled.equiv
 example : IsConic helpersDisabled := helpersDisabled.isConic
 
 def collisionSource :=

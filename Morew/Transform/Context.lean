@@ -109,10 +109,10 @@ def hypographAt {X : Type u} {A : Type v} {V : Type w} [LE A]
 end Problem
 
 /-- The auxiliary objective bound gives a global equivalence under `context`. -/
-def objectiveBoundAtEquivalence {X : Type u} {A : Type v} {V : Type w}
+def objectiveBoundAtEquiv {X : Type u} {A : Type v} {V : Type w}
     [Preorder A] [Preorder V] (p : Problem X V) (f : X → A) (C : X → A → V)
     (direction : BoundDirection) (context : ObjectiveBoundContext p f C direction) :
-    GlobalEquivalence p (p.objectiveBoundAt f C direction) where
+    GlobalEquiv p (p.objectiveBoundAt f C direction) where
   forward := {
     map := fun x => ⟨(x.1, f x.1), x.2, direction.rel_refl (f x.1)⟩
     objective_le := fun x => le_of_eq (context.atValue x.1) }
@@ -122,18 +122,18 @@ def objectiveBoundAtEquivalence {X : Type u} {A : Type v} {V : Type w}
       context.backward point.1.1 point.2.1 point.1.2 point.2.2 }
 
 /-- The epigraph substitution gives a global equivalence under `context`. -/
-def objectiveEpigraphAtEquivalence {X : Type u} {A : Type v} {V : Type w}
+def objectiveEpigraphAtEquiv {X : Type u} {A : Type v} {V : Type w}
     [Preorder A] [Preorder V] (p : Problem X V) (f : X → A) (C : X → A → V)
     (context : ObjectiveEpigraphContext p f C) :
-    GlobalEquivalence p (p.epigraphAt f C) :=
-  objectiveBoundAtEquivalence p f C .upper context
+    GlobalEquiv p (p.epigraphAt f C) :=
+  objectiveBoundAtEquiv p f C .upper context
 
 /-- The hypograph substitution gives a global equivalence under `context`. -/
-def objectiveHypographAtEquivalence {X : Type u} {A : Type v} {V : Type w}
+def objectiveHypographAtEquiv {X : Type u} {A : Type v} {V : Type w}
     [Preorder A] [Preorder V] (p : Problem X V) (f : X → A) (C : X → A → V)
     (context : ObjectiveHypographContext p f C) :
-    GlobalEquivalence p (p.hypographAt f C) :=
-  objectiveBoundAtEquivalence p f C .lower context
+    GlobalEquiv p (p.hypographAt f C) :=
+  objectiveBoundAtEquiv p f C .lower context
 
 /-- Conditions for replacing a constraint subexpression by an auxiliary bound.
 The new constraints must imply the original constraint. -/
@@ -201,19 +201,19 @@ theorem constraintBoundAt_feasible {X : Type u} {A : Type v} {V : Type w} [LE A]
 end Problem
 
 /-- Introducing a bound in a constraint preserves global optimization in either sense. -/
-noncomputable def constraintBoundAtEquivalence
+noncomputable def constraintBoundAtEquiv
     {X : Type u} {A : Type v} {V : Type w} [Preorder A] [Preorder V]
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (f : X → A) (C : X → A → Prop) (direction : BoundDirection)
     (context : ConstraintBoundContext decomposition.remainder source f C direction) :
-    GlobalEquivalence p (p.constraintBoundAt decomposition f C direction) := by
+    GlobalEquiv p (p.constraintBoundAt decomposition f C direction) := by
   let full : ConstraintDecomposition p (fun x => decomposition.remainder x ∧ source x) := {
     remainder := fun _ => True
     feasible_iff := fun x => by simpa only [true_and] using decomposition.feasible_iff x }
   let lift := context.toExactConstraintLift
   exact (exactConstraintLiftEquivalence p lift full).trans
-    (pointwiseEquivalence (p.liftConstraint lift full)
+    (pointwiseEquiv (p.liftConstraint lift full)
       (p.constraintBoundAt (A := A) decomposition f C direction)
       (fun _ => rfl) (fun _ => ⟨fun h => h.2, fun h => ⟨trivial, h⟩⟩))
 

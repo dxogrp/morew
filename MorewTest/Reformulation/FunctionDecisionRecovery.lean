@@ -30,7 +30,7 @@ info: problem (z : ℝ) (f : ℝ → ℝ)
 reformulation objectiveLift : source := by
   epigraph t at (f z)
 
-example : GlobalEquivalence source objectiveLift := objectiveLift.equivalence
+example : GlobalEquiv source objectiveLift := objectiveLift.equiv
 example (z t : ℝ) (f : ℝ → ℝ) : objectiveLift.objective ((z, f), t) = t := rfl
 example (z t : ℝ) (f : ℝ → ℝ) : objectiveLift.feasible ((z, f), t) ↔
     f z + z ≤ 10 ∧ f z ≤ t := Iff.rfl
@@ -50,7 +50,7 @@ info: problem (z : ℝ) (f : ℝ → ℝ) (t : ℝ)
 reformulation constraintLift : generated := by
   epigraph t at (f z) in budget
 
-example : GlobalEquivalence generated constraintLift := constraintLift.equivalence
+example : GlobalEquiv generated constraintLift := constraintLift.equiv
 example (z t : ℝ) (f : ℝ → ℝ) : constraintLift.objective ((z, f), t) = f z := rfl
 example (z t : ℝ) (f : ℝ → ℝ) : constraintLift.feasible ((z, f), t) ↔
     t + z ≤ 10 ∧ f z ≤ t := Iff.rfl
@@ -66,8 +66,8 @@ reformulation appliedNamed : (family offset) := by
 reformulation appliedConstraint : (appliedNamed offset) := by
   epigraph s at (f x y) in budget
 
-example : GlobalEquivalence (family offset) (appliedNamed offset) :=
-  appliedNamed.equivalence offset
+example : GlobalEquiv (family offset) (appliedNamed offset) :=
+  appliedNamed.equiv offset
 example (x y t s : ℝ) (f : ℝ → ℝ → ℝ) :
     (appliedConstraint offset).objective ((((x, f), y), t), s) = t + offset := rfl
 example (x y t s : ℝ) (f : ℝ → ℝ → ℝ) :
@@ -84,7 +84,7 @@ def firstFunction :=
 reformulation firstFunctionLift : firstFunction := by
   epigraph t at (f x y)
 
-example : GlobalEquivalence firstFunction firstFunctionLift := firstFunctionLift.equivalence
+example : GlobalEquiv firstFunction firstFunctionLift := firstFunctionLift.equiv
 example (x y t : ℝ) (f : ℝ → ℝ → ℝ) :
     firstFunctionLift.feasible (((f, x), y), t) ↔ f x y ≤ t := Iff.rfl
 
@@ -97,8 +97,8 @@ def projectedFunction :=
 reformulation projectedFunctionLift : projectedFunction := by
   epigraph t at (pair.1 x)
 
-example : GlobalEquivalence projectedFunction projectedFunctionLift :=
-  projectedFunctionLift.equivalence
+example : GlobalEquiv projectedFunction projectedFunctionLift :=
+  projectedFunctionLift.equiv
 example (x t : ℝ) (pair : (ℝ → ℝ) × ℝ) :
     projectedFunctionLift.objective ((x, pair), t) = t + pair.2 := rfl
 example (x t : ℝ) (pair : (ℝ → ℝ) × ℝ) :

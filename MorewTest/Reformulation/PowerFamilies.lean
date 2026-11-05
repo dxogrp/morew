@@ -31,8 +31,8 @@ include hn in
 reformulation ready : (source n) := by
   conic
 
-example : GlobalEquivalence (source n) (targeted n hn) := targeted.equivalence n hn
-example : GlobalEquivalence (source n) (ready n hn) := ready.equivalence n hn
+example : GlobalEquiv (source n) (targeted n hn) := targeted.equiv n hn
+example : GlobalEquiv (source n) (ready n hn) := ready.equiv n hn
 example : (ready.conicForm n hn).data.toProblem = ready n hn :=
   (ready.conicForm n hn).represents
 example : (ready.conicForm n hn).data.sense = .maximize := rfl
@@ -63,7 +63,7 @@ include hn hε in
 reformulation ready : (source n ε) := by
   conic
 
-example : GlobalEquivalence (source n ε) (ready n hn ε) := ready.equivalence n hn ε hε
+example : GlobalEquiv (source n ε) (ready n hn ε) := ready.equiv n hn ε hε
 example : (ready.conicForm n hn ε).data.toProblem = ready n hn ε :=
   (ready.conicForm n hn ε).represents
 example : (ready.conicForm n hn ε).data.sense = .minimize := rfl

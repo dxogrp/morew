@@ -23,17 +23,17 @@ def identityCoverage : FeasibleSurjection squareProblem (fun x : ℤ => x) where
   rightInverse _ := rfl
 
 example :
-    GlobalEquivalence squareProblem
+    GlobalEquiv squareProblem
       (squareProblem.pullback fun x : ℤ => x) :=
-  pullbackEquivalence squareProblem (fun x : ℤ => x) identityCoverage
+  pullbackEquiv squareProblem (fun x : ℤ => x) identityCoverage
 
 def squareEpigraph := squareProblem.epigraph
 
-example : GlobalEquivalence squareProblem squareEpigraph :=
-  epigraphEquivalence squareProblem
+example : GlobalEquiv squareProblem squareEpigraph :=
+  epigraphEquiv squareProblem
 
 example (x : FeasiblePoint squareProblem) :
-    (epigraphEquivalence squareProblem).forward.map x =
+    (epigraphEquiv squareProblem).forward.map x =
       ⟨(x.1, squareProblem.objective x.1), x.2, le_rfl⟩ := rfl
 
 /-- The epigraph theorem is independent of convexity. -/
@@ -41,8 +41,8 @@ def doubleWell : Problem ℝ ℝ where
   objective x := (x ^ 2 - 1) ^ 2
   feasible _ := True
 
-example : GlobalEquivalence doubleWell doubleWell.epigraph :=
-  epigraphEquivalence doubleWell
+example : GlobalEquiv doubleWell doubleWell.epigraph :=
+  epigraphEquiv doubleWell
 
 def boundedScore : Problem ℕ (OrderDual ℕ) where
   objective n := n
@@ -50,8 +50,8 @@ def boundedScore : Problem ℕ (OrderDual ℕ) where
 
 def scoreHypograph := boundedScore.hypograph
 
-example : GlobalEquivalence boundedScore scoreHypograph :=
-  hypographEquivalence (V := ℕ) boundedScore
+example : GlobalEquiv boundedScore scoreHypograph :=
+  hypographEquiv (V := ℕ) boundedScore
 
 /-- This target is exact only under the stronger retained bound. -/
 def conditionalProblem : Problem ℕ ℕ where
@@ -66,7 +66,7 @@ private theorem conditionalExact (x : ℕ) (retained : x ≤ 3) :
     x ≤ 5 ↔ ∃ a : ℕ, a = x :=
   ⟨fun _ => ⟨x, rfl⟩, fun _ => retained.trans (by decide)⟩
 
-noncomputable example : GlobalEquivalence conditionalProblem
+noncomputable example : GlobalEquiv conditionalProblem
     (conditionalProblem.liftConstraintConditional conditionalDecomposition (fun x a : ℕ => a = x)) :=
   conditionalConstraintLiftEquivalence conditionalProblem conditionalDecomposition
     (fun x a : ℕ => a = x) conditionalExact
@@ -85,7 +85,7 @@ def impossibleDecomposition : ConstraintDecomposition impossibleProblem (fun _ =
   remainder _ := False
   feasible_iff _ := Iff.rfl
 
-noncomputable example : GlobalEquivalence impossibleProblem
+noncomputable example : GlobalEquiv impossibleProblem
     (impossibleProblem.liftConstraintConditional impossibleDecomposition
       (fun (_ : ℕ) (_ : Empty) => True)) :=
   conditionalConstraintLiftEquivalence impossibleProblem impossibleDecomposition

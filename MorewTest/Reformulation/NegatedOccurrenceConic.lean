@@ -14,8 +14,8 @@ noncomputable section
 
 reformulation logConic : logBound := by conic
 
-example : GlobalEquivalence logSource logConic :=
-  logBound.equivalence.trans logConic.equivalence
+example : GlobalEquiv logSource logConic :=
+  logBound.equiv.trans logConic.equiv
 example : IsConic logConic := logConic.isConic
 example : logConic.conicForm.data.toProblem = logConic := logConic.conicForm.represents
 
@@ -26,8 +26,8 @@ example : absConic.conicForm.data.sense = .maximize := rfl
 
 reformulation compoundConic : compoundBound := by conic
 
-example : GlobalEquivalence compoundSource compoundConic :=
-  compoundBound.equivalence.trans compoundConic.equivalence
+example : GlobalEquiv compoundSource compoundConic :=
+  compoundBound.equiv.trans compoundConic.equiv
 example : IsConic compoundConic := compoundConic.isConic
 example : compoundConic.conicForm.data.rowCount = 4 := rfl
 

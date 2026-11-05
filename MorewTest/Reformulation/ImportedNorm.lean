@@ -20,10 +20,10 @@ variable (n : Nat)
 reformulation continuedConic : (selected n) := by conic
 reformulation continuedNLP : (selectedNLP n) := by nlp
 
-example : GlobalEquivalence (source n) (continuedConic n) :=
-  (selected.equivalence n).trans (continuedConic.equivalence n)
-example : GlobalEquivalence (source n) (continuedNLP n) :=
-  (selectedNLP.equivalence n).trans (continuedNLP.equivalence n)
+example : GlobalEquiv (source n) (continuedConic n) :=
+  (selected.equiv n).trans (continuedConic.equiv n)
+example : GlobalEquiv (source n) (continuedNLP n) :=
+  (selectedNLP.equiv n).trans (continuedNLP.equiv n)
 example : IsConic (continuedConic n) := continuedConic.isConic n
 example : IsSmoothNLP (continuedNLP n) := continuedNLP.isSmoothNLP n
 example : (continuedConic.conicForm n).data.toProblem = continuedConic n :=
@@ -43,8 +43,8 @@ example (x : Fin n → ℝ) (t : ℝ) :
 example : IsSmoothNLP (nativeContinuedNLP n) := nativeContinuedNLP.isSmoothNLP n
 example : (nativeContinuedNLP.nlpForm n).data.toProblem = nativeContinuedNLP n :=
   (nativeContinuedNLP.nlpForm n).represents
-example : GlobalEquivalence (nativeSource n) (nativeContinuedNLP n) :=
-  (nativeSelectedNLP.equivalence n).trans (nativeContinuedNLP.equivalence n)
+example : GlobalEquiv (nativeSource n) (nativeContinuedNLP n) :=
+  (nativeSelectedNLP.equiv n).trans (nativeContinuedNLP.equiv n)
 
 -- Reconstruction under unrelated caller norms must keep the imported mathematical
 -- functions and certificates intact.

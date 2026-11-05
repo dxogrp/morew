@@ -31,8 +31,8 @@ example : importedMinimumForm.data.sense = .minimize := rfl
 example : importedMaximumForm.data.sense = .maximize := rfl
 example : importedMinimumForm.data.rowCount = 4 := rfl
 example : importedMaximumForm.data.rowCount = 2 := rfl
-example : GlobalEquivalence minimumSource minimumTarget := minimumEquivalence hn hε
-example : GlobalEquivalence maximumSource maximumTarget := maximumEquivalence hε
+example : GlobalEquiv minimumSource minimumTarget := minimumEquiv hn hε
+example : GlobalEquiv maximumSource maximumTarget := maximumEquiv hε
 
 -- The source sections' `NeZero`/`Nonempty` instances are absent after import.
 -- The named property must have the same prerequisites as the stored form.
@@ -53,12 +53,12 @@ reformulation continuedMaximum : maximumTarget := by
   hypograph value as objectiveBound
   conic
 
-example : GlobalEquivalence minimumTarget continuedMinimum := continuedMinimum.equivalence
-example : GlobalEquivalence maximumTarget continuedMaximum := continuedMaximum.equivalence
-example : GlobalEquivalence minimumSource continuedMinimum :=
-  (minimumTarget.equivalence hn hε).trans continuedMinimum.equivalence
-example : GlobalEquivalence maximumSource continuedMaximum :=
-  (maximumTarget.equivalence hε).trans continuedMaximum.equivalence
+example : GlobalEquiv minimumTarget continuedMinimum := continuedMinimum.equiv
+example : GlobalEquiv maximumTarget continuedMaximum := continuedMaximum.equiv
+example : GlobalEquiv minimumSource continuedMinimum :=
+  (minimumTarget.equiv hn hε).trans continuedMinimum.equiv
+example : GlobalEquiv maximumSource continuedMaximum :=
+  (maximumTarget.equiv hε).trans continuedMaximum.equiv
 example : IsConic continuedMinimum := continuedMinimum.isConic
 example : IsConic continuedMaximum := continuedMaximum.isConic
 example : continuedMinimum.conicForm.data.sense = .minimize := rfl
@@ -94,7 +94,7 @@ run_cmd do
     unless view.constraints.map (·.name.eraseMacroScopes) == labels do
       Lean.throwError "import or continuation changed terminal row labels"
   for name in #[``minimumTarget, ``maximumTarget] do
-    for suffix in #[`equivalence, `conicForm, `isConic] do
+    for suffix in #[`equiv, `conicForm, `isConic] do
       unless env.contains (name ++ suffix) do
         Lean.throwError m!"import lost terminal public artifact {name ++ suffix}"
 

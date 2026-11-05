@@ -118,8 +118,8 @@ reformulation selectedAlias : normSource := by
   conic at bound using customSpectralNormEpigraph
   conic
 
-example : GlobalEquivalence normSource selectedBuiltIn := selectedBuiltIn.equivalence
-example : GlobalEquivalence normSource selectedAlias := selectedAlias.equivalence
+example : GlobalEquiv normSource selectedBuiltIn := selectedBuiltIn.equiv
+example : GlobalEquiv normSource selectedAlias := selectedAlias.equiv
 example : selectedAlias.conicForm.data.rowCount = 2 := rfl
 
 end Ambiguity

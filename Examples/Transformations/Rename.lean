@@ -31,7 +31,7 @@ reformulation interval : bounded := by
 
 #printp interval
 example (x : ℝ) : interval.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 := Iff.rfl
-example : GlobalEquivalence bounded interval := interval.equivalence
+example : GlobalEquiv bounded interval := interval.equiv
 
 def logarithmic :=
   problem (x : ℝ)
@@ -49,7 +49,7 @@ reformulation exponential : logarithmic := by
   rename value_bound to objective_bound
 
 #printp exponential
-example : GlobalEquivalence logarithmic exponential := exponential.equivalence
+example : GlobalEquiv logarithmic exponential := exponential.equiv
 
 end
 end Examples.Transformations.Rename

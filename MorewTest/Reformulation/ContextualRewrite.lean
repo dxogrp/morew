@@ -44,7 +44,7 @@ def logSource :=
 reformulation targetedLog : logSource := by
   nlp at bound using positiveLogEpigraph
 
-example : GlobalEquivalence logSource targetedLog := targetedLog.equivalence
+example : GlobalEquiv logSource targetedLog := targetedLog.equiv
 example (x t u : ℝ) : targetedLog.feasible ((x, t), u) ↔
     1 ≤ x ∧ x = Real.exp u ∧ u ≤ t ∧ t ≤ 10 := Iff.rfl
 
@@ -81,8 +81,8 @@ reformulation targetedConic : absSource := by
 reformulation targetedNLP : absSource := by
   nlp at bound
 
-example : GlobalEquivalence absSource targetedConic := targetedConic.equivalence
-example : GlobalEquivalence absSource targetedNLP := targetedNLP.equivalence
+example : GlobalEquiv absSource targetedConic := targetedConic.equiv
+example : GlobalEquiv absSource targetedNLP := targetedNLP.equiv
 example (x t u : ℝ) : targetedConic.objective ((x, t), u) = t := rfl
 example (x t u : ℝ) : targetedNLP.objective ((x, t), u) = t := rfl
 example (x t u : ℝ) : targetedConic.feasible ((x, t), u) ↔
@@ -110,8 +110,8 @@ reformulation terminalConic : absSource := by
 reformulation terminalNLP : absSource := by
   nlp
 
-example : GlobalEquivalence absSource terminalConic := terminalConic.equivalence
-example : GlobalEquivalence absSource terminalNLP := terminalNLP.equivalence
+example : GlobalEquiv absSource terminalConic := terminalConic.equiv
+example : GlobalEquiv absSource terminalNLP := terminalNLP.equiv
 example : terminalConic.conicForm.data.toProblem = terminalConic :=
   terminalConic.conicForm.represents
 example : terminalNLP.nlpForm.data.toProblem = terminalNLP := terminalNLP.nlpForm.represents
@@ -140,8 +140,8 @@ example (x t s u v : ℝ) : twoConic.objective ((((x, t), s), u), v) = t + 2 * s
 example (x t s u v : ℝ) : twoNLP.objective ((((x, t), s), u), v) = t + 2 * s := rfl
 example (x t s u v : ℝ) : twoNLP.feasible ((((x, t), s), u), v) ↔
     0 ≤ x ∧ u = x ∧ u ≤ t ∧ v = x ∧ v ≤ s := Iff.rfl
-example : GlobalEquivalence twoBounds twoConic := twoConic.equivalence
-example : GlobalEquivalence twoBounds twoNLP := twoNLP.equivalence
+example : GlobalEquiv twoBounds twoConic := twoConic.equiv
+example : GlobalEquiv twoBounds twoNLP := twoNLP.equiv
 example : Conic.Form twoConic := twoConic.conicForm
 example : NLP.Form twoNLP := twoNLP.nlpForm
 example : twoConic.conicForm.data.toProblem = twoConic := twoConic.conicForm.represents
@@ -172,10 +172,10 @@ reformulation nlpTarget : (Registry.Source.source center) := by
   nlp at bound using (nonnegativeShiftedAbs center hc)
   nlp
 
-example : GlobalEquivalence (Registry.Source.source center) (conicTarget center) :=
-  conicTarget.equivalence center hc
-example : GlobalEquivalence (Registry.Source.source center) (nlpTarget center) :=
-  nlpTarget.equivalence center hc
+example : GlobalEquiv (Registry.Source.source center) (conicTarget center) :=
+  conicTarget.equiv center hc
+example : GlobalEquiv (Registry.Source.source center) (nlpTarget center) :=
+  nlpTarget.equiv center hc
 example : Conic.Form (conicTarget center) := conicTarget.conicForm center
 example : NLP.Form (nlpTarget center) := nlpTarget.nlpForm center
 example : (conicTarget.conicForm center).data.toProblem = conicTarget center :=
@@ -210,7 +210,7 @@ reformulation continued : targetedNLP := by
   epigraph objectiveBound
   conic
 
-example : GlobalEquivalence targetedNLP continued := continued.equivalence
+example : GlobalEquiv targetedNLP continued := continued.equiv
 example : IsConic continued := continued.isConic
 
 -- `Unit` remains the representation of an absent auxiliary optimization variable.
@@ -285,8 +285,8 @@ reformulation concreteConic : retainedGuard := by
 reformulation concreteNLP : retainedGuard := by
   nlp at bound using (selectedGuardLift)
 
-example : GlobalEquivalence retainedGuard concreteConic := concreteConic.equivalence
-example : GlobalEquivalence retainedGuard concreteNLP := concreteNLP.equivalence
+example : GlobalEquiv retainedGuard concreteConic := concreteConic.equiv
+example : GlobalEquiv retainedGuard concreteNLP := concreteNLP.equiv
 example (x u : ℝ) : concreteConic.feasible (x, u) ↔ 1 ≤ x ∧ u = x := Iff.rfl
 example (x u : ℝ) : concreteNLP.feasible (x, u) ↔ 1 ≤ x ∧ u = x := Iff.rfl
 
@@ -450,8 +450,8 @@ example (x y t u : ℝ) : productConic.feasible (((x, y), t), u) ↔
     1 ≤ x ∧ u = x ∧ u + y ≤ t := Iff.rfl
 example : productAutomaticConic = productConic := rfl
 example : productAutomaticNLP = productNLP := rfl
-example : GlobalEquivalence productSource productConic := productConic.equivalence
-example : GlobalEquivalence productSource productNLP := productNLP.equivalence
+example : GlobalEquiv productSource productConic := productConic.equiv
+example : GlobalEquiv productSource productNLP := productNLP.equiv
 
 def productMissingGuard :=
   problem (x y t : ℝ) minimize t subject to bound : shiftedMagnitude x y ≤ t

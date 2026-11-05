@@ -29,10 +29,10 @@ reformulation continuedFraction :
   conic at bound
   conic
 
-example : GlobalEquivalence (MorewTest.Reformulation.MatrixFraction.source n)
+example : GlobalEquiv (MorewTest.Reformulation.MatrixFraction.source n)
     (continuedFraction n) :=
-  (MorewTest.Reformulation.MatrixFraction.domainIntermediate.equivalence n).trans
-    (continuedFraction.equivalence n)
+  (MorewTest.Reformulation.MatrixFraction.domainIntermediate.equiv n).trans
+    (continuedFraction.equiv n)
 
 example : (continuedFraction.conicForm n).data.rowCount = 2 := rfl
 example : (continuedFraction.conicForm n).data.toProblem = continuedFraction n :=
@@ -41,10 +41,10 @@ example : (continuedFraction.conicForm n).data.toProblem = continuedFraction n :
 reformulation continuedNuclear :
     (MorewTest.Reformulation.Spectral.nuclearIntermediate (m := m) (n := n)) := by conic
 
-example : GlobalEquivalence (MorewTest.Reformulation.Spectral.nuclearSource m n)
+example : GlobalEquiv (MorewTest.Reformulation.Spectral.nuclearSource m n)
     (continuedNuclear (m := m) (n := n)) :=
-  (MorewTest.Reformulation.Spectral.nuclearIntermediate.equivalence (m := m) (n := n)).trans
-    (continuedNuclear.equivalence (m := m) (n := n))
+  (MorewTest.Reformulation.Spectral.nuclearIntermediate.equiv (m := m) (n := n)).trans
+    (continuedNuclear.equiv (m := m) (n := n))
 
 example : (continuedNuclear.conicForm (m := m) (n := n)).data.rowCount = 2 := rfl
 example : (continuedNuclear.conicForm (m := m) (n := n)).data.toProblem =
@@ -207,9 +207,9 @@ example : (importedOperatorForm m n).data.toProblem =
 
 reformulation continuedOperator : (MorewTest.Reformulation.Spectral.normSource m n) := by conic
 
-example : GlobalEquivalence (MorewTest.Reformulation.Spectral.normSource m n)
+example : GlobalEquiv (MorewTest.Reformulation.Spectral.normSource m n)
     (continuedOperator (m := m) (n := n)) :=
-  continuedOperator.equivalence (m := m) (n := n)
+  continuedOperator.equiv (m := m) (n := n)
 example : IsConic (continuedOperator (m := m) (n := n)) :=
   continuedOperator.isConic (m := m) (n := n)
 

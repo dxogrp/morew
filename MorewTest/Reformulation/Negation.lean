@@ -44,8 +44,8 @@ reformulation logSelected : logBound := by
 reformulation logApplied : logBound := by
   conic at lossBound using (Exponential.logHypograph)
 
-example : GlobalEquivalence logSource logTarget :=
-  logBound.equivalence.trans logTarget.equivalence
+example : GlobalEquiv logSource logTarget :=
+  logBound.equiv.trans logTarget.equiv
 example : IsConic logReady := logReady.isConic
 example : Conic.Form logReady := logReady.conicForm
 example : logReady.conicForm.data.toProblem = logReady := logReady.conicForm.represents
@@ -103,7 +103,7 @@ reformulation meanReady : (meanSource n) := by
   epigraph t
   conic
 
-example : GlobalEquivalence (meanSource n) (meanReady n hn) := meanReady.equivalence n hn
+example : GlobalEquiv (meanSource n) (meanReady n hn) := meanReady.equiv n hn
 example : IsConic (meanReady n hn) := meanReady.isConic n hn
 example : (meanReady.conicForm n hn).data.rowCount = 5 := rfl
 
@@ -157,7 +157,7 @@ reformulation endpointTarget : endpointSource := by
 
 reformulation endpointReady : endpointSource := by conic
 
-example : GlobalEquivalence endpointSource endpointTarget := endpointTarget.equivalence
+example : GlobalEquiv endpointSource endpointTarget := endpointTarget.equiv
 example : IsConic endpointReady := endpointReady.isConic
 example : endpointReady.conicForm.data.rowCount = 10 := rfl
 example (x t : ℝ) : endpointTarget.feasible (x, t) ↔
@@ -187,7 +187,7 @@ reformulation target : (source center) := by conic at bound
 reformulation selected : (source center) := by conic at bound using rewardHypograph
 reformulation applied : (source center) := by conic at bound using (rewardHypograph center)
 
-example : GlobalEquivalence (source center) (target center) := target.equivalence center
+example : GlobalEquiv (source center) (target center) := target.equiv center
 example (x t : ℝ) : (target center).feasible (x, t) ↔
     -t ≤ x - center ∧ -t ≤ 2 * x := Iff.rfl
 example : selected center = target center := rfl
@@ -210,7 +210,7 @@ attribute [local morew_conic] negativeRewardEpigraph
     "rewardHypograph", "using"] in
 reformulation ambiguous : (source center) := by conic at bound
 
-assert_not_exists ambiguous ambiguous.equivalence
+assert_not_exists ambiguous ambiguous.equiv
 
 reformulation direct : (source center) := by conic at bound using negativeRewardEpigraph
 reformulation derived : (source center) := by conic at bound using rewardHypograph
@@ -231,7 +231,7 @@ attribute [local morew_conic] negativeRewardEpigraph rewardHypograph
     "rewardHypograph", "using"] in
 reformulation ambiguousReversed : (source center) := by conic at bound
 
-assert_not_exists ambiguousReversed ambiguousReversed.equivalence
+assert_not_exists ambiguousReversed ambiguousReversed.equiv
 
 end ReverseRegistration
 
@@ -255,7 +255,7 @@ reformulation exactDirect : (wholeSource center) := by conic at bound using exac
 #guard_error_fragments ["constraint `bound`"] in
 reformulation exactUnchanged : (source center) := by conic at bound using exactRule
 
-assert_not_exists exactUnchanged exactUnchanged.equivalence
+assert_not_exists exactUnchanged exactUnchanged.equiv
 
 def shifted (x : ℝ) : ℝ := x + 1
 
@@ -278,7 +278,7 @@ reformulation graphDirect : graphSource := by conic at bound using shiftedGraph
 
 reformulation graphSigned : negativeGraphSource := by conic at bound using shiftedGraph
 
-example : GlobalEquivalence negativeGraphSource graphSigned := graphSigned.equivalence
+example : GlobalEquiv negativeGraphSource graphSigned := graphSigned.equiv
 example (x t : ℝ) : graphSigned.feasible (x, t) ↔ t = x + 1 := Iff.rfl
 
 section RegisteredGraph
@@ -328,7 +328,7 @@ reformulation signedTarget : (signedSource n) := by
 reformulation signedNLP : (signedSource n) := by
   nlp at bound using (indexedAbsEpigraph n)
 
-example : GlobalEquivalence (source n) (target n) := target.equivalence n
+example : GlobalEquiv (source n) (target n) := target.equiv n
 example : nlpTarget n = target n := rfl
 example : signedNLP n = signedTarget n := rfl
 example (x t : ℝ) : (signedTarget n).feasible (x, t) ↔
@@ -353,7 +353,7 @@ reformulation finTarget : (finSource i) := by
 reformulation finNLP : (finSource i) := by
   nlp at bound using (finAbsEpigraph i)
 
-example : GlobalEquivalence (finSource i) (finTarget n i) := finTarget.equivalence n i
+example : GlobalEquiv (finSource i) (finTarget n i) := finTarget.equiv n i
 example : finNLP n i = finTarget n i := rfl
 example (x t : ℝ) : (finTarget n i).feasible (x, t) ↔
     x - i.val ≤ -t ∧ -(x - i.val) ≤ -t := Iff.rfl
@@ -370,7 +370,7 @@ def missingDomain :=
 #guard_error_fragments ["constraint `bound`", "positive constant margin"] in
 reformulation rejectedDomain : missingDomain := by conic at bound
 
-assert_not_exists rejectedDomain rejectedDomain.equivalence
+assert_not_exists rejectedDomain rejectedDomain.equiv
 
 -- A whole selected conjunction is not implicitly split to match an atom rule.
 def selfDomain :=
@@ -382,7 +382,7 @@ def selfDomain :=
 reformulation rejectedSelfDomain : selfDomain := by
   conic at bound using Exponential.logHypograph
 
-assert_not_exists rejectedSelfDomain rejectedSelfDomain.equivalence
+assert_not_exists rejectedSelfDomain rejectedSelfDomain.equiv
 
 def wrongPolarity :=
   problem (x t : ℝ)
@@ -392,7 +392,7 @@ def wrongPolarity :=
 #guard_error_fragments ["constraint `bound`", "no supported registered"] in
 reformulation rejectedPolarity : wrongPolarity := by conic at bound
 
-assert_not_exists rejectedPolarity rejectedPolarity.equivalence
+assert_not_exists rejectedPolarity rejectedPolarity.equiv
 
 def nestedArithmetic :=
   problem (x t : ℝ)

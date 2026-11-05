@@ -20,8 +20,8 @@ reformulation continued : reused := by
   conic
 
 example : IsConic continued := continued.isConic
-example : GlobalEquivalence bounded continued :=
-  reused.equivalence.trans continued.equivalence
+example : GlobalEquiv bounded continued :=
+  reused.equiv.trans continued.equiv
 
 reformulation continuedCheckpoint : checkpointChain := by
   derive copied : Real.exp w ≤ 3 using (by intro point hp; exact hp.1)
@@ -31,8 +31,8 @@ reformulation continuedCheckpoint : checkpointChain := by
 
 example (z v t : ℝ) : continuedCheckpoint.feasible ((z, v), t) ↔
     Real.exp z ≤ 3 ∧ (Real.exp v ≤ 4 ∧ True) ∧ z + v ≤ t := Iff.rfl
-example : GlobalEquivalence positive continuedCheckpoint :=
-  checkpointChain.equivalence.trans continuedCheckpoint.equivalence
+example : GlobalEquiv positive continuedCheckpoint :=
+  checkpointChain.equiv.trans continuedCheckpoint.equiv
 
 section
 variable (offset : ℝ)
@@ -43,8 +43,8 @@ reformulation continuedFamily : (familyRemoved offset) := by
   rename copied to bound
 
 example (x : ℝ) : (continuedFamily offset).feasible x ↔ 0 ≤ x + offset := Iff.rfl
-example : GlobalEquivalence (family offset) (continuedFamily offset) :=
-  (familyRemoved.equivalence offset).trans (continuedFamily.equivalence offset)
+example : GlobalEquiv (family offset) (continuedFamily offset) :=
+  (familyRemoved.equiv offset).trans (continuedFamily.equiv offset)
 end
 
 namespace Instances

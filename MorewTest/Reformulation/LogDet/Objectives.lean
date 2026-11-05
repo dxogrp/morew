@@ -36,10 +36,10 @@ reformulation negativeMinimumTarget : negativeMinimum := by
   epigraph t as logDet_bound
   conic
 
-example : GlobalEquivalence maximum maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv maximum maximumTarget := maximumTarget.equiv
 example : IsConic maximumTarget := maximumTarget.isConic
-example : GlobalEquivalence negativeMinimum negativeMinimumTarget :=
-  negativeMinimumTarget.equivalence
+example : GlobalEquiv negativeMinimum negativeMinimumTarget :=
+  negativeMinimumTarget.equiv
 example : IsConic negativeMinimumTarget := negativeMinimumTarget.isConic
 
 end

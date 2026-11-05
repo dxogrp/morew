@@ -25,7 +25,7 @@ reformulation split : compound := by
   epigraph a at (x ^ 2)
   epigraph b at (|x|) as magnitude
 
-example : GlobalEquivalence compound split := split.equivalence
+example : GlobalEquiv compound split := split.equiv
 example (x a b : ℝ) : split.objective ((x, a), b) = a + b := rfl
 example (x a b : ℝ) : split.feasible ((x, a), b) ↔ x ^ 2 ≤ a ∧ |x| ≤ b := Iff.rfl
 
@@ -44,8 +44,8 @@ def nestedExponential := problem (x : ℝ) minimize Real.exp (x ^ 2 + 1) + x
 reformulation nestedExponentialSplit : nestedExponential := by
   epigraph t at (x ^ 2)
 
-example : GlobalEquivalence nestedExponential nestedExponentialSplit :=
-  nestedExponentialSplit.equivalence
+example : GlobalEquiv nestedExponential nestedExponentialSplit :=
+  nestedExponentialSplit.equiv
 example (x t : ℝ) : nestedExponentialSplit.objective (x, t) = Real.exp (t + 1) + x := rfl
 example (x t : ℝ) : nestedExponentialSplit.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
 
@@ -56,8 +56,8 @@ def numeralExpression := problem (x : ℝ) minimize (x + 2) ^ 2 + |x|
 reformulation numeralExpressionSplit : numeralExpression := by
   epigraph t at ((x + 2) ^ 2)
 
-example : GlobalEquivalence numeralExpression numeralExpressionSplit :=
-  numeralExpressionSplit.equivalence
+example : GlobalEquiv numeralExpression numeralExpressionSplit :=
+  numeralExpressionSplit.equiv
 example (x t : ℝ) : numeralExpressionSplit.objective (x, t) = t + |x| := rfl
 example (x t : ℝ) : numeralExpressionSplit.feasible (x, t) ↔
     (x + 2) ^ 2 ≤ t := Iff.rfl
@@ -74,7 +74,7 @@ def named :=
 reformulation namedSplit : named := by
   epigraph t at loss as loss_bound
 
-example : GlobalEquivalence named namedSplit := namedSplit.equivalence
+example : GlobalEquiv named namedSplit := namedSplit.equiv
 example (x t : ℝ) : namedSplit.objective (x, t) = t + |x| := rfl
 example (x t : ℝ) : namedSplit.feasible (x, t) ↔
     (x - 1) ^ 2 ≤ 10 ∧ (x - 1) ^ 2 ≤ t := Iff.rfl
@@ -124,7 +124,7 @@ def namedConstraints :=
 reformulation constraintSplit : namedConstraints := by
   epigraph a at loss in budget as abs_bound
 
-example : GlobalEquivalence namedConstraints constraintSplit := constraintSplit.equivalence
+example : GlobalEquiv namedConstraints constraintSplit := constraintSplit.equiv
 example (x y a : ℝ) : constraintSplit.objective ((x, y), a) = |x| + y := rfl
 example (x y a : ℝ) : constraintSplit.feasible ((x, y), a) ↔
     0 ≤ x ∧ a + y ^ 2 ≤ 10 ∧ y ≤ 3 ∧ |x| ≤ a := Iff.rfl
@@ -161,7 +161,7 @@ reformulation maximumSplit : maximum := by
   hypograph t at score
   epigraph a at (|x|) in budget
 
-example : GlobalEquivalence maximum maximumSplit := maximumSplit.equivalence
+example : GlobalEquiv maximum maximumSplit := maximumSplit.equiv
 example (x t a : ℝ) : maximumSplit.objective ((x, t), a) = t + x := rfl
 example (x t a : ℝ) : maximumSplit.feasible ((x, t), a) ↔
     a + x ≤ 10 ∧ t ≤ min x (2 * x) ∧ |x| ≤ a := Iff.rfl
@@ -189,8 +189,8 @@ reformulation maximumUsing : maximum := by
 reformulation maximumLabeledUsing : maximum := by
   hypograph t at score as score_bound using maximumContext
 
-example : GlobalEquivalence maximum maximumUsing := maximumUsing.equivalence
-example : GlobalEquivalence maximum maximumLabeledUsing := maximumLabeledUsing.equivalence
+example : GlobalEquiv maximum maximumUsing := maximumUsing.equiv
+example : GlobalEquiv maximum maximumLabeledUsing := maximumLabeledUsing.equiv
 example : maximumUsing = maximumLabeledUsing := rfl
 example (x t : ℝ) : maximumLabeledUsing.feasible (x, t) ↔
     |x| + x ≤ 10 ∧ t ≤ min x (2 * x) := Iff.rfl
@@ -204,7 +204,7 @@ def lowerMinimum :=
 reformulation lowerMinimumSplit : lowerMinimum := by
   hypograph t at (x ^ 2) in lower
 
-example : GlobalEquivalence lowerMinimum lowerMinimumSplit := lowerMinimumSplit.equivalence
+example : GlobalEquiv lowerMinimum lowerMinimumSplit := lowerMinimumSplit.equiv
 example (x t : ℝ) : lowerMinimumSplit.feasible (x, t) ↔
     1 ≤ t ∧ t ≤ x ^ 2 := Iff.rfl
 
@@ -217,7 +217,7 @@ def lowerMaximum :=
 reformulation lowerMaximumSplit : lowerMaximum := by
   hypograph t at (x ^ 2) in lower as lower_bound
 
-example : GlobalEquivalence lowerMaximum lowerMaximumSplit := lowerMaximumSplit.equivalence
+example : GlobalEquiv lowerMaximum lowerMaximumSplit := lowerMaximumSplit.equiv
 
 def grouped :=
   problem (x : ℝ)
@@ -246,7 +246,7 @@ theorem weightedContext : ObjectiveEpigraphContext weighted
 reformulation weightedSplit : weighted := by
   epigraph t at loss as loss_bound using weightedContext
 
-example : GlobalEquivalence weighted weightedSplit := weightedSplit.equivalence
+example : GlobalEquiv weighted weightedSplit := weightedSplit.equiv
 
 def weightedConstraint :=
   problem (weight x : ℝ)
@@ -265,8 +265,8 @@ theorem weightedConstraintContext : ConstraintBoundContext
 reformulation weightedConstraintSplit : weightedConstraint := by
   epigraph t at (|x|) in budget as abs_bound using weightedConstraintContext
 
-example : GlobalEquivalence weightedConstraint weightedConstraintSplit :=
-  weightedConstraintSplit.equivalence
+example : GlobalEquiv weightedConstraint weightedConstraintSplit :=
+  weightedConstraintSplit.equiv
 
 def sharedNames :=
   problem (x : ℝ)
@@ -292,7 +292,7 @@ reformulation logarithmicSplit : logarithmic := by
   substitute x := Real.exp u
   epigraph t at loss
 
-example : GlobalEquivalence logarithmic logarithmicSplit := logarithmicSplit.equivalence
+example : GlobalEquiv logarithmic logarithmicSplit := logarithmicSplit.equiv
 example (u t : ℝ) : logarithmicSplit.objective (u, t) = t + Real.exp u := rfl
 example (u t : ℝ) : logarithmicSplit.feasible (u, t) ↔ u ^ 2 ≤ t := Iff.rfl
 
@@ -305,7 +305,7 @@ theorem naturalContext : ObjectiveEpigraphContext natural (fun x => x) (fun _ t 
 reformulation naturalSplit : natural := by
   epigraph t at (x) using naturalContext
 
-example : GlobalEquivalence natural naturalSplit := naturalSplit.equivalence
+example : GlobalEquiv natural naturalSplit := naturalSplit.equiv
 example (x t : ℕ) : naturalSplit.objective (x, t) = t + 1 := rfl
 
 end

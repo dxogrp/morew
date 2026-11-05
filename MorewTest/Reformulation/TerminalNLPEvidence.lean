@@ -31,7 +31,7 @@ example : NLP.Form (imported c) := imported.nlpForm c
 reformulation together : (source c) := by
   nlp at graph using weightedGraph c
   nlp
-example : GlobalEquivalence (source c) (together c) := together.equivalence c
+example : GlobalEquiv (source c) (together c) := together.equiv c
 example : (together.nlpForm c).data.toProblem = together c :=
   (together.nlpForm c).represents
 
@@ -95,7 +95,7 @@ def grouped :=
 reformulation groupedTarget : (grouped c) := by
   nlp
 example : (groupedTarget.nlpForm c).data.rowCount = 5 := rfl
-example : GlobalEquivalence (grouped c) (groupedTarget c) := groupedTarget.equivalence c
+example : GlobalEquiv (grouped c) (groupedTarget c) := groupedTarget.equiv c
 
 reformulation groupedAgain : (groupedTarget c) := by
   nlp
@@ -113,7 +113,7 @@ def projected :=
 reformulation projectedTarget : (projected c) := by
   nlp
 example : (projectedTarget.nlpForm c).data.rowCount = 2 := rfl
-example : GlobalEquivalence (projected c) (projectedTarget c) := projectedTarget.equivalence c
+example : GlobalEquiv (projected c) (projectedTarget c) := projectedTarget.equiv c
 
 reformulation projectedSelected : (projected c) := by
   nlp at bound
@@ -133,8 +133,8 @@ def projectedGroup :=
 reformulation projectedGroupTarget : (projectedGroup c) := by
   nlp
 example : (projectedGroupTarget.nlpForm c).data.rowCount = 5 := rfl
-example : GlobalEquivalence (projectedGroup c) (projectedGroupTarget c) :=
-  projectedGroupTarget.equivalence c
+example : GlobalEquiv (projectedGroup c) (projectedGroupTarget c) :=
+  projectedGroupTarget.equiv c
 reformulation projectedGroupAgain : (projectedGroupTarget c) := by
   nlp
 example : NLP.Form (projectedGroupAgain c) := projectedGroupAgain.nlpForm c
@@ -241,7 +241,7 @@ reformulation opaqueHelperTarget : helperSource := by
 reformulation helperTarget : helperSource := by
   nlp
 
-example : GlobalEquivalence helperSource helperTarget := helperTarget.equivalence
+example : GlobalEquiv helperSource helperTarget := helperTarget.equiv
 example : NLP.Form helperTarget := helperTarget.nlpForm
 
 end

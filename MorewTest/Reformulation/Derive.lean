@@ -19,7 +19,7 @@ reformulation oneRow : free := by
     intro point _
     exact sq_nonneg point)
 
-example : GlobalEquivalence free oneRow := oneRow.equivalence
+example : GlobalEquiv free oneRow := oneRow.equiv
 example (x : ℝ) : oneRow.objective x = x := rfl
 example (x : ℝ) : oneRow.feasible x ↔ 0 ≤ x ^ 2 := Iff.rfl
 
@@ -40,7 +40,7 @@ reformulation successive : free := by
   derive second : True using (by intro _ _; trivial)
 
 example (x : ℝ) : successive.feasible x ↔ True ∧ (True ∧ x = x) ∧ True := Iff.rfl
-example : GlobalEquivalence free successive := successive.equivalence
+example : GlobalEquiv free successive := successive.equiv
 
 /--
 info: problem (x : ℝ)
@@ -85,7 +85,7 @@ reformulation withMargin : transitiveSource := by
 
 example (y x : ℝ) : withMargin.feasible (y, x) ↔
     1 ≤ y ∧ y ≤ x ∧ 1 ≤ x := Iff.rfl
-example : GlobalEquivalence transitiveSource withMargin := withMargin.equivalence
+example : GlobalEquiv transitiveSource withMargin := withMargin.equiv
 
 -- The second proof uses the first derived row in the current checkpoint.
 reformulation chainedMargin : transitiveSource := by
@@ -96,7 +96,7 @@ reformulation chainedMargin : transitiveSource := by
 
 example (y x : ℝ) : chainedMargin.feasible (y, x) ↔
     1 ≤ y ∧ y ≤ x ∧ 1 ≤ x ∧ 0 < x := Iff.rfl
-example : GlobalEquivalence transitiveSource chainedMargin := chainedMargin.equivalence
+example : GlobalEquiv transitiveSource chainedMargin := chainedMargin.equiv
 
 reformulation exponential : transitiveSource := by
   derive margin : 1 ≤ x using marginOfFeasible
@@ -105,7 +105,7 @@ reformulation exponential : transitiveSource := by
 example (y u : ℝ) : exponential.objective (y, u) = u := rfl
 example (y u : ℝ) : exponential.feasible (y, u) ↔
     1 ≤ y ∧ y ≤ Real.exp u ∧ 1 ≤ Real.exp u := Iff.rfl
-example : GlobalEquivalence transitiveSource exponential := exponential.equivalence
+example : GlobalEquiv transitiveSource exponential := exponential.equiv
 
 /--
 info: problem (y u : ℝ)
@@ -132,7 +132,7 @@ reformulation explicitlyCovered : transitiveSource := by
   substitute x := Real.exp u using exponentialCoverage
 
 example : explicitlyCovered = exponential := rfl
-example : GlobalEquivalence transitiveSource explicitlyCovered := explicitlyCovered.equivalence
+example : GlobalEquiv transitiveSource explicitlyCovered := explicitlyCovered.equiv
 
 def interval :=
   problem (x : ℝ)
@@ -180,7 +180,7 @@ reformulation afterEpigraph : quadratic := by
 
 example (x t : ℝ) : afterEpigraph.feasible (x, t) ↔
     x ^ 2 ≤ t ∧ x ^ 2 ≤ t + 1 := Iff.rfl
-example : GlobalEquivalence quadratic afterEpigraph := afterEpigraph.equivalence
+example : GlobalEquiv quadratic afterEpigraph := afterEpigraph.equiv
 
 reformulation afterHypograph : transitiveSource := by
   hypograph t as objective_bound
@@ -192,7 +192,7 @@ reformulation afterHypograph : transitiveSource := by
 
 example (y x t : ℝ) : afterHypograph.feasible ((y, x), t) ↔
     1 ≤ y ∧ y ≤ x ∧ t ≤ Real.log x ∧ 1 ≤ x := Iff.rfl
-example : GlobalEquivalence transitiveSource afterHypograph := afterHypograph.equivalence
+example : GlobalEquiv transitiveSource afterHypograph := afterHypograph.equiv
 
 def middleSource :=
   problem (a x b : ℝ)
@@ -209,8 +209,8 @@ reformulation afterMiddleSubstitution : middleSource := by
 
 example (a u b : ℝ) : afterMiddleSubstitution.objective ((a, u), b) = a + u ^ 2 + b := rfl
 example (a u b : ℝ) : afterMiddleSubstitution.feasible ((a, u), b) ↔ 0 ≤ u ^ 2 := Iff.rfl
-example : GlobalEquivalence middleSource afterMiddleSubstitution :=
-  afterMiddleSubstitution.equivalence
+example : GlobalEquiv middleSource afterMiddleSubstitution :=
+  afterMiddleSubstitution.equiv
 
 /--
 info: problem (a u b : ℝ)
@@ -230,7 +230,7 @@ reformulation proofOnlyParameter : free := by
   epigraph t
   substitute x := u
 
-example : GlobalEquivalence free proofOnlyParameter := proofOnlyParameter.equivalence t
+example : GlobalEquiv free proofOnlyParameter := proofOnlyParameter.equiv t
 example (x t : ℝ) : proofOnlyParameter.feasible (x, t) ↔ x = x ∧ x ≤ t := Iff.rfl
 end
 
@@ -252,8 +252,8 @@ variable (offset : ℝ)
 reformulation shiftedDerived : (shiftedFamily offset) := by
   derive doubled_nonnegative : 0 ≤ doubled using doubledNonnegative offset
 
-example : GlobalEquivalence (shiftedFamily offset) (shiftedDerived offset) :=
-  shiftedDerived.equivalence offset
+example : GlobalEquiv (shiftedFamily offset) (shiftedDerived offset) :=
+  shiftedDerived.equiv offset
 example (x : ℝ) : (shiftedDerived offset).feasible x ↔
     0 ≤ x + offset ∧ 0 ≤ (x + offset) + (x + offset) := Iff.rfl
 
@@ -294,8 +294,8 @@ reformulation anonymousInstance : (genericSource (α := α)) := by
 
 example (x : α) : (anonymousInstance (α := α)).feasible x ↔
     x = x ∧ x + 0 = x := Iff.rfl
-example : GlobalEquivalence (genericSource (α := α)) (anonymousInstance (α := α)) :=
-  anonymousInstance.equivalence
+example : GlobalEquiv (genericSource (α := α)) (anonymousInstance (α := α)) :=
+  anonymousInstance.equiv
 end
 
 namespace Hygiene
@@ -322,7 +322,7 @@ macro "deriveSelf " target:ident " from " source:ident : command =>
       derive macro_fact : True using (by intro _ _; trivial))
 
 deriveSelf macroTarget from source
-example : GlobalEquivalence source macroTarget := macroTarget.equivalence
+example : GlobalEquiv source macroTarget := macroTarget.equiv
 
 end Hygiene
 

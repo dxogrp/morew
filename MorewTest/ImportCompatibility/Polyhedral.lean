@@ -33,7 +33,7 @@ info: problem (x : ℝ)
 reformulation continued : lowered := by
   conic at remaining
 
-example : GlobalEquivalence lowered continued := continued.equivalence
+example : GlobalEquiv lowered continued := continued.equiv
 
 example (x : ℝ) : continued.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 ∧ x ≤ 5 ∧ -x ≤ 5 := Iff.rfl
 
@@ -45,10 +45,10 @@ reformulation continued : lowered := by
   conic at one
   epigraph bound as value
 
-example : GlobalEquivalence lowered continued := continued.equivalence
+example : GlobalEquiv lowered continued := continued.equiv
 
-example : GlobalEquivalence source continued :=
-  lowered.equivalence.trans continued.equivalence
+example : GlobalEquiv source continued :=
+  lowered.equiv.trans continued.equiv
 
 example (v u : Fin Dimension.size → ℝ) (t bound : ℝ) :
     continued.objective (((v, t), u), bound) = bound := rfl

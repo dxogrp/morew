@@ -23,7 +23,7 @@ noncomputable section
 private def assertAbsent (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
-  for name in #[target, target ++ `equivalence, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName] do
     if env.contains name then
       Lean.throwError "failed conic rewrite emitted declaration `{name}`"
   if (Morew.Syntax.getProblemView? env target).isSome then
@@ -36,7 +36,7 @@ elab "assert_polyhedral_atomic% " nested:command : command => do
     | Lean.throwError "expected a reformulation command"
   let namespaceName ← Lean.getCurrNamespace
   let targetName := namespaceName ++ target.getId
-  let names := #[targetName, targetName ++ `equivalence] ++
+  let names := #[targetName, targetName ++ `equiv] ++
     (match aliasName with
       | some aliasName => #[namespaceName ++ aliasName.getId]
       | none => #[])
@@ -173,7 +173,7 @@ reformulation validAfterFailures : source := by
   conic at bound
   epigraph t
 
-example : GlobalEquivalence source validAfterFailures := validAfterFailures.equivalence
+example : GlobalEquiv source validAfterFailures := validAfterFailures.equiv
 
 end
 

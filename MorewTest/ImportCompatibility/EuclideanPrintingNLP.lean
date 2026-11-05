@@ -24,8 +24,8 @@ run_cmd do
     checkReadable declaration
     checkStoredProjections declaration
 
-example : GlobalEquivalence source continued :=
-  target.equivalence.trans continued.equivalence
+example : GlobalEquiv source continued :=
+  target.equiv.trans continued.equiv
 example : IsSmoothNLP continued := continued.isSmoothNLP
 
 namespace AlteredCoercion

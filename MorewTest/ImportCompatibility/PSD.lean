@@ -18,16 +18,16 @@ noncomputable section
 
 reformulation continued : diagonalTarget := by conic
 
-example : GlobalEquivalence diagonalSource continued :=
-  diagonalTarget.equivalence.trans continued.equivalence
+example : GlobalEquiv diagonalSource continued :=
+  diagonalTarget.equiv.trans continued.equiv
 example : continued.conicForm.data.toProblem = continued := continued.conicForm.represents
 
 variable (A : SymmetricMatrix 1) (hA : A.toMatrix.PosDef)
 
 reformulation importedSchur : (schurSelected A) := by conic
 
-example : GlobalEquivalence (schurSource A) (importedSchur A) :=
-  (schurSelected.equivalence A hA).trans (importedSchur.equivalence A)
+example : GlobalEquiv (schurSource A) (importedSchur A) :=
+  (schurSelected.equiv A hA).trans (importedSchur.equiv A)
 example : (importedSchur.conicForm A).data.rowCount = 3 := rfl
 
 namespace Shadow

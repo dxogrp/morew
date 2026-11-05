@@ -28,26 +28,26 @@ set_option pp.coercions true
 
 reformulation explicitCopy : explicitSource := by
 
-example : GlobalEquivalence explicitSource explicitCopy := explicitCopy.equivalence
+example : GlobalEquiv explicitSource explicitCopy := explicitCopy.equiv
 example (x : Box) : explicitCopy.objective x = x.value := rfl
 
 reformulation castCopy : castSource := by
 
-example : GlobalEquivalence castSource castCopy := castCopy.equivalence
+example : GlobalEquiv castSource castCopy := castCopy.equiv
 example (x : Box) : castCopy.objective x = x.value := rfl
 
 -- The selector, retained row, and new bound must all use the source's function.
 reformulation expressionLift : explicitSource := by
   epigraph t at (boxToReal x)
 
-example : GlobalEquivalence explicitSource expressionLift := expressionLift.equivalence
+example : GlobalEquiv explicitSource expressionLift := expressionLift.equiv
 example (x : Box) (t : ℝ) : expressionLift.objective (x, t) = t := rfl
 example (x : Box) (t : ℝ) : expressionLift.feasible (x, t) ↔ x.value ≤ t := Iff.rfl
 
 reformulation namedLift : (family 3) := by
   epigraph t at loss
 
-example : GlobalEquivalence (family 3) namedLift := namedLift.equivalence
+example : GlobalEquiv (family 3) namedLift := namedLift.equiv
 example (x : Box) (t : ℝ) : namedLift.objective (x, t) = t + 3 := rfl
 example (x : Box) (t : ℝ) : namedLift.feasible (x, t) ↔
     x.value ≤ 10 ∧ x.value ≤ t := Iff.rfl
@@ -56,7 +56,7 @@ example (x : Box) (t : ℝ) : namedLift.feasible (x, t) ↔
 reformulation continued : generated := by
   epigraph s at (boxToReal x) in cap
 
-example : GlobalEquivalence generated continued := continued.equivalence
+example : GlobalEquiv generated continued := continued.equiv
 example (x : Box) (t s : ℝ) : continued.objective ((x, t), s) = t + 2 := rfl
 example (x : Box) (t s : ℝ) : continued.feasible ((x, t), s) ↔
     s ≤ 10 ∧ x.value ≤ t ∧ x.value ≤ s := Iff.rfl
@@ -67,8 +67,8 @@ variable (box : Box)
 -- Re-elaborating a decision type must not resynthesize the natural-number coercion.
 reformulation indexedCopy : (indexedFamily box) := by
 
-example : GlobalEquivalence (indexedFamily box) (indexedCopy box) :=
-  indexedCopy.equivalence box
+example : GlobalEquiv (indexedFamily box) (indexedCopy box) :=
+  indexedCopy.equiv box
 example (i : Fin (box.size + 1)) : (indexedCopy box).objective i = (i.val : ℝ) := rfl
 
 end

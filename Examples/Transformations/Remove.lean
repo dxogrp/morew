@@ -40,7 +40,7 @@ reformulation simplified : bounded := by
 example (x : ℝ) : simplified.feasible x ↔ 1 ≤ x := by
   change 0 ≤ x - 1 ↔ 1 ≤ x
   exact sub_nonneg
-example : GlobalEquivalence bounded simplified := simplified.equivalence
+example : GlobalEquiv bounded simplified := simplified.equiv
 example : IsConic simplified := simplified.isConic
 
 end

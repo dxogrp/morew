@@ -8,7 +8,7 @@ import Morew.Elab.NLP.Terminal
 import Morew.Elab.Reformulation.Rows
 
 /-! Apply exact bound rewrites and certify the objective and residuals on a common
-open domain containing the feasible set. Emit `equivalence`, `nlpForm`, and `isSmoothNLP`.
+open domain containing the feasible set. Emit `equiv`, `nlpForm`, and `isSmoothNLP`.
 Domain inference leaves feasibility unchanged.
 
 Store scalar residuals `a - b` with upper, lower, or fixed zero bounds; retain grouped
@@ -77,9 +77,9 @@ private def materializeTerminalNLP (state : ReformState)
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
     let targetProblem ← prepared.presentation.canonicalProblem
-    let exact ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[typed.normalization.equivalence, prepared.equivalence]
-    let primitive ← state.runner.liftEquivalence exact
+    let exact ← mkAppM ``Morew.GlobalEquiv.trans
+      #[typed.normalization.equiv, prepared.equiv]
+    let primitive ← state.runner.liftEquiv exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate `_terminalNLPCertificate primitive

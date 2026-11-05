@@ -50,15 +50,15 @@ reformulation target : affineSource certificate certificateAlias := by
 example : target = 11 := rfl
 end TargetCollision
 
-namespace EquivalenceCollision
-def target.equivalence : Nat := 13
+namespace EquivCollision
+def target.equiv : Nat := 13
 #guard_error_fragments [
-  "`MorewTest.Reformulation.TerminalConicFailures.EquivalenceCollision.target.equivalence` has already been declared"] in
+  "`MorewTest.Reformulation.TerminalConicFailures.EquivCollision.target.equiv` has already been declared"] in
 assert_terminal_atomic%
 reformulation target : affineSource certificate certificateAlias := by
   conic
-example : target.equivalence = 13 := rfl
-end EquivalenceCollision
+example : target.equiv = 13 := rfl
+end EquivCollision
 
 namespace FormCollision
 def target.conicForm : Nat := 17
@@ -109,7 +109,7 @@ reformulation aliasIsTarget : affineSource certificate aliasIsTarget := by
 /-- error: certificate alias names the same declaration as the canonical certificate -/
 #guard_msgs in
 assert_terminal_atomic%
-reformulation aliasIsEquivalence : affineSource certificate aliasIsEquivalence.equivalence := by
+reformulation aliasIsEquiv : affineSource certificate aliasIsEquiv.equiv := by
   conic
 
 /-- error: cannot apply a reformulation step after a terminal step -/
@@ -331,8 +331,8 @@ reformulation constantRelationsTarget : reducibleConstantRelations := by
   conic
 
 example : constantRelationsTarget.conicForm.data.rowCount = 0 := rfl
-example : GlobalEquivalence reducibleConstantRelations constantRelationsTarget :=
-  constantRelationsTarget.equivalence
+example : GlobalEquiv reducibleConstantRelations constantRelationsTarget :=
+  constantRelationsTarget.equiv
 
 -- Normalizing an affine sibling must not reinterpret a constant relation that
 -- the semantic checkpoint already reduced to `True`. Keep its original leaf,
@@ -363,8 +363,8 @@ def groupedConstantRelations :=
 reformulation groupedConstantTarget : groupedConstantRelations := by
   conic
 
-example : GlobalEquivalence groupedConstantRelations groupedConstantTarget :=
-  groupedConstantTarget.equivalence
+example : GlobalEquiv groupedConstantRelations groupedConstantTarget :=
+  groupedConstantTarget.equiv
 example : groupedConstantTarget.conicForm.data.rowCount = 14 := rfl
 example : groupedConstantTarget.conicForm.data.toProblem = groupedConstantTarget :=
   groupedConstantTarget.conicForm.represents
@@ -402,8 +402,8 @@ reformulation groupedConstantAgain : groupedConstantTarget := by
   conic
 
 example : groupedConstantAgain.conicForm.data.rowCount = 15 := rfl
-example : GlobalEquivalence groupedConstantTarget groupedConstantAgain :=
-  groupedConstantAgain.equivalence
+example : GlobalEquiv groupedConstantTarget groupedConstantAgain :=
+  groupedConstantAgain.equiv
 
 def liftedThenFailure :=
   problem (x t : ℝ)

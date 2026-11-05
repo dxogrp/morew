@@ -37,7 +37,7 @@ reformulation regularizedConic : regularized := by
   conic
 
 #printp regularizedConic
-example : GlobalEquivalence regularized regularizedConic := regularizedConic.equivalence
+example : GlobalEquiv regularized regularizedConic := regularizedConic.equiv
 example : IsConic regularizedConic := regularizedConic.isConic
 
 def budgeted :=
@@ -56,7 +56,7 @@ reformulation budgetedConic : budgeted := by
   conic
 
 #printp budgetedConic
-example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
+example : GlobalEquiv budgeted budgetedConic := budgetedConic.equiv
 example : IsConic budgetedConic := budgetedConic.isConic
 
 def nonlinear :=
@@ -74,7 +74,7 @@ reformulation smoothConstraints : nonlinear := by
   nlp
 
 #printp smoothConstraints
-example : GlobalEquivalence nonlinear smoothConstraints := smoothConstraints.equivalence
+example : GlobalEquiv nonlinear smoothConstraints := smoothConstraints.equiv
 example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
   smoothConstraints.nlpForm.represents
 example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP

@@ -23,7 +23,7 @@ noncomputable section
 def source := problem (x : ℝ) minimize x subject to bound : |x| ≤ 1
 reformulation targeted : source := by conic at bound
 reformulation terminal : targeted := by conic
-example : GlobalEquivalence source terminal := targeted.equivalence.trans terminal.equivalence
+example : GlobalEquiv source terminal := targeted.equiv.trans terminal.equiv
 example : IsConic terminal := terminal.isConic
 example : terminal.conicForm.data.toProblem = terminal := terminal.conicForm.represents
 

@@ -26,8 +26,8 @@ def groupedSource (n : Nat) :=
 
 reformulation groupedTarget : (groupedSource n) := by conic
 example : (groupedTarget.conicForm n).data.rowCount = 7 := rfl
-example : GlobalEquivalence (groupedSource n) (groupedTarget n) :=
-  groupedTarget.equivalence n hn
+example : GlobalEquiv (groupedSource n) (groupedTarget n) :=
+  groupedTarget.equiv n hn
 
 def marginSource (n : Nat) (epsilon : ℝ) :=
   problem (X : SymmetricMatrix n) (t : ℝ)
@@ -39,8 +39,8 @@ def marginSource (n : Nat) (epsilon : ℝ) :=
 variable (epsilon : ℝ) (hε : 0 < epsilon)
 
 reformulation marginTarget : (marginSource n epsilon) := by conic
-example : GlobalEquivalence (marginSource n epsilon) (marginTarget n epsilon) :=
-  marginTarget.equivalence n hn epsilon hε
+example : GlobalEquiv (marginSource n epsilon) (marginTarget n epsilon) :=
+  marginTarget.equiv n hn epsilon hε
 
 def bundledMarginSource (n : Nat) :=
   problem (X : SymmetricMatrix n) (t : ℝ)
@@ -50,8 +50,8 @@ def bundledMarginSource (n : Nat) :=
       bound : t ≤ Fn.logDet X.toMatrix
 
 reformulation bundledMarginTarget : (bundledMarginSource n) := by conic
-example : GlobalEquivalence (bundledMarginSource n) (bundledMarginTarget n) :=
-  bundledMarginTarget.equivalence n hn
+example : GlobalEquiv (bundledMarginSource n) (bundledMarginTarget n) :=
+  bundledMarginTarget.equiv n hn
 
 def witnessedSource (n : Nat) :=
   problem (X W : SymmetricMatrix n) (t : ℝ)
@@ -71,8 +71,8 @@ def nativeWitnessedSource (n : Nat) :=
         (fromBlocksFin matrix 1 1 W.toMatrix).PosSemidef ∧ t ≤ Fn.logDet matrix)
 
 reformulation nativeWitnessedTarget : (nativeWitnessedSource n) := by conic
-example : GlobalEquivalence (nativeWitnessedSource n) (nativeWitnessedTarget n) :=
-  nativeWitnessedTarget.equivalence n hn
+example : GlobalEquiv (nativeWitnessedSource n) (nativeWitnessedTarget n) :=
+  nativeWitnessedTarget.equiv n hn
 
 def fixedSource (n : Nat) (X : Matrix (Fin n) (Fin n) ℝ) :=
   problem (t : ℝ)
@@ -84,8 +84,8 @@ variable (X : Matrix (Fin n) (Fin n) ℝ) (hX : X.PosDef)
 reformulation fixedTarget : (fixedSource n X) := by
   conic at bound
   conic
-example : GlobalEquivalence (fixedSource n X) (fixedTarget n X hX) :=
-  fixedTarget.equivalence n hn X hX
+example : GlobalEquiv (fixedSource n X) (fixedTarget n X hX) :=
+  fixedTarget.equiv n hn X hX
 example : (fixedTarget.conicForm n X hX).data.rowCount = 3 := rfl
 
 section ConjoinedDomain
@@ -96,9 +96,9 @@ variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
 reformulation fixedConjoinedTarget : (fixedSource n (family 0)) := by
   conic at bound
   conic
-example : GlobalEquivalence (fixedSource n (family 0))
+example : GlobalEquiv (fixedSource n (family 0))
     (fixedConjoinedTarget n family hFamily) :=
-  fixedConjoinedTarget.equivalence n hn family hFamily
+  fixedConjoinedTarget.equiv n hn family hFamily
 
 end ConjoinedDomain
 
@@ -110,8 +110,8 @@ def affineSource (n : Nat) :=
       bound : t + 1 ≤ Fn.logDet ((2 : ℝ) • X.toMatrix + 1)
 
 reformulation affineTarget : (affineSource n) := by conic
-example : GlobalEquivalence (affineSource n) (affineTarget n) :=
-  affineTarget.equivalence n hn
+example : GlobalEquiv (affineSource n) (affineTarget n) :=
+  affineTarget.equiv n hn
 
 end
 end MorewTest.Reformulation.LogDet

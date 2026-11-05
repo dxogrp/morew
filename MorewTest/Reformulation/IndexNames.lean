@@ -48,7 +48,7 @@ info: problem (v : Fin n → ℝ) (t : ℝ)
 #guard_msgs in
 #printp normTerminal
 
-example : GlobalEquivalence (normBound n) (normTerminal n) := normTerminal.equivalence n
+example : GlobalEquiv (normBound n) (normTerminal n) := normTerminal.equiv n
 example : (normTerminal.nlpForm n).data.toProblem = normTerminal n :=
   (normTerminal.nlpForm n).represents
 

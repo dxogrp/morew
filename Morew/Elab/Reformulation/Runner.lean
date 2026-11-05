@@ -63,7 +63,7 @@ structure PointwiseNormalization where
   /-- Pointwise equivalence of semantic and canonical feasibility. -/
   feasibleIff : Expr
   /-- Global-equivalence certificate induced by the pointwise proofs. -/
-  equivalence : Expr
+  equiv : Expr
 
 /-- A step's requested names and construction procedure. -/
 structure StepPlan (m : Type → Type) where
@@ -125,7 +125,7 @@ def PointwiseNormalization.replaceFVars (normalization : PointwiseNormalization)
   canonical := normalization.canonical.replaceFVars oldFVars newFVars
   objectiveEquality := normalization.objectiveEquality.replaceFVars oldFVars newFVars
   feasibleIff := normalization.feasibleIff.replaceFVars oldFVars newFVars
-  equivalence := normalization.equivalence.replaceFVars oldFVars newFVars
+  equiv := normalization.equiv.replaceFVars oldFVars newFVars
 }
 
 /-- Replace section variables in retained expressions with those from a later `runTermElabM` context. -/
@@ -151,7 +151,7 @@ structure CertificateRunner where
   /-- Declaration implementing transitivity for the relation. -/
   trans : Name
   /-- Optional declaration converting global equivalence to the relation. -/
-  liftEquivalence? : Option Name := none
+  liftEquiv? : Option Name := none
 
 /-- Form the type `relation source target` selected by a certificate runner. -/
 def CertificateRunner.relationType (runner : CertificateRunner)
@@ -169,17 +169,17 @@ def CertificateRunner.compose (runner : CertificateRunner)
   mkAppM runner.trans #[left, right]
 
 /-- Convert a primitive equivalence certificate to the selected relation when required. -/
-def CertificateRunner.liftEquivalence (runner : CertificateRunner)
+def CertificateRunner.liftEquiv (runner : CertificateRunner)
     (certificate : Expr) : MetaM Expr :=
-  match runner.liftEquivalence? with
+  match runner.liftEquiv? with
   | none => pure certificate
   | some lift => mkAppM lift #[certificate]
 
 /-- The exact relation used by the current public reformulation command. -/
-def globalEquivalenceRunner : CertificateRunner where
-  relation := ``Morew.GlobalEquivalence
-  refl := ``Morew.GlobalEquivalence.refl
-  trans := ``Morew.GlobalEquivalence.trans
+def globalEquivRunner : CertificateRunner where
+  relation := ``Morew.GlobalEquiv
+  refl := ``Morew.GlobalEquiv.refl
+  trans := ``Morew.GlobalEquiv.trans
 
 private def problemTypeParts (optimizationProblem : Expr) : MetaM (Expr × Expr) := do
   let type ← whnf (← inferType optimizationProblem)
@@ -216,9 +216,9 @@ def PointwiseNormalization.check (normalization : PointwiseNormalization) :
     "normalization objective proof"
   ensureHasType normalization.feasibleIff feasibleType
     "normalization feasibility proof"
-  let expectedEquivalence ← mkAppM ``Morew.GlobalEquivalence
+  let expectedEquiv ← mkAppM ``Morew.GlobalEquiv
     #[normalization.semantic, normalization.canonical]
-  ensureHasType normalization.equivalence expectedEquivalence
+  ensureHasType normalization.equiv expectedEquiv
     "normalization equivalence certificate"
 
 private def validateDeltaEvidence (state : RunnerState) (result : StepResult)
@@ -278,14 +278,14 @@ def RunnerState.commit (state : RunnerState) (runner : CertificateRunner)
     | throwError "presentation delta is missing semantic objective normalization evidence"
   let some feasibleIff := result.presentationDelta.normalizationFeasibleIff?
     | throwError "presentation delta is missing semantic feasibility normalization evidence"
-  let equivalence ← mkAppM ``Morew.pointwiseEquivalence
+  let equiv ← mkAppM ``Morew.pointwiseEquiv
     #[result.nextSemantic, expectedCanonical, objectiveEquality, feasibleIff]
   let normalization : PointwiseNormalization := {
     semantic := result.nextSemantic
     canonical := expectedCanonical
     objectiveEquality
     feasibleIff
-    equivalence
+    equiv
   }
   normalization.check
   let (semanticDomainType, semanticValueType) ← problemTypeParts result.nextSemantic
@@ -311,7 +311,7 @@ def RunnerState.commit (state : RunnerState) (runner : CertificateRunner)
 /-- Compose the raw semantic chain with its final canonical normalization. -/
 def RunnerState.finalCertificate (state : RunnerState)
     (runner : CertificateRunner) : MetaM Expr := do
-  let normalization ← runner.liftEquivalence state.normalization.equivalence
+  let normalization ← runner.liftEquiv state.normalization.equiv
   runner.compose state.accumulatedCertificate normalization
 
 

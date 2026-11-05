@@ -33,12 +33,12 @@ reformulation labeledMinimum : minimumSource := by
 reformulation explicitlyDefaultMinimum : minimumSource := by
   epigraph t as epigraph_t
 
-example : GlobalEquivalence minimumSource labeledMinimum :=
-  labeledMinimum.equivalence
+example : GlobalEquiv minimumSource labeledMinimum :=
+  labeledMinimum.equiv
 
 example : defaultMinimum = labeledMinimum := rfl
 example : defaultMinimum = explicitlyDefaultMinimum := rfl
-example : defaultMinimum.equivalence = labeledMinimum.equivalence := rfl
+example : defaultMinimum.equiv = labeledMinimum.equiv := rfl
 
 example (x t : ℝ) : labeledMinimum.objective (x, t) = t := rfl
 
@@ -76,11 +76,11 @@ reformulation defaultMaximum : maximumSource := by
 reformulation labeledMaximum : maximumSource := by
   hypograph t as score_bound
 
-example : GlobalEquivalence maximumSource labeledMaximum :=
-  labeledMaximum.equivalence
+example : GlobalEquiv maximumSource labeledMaximum :=
+  labeledMaximum.equiv
 
 example : defaultMaximum = labeledMaximum := rfl
-example : defaultMaximum.equivalence = labeledMaximum.equivalence := rfl
+example : defaultMaximum.equiv = labeledMaximum.equiv := rfl
 
 example (x t : ℝ) :
     labeledMaximum.feasible (x, t) ↔
@@ -103,8 +103,8 @@ reformulation twiceBounded : minimumSource := by
   epigraph t as first_bound
   epigraph s as second_bound
 
-example : GlobalEquivalence minimumSource twiceBounded :=
-  twiceBounded.equivalence
+example : GlobalEquiv minimumSource twiceBounded :=
+  twiceBounded.equiv
 
 example (x t s : ℝ) :
     twiceBounded.feasible ((x, t), s) ↔
@@ -123,8 +123,8 @@ info: problem (x t s : ℝ)
 reformulation boundedAcrossDeclarations : labeledMinimum := by
   epigraph s as outer_bound
 
-example : GlobalEquivalence labeledMinimum boundedAcrossDeclarations :=
-  boundedAcrossDeclarations.equivalence
+example : GlobalEquiv labeledMinimum boundedAcrossDeclarations :=
+  boundedAcrossDeclarations.equiv
 
 example (x t s : ℝ) :
     boundedAcrossDeclarations.feasible ((x, t), s) ↔
@@ -152,8 +152,8 @@ reformulation automaticSubstitution : logarithmicSource := by
   substitute x := Real.exp u
   epigraph t as logarithm_bound
 
-example : GlobalEquivalence logarithmicSource automaticSubstitution :=
-  automaticSubstitution.equivalence
+example : GlobalEquiv logarithmicSource automaticSubstitution :=
+  automaticSubstitution.equiv
 
 example (u t : ℝ) :
     automaticSubstitution.feasible (u, t) ↔ u ^ 2 ≤ t := Iff.rfl
@@ -175,8 +175,8 @@ def labeledRenameCoverage :
 reformulation substitutionAfterBound : labeledMinimum := by
   substitute x := u using labeledRenameCoverage
 
-example : GlobalEquivalence labeledMinimum substitutionAfterBound :=
-  substitutionAfterBound.equivalence
+example : GlobalEquiv labeledMinimum substitutionAfterBound :=
+  substitutionAfterBound.equiv
 
 example (u t : ℝ) :
     substitutionAfterBound.feasible (u, t) ↔ u ^ 2 ≤ t := Iff.rfl
@@ -340,7 +340,7 @@ elab "assert_objective_bound_atomic% " nested:command : command => do
     | Lean.throwError "expected a reformulation command"
   let namespaceName ← Lean.getCurrNamespace
   let targetName := namespaceName ++ target.getId
-  let names := #[targetName, targetName ++ `equivalence] ++
+  let names := #[targetName, targetName ++ `equiv] ++
     (match aliasName with
       | some aliasName => #[namespaceName ++ aliasName.getId]
       | none => #[])
@@ -395,7 +395,7 @@ run_cmd do
   let env ← Lean.getEnv
   if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget then
     Lean.throwError "a label collision emitted the reformulation target"
-  if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget.equivalence then
+  if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget.equiv then
     Lean.throwError "a label collision emitted the canonical certificate"
   if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicAlias then
     Lean.throwError "a label collision emitted the certificate alias"
@@ -407,7 +407,7 @@ reformulation atomicTarget : minimumSource certificate atomicAlias := by
   epigraph t as shared
   epigraph s as recovered
 
-example : GlobalEquivalence minimumSource atomicTarget := atomicAlias
+example : GlobalEquiv minimumSource atomicTarget := atomicAlias
 
 example (x t s : ℝ) :
     atomicTarget.feasible ((x, t), s) ↔

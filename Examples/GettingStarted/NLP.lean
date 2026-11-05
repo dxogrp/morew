@@ -38,7 +38,7 @@ reformulation smoothConstraints : nonlinear := by
   nlp
 
 #printp smoothConstraints
-example : GlobalEquivalence nonlinear smoothConstraints := smoothConstraints.equivalence
+example : GlobalEquiv nonlinear smoothConstraints := smoothConstraints.equiv
 example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
   smoothConstraints.nlpForm.represents
 example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP
@@ -53,7 +53,7 @@ reformulation negativeMinimumNLP : negativeMinimum := by
   nlp
 
 #printp negativeMinimumNLP
-example : GlobalEquivalence negativeMinimum negativeMinimumNLP := negativeMinimumNLP.equivalence
+example : GlobalEquiv negativeMinimum negativeMinimumNLP := negativeMinimumNLP.equiv
 example : IsSmoothNLP negativeMinimumNLP := negativeMinimumNLP.isSmoothNLP
 
 end

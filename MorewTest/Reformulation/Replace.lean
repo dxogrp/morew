@@ -51,8 +51,8 @@ reformulation nlpTarget : source := by
   nlp at cap_nlp_1 using upperLift
   nlp at norm
 
-example : GlobalEquivalence source conicTarget := conicTarget.equivalence
-example : GlobalEquivalence source nlpTarget := nlpTarget.equivalence
+example : GlobalEquiv source conicTarget := conicTarget.equiv
+example : GlobalEquiv source nlpTarget := nlpTarget.equiv
 
 example (x : ℝ) (v u : Fin 1 → ℝ) :
     conicTarget.feasible ((x, v), u) ↔
@@ -108,8 +108,8 @@ reformulation conicContinued : conicTarget := by
 reformulation nlpContinued : nlpTarget := by
   epigraph bound at first as first_bound
 
-example : GlobalEquivalence conicTarget conicContinued := conicContinued.equivalence
-example : GlobalEquivalence nlpTarget nlpContinued := nlpContinued.equivalence
+example : GlobalEquiv conicTarget conicContinued := conicContinued.equiv
+example : GlobalEquiv nlpTarget nlpContinued := nlpContinued.equiv
 
 end
 end MorewTest.Reformulation.Replace

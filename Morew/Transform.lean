@@ -29,8 +29,8 @@ structure ConstraintDecomposition {X : Type u} {V : Type v}
 namespace Problem
 
 /-- Append a constraint, preserving the decision space and objective.
-For global equivalence, use `addConstraintEquivalence` with an implication
-from feasibility, or `restrictionEquivalence` with a feasible improvement map. -/
+For global equivalence, use `addConstraintEquiv` with an implication
+from feasibility, or `restrictionEquiv` with a feasible improvement map. -/
 def addConstraint {X : Type u} {V : Type v}
     (p : Problem X V) (constraint : X → Prop) : Problem X V where
   objective := p.objective
@@ -48,7 +48,7 @@ theorem addConstraint_feasible {X : Type u} {V : Type v}
       p.feasible point ∧ constraint point := Iff.rfl
 
 /-- Remove a selected constraint, preserving the decision space and objective.
-`removeConstraintEquivalence` proves equivalence when the retained constraints
+`removeConstraintEquiv` proves equivalence when the retained constraints
 imply the removed constraint. -/
 def removeConstraint {X : Type u} {V : Type v}
     {selected : X → Prop} (p : Problem X V)
@@ -192,11 +192,11 @@ structure FeasibleSurjection {X : Type u} {Y : Type v} {V : Type w}
 
 /-- Pointwise-equal objectives and pointwise-equivalent feasible predicates
 give a global equivalence via the identity map on decision points. -/
-def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
+def pointwiseEquiv {X : Type u} {V : Type v} [Preorder V]
     (p q : Problem X V)
     (objective_eq : ∀ x, p.objective x = q.objective x)
     (feasible_iff : ∀ x, p.feasible x ↔ q.feasible x) :
-    GlobalEquivalence p q where
+    GlobalEquiv p q where
   forward := {
     map := fun x => ⟨x.1, (feasible_iff x.1).mp x.2⟩
     objective_le := fun x => le_of_eq (objective_eq x.1).symm }
@@ -206,30 +206,30 @@ def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
 
 /-- Add a consequence of current feasibility, preserving decision points and
 objective values. -/
-def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+def addConstraintEquiv {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (implied : ∀ point, p.feasible point → constraint point) :
-    GlobalEquivalence p (p.addConstraint constraint) :=
-  pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
+    GlobalEquiv p (p.addConstraint constraint) :=
+  pointwiseEquiv p (p.addConstraint constraint) (fun _ => rfl)
     (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
 
 /-- Remove a constraint implied by the retained constraints, preserving decision
 points and objective values. -/
-def removeConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
+def removeConstraintEquiv {X : Type u} {V : Type v} [Preorder V]
     {selected : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p selected)
     (implied : ∀ point, decomposition.remainder point → selected point) :
-    GlobalEquivalence p (p.removeConstraint decomposition) :=
-  pointwiseEquivalence p (p.removeConstraint decomposition) (fun _ => rfl)
+    GlobalEquiv p (p.removeConstraint decomposition) :=
+  pointwiseEquiv p (p.removeConstraint decomposition) (fun _ => rfl)
     (fun point => ⟨fun feasible => ((decomposition.feasible_iff point).mp feasible).1,
       fun retained => (decomposition.feasible_iff point).mpr ⟨retained, implied point retained⟩⟩)
 
 /-- Restrict to an added constraint using a feasible improvement map.
 The backward map is inclusion. -/
-def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
+def restrictionEquiv {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (repair : GlobalImprovement p (p.addConstraint constraint)) :
-    GlobalEquivalence p (p.addConstraint constraint) where
+    GlobalEquiv p (p.addConstraint constraint) where
   forward := repair
   backward := {
     map := fun point => ⟨point.1, point.2.1⟩
@@ -245,7 +245,7 @@ noncomputable def conditionalConstraintLiftEquivalence
     (target : X → A → Prop)
     (source_iff_exists : ∀ x, decomposition.remainder x →
       (source x ↔ ∃ a, target x a)) :
-    GlobalEquivalence p (p.liftConstraintConditional decomposition target) where
+    GlobalEquiv p (p.liftConstraintConditional decomposition target) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
@@ -271,7 +271,7 @@ noncomputable def exactConstraintLiftEquivalence
     (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    GlobalEquivalence p (p.liftConstraint lift decomposition) where
+    GlobalEquiv p (p.liftConstraint lift decomposition) where
   forward := {
     map := fun x => by
       have hparts : decomposition.remainder x.1 ∧ source x.1 :=
@@ -291,9 +291,9 @@ noncomputable def exactConstraintLiftEquivalence
     objective_le := fun _ => le_rfl }
 
 /-- Pullback along a feasibly surjective map is a global equivalence. -/
-def pullbackEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+def pullbackEquiv {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     (p : Problem X V) (f : Y → X) (h : FeasibleSurjection p f) :
-    GlobalEquivalence p (p.pullback f) where
+    GlobalEquiv p (p.pullback f) where
   forward := {
     map := fun x =>
       ⟨h.preimage x, by
@@ -356,8 +356,8 @@ theorem restrictionImprovement_objective_eq
 end FeasibleSurjection
 
 /-- The epigraph construction preserves global optimization behavior. -/
-def epigraphEquivalence {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X V) : GlobalEquivalence p p.epigraph where
+def epigraphEquiv {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X V) : GlobalEquiv p p.epigraph where
   forward := {
     map := fun x => ⟨(x.1, p.objective x.1), x.2, le_rfl⟩
     objective_le := fun _ => le_rfl }
@@ -366,8 +366,8 @@ def epigraphEquivalence {X : Type u} {V : Type v} [Preorder V]
     objective_le := fun xt => xt.2.2 }
 
 /-- The hypograph construction preserves global maximization behavior. -/
-def hypographEquivalence {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X (OrderDual V)) : GlobalEquivalence p p.hypograph where
+def hypographEquiv {X : Type u} {V : Type v} [Preorder V]
+    (p : Problem X (OrderDual V)) : GlobalEquiv p p.hypograph where
   forward := {
     map := fun x => ⟨(x.1, p.objective x.1), x.2, le_rfl⟩
     objective_le := fun _ => le_rfl }

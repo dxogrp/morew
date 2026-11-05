@@ -30,7 +30,7 @@ reformulation shortened : bounded := by
 
 example (x : ℝ) : shortened.feasible x ↔ 0 ≤ x ∧ x + 1 ≤ 4 := Iff.rfl
 example (x : ℝ) : shortened.objective x = x + 1 := rfl
-example : GlobalEquivalence bounded shortened := shortened.equivalence
+example : GlobalEquiv bounded shortened := shortened.equiv
 
 /--
 info: problem (x : ℝ)
@@ -77,7 +77,7 @@ reformulation unconstrained : tautologies := by
   remove at grouped
 
 example (x : ℝ) : unconstrained.feasible x ↔ True := Iff.rfl
-example : GlobalEquivalence tautologies unconstrained := unconstrained.equivalence
+example : GlobalEquiv tautologies unconstrained := unconstrained.equiv
 
 /-- info: problem (x : ℝ)
   minimize x -/
@@ -153,7 +153,7 @@ reformulation infeasible : impossible := by
   remove at arbitrary using (by intro _ hp; exact hp.elim)
 
 example (x : ℝ) : infeasible.feasible x ↔ False := Iff.rfl
-example : GlobalEquivalence impossible infeasible := infeasible.equivalence
+example : GlobalEquiv impossible infeasible := infeasible.equiv
 
 section Generic
 variable {X V : Type*} [Preorder V] (f : X → V) (P : X → Prop)
@@ -172,8 +172,8 @@ reformulation genericRemoved : (generic f P) := by
 
 example (x : X) : (genericRemoved f P).feasible x ↔ P x := Iff.rfl
 example (x : X) : (genericRemoved f P).objective x = f x := rfl
-example : GlobalEquivalence (generic f P) (genericRemoved f P) :=
-  genericRemoved.equivalence f P
+example : GlobalEquiv (generic f P) (genericRemoved f P) :=
+  genericRemoved.equiv f P
 end Generic
 
 section GenericOrder
@@ -210,7 +210,7 @@ reformulation maximumBound : maximum := by
 
 example (x t : ℝ) : maximumBound.feasible (x, t) ↔ x ≤ 1 ∧ t ≤ x := Iff.rfl
 example (x t : ℝ) : maximumBound.objective (x, t) = t := rfl
-example : GlobalEquivalence maximum maximumBound := maximumBound.equivalence
+example : GlobalEquiv maximum maximumBound := maximumBound.equiv
 
 def positive :=
   problem (x y : ℝ)
@@ -272,7 +272,7 @@ reformulation zeroExplicit : zero := by
   restrict branch : 0 ≤ u using zeroEpiRepair
 
 example (x u : ℝ) : zeroExplicit.feasible (x, u) ↔ 0 ≤ u := Iff.rfl
-example : GlobalEquivalence zero zeroExplicit := zeroExplicit.equivalence
+example : GlobalEquiv zero zeroExplicit := zeroExplicit.equiv
 
 def trueRepair {X V : Type*} [Preorder V] (p : Problem X V) :
     GlobalImprovement p (p.addConstraint (fun _ => True)) where

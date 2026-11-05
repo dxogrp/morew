@@ -31,7 +31,7 @@ theorem naturalContext : ObjectiveEpigraphContext naturalSource
   atValue _ := rfl
   backward _ _ _ bound := add_le_add (Int.ofNat_le.mpr bound) le_rfl
 
-def naturalEquivalence := objectiveEpigraphAtEquivalence naturalSource
+def naturalEquiv := objectiveEpigraphAtEquiv naturalSource
   (fun n => n) (fun _ a : ℕ => (a : ℤ) + 1) naturalContext
 
 example : naturalSource.IsGlobalOptimum ⟨3, le_rfl⟩ := by
@@ -40,8 +40,8 @@ example : naturalSource.IsGlobalOptimum ⟨3, le_rfl⟩ := by
 
 example : (naturalSource.epigraphAt (fun n => n)
     (fun _ a : ℕ => (a : ℤ) + 1)).IsGlobalOptimum
-    (naturalEquivalence.forward.map ⟨3, le_rfl⟩) := by
-  apply naturalEquivalence.map_isGlobalOptimum
+    (naturalEquiv.forward.map ⟨3, le_rfl⟩) := by
+  apply naturalEquiv.map_isGlobalOptimum
   intro n
   exact add_le_add (Int.ofNat_le.mpr n.2) le_rfl
 
@@ -55,11 +55,11 @@ theorem maximumContext : ObjectiveHypographContext maximumSource
   atValue _ := rfl
   backward _ _ _ bound := bound
 
-def maximumEquivalence := objectiveHypographAtEquivalence maximumSource
+def maximumEquiv := objectiveHypographAtEquiv maximumSource
   (fun n => n) (fun _ a => a) maximumContext
 
 example : (maximumSource.hypographAt (fun n => n) (fun _ a => a)).HasGlobalOptimum := by
-  apply maximumEquivalence.hasGlobalOptimum_iff.mp
+  apply maximumEquiv.hasGlobalOptimum_iff.mp
   refine ⟨⟨7, le_rfl⟩, ?_⟩
   intro n
   exact n.2
@@ -74,9 +74,9 @@ theorem weightedContext : ObjectiveEpigraphContext weightedSource
   atValue _ := rfl
   backward _ feasible _ bound := mul_le_mul_of_nonneg_left bound feasible
 
-example : GlobalEquivalence weightedSource
+example : GlobalEquiv weightedSource
     (weightedSource.epigraphAt Prod.snd (fun point a => point.1 * a)) :=
-  objectiveEpigraphAtEquivalence weightedSource Prod.snd (fun point a => point.1 * a)
+  objectiveEpigraphAtEquiv weightedSource Prod.snd (fun point a => point.1 * a)
     weightedContext
 
 /-- Retained-row assumptions justify the same context inside a constraint. -/
@@ -96,8 +96,8 @@ theorem weightedConstraintContext : ConstraintBoundContext weightedDecomposition
   backward _ retained _ bound target :=
     (mul_le_mul_of_nonneg_left bound retained).trans target
 
-noncomputable def weightedConstraintEquivalence :=
-  constraintBoundAtEquivalence weightedConstraintSource weightedDecomposition Prod.snd
+noncomputable def weightedConstraintEquiv :=
+  constraintBoundAtEquiv weightedConstraintSource weightedDecomposition Prod.snd
     (fun point a => point.1 * a ≤ 10) .upper weightedConstraintContext
 
 example (point : ℝ × ℝ) :
@@ -116,10 +116,10 @@ theorem maximumConstraintContext : ConstraintBoundContext maximumDecomposition.r
   atValue _ := Iff.rfl
   backward _ _ _ bound target := bound.trans target
 
-example : GlobalEquivalence maximumSource
+example : GlobalEquiv maximumSource
     (maximumSource.constraintBoundAt maximumDecomposition
       (fun n => n) (fun _ a => a ≤ 7) .upper) :=
-  constraintBoundAtEquivalence maximumSource maximumDecomposition
+  constraintBoundAtEquiv maximumSource maximumDecomposition
     (fun n => n) (fun _ a => a ≤ 7) .upper maximumConstraintContext
 
 /-- The opposite predicate polarity cannot supply the required certificate. -/

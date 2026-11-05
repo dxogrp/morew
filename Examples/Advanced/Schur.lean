@@ -57,7 +57,7 @@ reformulation schurConic : (schurModel A) := by
 
 #printp schurConic
 
-example : GlobalEquivalence (schurModel A) (schurConic A) := schurConic.equivalence A hA
+example : GlobalEquiv (schurModel A) (schurConic A) := schurConic.equiv A hA
 example : (schurConic.conicForm A).data.toProblem = schurConic A :=
   (schurConic.conicForm A).represents
 example : IsConic (schurConic A) := schurConic.isConic A

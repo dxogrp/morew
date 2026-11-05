@@ -208,9 +208,9 @@ private def materializeTerminalConic (state : ReformState)
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared := prepared.replaceFVars preparedVars sectionFVars
     let targetProblem ← prepared.presentation.canonicalProblem
-    let exact ← mkAppM ``Morew.GlobalEquivalence.trans
-      #[typed.normalization.equivalence, prepared.equivalence]
-    let primitive ← state.runner.liftEquivalence exact
+    let exact ← mkAppM ``Morew.GlobalEquiv.trans
+      #[typed.normalization.equiv, prepared.equiv]
+    let primitive ← state.runner.liftEquiv exact
     let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate `_terminalConicCertificate primitive

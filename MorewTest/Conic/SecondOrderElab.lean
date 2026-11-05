@@ -59,8 +59,8 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
       let expected ← withLocalDeclD `point domain fun point => do
         let remainder := conjunction (retained.map (mkApp · point))
         let target ← mkAppM ``Exists #[mkApp target point]
-        let equivalence ← mkAppM ``Iff #[mkApp source point, target]
-        mkForallFVars #[point] (← mkArrow remainder equivalence)
+        let equiv ← mkAppM ``Iff #[mkApp source point, target]
+        mkForallFVars #[point] (← mkArrow remainder equiv)
       unless ← isDefEq (← inferType conditionalIff) expected do
         throwError "conditional certificate does not retain the exact source and remainder"
   unless predicates.size == 1 && certificates.size == 1 do

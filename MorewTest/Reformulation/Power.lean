@@ -38,8 +38,8 @@ reformulation targeted : source := by
 reformulation terminal : source := by
   conic
 
-example : GlobalEquivalence source targeted := targeted.equivalence
-example : GlobalEquivalence source terminal := terminal.equivalence
+example : GlobalEquiv source targeted := targeted.equiv
+example : GlobalEquiv source terminal := terminal.equiv
 example : terminal.conicForm.data.toProblem = terminal := terminal.conicForm.represents
 example : terminal.conicForm.data.rowCount = 3 := rfl
 example (x t : ℝ) : targeted.feasible (x, t) ↔
@@ -56,7 +56,7 @@ def negativeSource :=
 reformulation negativeTarget : negativeSource := by
   conic
 
-example : GlobalEquivalence negativeSource negativeTarget := negativeTarget.equivalence
+example : GlobalEquiv negativeSource negativeTarget := negativeTarget.equiv
 example : Conic.Form negativeTarget := negativeTarget.conicForm
 example (x t : ℝ) : negativeTarget.feasible (x, t) ↔
     x - 1 / 2 ∈ ℝ₊ ∧ (t, x, 1) ∈ POW (1 / 3) := Iff.rfl
@@ -74,8 +74,8 @@ reformulation negativeFractionTarget : negativeFractionSource := by
 reformulation negativeFractionTerminal : negativeFractionSource := by
   conic
 
-example : GlobalEquivalence negativeFractionSource negativeFractionTarget :=
-  negativeFractionTarget.equivalence
+example : GlobalEquiv negativeFractionSource negativeFractionTarget :=
+  negativeFractionTarget.equiv
 example (x t : ℝ) : negativeFractionTarget.feasible (x, t) ↔
     1 ≤ x ∧ (t, x, 1) ∈ POW (2 / 3) := Iff.rfl
 example (x t : ℝ) : negativeFractionTerminal.feasible (x, t) ↔
@@ -95,7 +95,7 @@ reformulation constantTarget : constantSource := by
   conic at negative
   conic
 
-example : GlobalEquivalence constantSource constantTarget := constantTarget.equivalence
+example : GlobalEquiv constantSource constantTarget := constantTarget.equiv
 example : Conic.Form constantTarget := constantTarget.conicForm
 
 end Scalar
@@ -115,7 +115,7 @@ reformulation target : source := by
 reformulation terminal : target := by
   conic
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example : Problem ((ℝ × ℝ) × ℝ) (OrderDual ℝ) := target
 example : terminal.conicForm.data.sense = .maximize := rfl
 example : terminal.conicForm.data.rowCount = 4 := rfl
@@ -137,7 +137,7 @@ def meanSource :=
 reformulation meanTarget : meanSource := by
   conic
 
-example : GlobalEquivalence meanSource meanTarget := meanTarget.equivalence
+example : GlobalEquiv meanSource meanTarget := meanTarget.equiv
 example : meanTarget.conicForm.data.toProblem = meanTarget := meanTarget.conicForm.represents
 example (x y t u : ℝ) : meanTarget.feasible (((x, y), t), u) ↔
     x ∈ ℝ₊ ∧ u ∈ ℝ₊ ∧ u - t ∈ ℝ₊ ∧ (x, y, u) ∈ POW (1 / 3) ∧ y ∈ ℝ₊ := Iff.rfl
@@ -154,7 +154,7 @@ def source :=
 reformulation target : source := by
   conic
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example : Conic.Form target := target.conicForm
 example : target.conicForm.data.rowCount = 1 := rfl
 example (x y z : ℝ) : target.feasible ((x, y), z) ↔
@@ -171,8 +171,8 @@ include hα in
 reformulation symbolicTarget : (symbolicSource α) := by
   conic
 
-example : GlobalEquivalence (symbolicSource α) (symbolicTarget α) :=
-  symbolicTarget.equivalence α
+example : GlobalEquiv (symbolicSource α) (symbolicTarget α) :=
+  symbolicTarget.equiv α
 example : Conic.Form (symbolicTarget α) := symbolicTarget.conicForm α hα
 example : (symbolicTarget.conicForm α hα).data.sense = .maximize := rfl
 
@@ -192,7 +192,7 @@ def source :=
 reformulation target : source := by
   conic at bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x t : ℝ) : target.feasible (x, t) ↔
     let exponent : ℝ := -1 / 2
     1 ≤ x ∧ (t, x, 1) ∈ POW (2 / 3) ∧ exponent ≤ 0 := Iff.rfl
@@ -213,7 +213,7 @@ reformulation target : (PowerSource.source offset) := by
 reformulation terminal : (target offset) := by
   conic
 
-example : GlobalEquivalence (PowerSource.source offset) (target offset) := target.equivalence offset
+example : GlobalEquiv (PowerSource.source offset) (target offset) := target.equiv offset
 example : Conic.Form (terminal offset) := terminal.conicForm offset
 example (x t : ℝ) : (target offset).feasible (x, t) ↔
     0 ≤ x + offset ∧ (t, 1, x + offset) ∈ POW (1 / PowerSource.exponent) ∧ t ≤ 10 := Iff.rfl
@@ -240,8 +240,8 @@ example : Conic.Form (importedContinuation offset) := importedContinuation.conic
 reformulation numericContinuation : PowerSource.numericTarget := by
   conic
 
-example : GlobalEquivalence PowerSource.numericTarget numericContinuation :=
-  numericContinuation.equivalence
+example : GlobalEquiv PowerSource.numericTarget numericContinuation :=
+  numericContinuation.equiv
 example : numericContinuation.conicForm.data.toProblem = numericContinuation :=
   numericContinuation.conicForm.represents
 
@@ -262,7 +262,7 @@ include hp in
 reformulation target : (source p) := by
   conic at bound using (Conic.Power.rpowEpigraph p hp)
 
-example : GlobalEquivalence (source p) (target p hp) := target.equivalence p hp
+example : GlobalEquiv (source p) (target p hp) := target.equiv p hp
 
 run_cmd do
   for (replay, copy) in [(true, `exactCopy), (false, `displayCopy)] do
@@ -304,7 +304,7 @@ def source :=
 reformulation target : source := by
   conic at bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 run_cmd do
   for (replay, copy) in [(true, `exactCopy), (false, `displayCopy)] do
@@ -326,7 +326,7 @@ example : displayCopy = target := rfl
 reformulation continued : target := by
   conic at later
 
-example : GlobalEquivalence target continued := continued.equivalence
+example : GlobalEquiv target continued := continued.equiv
 
 end ShadowedMembership
 
@@ -366,7 +366,7 @@ reformulation continued : Hypograph.target := by
   hypograph value as objectiveBound
   conic
 
-example : GlobalEquivalence Hypograph.target continued := continued.equivalence
+example : GlobalEquiv Hypograph.target continued := continued.equiv
 example : Conic.Form continued := continued.conicForm
 
 elab "assert_power_atomic% " nested:command : command => do

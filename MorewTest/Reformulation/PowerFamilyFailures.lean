@@ -144,13 +144,13 @@ reformulation explicitPowerAtOne : (normSource 1) := by
   conic at bound using Conic.Power.normEpigraph
 
 reformulation automaticAtOne : (normSource 1) := by conic
-example : GlobalEquivalence (normSource 1) automaticAtOne := automaticAtOne.equivalence
+example : GlobalEquiv (normSource 1) automaticAtOne := automaticAtOne.equiv
 example : IsConic automaticAtOne := automaticAtOne.isConic
 
-assert_not_exists inverseWrongPolarity inverseWrongPolarity.equivalence
-  alteredNormRejected alteredNormRejected.equivalence
-  alteredNormExplicitRejected alteredNormExplicitRejected.equivalence
-  explicitPowerAtOne explicitPowerAtOne.equivalence
+assert_not_exists inverseWrongPolarity inverseWrongPolarity.equiv
+  alteredNormRejected alteredNormRejected.equiv
+  alteredNormExplicitRejected alteredNormExplicitRejected.equiv
+  explicitPowerAtOne explicitPowerAtOne.equiv
 
 def nonmonotone :=
   problem (x : Fin 2 → ℝ) (t : ℝ)
@@ -181,8 +181,8 @@ assert_power_family_atomic%
 reformulation lateTerminal : lateFailure := by
   conic
 
-assert_not_exists lateTargeted lateAlias lateTargeted.equivalence lateTargeted.conicForm
-  lateTerminal lateTerminal.equivalence lateTerminal.conicForm
+assert_not_exists lateTargeted lateAlias lateTargeted.equiv lateTargeted.conicForm
+  lateTerminal lateTerminal.equiv lateTerminal.conicForm
 
 -- Automatic names freshen both the auxiliary and generated row labels while
 -- retaining the pre-existing coordinate and constraint in their original slots.
@@ -196,7 +196,7 @@ def automaticNameCollision :=
 reformulation freshNames : automaticNameCollision := by
   conic at bound
 
-example : GlobalEquivalence automaticNameCollision freshNames := freshNames.equivalence
+example : GlobalEquiv automaticNameCollision freshNames := freshNames.equiv
 example (x old r : Fin 2 → ℝ) (t : ℝ) :
     freshNames.objective (((x, t), old), r) = t := rfl
 example (x old r : Fin 2 → ℝ) (t : ℝ) :
@@ -217,7 +217,7 @@ run_cmd do
     Lean.throwError "power lift changed an existing label or duplicated a generated label"
 
 reformulation recovered : (normSource 3) := by conic
-example : GlobalEquivalence (normSource 3) recovered := recovered.equivalence
+example : GlobalEquiv (normSource 3) recovered := recovered.equiv
 example : IsConic recovered := recovered.isConic
 
 end

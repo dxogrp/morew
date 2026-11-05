@@ -30,7 +30,7 @@ def source :=
 
 reformulation target : (source m n) := by
   nlp
-example : GlobalEquivalence (source m n) (target m n) := target.equivalence m n
+example : GlobalEquiv (source m n) (target m n) := target.equiv m n
 example : (target.nlpForm m n).data.rowCount = m * (n * 2) := by
   change (∑ _ : Fin m, ∑ _ : Fin n, (1 + 1 : ℕ)) + 0 = m * (n * 2)
   simp
@@ -64,7 +64,7 @@ def normSource :=
 
 reformulation normTarget : (normSource n) := by
   nlp
-example : GlobalEquivalence (normSource n) (normTarget n) := normTarget.equivalence n
+example : GlobalEquiv (normSource n) (normTarget n) := normTarget.equiv n
 example : IsSmoothNLP (normTarget n) := normTarget.isSmoothNLP n
 example (t : ℝ) : (normTarget 0).feasible (Fin.elim0, t) ↔ 0 ≤ t := by
   simp [normTarget, sq_nonneg]
@@ -97,8 +97,8 @@ def extremaSource :=
 
 reformulation extremaTarget : (extremaSource s hs a) := by
   nlp
-example : GlobalEquivalence (extremaSource s hs a) (extremaTarget s a) :=
-  extremaTarget.equivalence s hs a
+example : GlobalEquiv (extremaSource s hs a) (extremaTarget s a) :=
+  extremaTarget.equiv s hs a
 example : NLP.Form (extremaTarget s a) := extremaTarget.nlpForm s hs a ha
 example : (extremaTarget.nlpForm s hs a ha).data.rowCount = s.card + s.card := by
   change (∑ _ : Fin s.card, (1 : ℕ)) + ((∑ _ : Fin s.card, (1 : ℕ)) + 0) =
@@ -117,7 +117,7 @@ def shift : FeasibleSurjection source (fun y : ℝ => y + 1) where
 reformulation target : source := by
   substitute x := y + 1 using shift
   nlp
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (y : ℝ) : target.objective y = Real.exp (y + 1) + (y + 1) ^ 2 := rfl
 example : target.nlpForm.data.rowCount = 0 := rfl
 

@@ -32,7 +32,7 @@ def objectiveSource :=
 reformulation objectiveTarget : objectiveSource := by
   conic
 
-example : GlobalEquivalence objectiveSource objectiveTarget := objectiveTarget.equivalence
+example : GlobalEquiv objectiveSource objectiveTarget := objectiveTarget.equiv
 example : Conic.Form objectiveTarget := objectiveTarget.conicForm
 example : IsConic objectiveTarget := objectiveTarget.isConic
 
@@ -45,7 +45,7 @@ def rowSource :=
 reformulation rowTarget : rowSource := by
   conic
 
-example : GlobalEquivalence rowSource rowTarget := rowTarget.equivalence
+example : GlobalEquiv rowSource rowTarget := rowTarget.equiv
 example : Conic.Form rowTarget := rowTarget.conicForm
 example : IsConic rowTarget := rowTarget.isConic
 

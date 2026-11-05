@@ -15,25 +15,25 @@ noncomputable section
 
 -- The custom descriptor is discovered from the imported persistent registry.
 reformulation custom : positiveMargin := by substitute x := shiftedSquare u
-example : GlobalEquivalence positiveMargin custom := custom.equivalence
+example : GlobalEquiv positiveMargin custom := custom.equiv
 example (u : ℝ) : custom.objective u = Real.log (shiftedSquare u) := rfl
 example (u : ℝ) : custom.feasible u ↔ 1 ≤ shiftedSquare u := Iff.rfl
 
 reformulation customSelected : positiveMargin := by
   substitute x := shiftedSquare u via shiftedSquareRule
-example : GlobalEquivalence positiveMargin customSelected := customSelected.equivalence
+example : GlobalEquiv positiveMargin customSelected := customSelected.equiv
 
 reformulation continued : squared := by
   epigraph t
   conic
-example : GlobalEquivalence nonnegative continued :=
-  squared.equivalence.trans continued.equivalence
+example : GlobalEquiv nonnegative continued :=
+  squared.equiv.trans continued.equiv
 example : IsConic continued := continued.isConic
 
 reformulation continuedMaximum : MiddleCoordinate.maximumTarget := by
   substitute u := v + 1
-example : GlobalEquivalence MiddleCoordinate.maximum continuedMaximum :=
-  MiddleCoordinate.maximumTarget.equivalence.trans continuedMaximum.equivalence
+example : GlobalEquiv MiddleCoordinate.maximum continuedMaximum :=
+  MiddleCoordinate.maximumTarget.equiv.trans continuedMaximum.equiv
 
 -- Imported operations and certificates survive a caller-local spelling shadow.
 namespace Shadow
@@ -42,8 +42,8 @@ def shiftedSquare (_ : ℝ) : ℝ := 37
 reformulation renamedCustom : custom := by substitute u := v
 example (v : ℝ) : renamedCustom.objective v =
     Real.log (MorewTest.Reformulation.SubstitutionRules.shiftedSquare v) := rfl
-example : GlobalEquivalence positiveMargin renamedCustom :=
-  custom.equivalence.trans renamedCustom.equivalence
+example : GlobalEquiv positiveMargin renamedCustom :=
+  custom.equiv.trans renamedCustom.equiv
 
 run_cmd do
   for (original, copied) in #[

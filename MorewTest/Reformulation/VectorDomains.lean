@@ -54,8 +54,8 @@ reformulation nonnegativeReady : (nonnegativeSource n) := by
   conic at bound
   conic
 
-example : GlobalEquivalence (nonnegativeSource n) (nonnegativeReady n) :=
-  nonnegativeReady.equivalence n
+example : GlobalEquiv (nonnegativeSource n) (nonnegativeReady n) :=
+  nonnegativeReady.equiv n
 
 end
 
@@ -74,8 +74,8 @@ reformulation positiveReady : (positiveSource n ε) := by
   conic at bound
   conic
 
-example : GlobalEquivalence (positiveSource n ε) (positiveReady n ε) :=
-  positiveReady.equivalence n ε hε
+example : GlobalEquiv (positiveSource n ε) (positiveReady n ε) :=
+  positiveReady.equiv n ε hε
 example : (positiveReady.conicForm n ε).data.toProblem = positiveReady n ε :=
   (positiveReady.conicForm n ε).represents
 
@@ -91,8 +91,8 @@ reformulation coneReady : (coneSource n ε) := by
   conic at bound
   conic
 
-example : GlobalEquivalence (coneSource n ε) (coneReady n ε) :=
-  coneReady.equivalence n ε hε
+example : GlobalEquiv (coneSource n ε) (coneReady n ε) :=
+  coneReady.equiv n ε hε
 
 def directConeSource (n : ℕ) :=
   problem (x : Fin n → ℝ) (t : ℝ)
@@ -116,8 +116,8 @@ include hε in
 reformulation familyTargeted : (familySource n ε) := by
   conic at bound
 
-example : GlobalEquivalence (familySource n ε) (familyTargeted n ε) :=
-  familyTargeted.equivalence n ε hε
+example : GlobalEquiv (familySource n ε) (familyTargeted n ε) :=
+  familyTargeted.equiv n ε hε
 
 -- Pointwise margins are usable evidence, but this retained syntax is not a
 -- terminal cone family. It is never silently rewritten as a vector bound.

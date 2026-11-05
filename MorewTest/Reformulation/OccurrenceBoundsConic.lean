@@ -18,7 +18,7 @@ reformulation converted : compound := by
   epigraph b at (|x|)
   conic
 
-example : GlobalEquivalence compound converted := converted.equivalence
+example : GlobalEquiv compound converted := converted.equiv
 example : Conic.Form converted := converted.conicForm
 example : IsConic converted := converted.isConic
 example : converted.conicForm.data.rowCount = 3 := rfl
@@ -30,7 +30,7 @@ reformulation targetedConverted : compound := by
   conic at magnitude_bound
   conic
 
-example : GlobalEquivalence compound targetedConverted := targetedConverted.equivalence
+example : GlobalEquiv compound targetedConverted := targetedConverted.equiv
 example : IsConic targetedConverted := targetedConverted.isConic
 example : targetedConverted.conicForm.data.rowCount = 3 := rfl
 
@@ -38,7 +38,7 @@ reformulation continued : namedSplit := by
   epigraph b at penalty
   conic
 
-example : GlobalEquivalence namedSplit continued := continued.equivalence
+example : GlobalEquiv namedSplit continued := continued.equiv
 example : IsConic continued := continued.isConic
 
 -- The complete chain fits Lean's default heartbeat budget.
@@ -49,7 +49,7 @@ reformulation budgetedConic : budgeted := by
   epigraph d at abs_y in bound as abs_bound
   conic
 
-example : GlobalEquivalence budgeted budgetedConic := budgetedConic.equivalence
+example : GlobalEquiv budgeted budgetedConic := budgetedConic.equiv
 example : Conic.Form budgetedConic := budgetedConic.conicForm
 example : IsConic budgetedConic := budgetedConic.isConic
 example : budgetedConic.conicForm.data.rowCount = 8 := rfl
@@ -80,7 +80,7 @@ reformulation maximumConverted : maximum := by
   conic at magnitude_bound
   conic
 
-example : GlobalEquivalence maximum maximumConverted := maximumConverted.equivalence
+example : GlobalEquiv maximum maximumConverted := maximumConverted.equiv
 example : IsConic maximumConverted := maximumConverted.isConic
 example : maximumConverted.conicForm.data.sense = .maximize := rfl
 example : maximumConverted.conicForm.data.rowCount = 5 := rfl

@@ -52,10 +52,10 @@ info: problem (v : Fin Parameter.size → ℝ) (x y t value : ℝ)
 #guard_msgs in
 #printp continued
 
-example : GlobalEquivalence lowered continued := continued.equivalence
+example : GlobalEquiv lowered continued := continued.equiv
 
-example : GlobalEquivalence source continued :=
-  lowered.equivalence.trans continued.equivalence
+example : GlobalEquiv source continued :=
+  lowered.equiv.trans continued.equiv
 
 example (v : Fin Parameter.size → ℝ) (x y t value : ℝ) :
     continued.objective ((((v, x), y), t), value) = value := rfl

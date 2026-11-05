@@ -34,7 +34,7 @@ def scalars :=
 reformulation scalarTarget : scalars := by
   conic
 
-example : GlobalEquivalence scalars scalarTarget := scalarTarget.equivalence
+example : GlobalEquiv scalars scalarTarget := scalarTarget.equiv
 example : scalarTarget.conicForm.data.toProblem = scalarTarget :=
   scalarTarget.conicForm.represents
 example : scalarTarget.conicForm.data.rowCount = 8 := rfl
@@ -72,8 +72,8 @@ def negativeScalars :=
 reformulation negativeScalarTarget : negativeScalars := by
   conic
 
-example : GlobalEquivalence negativeScalars negativeScalarTarget :=
-  negativeScalarTarget.equivalence
+example : GlobalEquiv negativeScalars negativeScalarTarget :=
+  negativeScalarTarget.equiv
 example : negativeScalarTarget.conicForm.data.toProblem = negativeScalarTarget :=
   negativeScalarTarget.conicForm.represents
 example (x y : ℝ) : negativeScalarTarget.feasible (x, y) ↔
@@ -111,7 +111,7 @@ def negativeAlias :=
 reformulation negativeAliasTarget : negativeAlias := by
   conic
 
-example : GlobalEquivalence negativeAlias negativeAliasTarget := negativeAliasTarget.equivalence
+example : GlobalEquiv negativeAlias negativeAliasTarget := negativeAliasTarget.equiv
 example : negativeAliasTarget.conicForm.data.toProblem = negativeAliasTarget :=
   negativeAliasTarget.conicForm.represents
 
@@ -166,7 +166,7 @@ def numeric :=
 reformulation numericTarget : numeric := by
   conic
 
-example : GlobalEquivalence numeric numericTarget := numericTarget.equivalence
+example : GlobalEquiv numeric numericTarget := numericTarget.equiv
 example : numericTarget.conicForm.data.rowCount = 4 := rfl
 example : numericTarget.conicForm.data.toProblem = numericTarget := numericTarget.conicForm.represents
 example (x : ℝ) : numericTarget.feasible x ↔
@@ -209,7 +209,7 @@ def vectors :=
 reformulation vectorTarget : (vectors n) := by
   conic
 
-example : GlobalEquivalence (vectors n) (vectorTarget n) := vectorTarget.equivalence n
+example : GlobalEquiv (vectors n) (vectorTarget n) := vectorTarget.equiv n
 example : (vectorTarget.conicForm n).data.rowCount = 5 := rfl
 example : (vectorTarget.conicForm n).data.toProblem = vectorTarget n :=
   (vectorTarget.conicForm n).represents
@@ -229,7 +229,7 @@ reformulation emptyVectorAgain : (vectorTarget 0) := by
   conic
 
 example : emptyVectorAgain.conicForm.data.rowCount = 5 := rfl
-example : GlobalEquivalence (vectorTarget 0) emptyVectorAgain := emptyVectorAgain.equivalence
+example : GlobalEquiv (vectorTarget 0) emptyVectorAgain := emptyVectorAgain.equiv
 
 def native :=
   problem (x t : ℝ) (v : Fin 0 → ℝ)
@@ -244,7 +244,7 @@ def native :=
 reformulation nativeTarget : native := by
   conic
 
-example : GlobalEquivalence native nativeTarget := nativeTarget.equivalence
+example : GlobalEquiv native nativeTarget := nativeTarget.equiv
 example : nativeTarget.conicForm.data.rowCount = 5 := rfl
 example : nativeTarget.conicForm.data.toProblem = nativeTarget := nativeTarget.conicForm.represents
 example (x t : ℝ) (v : Fin 0 → ℝ) : nativeTarget.feasible ((x, t), v) ↔
@@ -261,9 +261,9 @@ reformulation continued : (Defined.target 3) := by
   epigraph t as objectiveBound
   conic
 
-example : GlobalEquivalence (Defined.source 2) applied := applied.equivalence
-example : GlobalEquivalence (Defined.source 3) continued :=
-  (Defined.target.equivalence 3).trans continued.equivalence
+example : GlobalEquiv (Defined.source 2) applied := applied.equiv
+example : GlobalEquiv (Defined.source 3) continued :=
+  (Defined.target.equiv 3).trans continued.equiv
 example : continued.conicForm.data.toProblem = continued := continued.conicForm.represents
 example (x t : ℝ) : continued.feasible (x, t) ↔
     ((Defined.shifted 3 x ∈ ℝ₊ ∧ True) ∧ 4 - Defined.shifted 3 x ∈ ℝ₊) ∧
@@ -342,7 +342,7 @@ example : target.conicForm.data.toProblem = target := target.conicForm.represent
 reformulation continued : target := by
   conic
 
-example : GlobalEquivalence target continued := continued.equivalence
+example : GlobalEquiv target continued := continued.equiv
 
 end
 end AmbientZero
@@ -374,7 +374,7 @@ example : target.conicForm.data.toProblem = target := target.conicForm.represent
 reformulation continued : target := by
   conic
 
-example : GlobalEquivalence target continued := continued.equivalence
+example : GlobalEquiv target continued := continued.equiv
 
 end
 end AmbientSubtraction
@@ -413,7 +413,7 @@ example : target.conicForm.data.toProblem = target := target.conicForm.represent
 reformulation continued : target := by
   conic
 
-example : GlobalEquivalence target continued := continued.equivalence
+example : GlobalEquiv target continued := continued.equiv
 
 end
 end AmbientAddition

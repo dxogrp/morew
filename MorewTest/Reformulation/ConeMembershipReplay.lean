@@ -99,7 +99,7 @@ end ImportedParameter
 reformulation continued : applied := by
   conic
 
-example : GlobalEquivalence applied continued := continued.equivalence
+example : GlobalEquiv applied continued := continued.equiv
 example (x : ℝ) : continued.feasible x ↔ applied.feasible x := Iff.rfl
 
 /--
@@ -252,7 +252,7 @@ example (x : ℝ) : replayed.objective x = target.objective x := rfl
 reformulation continued : target := by
   conic
 
-example : GlobalEquivalence target continued := continued.equivalence
+example : GlobalEquiv target continued := continued.equiv
 example (x : ℝ) : continued.feasible x ↔ target.feasible x := Iff.rfl
 
 /--

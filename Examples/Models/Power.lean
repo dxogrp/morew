@@ -45,7 +45,7 @@ reformulation ready : source := by
 
 #printp ready
 
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source ready := ready.equiv
 example : IsConic ready := ready.isConic
 
 end ConvexPower
@@ -81,7 +81,7 @@ reformulation ready : source := by
 
 #printp ready
 
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source ready := ready.equiv
 example : IsConic ready := ready.isConic
 
 end WeightedMean
@@ -112,7 +112,7 @@ reformulation ready : source := by
   conic
 
 #printp ready
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source ready := ready.equiv
 example : IsConic ready := ready.isConic
 
 end NegativePower
@@ -147,7 +147,7 @@ reformulation ready : (source α) := by
   conic
 
 #printp ready
-example : GlobalEquivalence (source α) (ready α) := ready.equivalence α
+example : GlobalEquiv (source α) (ready α) := ready.equiv α
 example : (ready.conicForm α hα).data.toProblem = ready α :=
   (ready.conicForm α hα).represents
 example : IsConic (ready α) := ready.isConic α hα
@@ -181,7 +181,7 @@ reformulation ready : source := by
 
 /-! Prefix means connect the coordinates in their original order. -/
 #printp ready
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source ready := ready.equiv
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 example : IsConic ready := ready.isConic
 
@@ -214,7 +214,7 @@ reformulation ready : source := by
   conic
 
 #printp ready
-example : GlobalEquivalence source ready := ready.equivalence
+example : GlobalEquiv source ready := ready.equiv
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 example : IsConic ready := ready.isConic
 

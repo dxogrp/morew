@@ -78,9 +78,9 @@ example : readyReplay = ready := rfl
 
 end Shadow
 
-example : GlobalEquivalence (Defined.source 3) ready :=
-  (Defined.lowered.equivalence 3 (by decide)).trans
-    (specialized.equivalence.trans ready.equivalence)
+example : GlobalEquiv (Defined.source 3) ready :=
+  (Defined.lowered.equiv 3 (by decide)).trans
+    (specialized.equiv.trans ready.equiv)
 example : ready.conicForm.data.toProblem = ready := ready.conicForm.represents
 example : ready.conicForm.data.rowCount = 11 := rfl
 

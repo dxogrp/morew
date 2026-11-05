@@ -24,21 +24,21 @@ private def materializeObjectiveBound (state : ReformState)
   let scopedBinderName ← withFreshMacroScope do
     MonadQuotation.addMacroScope binderName
 
-  let (valueType, order, nextSemantic, nextDomainType, primitiveEquivalence) ←
+  let (valueType, order, nextSemantic, nextDomainType, primitiveEquiv) ←
     runTermElabM fun sectionVars => do
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         let typed := state.typed.replaceFVars state.sectionFVars sectionVars
-        let equivalenceName := match expectedSense with
-          | .minimize => ``Morew.epigraphEquivalence
-          | .maximize => ``Morew.hypographEquivalence
+        let equivName := match expectedSense with
+          | .minimize => ``Morew.epigraphEquiv
+          | .maximize => ``Morew.hypographEquiv
         let transformName := match expectedSense with
           | .minimize => ``Morew.Problem.epigraph
           | .maximize => ``Morew.Problem.hypograph
-        let equivalence ← mkAppM equivalenceName #[typed.semantic]
+        let equiv ← mkAppM equivName #[typed.semantic]
         synthesizeSyntheticMVarsNoPostponing
-        let equivalence ← instantiateMVars equivalence
-        let equivalenceType ← whnf (← inferType equivalence)
-        let next := equivalenceType.getAppArgs.back!
+        let equiv ← instantiateMVars equiv
+        let equivType ← whnf (← inferType equiv)
+        let next := equivType.getAppArgs.back!
         unless next.isAppOfArity transformName 4 do
           throwError "internal error: objective-bound certificate has an unexpected target"
         -- Remove exactly one outer `OrderDual` for maximization.
@@ -47,7 +47,7 @@ private def materializeObjectiveBound (state : ReformState)
         let nextType ← whnf (← inferType next)
         pure (← presentationTypeSyntax auxiliaryType, ← exactExpressionSyntax order,
           ← exactExpressionSyntax next, ← exactExpressionSyntax nextType.getAppArgs[0]!,
-          ← exactExpressionSyntax equivalence)
+          ← exactExpressionSyntax equiv)
   let valueType : TSyntax `term := ⟨valueType⟩
   let newBinder : Morew.Syntax.BinderView := {
     name := scopedBinderName
@@ -71,7 +71,7 @@ private def materializeObjectiveBound (state : ReformState)
   }
 
   let primitive ← liftMacroM <|
-    liftCertificateEquivalence state.runner primitiveEquivalence
+    liftCertificateEquiv state.runner primitiveEquiv
   -- Retain the new bound and the epigraph or hypograph equivalence certificate.
   let canonical ← runTermElabM fun _ => do
     let canonical ← canonicalTargetExpression state.sourceName state.checkpoint.semantic

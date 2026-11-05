@@ -33,7 +33,7 @@ def diagonalModel :=
 reformulation diagonalConic : diagonalModel := by conic
 
 #printp diagonalConic
-example : GlobalEquivalence diagonalModel diagonalConic := diagonalConic.equivalence
+example : GlobalEquiv diagonalModel diagonalConic := diagonalConic.equiv
 example : IsConic diagonalConic := diagonalConic.isConic
 
 /-!
@@ -59,8 +59,8 @@ reformulation positiveDefiniteConic : positiveDefiniteModel := by conic
 
 #printp positiveDefiniteConic
 
-example : GlobalEquivalence positiveDefiniteModel positiveDefiniteConic :=
-  positiveDefiniteConic.equivalence
+example : GlobalEquiv positiveDefiniteModel positiveDefiniteConic :=
+  positiveDefiniteConic.equiv
 example : IsConic positiveDefiniteConic := positiveDefiniteConic.isConic
 
 end

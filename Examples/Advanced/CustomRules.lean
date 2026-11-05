@@ -45,15 +45,15 @@ reformulation conicRows : (fitting center) := by
 
 /-! The bound is replaced by `x - center ≤ t` and `-(x - center) ≤ t`. -/
 #printp conicRows
-example : GlobalEquivalence (fitting center) (conicRows center) :=
-  conicRows.equivalence center
+example : GlobalEquiv (fitting center) (conicRows center) :=
+  conicRows.equiv center
 
 -- `nlp` applies the registered rule and certifies smoothness.
 reformulation smooth : (fitting center) := by
   nlp
 
 #printp smooth
-example : GlobalEquivalence (fitting center) (smooth center) := smooth.equivalence center
+example : GlobalEquiv (fitting center) (smooth center) := smooth.equiv center
 example : (smooth.nlpForm center).data.toProblem = smooth center :=
   (smooth.nlpForm center).represents
 example : IsSmoothNLP (smooth center) := smooth.isSmoothNLP center
@@ -63,8 +63,8 @@ reformulation selected : (fitting center) := by
   conic at deviation using absoluteDeviationEpigraph
   conic
 
-example : GlobalEquivalence (fitting center) (selected center) :=
-  selected.equivalence center
+example : GlobalEquiv (fitting center) (selected center) :=
+  selected.equiv center
 example : IsConic (selected center) := selected.isConic center
 
 #printp selected
@@ -96,7 +96,7 @@ reformulation signedGraphNLP : signedGraph := by nlp
 
 #printp signedGraphNLP
 
-example : GlobalEquivalence signedGraph signedGraphNLP := signedGraphNLP.equivalence
+example : GlobalEquiv signedGraph signedGraphNLP := signedGraphNLP.equiv
 example : IsSmoothNLP signedGraphNLP := signedGraphNLP.isSmoothNLP
 
 -- A subtype states the representation's domain, proved from existing constraints.
@@ -125,7 +125,7 @@ reformulation logarithmicNLP : logarithmicBound := by
 
 #printp logarithmicNLP
 
-example : GlobalEquivalence logarithmicBound logarithmicNLP := logarithmicNLP.equivalence
+example : GlobalEquiv logarithmicBound logarithmicNLP := logarithmicNLP.equiv
 example : IsSmoothNLP logarithmicNLP := logarithmicNLP.isSmoothNLP
 
 end

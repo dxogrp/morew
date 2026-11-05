@@ -32,7 +32,7 @@ reformulation squared : nonnegative := by
   nlp
 
 #printp squared
-example : GlobalEquivalence nonnegative squared := squared.equivalence
+example : GlobalEquiv nonnegative squared := squared.equiv
 example : IsSmoothNLP squared := squared.isSmoothNLP
 
 -- `via` selects a rule; automatic selection searches the registry.
@@ -40,7 +40,7 @@ example : IsSmoothNLP squared := squared.isSmoothNLP
 reformulation explicitlySquared : nonnegative := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
-example : GlobalEquivalence nonnegative explicitlySquared := explicitlySquared.equivalence
+example : GlobalEquiv nonnegative explicitlySquared := explicitlySquared.equiv
 
 def interval :=
   problem (x : ℝ)
@@ -55,7 +55,7 @@ reformulation affineCoordinates : interval := by
   conic
 
 #printp affineCoordinates
-example : GlobalEquivalence interval affineCoordinates := affineCoordinates.equivalence
+example : GlobalEquiv interval affineCoordinates := affineCoordinates.equiv
 example : IsConic affineCoordinates := affineCoordinates.isConic
 
 def scaled :=
@@ -71,7 +71,7 @@ reformulation retainedCoefficient : scaled := by
   substitute x := a * u
 
 #printp retainedCoefficient
-example : GlobalEquivalence scaled retainedCoefficient := retainedCoefficient.equivalence
+example : GlobalEquiv scaled retainedCoefficient := retainedCoefficient.equiv
 
 namespace LogSquared
 
@@ -90,7 +90,7 @@ reformulation exponentialEpigraph : p := by
   epigraph t
 
 #printp exponentialEpigraph
-example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
+example : GlobalEquiv p exponentialEpigraph := exponentialEpigraph.equiv
 
 -- Represent the quadratic bound with a cone.
 reformulation conicProb : p := by
@@ -99,7 +99,7 @@ reformulation conicProb : p := by
   conic
 
 #printp conicProb
-example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : GlobalEquiv p conicProb := conicProb.equiv
 example : IsConic conicProb := conicProb.isConic
 
 end LogSquared

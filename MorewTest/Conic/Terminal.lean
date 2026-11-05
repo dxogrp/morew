@@ -44,15 +44,15 @@ private def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
     | .error error => throwError "expected successful terminal conic plan: {error.reason}"
   let before ← source.canonicalProblem
   let after ← result.presentation.canonicalProblem
-  let expected ← mkAppM ``Morew.GlobalEquivalence #[before, after]
-  unless ← isDefEq (← inferType result.equivalence) expected do
+  let expected ← mkAppM ``Morew.GlobalEquiv #[before, after]
+  unless ← isDefEq (← inferType result.equiv) expected do
     throwError "terminal equivalence has the wrong endpoints"
   let formType ← whnf (← inferType result.form)
   unless formType.getAppFn.isConstOf ``Morew.Conic.Form do
     throwError "terminal form has the wrong type"
   unless ← isDefEq formType.getAppArgs.back! after do
     throwError "terminal form does not represent the final canonical problem"
-  for expression in #[result.equivalence, result.form] do
+  for expression in #[result.equiv, result.form] do
     if expression.hasMVar || expression.hasSorry then
       throwError "terminal planning returned incomplete proof evidence"
     checkWithKernel expression
@@ -224,7 +224,7 @@ run_cmd liftTermElabM do
       unless ← isDefEq (← mkProjection data `rowCount)
           (mkNatLit (3 + 2 * auxiliaryCount)) do
         throwError "finite-domain planning lost certified rows"
-      for certificate in #[result.form, result.equivalence] do
+      for certificate in #[result.form, result.equiv] do
         let closed ← mkLambdaFVars parameters certificate
         if closed.hasFVar || closed.hasMVar || closed.hasSorry then
           throwError "source-local finite evidence escaped the completed certificate"

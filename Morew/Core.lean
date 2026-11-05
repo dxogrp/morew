@@ -134,54 +134,54 @@ end GlobalImprovement
 
 /-- Feasible maps in both directions with objective inequalities that preserve
 global optimality and objective bounds. -/
-structure GlobalEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
+structure GlobalEquiv {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     (p : Problem X V) (q : Problem Y V) where
   /-- A map to the target with an objective at most the source objective. -/
   forward : GlobalImprovement p q
   /-- A map to the source with an objective at most the target objective. -/
   backward : GlobalImprovement q p
 
-namespace GlobalEquivalence
+namespace GlobalEquiv
 
 /-- Return the forward improvement map. -/
 def toGlobalImprovement
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
     GlobalImprovement p q :=
   e.forward
 
 /-- Global equivalence is reflexive. -/
 protected def refl {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X V) : GlobalEquivalence p p where
+    (p : Problem X V) : GlobalEquiv p p where
   forward := GlobalImprovement.refl p
   backward := GlobalImprovement.refl p
 
 /-- Global equivalence is symmetric. -/
 def symm {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :
-    GlobalEquivalence q p where
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
+    GlobalEquiv q p where
   forward := e.backward
   backward := e.forward
 
 /-- Global equivalence is transitive. -/
 def trans {X : Type u} {Y : Type v} {Z : Type w} {V : Type*} [Preorder V]
     {p : Problem X V} {q : Problem Y V} {r : Problem Z V}
-    (pq : GlobalEquivalence p q) (qr : GlobalEquivalence q r) :
-    GlobalEquivalence p r where
+    (pq : GlobalEquiv p q) (qr : GlobalEquiv q r) :
+    GlobalEquiv p r where
   forward := pq.forward.trans qr.forward
   backward := qr.backward.trans pq.backward
 
 /-- Equivalent problems are feasible simultaneously. -/
 theorem hasFeasiblePoint_iff
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
     p.HasFeasiblePoint ↔ q.HasFeasiblePoint :=
   ⟨e.forward.map_hasFeasiblePoint, e.backward.map_hasFeasiblePoint⟩
 
 /-- Send a global optimum through the forward map of an equivalence. -/
 theorem map_isGlobalOptimum
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q)
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q)
     {x : FeasiblePoint p} (hx : p.IsGlobalOptimum x) :
     q.IsGlobalOptimum (e.forward.map x) := by
   intro y
@@ -194,7 +194,7 @@ theorem map_isGlobalOptimum
 /-- Send a global optimum through the backward map of an equivalence. -/
 theorem map_isGlobalOptimum_backward
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q)
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q)
     {y : FeasiblePoint q} (hy : q.IsGlobalOptimum y) :
     p.IsGlobalOptimum (e.backward.map y) :=
   e.symm.map_isGlobalOptimum hy
@@ -202,7 +202,7 @@ theorem map_isGlobalOptimum_backward
 /-- Equivalent problems attain a global optimum simultaneously. -/
 theorem hasGlobalOptimum_iff
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
     p.HasGlobalOptimum ↔ q.HasGlobalOptimum := by
   constructor
   · rintro ⟨x, hx⟩
@@ -213,7 +213,7 @@ theorem hasGlobalOptimum_iff
 /-- Corresponding mapped optima have the same objective value. -/
 theorem objective_eq_of_isGlobalOptimum
     {X : Type u} {Y : Type v} {V : Type w} [PartialOrder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q)
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q)
     {x : FeasiblePoint p} (hx : p.IsGlobalOptimum x) :
     q.objective (e.forward.map x).1 = p.objective x.1 := by
   apply le_antisymm (e.forward.objective_le x)
@@ -223,7 +223,7 @@ theorem objective_eq_of_isGlobalOptimum
 /-- Any attained global optima of equivalent problems have the same value. -/
 theorem objective_eq_of_optima
     {X : Type u} {Y : Type v} {V : Type w} [PartialOrder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q)
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q)
     {x : FeasiblePoint p} {y : FeasiblePoint q}
     (hx : p.IsGlobalOptimum x) (hy : q.IsGlobalOptimum y) :
     p.objective x.1 = q.objective y.1 := by
@@ -234,7 +234,7 @@ theorem objective_eq_of_optima
 /-- Equivalent problems have exactly the same objective lower bounds. -/
 theorem isObjectiveLowerBound_iff
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q)
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q)
     (b : V) : p.IsObjectiveLowerBound b ↔ q.IsObjectiveLowerBound b := by
   constructor
   · intro hp y
@@ -246,10 +246,10 @@ theorem isObjectiveLowerBound_iff
 simultaneously. -/
 theorem isUnbounded_iff
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquivalence p q) :
+    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
     p.IsUnbounded ↔ q.IsUnbounded :=
   ⟨e.forward.map_isUnbounded, e.backward.map_isUnbounded⟩
 
-end GlobalEquivalence
+end GlobalEquiv
 
 end Morew

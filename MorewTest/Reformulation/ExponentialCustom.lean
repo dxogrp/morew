@@ -66,7 +66,7 @@ def graphSource :=
 reformulation graphTarget : graphSource := by
   conic at graph using graphRule
 
-example : GlobalEquivalence graphSource graphTarget := graphTarget.equivalence
+example : GlobalEquiv graphSource graphTarget := graphTarget.equiv
 
 example (x y : ℝ) : graphTarget.feasible (x, y) ↔
     (0, 0, y - x) ∈ EXP ∧ (∀ _ : Fin 1, (0, 0, x - y) ∈ EXP) := Iff.rfl
@@ -80,7 +80,7 @@ def epigraphSource :=
 reformulation epigraphTarget : epigraphSource := by
   conic at epi_row using epigraphRule
 
-example : GlobalEquivalence epigraphSource epigraphTarget := epigraphTarget.equivalence
+example : GlobalEquiv epigraphSource epigraphTarget := epigraphTarget.equiv
 
 example (x t : ℝ) (u : Fin 2 → ℝ) : epigraphTarget.feasible ((x, t), u) ↔
     (∀ i, (![0, x] i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 := Iff.rfl
@@ -94,7 +94,7 @@ def hypographSource :=
 reformulation hypographTarget : hypographSource := by
   conic at hypo_row using hypographRule
 
-example : GlobalEquivalence hypographSource hypographTarget := hypographTarget.equivalence
+example : GlobalEquiv hypographSource hypographTarget := hypographTarget.equiv
 
 example (x t : ℝ) : hypographTarget.feasible (x, t) ↔
     (0, 0, x - t) ∈ EXP := Iff.rfl
@@ -110,7 +110,7 @@ def source :=
 reformulation target : source := by
   conic at exponential using scalarAuxiliaryRule
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x t u : ℝ) : target.objective ((x, t), u) = x + t := rfl
 
@@ -133,7 +133,7 @@ def emptySource :=
 reformulation emptyTarget : emptySource := by
   conic at empty using emptyRule
 
-example : GlobalEquivalence emptySource emptyTarget := emptyTarget.equivalence
+example : GlobalEquiv emptySource emptyTarget := emptyTarget.equiv
 
 example (x : ℝ) : emptyTarget.feasible x ↔
     x ≤ 1 ∧ (∀ _ : Fin 0, (x, 1, x) ∈ EXP) ∧ 0 ≤ x := Iff.rfl
@@ -205,7 +205,7 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`rollback, `noFallback, `nonlinearTarget, `uninspectableTarget] do
     let full := `MorewTest.Reformulation.ExponentialCustom ++ name
-    if env.contains full || env.contains (full ++ `equivalence) then
+    if env.contains full || env.contains (full ++ `equiv) then
       Lean.throwError "failed custom rewrite emitted {full}"
     if (Morew.Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed custom rewrite registered presentation metadata"

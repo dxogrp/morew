@@ -36,19 +36,19 @@ reformulation appliedRule : (source n) := by
   conic at bound using (Morew.Conic.LogDet.hypograph hn)
   conic
 
-example : GlobalEquivalence (source n) (terminal n) := terminal.equivalence n hn
+example : GlobalEquiv (source n) (terminal n) := terminal.equiv n hn
 example : IsConic (terminal n) := terminal.isConic n
 example : (terminal.conicForm n).data.rowCount = 4 := rfl
 example : (terminal.conicForm n).data.toProblem = terminal n :=
   (terminal.conicForm n).represents
-example : GlobalEquivalence (source n) (domainFirst n) := domainFirst.equivalence n hn
-example : GlobalEquivalence (source n) (logDetFirst n) := logDetFirst.equivalence n hn
-example : GlobalEquivalence (source n) (namedRule n) := namedRule.equivalence n hn
-example : GlobalEquivalence (source n) (appliedRule n) := appliedRule.equivalence n hn
+example : GlobalEquiv (source n) (domainFirst n) := domainFirst.equiv n hn
+example : GlobalEquiv (source n) (logDetFirst n) := logDetFirst.equiv n hn
+example : GlobalEquiv (source n) (namedRule n) := namedRule.equiv n hn
+example : GlobalEquiv (source n) (appliedRule n) := appliedRule.equiv n hn
 
 reformulation reverseTarget : (reverseSource n) := by conic
-example : GlobalEquivalence (reverseSource n) (reverseTarget n) :=
-  reverseTarget.equivalence n hn
+example : GlobalEquiv (reverseSource n) (reverseTarget n) :=
+  reverseTarget.equiv n hn
 
 end
 end MorewTest.Reformulation.LogDet

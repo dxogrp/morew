@@ -260,7 +260,7 @@ run_cmd do
       `nonaffineCoordinate, `nonaffineLogArgument, `unsupportedSubset, `incompatibleOrder,
       `invalidExplicitRule, `explicitCannotFallback, `failureAfterAuxiliary, `stale] do
     let full := `MorewTest.Reformulation.ExponentialFailures ++ name
-    if env.contains full || env.contains (full ++ `equivalence) ||
+    if env.contains full || env.contains (full ++ `equiv) ||
         (Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed exponential rewrite emitted {full}"
 

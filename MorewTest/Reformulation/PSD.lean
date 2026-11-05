@@ -44,7 +44,7 @@ reformulation diagonalTarget : diagonalSource := by conic
 set_option pp.proofs true in
 reformulation diagonalRegisteredDetailed : diagonalSource := by conic
 
-example : GlobalEquivalence diagonalSource diagonalTarget := diagonalTarget.equivalence
+example : GlobalEquiv diagonalSource diagonalTarget := diagonalTarget.equiv
 example : IsConic diagonalTarget := diagonalTarget.isConic
 example : diagonalTarget.conicForm.data.toProblem = diagonalTarget :=
   diagonalTarget.conicForm.represents
@@ -103,7 +103,7 @@ def maximumSource :=
 
 reformulation maximumTarget : maximumSource := by conic
 example : maximumTarget.conicForm.data.sense = ObjectiveSense.maximize := rfl
-example : GlobalEquivalence maximumSource maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv maximumSource maximumTarget := maximumTarget.equiv
 
 def symmetricDecisionSource :=
   problem (M : SymmetricMatrix 2)
@@ -129,7 +129,7 @@ variable (n : Nat)
 
 reformulation target : (source n) := by conic
 
-example : GlobalEquivalence (source n) (target n) := target.equivalence n
+example : GlobalEquiv (source n) (target n) := target.equiv n
 example : (target.conicForm n).data.toProblem = target n := (target.conicForm n).represents
 
 run_cmd do
@@ -157,8 +157,8 @@ reformulation schurSelected : (schurSource A) := by
 
 reformulation schurReady : (schurSelected A) := by conic
 
-example : GlobalEquivalence (schurSource A) (schurReady A) :=
-  (schurSelected.equivalence A hA).trans (schurReady.equivalence A)
+example : GlobalEquiv (schurSource A) (schurReady A) :=
+  (schurSelected.equiv A hA).trans (schurReady.equiv A)
 example : (schurReady.conicForm A).data.toProblem = schurReady A :=
   (schurReady.conicForm A).represents
 example : (schurReady.conicForm A).data.rowCount = 3 := rfl
@@ -275,8 +275,8 @@ reformulation rightSchurReady : (rightSchurSource A) := by
   conic at schur using rightSchurRule
   conic
 
-example : GlobalEquivalence (rightSchurSource A) (rightSchurReady A) :=
-  rightSchurReady.equivalence A hA
+example : GlobalEquiv (rightSchurSource A) (rightSchurReady A) :=
+  rightSchurReady.equiv A hA
 example : (rightSchurReady.conicForm A).data.rowCount = 1 := rfl
 
 section Registered
@@ -301,7 +301,7 @@ def auxiliarySource :=
 
 reformulation auxiliaryTarget : auxiliarySource := by conic
 
-example : GlobalEquivalence auxiliarySource auxiliaryTarget := auxiliaryTarget.equivalence
+example : GlobalEquiv auxiliarySource auxiliaryTarget := auxiliaryTarget.equiv
 example : auxiliaryTarget.conicForm.data.toProblem = auxiliaryTarget :=
   auxiliaryTarget.conicForm.represents
 
@@ -335,7 +335,7 @@ variable (C D : Matrix (Fin 2) (Fin 2) ℝ)
 
 reformulation target : (source C D) := by conic
 
-example : GlobalEquivalence (source C D) (target C D hSym) := target.equivalence C D hSym
+example : GlobalEquiv (source C D) (target C D hSym) := target.equiv C D hSym
 example : (target.conicForm C D hSym).data.toProblem = target C D hSym :=
   (target.conicForm C D hSym).represents
 
@@ -363,7 +363,7 @@ reformulation substituted : substitutionSource := by
   substitute x := Real.exp u
   conic
 
-example : GlobalEquivalence substitutionSource substituted := substituted.equivalence
+example : GlobalEquiv substitutionSource substituted := substituted.equiv
 example : substituted.conicForm.data.toProblem = substituted := substituted.conicForm.represents
 
 -- A constraint-local matrix let becomes a dependency of the generated symmetry
@@ -388,7 +388,7 @@ def localLetGroupSource :=
 
 reformulation localLetGroupTarget : localLetGroupSource := by conic
 
-example : GlobalEquivalence localLetSource localLetTarget := localLetTarget.equivalence
+example : GlobalEquiv localLetSource localLetTarget := localLetTarget.equiv
 example : localLetTarget.conicForm.data.rowCount = 1 := rfl
 example : localLetGroupTarget.conicForm.data.rowCount = 2 := rfl
 example : localLetGroupTarget.conicForm.data.toProblem = localLetGroupTarget :=
@@ -427,8 +427,8 @@ def mixedMembershipSource :=
 
 reformulation mixedMembershipTarget : mixedMembershipSource := by conic
 
-example : GlobalEquivalence mixedMembershipSource mixedMembershipTarget :=
-  mixedMembershipTarget.equivalence
+example : GlobalEquiv mixedMembershipSource mixedMembershipTarget :=
+  mixedMembershipTarget.equiv
 example : mixedMembershipTarget.conicForm.data.rowCount = 4 := rfl
 example : mixedMembershipTarget.conicForm.data.toProblem = mixedMembershipTarget :=
   mixedMembershipTarget.conicForm.represents

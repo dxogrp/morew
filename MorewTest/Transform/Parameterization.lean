@@ -33,9 +33,9 @@ private def subtypeCoverage := subtypeRule.toFeasibleSurjection positiveSource
   (fun _ h => h)
 
 /-- The new coordinate may have a different type. -/
-example : GlobalEquivalence positiveSource
+example : GlobalEquiv positiveSource
     (positiveSource.pullback fun point : {x : ℝ // 0 ≤ x} × ℕ => (point.1.1, point.2)) :=
-  pullbackEquivalence positiveSource _ subtypeCoverage
+  pullbackEquiv positiveSource _ subtypeCoverage
 
 example (point : FeasiblePoint positiveSource) :
     (subtypeCoverage.preimage point).2 = point.1.2 := rfl
@@ -54,9 +54,9 @@ private noncomputable def dependentCoverage :=
     (Equiv.refl _) (Equiv.refl _) (fun _ h => h.1)
 
 /-- The coefficient may vanish away from the feasible retained coordinates. -/
-noncomputable example : GlobalEquivalence dependentSource
+noncomputable example : GlobalEquiv dependentSource
     (dependentSource.pullback fun point : ℝ × ℝ => (point.1, point.1 * point.2)) :=
-  pullbackEquivalence dependentSource _ dependentCoverage
+  pullbackEquiv dependentSource _ dependentCoverage
 
 example (point : FeasiblePoint dependentSource) :
     dependentCoverage.preimage point = (point.1.1, point.1.2 / point.1.1) := rfl
@@ -75,18 +75,18 @@ private noncomputable def middleCoverage :=
   Substitution.square.toFeasibleSurjection middleSource middleSplit middleSplit
     (fun _ h => h)
 
-private noncomputable def middleEquivalence :=
-  pullbackEquivalence middleSource
+private noncomputable def middleEquiv :=
+  pullbackEquiv middleSource
     (coordinateMap (fun (_ : ℝ × ℝ) (u : ℝ) => u ^ 2) middleSplit middleSplit)
     middleCoverage
 
 example (point : FeasiblePoint middleSource) :
-    (middleEquivalence.forward.map point).1 =
+    (middleEquiv.forward.map point).1 =
       (point.1.1, Real.sqrt point.1.2.1, point.1.2.2) := rfl
 
 example (point : FeasiblePoint (middleSource.pullback
     (coordinateMap (fun (_ : ℝ × ℝ) (u : ℝ) => u ^ 2) middleSplit middleSplit))) :
-    (middleEquivalence.backward.map point).1 =
+    (middleEquiv.backward.map point).1 =
       (point.1.1, point.1.2.1 ^ 2, point.1.2.2) := rfl
 
 example : Substitution.square.preimage () ⟨0, le_rfl⟩ = 0 := Real.sqrt_zero

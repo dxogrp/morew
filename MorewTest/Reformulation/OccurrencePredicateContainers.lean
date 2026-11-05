@@ -53,7 +53,7 @@ theorem upperContext : ConstraintBoundContext (fun _ : ℝ => True)
 reformulation singleNamedLift : singleNamed := by
   epigraph t at loss in cap using upperContext
 
-example : GlobalEquivalence singleNamed singleNamedLift := singleNamedLift.equivalence
+example : GlobalEquiv singleNamed singleNamedLift := singleNamedLift.equiv
 example (x t : ℝ) : singleNamedLift.objective (x, t) = x := rfl
 example (x t : ℝ) : singleNamedLift.feasible (x, t) ↔ t ≤ 1 ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -65,8 +65,8 @@ def singleExpression :=
 reformulation singleExpressionLift : singleExpression := by
   epigraph t at (x ^ 2) in cap using upperContext
 
-example : GlobalEquivalence singleExpression singleExpressionLift :=
-  singleExpressionLift.equivalence
+example : GlobalEquiv singleExpression singleExpressionLift :=
+  singleExpressionLift.equiv
 example (x t : ℝ) : singleExpressionLift.feasible (x, t) ↔
     t ≤ 1 ∧ x ^ 2 ≤ t := Iff.rfl
 
@@ -78,7 +78,7 @@ def letContainer :=
 reformulation letContainerLift : letContainer := by
   epigraph t at (x ^ 2) in cap using upperContext
 
-example : GlobalEquivalence letContainer letContainerLift := letContainerLift.equivalence
+example : GlobalEquiv letContainer letContainerLift := letContainerLift.equiv
 example (x t : ℝ) : letContainerLift.feasible (x, t) ↔ t ≤ 1 ∧ x ^ 2 ≤ t := Iff.rfl
 
 -- Both tuple fields are direct occurrences even though the projection uses
@@ -103,7 +103,7 @@ def optionContainer :=
 reformulation optionContainerLift : optionContainer := by
   epigraph t at loss in cap using upperContext
 
-example : GlobalEquivalence optionContainer optionContainerLift := optionContainerLift.equivalence
+example : GlobalEquiv optionContainer optionContainerLift := optionContainerLift.equiv
 example (x t : ℝ) : optionContainerLift.feasible (x, t) ↔
     t ≤ 1 ∧ x ^ 2 ≤ t := Iff.rfl
 

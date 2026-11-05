@@ -170,13 +170,13 @@ reformulation selectedExplicitly : validSource := by
   conic at bound using customMatrixFracEpigraph
   conic
 
-example : GlobalEquivalence validSource selectedExplicitly := selectedExplicitly.equivalence
+example : GlobalEquiv validSource selectedExplicitly := selectedExplicitly.equiv
 example : IsConic selectedExplicitly := selectedExplicitly.isConic
 
 end Ambiguity
 
 reformulation recovered : validSource := by conic
-example : GlobalEquivalence validSource recovered := recovered.equivalence
+example : GlobalEquiv validSource recovered := recovered.equiv
 example : IsConic recovered := recovered.isConic
 
 assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedSemidefinite

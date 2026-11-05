@@ -40,7 +40,7 @@ reformulation maximumConic : maximum := by
 
 #printp maximumConic
 
-example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
+example : GlobalEquiv maximum maximumConic := maximumConic.equiv
 example : IsConic maximumConic := maximumConic.isConic
 example : maximumConic.conicForm.data.rowCount = 5 := rfl
 
@@ -56,8 +56,8 @@ reformulation maximumWithoutDomainConic : maximum := by
 
 #printp maximumWithoutDomainConic
 
-example : GlobalEquivalence maximum maximumWithoutDomainConic :=
-  maximumWithoutDomainConic.equivalence
+example : GlobalEquiv maximum maximumWithoutDomainConic :=
+  maximumWithoutDomainConic.equiv
 example : IsConic maximumWithoutDomainConic := maximumWithoutDomainConic.isConic
 example : maximumWithoutDomainConic.conicForm.data.rowCount = 4 := rfl
 example : maximumWithoutDomainConic.conicForm.data.toProblem = maximumWithoutDomainConic :=
@@ -80,7 +80,7 @@ reformulation domainFirstConic : nativeMaximum := by
 
 #printp domainFirstConic
 
-example : GlobalEquivalence nativeMaximum domainFirstConic := domainFirstConic.equivalence
+example : GlobalEquiv nativeMaximum domainFirstConic := domainFirstConic.equiv
 example : IsConic domainFirstConic := domainFirstConic.isConic
 
 end

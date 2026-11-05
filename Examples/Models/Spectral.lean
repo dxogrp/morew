@@ -38,8 +38,8 @@ reformulation largestEigenvalueConic : largestEigenvalueModel := by
 
 #printp largestEigenvalueConic
 
-example : GlobalEquivalence largestEigenvalueModel largestEigenvalueConic :=
-  largestEigenvalueConic.equivalence
+example : GlobalEquiv largestEigenvalueModel largestEigenvalueConic :=
+  largestEigenvalueConic.equiv
 example : IsConic largestEigenvalueConic := largestEigenvalueConic.isConic
 
 /-!
@@ -69,8 +69,8 @@ reformulation operatorNormConic : operatorNormModel := by
 
 #printp operatorNormConic
 
-example : GlobalEquivalence operatorNormModel operatorNormConic :=
-  operatorNormConic.equivalence
+example : GlobalEquiv operatorNormModel operatorNormConic :=
+  operatorNormConic.equiv
 example : IsConic operatorNormConic := operatorNormConic.isConic
 
 /-!
@@ -98,7 +98,7 @@ reformulation normNucConic : normNucModel := by
 
 #printp normNucConic
 
-example : GlobalEquivalence normNucModel normNucConic := normNucConic.equivalence
+example : GlobalEquiv normNucModel normNucConic := normNucConic.equiv
 example : IsConic normNucConic := normNucConic.isConic
 
 /-!
@@ -132,8 +132,8 @@ reformulation matrixFractionConic : matrixFractionModel := by
 
 #printp matrixFractionConic
 
-example : GlobalEquivalence matrixFractionModel matrixFractionConic :=
-  matrixFractionConic.equivalence
+example : GlobalEquiv matrixFractionModel matrixFractionConic :=
+  matrixFractionConic.equiv
 example : IsConic matrixFractionConic := matrixFractionConic.isConic
 
 end

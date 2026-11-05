@@ -49,7 +49,7 @@ reformulation normConic : (normBudget b) := by
 
 #printp normConic
 
-example : GlobalEquivalence (normBudget b) (normConic b) := normConic.equivalence b
+example : GlobalEquiv (normBudget b) (normConic b) := normConic.equiv b
 example : (normConic.conicForm b).data.toProblem = normConic b :=
   (normConic.conicForm b).represents
 example : IsConic (normConic b) := normConic.isConic b
@@ -62,7 +62,7 @@ reformulation normNLP : (normBudget b) := by
 
 #printp normNLP
 
-example : GlobalEquivalence (normBudget b) (normNLP b) := normNLP.equivalence b
+example : GlobalEquiv (normBudget b) (normNLP b) := normNLP.equiv b
 example : (normNLP.nlpForm b).data.toProblem = normNLP b :=
   (normNLP.nlpForm b).represents
 example : IsSmoothNLP (normNLP b) := normNLP.isSmoothNLP b
@@ -84,7 +84,7 @@ reformulation soc : (source n) := by
   conic
 
 #printp soc
-example : GlobalEquivalence (source n) (soc n) := soc.equivalence n
+example : GlobalEquiv (source n) (soc n) := soc.equiv n
 example : Conic.Form (soc n) := soc.conicForm n
 example : (soc.conicForm n).data.toProblem = soc n := (soc.conicForm n).represents
 example : IsConic (soc n) := soc.isConic n
@@ -96,7 +96,7 @@ reformulation power : (source n) := by
   conic
 
 #printp power
-example : GlobalEquivalence (source n) (power n) := power.equivalence n
+example : GlobalEquiv (source n) (power n) := power.equiv n
 example : Conic.Form (power n) := power.conicForm n
 example : (power.conicForm n).data.toProblem = power n := (power.conicForm n).represents
 example : IsConic (power n) := power.isConic n
@@ -106,7 +106,7 @@ reformulation squaredNorm : (source n) := by
   nlp
 
 #printp squaredNorm
-example : GlobalEquivalence (source n) (squaredNorm n) := squaredNorm.equivalence n
+example : GlobalEquiv (source n) (squaredNorm n) := squaredNorm.equiv n
 example : (squaredNorm.nlpForm n).data.toProblem = squaredNorm n :=
   (squaredNorm.nlpForm n).represents
 example : IsSmoothNLP (squaredNorm n) := squaredNorm.isSmoothNLP n
@@ -128,7 +128,7 @@ reformulation ready : (source n) := by
 
 /-! The power-cone exponent is 2/3, with one auxiliary variable per coordinate. -/
 #printp ready
-example : GlobalEquivalence (source n) (ready n) := ready.equivalence n
+example : GlobalEquiv (source n) (ready n) := ready.equiv n
 example : (ready.conicForm n).data.toProblem = ready n := (ready.conicForm n).represents
 example : IsConic (ready n) := ready.isConic n
 
@@ -150,7 +150,7 @@ reformulation coneBound : p := by
   conic
 
 #printp coneBound
-example : GlobalEquivalence p coneBound := coneBound.equivalence
+example : GlobalEquiv p coneBound := coneBound.equiv
 example : IsConic coneBound := coneBound.isConic
 
 end NormBound

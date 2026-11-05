@@ -130,19 +130,19 @@ private def applyRemovalCore (presentation : PresentationState) (index : Nat)
     checkWithKernel implied
     let source ← presentation.canonicalProblem
     let decomposition ← Replace.makeDecomposition presentation index source
-    let equivalence ← instantiateMVars (← mkAppM ``Morew.removeConstraintEquivalence
+    let equiv ← instantiateMVars (← mkAppM ``Morew.removeConstraintEquiv
       #[source, decomposition, implied])
     let next := { presentation with constraints :=
       presentation.constraints.extract 0 index ++
         presentation.constraints.extract (index + 1) presentation.constraints.size }
     let targetProblem ← instantiateMVars (← next.canonicalProblem)
-    let expected ← mkAppM ``Morew.GlobalEquivalence #[source, targetProblem]
-    unless ← isDefEq (← inferType equivalence) expected do
+    let expected ← mkAppM ``Morew.GlobalEquiv #[source, targetProblem]
+    unless ← isDefEq (← inferType equiv) expected do
       throwError "constraint removal did not produce the retained canonical problem"
-    unless (← complete equivalence) && (← complete targetProblem) do
+    unless (← complete equiv) && (← complete targetProblem) do
       throwError "constraint removal contains unresolved metavariables or placeholders"
-    checkWithKernel equivalence
-    return { targetProblem, equivalence }
+    checkWithKernel equiv
+    return { targetProblem, equiv }
 
 /-- Remove a row using an implication from current retained rows.
 Preserve other rows, coordinates, and caller metavariables; reject incomplete presentations. -/

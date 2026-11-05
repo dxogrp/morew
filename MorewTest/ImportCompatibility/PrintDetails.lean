@@ -57,8 +57,8 @@ end Shadow
 example : Shadow.importedReplay = Defined.lowered := rfl
 example : Shadow.detailedImportedReplay = Defined.registeredDetailed := rfl
 example : Shadow.continuedReplay = continued := rfl
-example : GlobalEquivalence Defined.source continued :=
-  Defined.lowered.equivalence.trans continued.equivalence
+example : GlobalEquiv Defined.source continued :=
+  Defined.lowered.equiv.trans continued.equiv
 
 namespace BinderTypes
 
@@ -91,8 +91,8 @@ run_cmd do
 
 example : exactReplay = continued := rfl
 example : displayReplay = continued := rfl
-example : GlobalEquivalence (Defined.BinderTypes.source 0) continued :=
-  Defined.BinderTypes.lowered.equivalence.trans continued.equivalence
+example : GlobalEquiv (Defined.BinderTypes.source 0) continued :=
+  Defined.BinderTypes.lowered.equiv.trans continued.equiv
 
 end BinderTypes
 

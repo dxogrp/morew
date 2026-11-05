@@ -60,7 +60,7 @@ def graphSource :=
 reformulation graphTarget : graphSource := by
   conic at graph using graphRule
 
-example : GlobalEquivalence graphSource graphTarget := graphTarget.equivalence
+example : GlobalEquiv graphSource graphTarget := graphTarget.equiv
 
 example (x y : ℝ) : graphTarget.feasible (x, y) ↔
     (y - x, (0 : Fin 0 → ℝ)) ∈ (Cone.secondOrder 0).carrier ∧
@@ -75,7 +75,7 @@ def epigraphSource :=
 reformulation epigraphTarget : epigraphSource := by
   conic at epi_row using epigraphRule
 
-example : GlobalEquivalence epigraphSource epigraphTarget := epigraphTarget.equivalence
+example : GlobalEquiv epigraphSource epigraphTarget := epigraphTarget.equiv
 
 example (x y : ℝ) : epigraphTarget.feasible (x, y) ↔
     (y, 1 / 2, ![x]) ∈ (Cone.rotatedSecondOrder 1).carrier := Iff.rfl
@@ -89,7 +89,7 @@ def hypographSource :=
 reformulation hypographTarget : hypographSource := by
   conic at hypo_row using hypographRule
 
-example : GlobalEquivalence hypographSource hypographTarget := hypographTarget.equivalence
+example : GlobalEquiv hypographSource hypographTarget := hypographTarget.equiv
 
 example (x y : ℝ) : hypographTarget.feasible (x, y) ↔
     (x - y, (0 : Fin 0 → ℝ)) ∈ (Cone.secondOrder 0).carrier := Iff.rfl
@@ -97,7 +97,7 @@ example (x y : ℝ) : hypographTarget.feasible (x, y) ↔
 reformulation target : source := by
   conic at auxiliary using auxiliaryRule
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x y u : ℝ) : target.objective ((x, y), u) = x + y := rfl
 
@@ -123,7 +123,7 @@ reformulation combinedTarget : combinedSource := by
   conic at hypo_row using hypographRule
   conic at auxiliary using auxiliaryRule
 
-example : GlobalEquivalence combinedSource combinedTarget := combinedTarget.equivalence
+example : GlobalEquiv combinedSource combinedTarget := combinedTarget.equiv
 
 example (x y u : ℝ) : combinedTarget.feasible ((x, y), u) ↔
     Real.exp x ≤ 100 ∧
@@ -161,7 +161,7 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`wrongSource, `nonaffineTarget] do
     let full := `MorewTest.Reformulation.SecondOrderCustom ++ name
-    for declaration in #[full, full ++ `equivalence,
+    for declaration in #[full, full ++ `equiv,
         `MorewTest.Reformulation.SecondOrderCustom ++
           Lean.Name.mkSimple (name.toString ++ "Alias")] do
       if env.contains declaration then

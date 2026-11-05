@@ -89,12 +89,12 @@ private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
     throwError "rewrite produced the wrong target problem"
   let source ← presentation.canonicalProblem
   let order ← synthInstance (← mkAppM ``Preorder #[valueType])
-  let expectedType ← mkAppOptM ``GlobalEquivalence
+  let expectedType ← mkAppOptM ``GlobalEquiv
     #[some domain, some nextDomain, some valueType, some order, some source, some expected]
-  unless ← isDefEq (← inferType result.equivalence) expectedType do
+  unless ← isDefEq (← inferType result.equiv) expectedType do
     throwError "rewrite equivalence has the wrong endpoints or optimization order"
   checkWithKernel result.targetProblem
-  checkWithKernel result.equivalence
+  checkWithKernel result.equiv
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   -- Removing the only row must result in `True`, with no `Unit` decision binder.
@@ -172,11 +172,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (fun x => (0 ≤ x ∧ x ≤ 3) ∧ True)))
   unless ← isDefEq result.targetProblem expected do
     throwError "contextual replacement changed retained row boundaries"
-  let expectedType ← mkAppM ``GlobalEquivalence
+  let expectedType ← mkAppM ``GlobalEquiv
     #[← presentation.canonicalProblem, expected]
-  unless ← isDefEq (← inferType result.equivalence) expectedType do
+  unless ← isDefEq (← inferType result.equiv) expectedType do
     throwError "contextual replacement has the wrong equivalence endpoints"
-  checkWithKernel result.equivalence
+  checkWithKernel result.equiv
   let invalid ← checkedTerm (← `(fun (x : ℝ) (h : x ≤ 5) =>
     (show x ≤ 5 ↔ True from ⟨fun _ => trivial, fun _ => h⟩)))
   let rejected ← try
@@ -220,12 +220,12 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless ← isDefEq result.targetProblem expected do
       throwError "conditional auxiliary replacement changed retained rows or coordinates"
     let order ← synthInstance (← mkAppM ``Preorder #[valueType])
-    let expectedType ← mkAppOptM ``GlobalEquivalence
+    let expectedType ← mkAppOptM ``GlobalEquiv
       #[some domain, some nextDomain, some valueType, some order,
         some (← presentation.canonicalProblem), some expected]
-    unless ← isDefEq (← inferType result.equivalence) expectedType do
+    unless ← isDefEq (← inferType result.equiv) expectedType do
       throwError "conditional auxiliary equivalence has the wrong endpoints or optimization order"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
     let invalid ← checkedTerm (← `(fun (x : ℝ) (_h : x ≤ 5) =>
       (show x ≤ 5 ↔ ∃ a : ℝ, a = x from ⟨fun _ => ⟨x, rfl⟩, fun _ => _h⟩)))
     let rejected ← try
@@ -246,7 +246,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let feasible ← checkedTerm (← `(fun x : ℝ => (x ≤ 3 ∧ 0 ≤ x) ∧ True))
     unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[objective, feasible]) do
       throwError "conditional Unit replacement changed the decision domain"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
     -- An unused non-`Unit` auxiliary is still part of the exact decision layout.
     let target ← checkedTerm (← `(fun (_ : ℝ) (_ : ℝ) => True))
     let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
@@ -259,7 +259,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let feasible ← checkedTerm (← `(fun p : ℝ × ℝ => (p.1 ≤ 3 ∧ 0 ≤ p.1) ∧ True))
     unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[nextObjective, feasible]) do
       throwError "conditional replacement dropped unused auxiliary coordinates"
-    checkWithKernel result.equivalence
+    checkWithKernel result.equiv
 
 end
 

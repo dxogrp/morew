@@ -27,8 +27,8 @@ def affineObjective :=
 reformulation affineConic : affineObjective := by conic
 reformulation affineNLP : affineObjective := by nlp
 
-example : GlobalEquivalence affineObjective affineConic := affineConic.equivalence
-example : GlobalEquivalence affineObjective affineNLP := affineNLP.equivalence
+example : GlobalEquiv affineObjective affineConic := affineConic.equiv
+example : GlobalEquiv affineObjective affineNLP := affineNLP.equiv
 example : affineConic.conicForm.data.toProblem = affineConic := affineConic.conicForm.represents
 example : affineNLP.nlpForm.data.toProblem = affineNLP := affineNLP.nlpForm.represents
 example (x : ℝ) : affineConic.objective x = x := rfl
@@ -93,7 +93,7 @@ example : loweredDomainNLP.nlpForm.data.sense = .maximize := rfl
 example : loweredDomainNLP.nlpForm.data.rowCount = 3 := rfl
 example : loweredDomainNLP.nlpForm.data.toProblem = loweredDomainNLP :=
   loweredDomainNLP.nlpForm.represents
-example : GlobalEquivalence loweredDomain loweredDomainNLP := loweredDomainNLP.equivalence
+example : GlobalEquiv loweredDomain loweredDomainNLP := loweredDomainNLP.equiv
 
 def mixedSigned :=
   problem (x t : ℝ)
@@ -103,7 +103,7 @@ def mixedSigned :=
 reformulation mixedSignedNLP : mixedSigned := by nlp
 
 example : mixedSignedNLP.nlpForm.data.rowCount = 3 := rfl
-example : GlobalEquivalence mixedSigned mixedSignedNLP := mixedSignedNLP.equivalence
+example : GlobalEquiv mixedSigned mixedSignedNLP := mixedSignedNLP.equiv
 
 section ProofLet
 
@@ -119,7 +119,7 @@ def proofLetSource :=
 reformulation proofLetNLP : (proofLetSource c hc) := by nlp
 
 example : (proofLetNLP.nlpForm c hc).data.rowCount = 1 := rfl
-example : GlobalEquivalence (proofLetSource c hc) (proofLetNLP c hc) := proofLetNLP.equivalence c hc
+example : GlobalEquiv (proofLetSource c hc) (proofLetNLP c hc) := proofLetNLP.equiv c hc
 
 end ProofLet
 

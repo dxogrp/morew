@@ -34,7 +34,7 @@ reformulation conicProb : p := by
 
 #printp conicProb
 #check conicProb.conicForm.data
-example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : GlobalEquiv p conicProb := conicProb.equiv
 example : conicProb.conicForm.data.toProblem = conicProb := conicProb.conicForm.represents
 example : IsConic conicProb := conicProb.isConic
 
@@ -58,7 +58,7 @@ reformulation conicProb : p := by
 
 /-! Printed objectives and constraints keep their original helper references. -/
 #printp conicProb
-example : GlobalEquivalence p conicProb := conicProb.equivalence
+example : GlobalEquiv p conicProb := conicProb.equiv
 example : IsConic conicProb := conicProb.isConic
 
 end Helpers
@@ -81,15 +81,15 @@ reformulation linearBounds : p := by
 -- ANCHOR_END: linearBounds
 
 #printp linearBounds
-example : GlobalEquivalence p linearBounds := linearBounds.equivalence
+example : GlobalEquiv p linearBounds := linearBounds.equiv
 
 /-! Continue from the intermediate problem and compose the two equivalences. -/
 -- ANCHOR: conicChain
 reformulation conicProb : linearBounds := by
   conic
 
-example : GlobalEquivalence p conicProb :=
-  linearBounds.equivalence.trans conicProb.equivalence
+example : GlobalEquiv p conicProb :=
+  linearBounds.equiv.trans conicProb.equiv
 -- ANCHOR_END: conicChain
 
 #printp conicProb

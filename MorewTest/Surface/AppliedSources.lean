@@ -23,11 +23,11 @@ def quadratic (a : ℝ) :=
     subject to
       lower : a ≤ x
 
-reformulation concrete : (quadratic 3) certificate concreteEquivalence := by
+reformulation concrete : (quadratic 3) certificate concreteEquiv := by
   epigraph t as objectiveBound
 
-example : GlobalEquivalence (quadratic 3) concrete := concrete.equivalence
-example : GlobalEquivalence (quadratic 3) concrete := concreteEquivalence
+example : GlobalEquiv (quadratic 3) concrete := concrete.equiv
+example : GlobalEquiv (quadratic 3) concrete := concreteEquiv
 
 example (x t : ℝ) : concrete.feasible (x, t) ↔
     3 ≤ x ∧ (x - 3) ^ 2 ≤ t := Iff.rfl
@@ -45,18 +45,18 @@ info: problem (x t : ℝ)
 reformulation named : (quadratic (a := 4)) := by
   epigraph t
 
-example : GlobalEquivalence (quadratic 4) named := named.equivalence
+example : GlobalEquiv (quadratic 4) named := named.equiv
 
 reformulation explicitlyApplied : (@quadratic 5) := by
   epigraph t
 
-example : GlobalEquivalence (quadratic 5) explicitlyApplied :=
-  explicitlyApplied.equivalence
+example : GlobalEquiv (quadratic 5) explicitlyApplied :=
+  explicitlyApplied.equiv
 
 reformulation nestedParens : ((quadratic 6)) := by
   epigraph t
 
-example : GlobalEquivalence (quadratic 6) nestedParens := nestedParens.equivalence
+example : GlobalEquiv (quadratic 6) nestedParens := nestedParens.equiv
 
 reformulation expressionArgument : (quadratic (2 + 1)) := by
   epigraph t
@@ -81,14 +81,14 @@ section
 variable (coefficient : ℝ)
 
 reformulation parameterized : (quadratic coefficient)
-    certificate parameterizedEquivalence := by
+    certificate parameterizedEquiv := by
   epigraph t as objectiveBound
 
-example : GlobalEquivalence (quadratic coefficient) (parameterized coefficient) :=
-  parameterized.equivalence coefficient
+example : GlobalEquiv (quadratic coefficient) (parameterized coefficient) :=
+  parameterized.equiv coefficient
 
-example : GlobalEquivalence (quadratic coefficient) (parameterized coefficient) :=
-  parameterizedEquivalence coefficient
+example : GlobalEquiv (quadratic coefficient) (parameterized coefficient) :=
+  parameterizedEquiv coefficient
 
 end
 
@@ -105,7 +105,7 @@ info: problem (x t : ℝ)
 reformulation chained : (parameterized 7) := by
   epigraph s as secondBound
 
-example : GlobalEquivalence (parameterized 7) chained := chained.equivalence
+example : GlobalEquiv (parameterized 7) chained := chained.equiv
 
 example (x t s : ℝ) : chained.feasible ((x, t), s) ↔
     7 ≤ x ∧ (x - 7) ^ 2 ≤ t ∧ t ≤ s := Iff.rfl
@@ -131,8 +131,8 @@ variable (x coefficient : ℝ)
 reformulation unusedOuterName : (quadratic coefficient) := by
   epigraph t
 
-example : GlobalEquivalence (quadratic coefficient) (unusedOuterName coefficient) :=
-  unusedOuterName.equivalence coefficient
+example : GlobalEquiv (quadratic coefficient) (unusedOuterName coefficient) :=
+  unusedOuterName.equiv coefficient
 
 end
 
@@ -168,7 +168,7 @@ example (v w : Fin 2 → ℝ) (t : ℝ) : copiedVectors.feasible ((v, w), t) ↔
 reformulation explicitVectors : (@vectors 2 3) := by
   epigraph t
 
-example : GlobalEquivalence (@vectors 2 3) explicitVectors := explicitVectors.equivalence
+example : GlobalEquiv (@vectors 2 3) explicitVectors := explicitVectors.equiv
 
 section
 
@@ -202,8 +202,8 @@ local instance : Weight := changedWeight
 reformulation explicitInstance : (@weighted originalWeight 3) := by
   epigraph t
 
-example : GlobalEquivalence (@weighted originalWeight 3) explicitInstance :=
-  explicitInstance.equivalence
+example : GlobalEquiv (@weighted originalWeight 3) explicitInstance :=
+  explicitInstance.equiv
 
 example (x t : ℝ) : explicitInstance.feasible (x, t) ↔ 2 * x + 3 ≤ t := Iff.rfl
 
@@ -223,7 +223,7 @@ def maximum (bound : ℝ) :=
 reformulation maximumBound : (maximum 8) := by
   hypograph t
 
-example : GlobalEquivalence (maximum 8) maximumBound := maximumBound.equivalence
+example : GlobalEquiv (maximum 8) maximumBound := maximumBound.equiv
 
 example (x t : ℝ) : maximumBound.feasible (x, t) ↔ x ≤ 8 ∧ t ≤ x := Iff.rfl
 
@@ -249,7 +249,7 @@ reformulation minimumTarget : (minimum 3) := by
   epigraph t
 
 example : Problem (Nat × OrderDual Nat) (OrderDual Nat) := minimumTarget
-example : GlobalEquivalence (minimum 3) minimumTarget := minimumTarget.equivalence
+example : GlobalEquiv (minimum 3) minimumTarget := minimumTarget.equiv
 
 -- These comparisons infer their order from the emitted target itself.
 example : ¬ minimumTarget.objective (0, 0) ≤ minimumTarget.objective (0, 1) := by decide
@@ -262,7 +262,7 @@ reformulation maximumTarget : (maximum 3) := by
   hypograph t
 
 example : Problem (Nat × OrderDual Nat) (OrderDual (OrderDual Nat)) := maximumTarget
-example : GlobalEquivalence (maximum 3) maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv (maximum 3) maximumTarget := maximumTarget.equiv
 
 example : maximumTarget.objective (0, 0) ≤ maximumTarget.objective (0, 1) := by decide
 
@@ -282,8 +282,8 @@ reformulation substituted : (logarithmic offset) := by
   substitute x := Real.exp u
   epigraph t
 
-example : GlobalEquivalence (logarithmic offset) (substituted offset) :=
-  substituted.equivalence offset
+example : GlobalEquiv (logarithmic offset) (substituted offset) :=
+  substituted.equiv offset
 
 example (u t : ℝ) : (substituted offset).feasible (u, t) ↔ u + offset ≤ t := Iff.rfl
 
@@ -304,7 +304,7 @@ def absoluteBound (bound : ℝ) :=
 reformulation targeted : (absoluteBound 9) := by
   conic at magnitude
 
-example : GlobalEquivalence (absoluteBound 9) targeted := targeted.equivalence
+example : GlobalEquiv (absoluteBound 9) targeted := targeted.equiv
 
 example (x : ℝ) : targeted.feasible x ↔ x ≤ 9 ∧ -x ≤ 9 := Iff.rfl
 
@@ -312,13 +312,13 @@ section
 
 variable (bound : ℝ)
 
-reformulation terminal : (absoluteBound bound) certificate terminalEquivalence := by
+reformulation terminal : (absoluteBound bound) certificate terminalEquiv := by
   conic
 
-example : GlobalEquivalence (absoluteBound bound) (terminal bound) :=
-  terminal.equivalence bound
-example : GlobalEquivalence (absoluteBound bound) (terminal bound) :=
-  terminalEquivalence bound
+example : GlobalEquiv (absoluteBound bound) (terminal bound) :=
+  terminal.equiv bound
+example : GlobalEquiv (absoluteBound bound) (terminal bound) :=
+  terminalEquiv bound
 example : Conic.Form (terminal bound) := terminal.conicForm bound
 example : IsConic (terminal bound) := terminal.isConic bound
 
@@ -328,7 +328,7 @@ reformulation terminalAgain : (terminal 10) := by
   epigraph t
   conic
 
-example : GlobalEquivalence (terminal 10) terminalAgain := terminalAgain.equivalence
+example : GlobalEquiv (terminal 10) terminalAgain := terminalAgain.equiv
 example : Conic.Form terminalAgain := terminalAgain.conicForm
 example : IsConic terminalAgain := terminalAgain.isConic
 
@@ -440,7 +440,7 @@ run_cmd do
       `conflictingParameter, `conflictingNewBinder, `conflictingSubstitution,
       `failedAfterTerminal] do
     let name := `MorewTest.Surface.AppliedSources ++ shortName
-    for artifact in #[name, name ++ `equivalence, name ++ `conicForm, name ++ `isConic] do
+    for artifact in #[name, name ++ `equiv, name ++ `conicForm, name ++ `isConic] do
       if env.contains artifact then
         Lean.throwError "failed applied source emitted declaration `{artifact}`"
     if (Morew.Syntax.getProblemView? env name).isSome then
@@ -467,10 +467,10 @@ reformulation targeted : (family magnitude_aux) := by
 reformulation terminal : (family magnitude_aux) := by
   conic
 
-example : GlobalEquivalence (family magnitude_aux) (targeted magnitude_aux) :=
-  targeted.equivalence magnitude_aux
-example : GlobalEquivalence (family magnitude_aux) (terminal magnitude_aux) :=
-  terminal.equivalence magnitude_aux
+example : GlobalEquiv (family magnitude_aux) (targeted magnitude_aux) :=
+  targeted.equiv magnitude_aux
+example : GlobalEquiv (family magnitude_aux) (terminal magnitude_aux) :=
+  terminal.equiv magnitude_aux
 example : IsConic (terminal magnitude_aux) := terminal.isConic magnitude_aux
 
 end
@@ -534,7 +534,7 @@ info: problem (x t : ℝ)
 reformulation chained : (target 2 5) := by
   epigraph s
 
-example : GlobalEquivalence (target 2 5) chained := chained.equivalence
+example : GlobalEquiv (target 2 5) chained := chained.equiv
 
 example (x t s : ℝ) : chained.feasible ((x, t), s) ↔
     2 ≤ x ∧ x ≤ 5 ∧ 2 - 5 + x ≤ t ∧ t ≤ s := Iff.rfl
@@ -612,7 +612,7 @@ end ShadowedParameterNames
 reformulation validAfterFailures : (quadratic 11) := by
   epigraph t
 
-example : GlobalEquivalence (quadratic 11) validAfterFailures := validAfterFailures.equivalence
+example : GlobalEquiv (quadratic 11) validAfterFailures := validAfterFailures.equiv
 
 end
 end MorewTest.Surface.AppliedSources

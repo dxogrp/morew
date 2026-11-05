@@ -38,7 +38,7 @@ reformulation nonnegativeMaximum : maximum := by
   restrict nonnegative : 0 ≤ x using absoluteRepair
 
 #printp nonnegativeMaximum
-example : GlobalEquivalence maximum nonnegativeMaximum := nonnegativeMaximum.equivalence
+example : GlobalEquiv maximum nonnegativeMaximum := nonnegativeMaximum.equiv
 
 -- Sorting interchangeable variables chooses an ordered representative.
 def symmetric :=
@@ -61,7 +61,7 @@ reformulation ordered : symmetric := by
   restrict ordered : x ≤ y using sortingRepair
 
 #printp ordered
-example : GlobalEquivalence symmetric ordered := ordered.equivalence
+example : GlobalEquiv symmetric ordered := ordered.equiv
 
 -- After `x := u²`, choose `u ≥ 0` using the square-root preimage.
 -- This preserves `u²` and retains the optimum `u = 2` from `u = ±2`.
@@ -81,7 +81,7 @@ reformulation principalCoordinates : nonnegativeSource := by
       (fun point => Real.sqrt_nonneg point.1)
 
 #printp principalCoordinates
-example : GlobalEquivalence nonnegativeSource principalCoordinates := principalCoordinates.equivalence
+example : GlobalEquiv nonnegativeSource principalCoordinates := principalCoordinates.equiv
 example (u : ℝ) (hu : principalCoordinates.feasible u) : Real.sqrt (u ^ 2) = u :=
   Real.sqrt_sq hu
 

@@ -23,8 +23,8 @@ noncomputable section
 reformulation importedCertified : TerminalNLP.localTarget := by
   epigraph t at first
   nlp
-example : GlobalEquivalence TerminalNLP.localTarget importedCertified :=
-  importedCertified.equivalence
+example : GlobalEquiv TerminalNLP.localTarget importedCertified :=
+  importedCertified.equiv
 example : NLP.Form importedCertified := importedCertified.nlpForm
 example : importedCertified.nlpForm.data.toProblem = importedCertified :=
   importedCertified.nlpForm.represents
@@ -43,7 +43,7 @@ def objectiveSource :=
 
 reformulation objectiveTarget : objectiveSource := by
   nlp
-example : GlobalEquivalence objectiveSource objectiveTarget := objectiveTarget.equivalence
+example : GlobalEquiv objectiveSource objectiveTarget := objectiveTarget.equiv
 example : NLP.Form objectiveTarget := objectiveTarget.nlpForm
 example : IsSmoothNLP objectiveTarget := objectiveTarget.isSmoothNLP
 
@@ -54,7 +54,7 @@ def rowSource :=
 
 reformulation rowTarget : rowSource := by
   nlp
-example : GlobalEquivalence rowSource rowTarget := rowTarget.equivalence
+example : GlobalEquiv rowSource rowTarget := rowTarget.equiv
 example : rowTarget.nlpForm.data.sense = .maximize := rfl
 end
 
@@ -63,8 +63,8 @@ variable (radius : ℝ) (positive : 0 < radius)
 
 reformulation importedTarget : (NLPImportedSource.family radius) := by
   nlp
-example : GlobalEquivalence (NLPImportedSource.family radius) (importedTarget radius) :=
-  importedTarget.equivalence radius
+example : GlobalEquiv (NLPImportedSource.family radius) (importedTarget radius) :=
+  importedTarget.equiv radius
 example : NLP.Form (importedTarget radius) := importedTarget.nlpForm radius positive
 
 /--
@@ -83,8 +83,8 @@ info: problem (x : ℝ)
 
 reformulation importedAgain : (importedTarget radius) := by
   nlp
-example : GlobalEquivalence (importedTarget radius) (importedAgain radius) :=
-  importedAgain.equivalence radius
+example : GlobalEquiv (importedTarget radius) (importedAgain radius) :=
+  importedAgain.equiv radius
 example : NLP.Form (importedAgain radius) := importedAgain.nlpForm radius positive
 end
 
@@ -103,7 +103,7 @@ reformulation vectorTarget : (vectorSource n) := by
 example : (vectorTarget.nlpForm n).data.rowCount = n + n := by
   change (∑ _ : Fin n, (1 : ℕ)) + ((∑ _ : Fin n, (1 : ℕ)) + 0) = n + n
   simp
-example : GlobalEquivalence (vectorSource n) (vectorTarget n) := vectorTarget.equivalence n
+example : GlobalEquiv (vectorSource n) (vectorTarget n) := vectorTarget.equiv n
 example : NLP.Form (vectorTarget n) := vectorTarget.nlpForm n
 example : (vectorTarget.nlpForm 0).data.rowCount = 0 := rfl
 
@@ -133,7 +133,7 @@ example : (target.nlpForm n m).data.rowCount = n * m := by
   simp
 example : (target.nlpForm n m).data.toProblem = target n m :=
   (target.nlpForm n m).represents
-example : GlobalEquivalence (source n m) (target n m) := target.equivalence n m
+example : GlobalEquiv (source n m) (target n m) := target.equiv n m
 example : (target.nlpForm 0 m).data.rowCount = 0 := rfl
 
 /--
@@ -166,7 +166,7 @@ reformulation targeted : source := by
 reformulation targetedTerminal : targeted := by
   nlp
 example : NLP.Form targetedTerminal := targetedTerminal.nlpForm
-example : GlobalEquivalence targeted targetedTerminal := targetedTerminal.equivalence
+example : GlobalEquiv targeted targetedTerminal := targetedTerminal.equiv
 
 reformulation terminal : source := by
   nlp
@@ -178,7 +178,7 @@ reformulation continued : terminal := by
   epigraph value
   nlp
 example : NLP.Form continued := continued.nlpForm
-example : GlobalEquivalence terminal continued := continued.equivalence
+example : GlobalEquiv terminal continued := continued.equiv
 
 run_cmd do
   for name in #[``targeted, ``terminal, ``continued] do

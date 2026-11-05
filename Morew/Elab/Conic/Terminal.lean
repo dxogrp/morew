@@ -26,7 +26,7 @@ structure Result where
   /-- Final typed presentation, with temporary names for generated entries. -/
   presentation : PresentationState
   /-- Exact equivalence from the incoming canonical problem to the final one. -/
-  equivalence : Expr
+  equiv : Expr
   /-- A checked `Conic.Form` of the final canonical problem. -/
   form : Expr
   /-- Original presentation-entry index for every final constraint entry. -/
@@ -42,7 +42,7 @@ structure Result where
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
-  equivalence := result.equivalence.replaceFVars oldVars newVars
+  equiv := result.equiv.replaceFVars oldVars newVars
   form := result.form.replaceFVars oldVars newVars
   auxiliaries := result.auxiliaries.map fun (origin, type) =>
     (origin, type.replaceFVars oldVars newVars)
@@ -50,7 +50,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 
 private structure Work where
   presentation : PresentationState
-  equivalence : Expr
+  equiv : Expr
   rowOrigins : Array Nat
   certifiedRows : Array (Option (Array RowResult))
   replacedIndices : Array Nat := #[]
@@ -150,13 +150,13 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
   let canonical ← presentation.canonicalProblem
   unless ← isDefEq canonical rewrite.targetProblem do
     throwError "terminal rewrite presentation does not match its checked target"
-  let equivalence ← instantiateMVars (← mkAppM ``Morew.GlobalEquivalence.trans
-    #[work.equivalence, rewrite.equivalence])
+  let equiv ← instantiateMVars (← mkAppM ``Morew.GlobalEquiv.trans
+    #[work.equiv, rewrite.equiv])
   let replacedIndices := if work.replacedIndices.contains origin then work.replacedIndices
     else work.replacedIndices.push origin
   return {
     presentation
-    equivalence
+    equiv
     rowOrigins := splice work.rowOrigins index (rows.map fun _ => origin)
     certifiedRows := splice retainedCertificates index certificates
     replacedIndices
@@ -305,12 +305,12 @@ private def normalizeFinal (work : Work) : MetaM Work := do
     let presentation := { presentation with constraints }
     unless ← isDefEq (← presentation.canonicalProblem) rewrite.targetProblem do
       throwError "normalized conic presentation does not match its checked target"
-    let equivalence ← instantiateMVars (← mkAppM ``Morew.GlobalEquivalence.trans
-      #[work.equivalence, rewrite.equivalence])
+    let equiv ← instantiateMVars (← mkAppM ``Morew.GlobalEquiv.trans
+      #[work.equiv, rewrite.equiv])
     let origin := work.rowOrigins[index]!
     work := { work with
       presentation
-      equivalence
+      equiv
       certifiedRows := work.certifiedRows.set! index (some rows)
       changedBodies := if work.changedBodies.contains origin then work.changedBodies
         else work.changedBodies.push origin
@@ -339,10 +339,10 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
             reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
         | .ok _ => pure ()
         let canonical ← presentation.canonicalProblem
-        let equivalence ← instantiateMVars (← mkAppM ``Morew.GlobalEquivalence.refl #[canonical])
+        let equiv ← instantiateMVars (← mkAppM ``Morew.GlobalEquiv.refl #[canonical])
         let work : Work := {
           presentation
-          equivalence
+          equiv
           rowOrigins := presentation.constraints.mapIdx fun index _ => index
           certifiedRows := presentation.constraints.map fun _ => none
         }
@@ -354,11 +354,11 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
         let form ← match ← buildForm work.presentation provider work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
-        checkWithKernel work.equivalence
+        checkWithKernel work.equiv
         checkWithKernel form
         return .ok {
           presentation := work.presentation
-          equivalence := work.equivalence
+          equiv := work.equiv
           form
           rowOrigins := work.rowOrigins
           replacedIndices := work.replacedIndices.qsort (· < ·)

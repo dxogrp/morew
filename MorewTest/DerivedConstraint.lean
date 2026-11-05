@@ -40,23 +40,23 @@ variable {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (implied : ∀ point, p.feasible point → constraint point)
 
-example : GlobalEquivalence p (p.addConstraint constraint) :=
-  addConstraintEquivalence p constraint implied
+example : GlobalEquiv p (p.addConstraint constraint) :=
+  addConstraintEquiv p constraint implied
 
 example (point : FeasiblePoint p) :
-    ((addConstraintEquivalence p constraint implied).forward.map point).1 = point.1 := rfl
+    ((addConstraintEquiv p constraint implied).forward.map point).1 = point.1 := rfl
 
 example (point : FeasiblePoint (p.addConstraint constraint)) :
-    ((addConstraintEquivalence p constraint implied).backward.map point).1 = point.1 := rfl
+    ((addConstraintEquiv p constraint implied).backward.map point).1 = point.1 := rfl
 
 example (point : FeasiblePoint p) :
-    (addConstraintEquivalence p constraint implied).backward.map
-      ((addConstraintEquivalence p constraint implied).forward.map point) = point := by
+    (addConstraintEquiv p constraint implied).backward.map
+      ((addConstraintEquiv p constraint implied).forward.map point) = point := by
   rfl
 
 example (point : FeasiblePoint (p.addConstraint constraint)) :
-    (addConstraintEquivalence p constraint implied).forward.map
-      ((addConstraintEquivalence p constraint implied).backward.map point) = point := by
+    (addConstraintEquiv p constraint implied).forward.map
+      ((addConstraintEquiv p constraint implied).backward.map point) = point := by
   rfl
 
 -- A later implication can use the already derived constraint. Composing the
@@ -65,9 +65,9 @@ variable (nextConstraint : X → Prop)
     (nextImplied : ∀ point, p.feasible point → constraint point → nextConstraint point)
 
 private def chained :
-    GlobalEquivalence p ((p.addConstraint constraint).addConstraint nextConstraint) :=
-  (addConstraintEquivalence p constraint implied).trans
-    (addConstraintEquivalence (p.addConstraint constraint) nextConstraint
+    GlobalEquiv p ((p.addConstraint constraint).addConstraint nextConstraint) :=
+  (addConstraintEquiv p constraint implied).trans
+    (addConstraintEquiv (p.addConstraint constraint) nextConstraint
       (fun point feasible => nextImplied point feasible.1 feasible.2))
 
 example (point : FeasiblePoint p) :
@@ -84,11 +84,11 @@ example (point : FeasiblePoint p) :
         p.objective point.1 := rfl
 
 -- Maximization uses the same constructor and certificate over the dual order.
-example : GlobalEquivalence p.orderDual (p.orderDual.addConstraint constraint) :=
-  addConstraintEquivalence p.orderDual constraint implied
+example : GlobalEquiv p.orderDual (p.orderDual.addConstraint constraint) :=
+  addConstraintEquiv p.orderDual constraint implied
 
 example (point : FeasiblePoint p.orderDual) :
-    ((addConstraintEquivalence p.orderDual constraint implied).forward.map point).1 =
+    ((addConstraintEquiv p.orderDual constraint implied).forward.map point).1 =
       point.1 := rfl
 
 end Ordered
@@ -99,14 +99,14 @@ variable {X : Type u} {V : Type v} [Preorder V] (objective : X → V)
 
 -- Explicit tautologies remain predicates of the constructed problem.
 example :
-    GlobalEquivalence (Problem.mk objective (fun _ => True))
+    GlobalEquiv (Problem.mk objective (fun _ => True))
       ((Problem.mk objective (fun _ => True)).addConstraint (fun _ => True)) :=
-  addConstraintEquivalence _ _ (fun _ _ => True.intro)
+  addConstraintEquiv _ _ (fun _ _ => True.intro)
 
 example (constraint : X → Prop) :
-    GlobalEquivalence (Problem.mk objective (fun _ => False))
+    GlobalEquiv (Problem.mk objective (fun _ => False))
       ((Problem.mk objective (fun _ => False)).addConstraint constraint) :=
-  addConstraintEquivalence _ _ (fun _ impossible => False.elim impossible)
+  addConstraintEquiv _ _ (fun _ impossible => False.elim impossible)
 
 end EmptyAndInfeasible
 

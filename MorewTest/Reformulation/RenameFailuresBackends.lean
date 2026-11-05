@@ -44,7 +44,7 @@ reformulation atomicTarget : bounded certificate atomicAlias := by
 reformulation atomicTarget : bounded certificate atomicAlias := by
   rename lower to lower
 
-example : GlobalEquivalence bounded atomicTarget := atomicAlias
+example : GlobalEquiv bounded atomicTarget := atomicAlias
 example : atomicTarget = bounded := rfl
 
 #guard_error_fragments ["cannot apply a reformulation step after a terminal step"] in

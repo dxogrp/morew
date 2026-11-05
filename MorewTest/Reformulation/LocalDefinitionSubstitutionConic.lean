@@ -19,7 +19,7 @@ reformulation proofConic : proofSource := by
   substitute x := Real.exp u
   conic
 
-example : GlobalEquivalence proofSource proofConic := proofConic.equivalence
+example : GlobalEquiv proofSource proofConic := proofConic.equiv
 example : Conic.Form proofConic := proofConic.conicForm
 example : proofConic.conicForm.data.toProblem = proofConic :=
   proofConic.conicForm.represents
@@ -29,8 +29,8 @@ reformulation fixedSubtypeConic : fixedSubtypeSource := by
   epigraph t
   conic
 
-example : GlobalEquivalence fixedSubtypeSource fixedSubtypeConic :=
-  fixedSubtypeConic.equivalence
+example : GlobalEquiv fixedSubtypeSource fixedSubtypeConic :=
+  fixedSubtypeConic.equiv
 example : Conic.Form fixedSubtypeConic := fixedSubtypeConic.conicForm
 example : fixedSubtypeConic.conicForm.data.toProblem = fixedSubtypeConic :=
   fixedSubtypeConic.conicForm.represents

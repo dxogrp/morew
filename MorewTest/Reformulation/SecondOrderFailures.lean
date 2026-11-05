@@ -35,7 +35,7 @@ reformulation missing : source certificate missingAlias := by
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in #[`missing, `missing.equivalence, `missingAlias] do
+  for name in #[`missing, `missing.equiv, `missingAlias] do
     let full := `MorewTest.Reformulation.SecondOrderFailures ++ name
     if env.contains full || (Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed second-order rewrite emitted {full}"

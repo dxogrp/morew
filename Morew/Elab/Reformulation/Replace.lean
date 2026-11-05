@@ -88,8 +88,8 @@ def makeDecomposition (presentation : PresentationState) (index : Nat)
 structure RewriteResult where
   /-- Explicit canonical problem containing the ordered replacement rows. -/
   targetProblem : Expr
-  /-- `GlobalEquivalence` from the old canonical problem to `targetProblem`. -/
-  equivalence : Expr
+  /-- `GlobalEquiv` from the old canonical problem to `targetProblem`. -/
+  equiv : Expr
 
 /-- Assemble a selected-row replacement; `targetIff` equates the representation target
 with the ordered replacement conjunction. -/
@@ -170,17 +170,17 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
     mkLambdaFVars #[point] proof
   let objectiveEq ← withLocalDeclD `point nextDomain fun point => do
     mkLambdaFVars #[point] (← mkEqRefl (mkApp objective point))
-  let normalization ← mkAppM ``Morew.pointwiseEquivalence
+  let normalization ← mkAppM ``Morew.pointwiseEquiv
     #[natural, targetProblem, objectiveEq, feasibleIff]
-  let equivalence ← match primitive with
+  let equiv ← match primitive with
     | none => pure normalization
-    | some primitive => mkAppM ``Morew.GlobalEquivalence.trans #[primitive, normalization]
+    | some primitive => mkAppM ``Morew.GlobalEquiv.trans #[primitive, normalization]
   let targetProblem ← instantiateMVars targetProblem
-  let equivalence ← instantiateMVars equivalence
-  if targetProblem.hasMVar || equivalence.hasMVar then
+  let equiv ← instantiateMVars equiv
+  if targetProblem.hasMVar || equiv.hasMVar then
     throwError "constraint replacement contains unresolved metavariables"
-  checkWithKernel equivalence
-  return { targetProblem, equivalence }
+  checkWithKernel equiv
+  return { targetProblem, equiv }
 
 /-- Validate and apply a replacement using current retained constraints. -/
 def applyReplacement (presentation : PresentationState) (index : Nat)
@@ -233,11 +233,11 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
     mkLambdaFVars #[point] proof
   let objectiveEq ← withLocalDeclD `point domain fun point => do
     mkLambdaFVars #[point] (← mkEqRefl (mkApp presentation.objective point))
-  let equivalence ← instantiateMVars (← mkAppM ``Morew.pointwiseEquivalence
+  let equiv ← instantiateMVars (← mkAppM ``Morew.pointwiseEquiv
     #[oldProblem, targetProblem, objectiveEq, feasibleIff])
-  if equivalence.hasMVar then
+  if equiv.hasMVar then
     throwError "conditional constraint replacement contains unresolved metavariables"
-  checkWithKernel equivalence
-  return { targetProblem, equivalence }
+  checkWithKernel equiv
+  return { targetProblem, equiv }
 
 end Morew.Elab.Reformulation.Replace

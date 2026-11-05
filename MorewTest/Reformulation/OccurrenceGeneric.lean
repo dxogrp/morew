@@ -34,7 +34,7 @@ reformulation naturalTarget : naturalSource := by
       change (point : ℤ) + 1 ≤ (auxiliary : ℤ) + 1
       exact add_le_add (Int.ofNat_le.mpr bound) le_rfl)
 
-example : GlobalEquivalence naturalSource naturalTarget := naturalTarget.equivalence
+example : GlobalEquiv naturalSource naturalTarget := naturalTarget.equiv
 example (n a : ℕ) : naturalTarget.objective (n, a) = (a : ℤ) + 1 := rfl
 example (n a : ℕ) : naturalTarget.feasible (n, a) ↔ n ≤ a := Iff.rfl
 
@@ -65,7 +65,7 @@ reformulation maximumTarget : maximumSource := by
       change (auxiliary : ℤ) + 1 ≤ (point : ℤ) + 1
       exact add_le_add (Int.ofNat_le.mpr bound) le_rfl)
 
-example : GlobalEquivalence maximumSource maximumTarget := maximumTarget.equivalence
+example : GlobalEquiv maximumSource maximumTarget := maximumTarget.equiv
 example (n a : ℕ) : maximumTarget.feasible (n, a) ↔ n ≤ 7 ∧ a ≤ n := Iff.rfl
 
 /--
@@ -98,7 +98,7 @@ reformulation weightedTarget : weightedSource := by
       change point.1 * auxiliary ≤ 10 at target
       exact (mul_le_mul_of_nonneg_left bound retained).trans target)
 
-example : GlobalEquivalence weightedSource weightedTarget := weightedTarget.equivalence
+example : GlobalEquiv weightedSource weightedTarget := weightedTarget.equiv
 example (weight x a : ℝ) : weightedTarget.feasible ((weight, x), a) ↔
     0 ≤ weight ∧ weight * a ≤ 10 ∧ x ≤ a := Iff.rfl
 

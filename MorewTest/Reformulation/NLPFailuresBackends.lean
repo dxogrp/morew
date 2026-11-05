@@ -24,7 +24,7 @@ run_cmd do
   let env ← Lean.getEnv
   for target in #[`afterTerminal] do
     let name := `MorewTest.Reformulation.NLPFailures ++ target
-    for declaration in #[name, name ++ `equivalence] do
+    for declaration in #[name, name ++ `equiv] do
       if env.contains declaration then
         Lean.throwError "failed NLP reformulation emitted {declaration}"
     if (Morew.Syntax.getProblemView? env name).isSome then

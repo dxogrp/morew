@@ -30,7 +30,7 @@ elab "assert_substitution_atomic% " target:ident aliasName:ident " in " nested:c
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed substitution changed declarations or coverage helpers"
-  for name in #[target, target ++ `equivalence, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName] do
     if after.contains name then Lean.throwError m!"failed substitution emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome then
       Lean.throwError m!"failed substitution registered presentation metadata for {name}"
@@ -157,8 +157,8 @@ reformulation explicitSquare : nonnegative := by
 reformulation manualSquare : nonnegative := by
   substitute x := u ^ 2 using squareCoverage
 
-example : GlobalEquivalence nonnegative explicitSquare := explicitSquare.equivalence
-example : GlobalEquivalence nonnegative manualSquare := manualSquare.equivalence
+example : GlobalEquiv nonnegative explicitSquare := explicitSquare.equiv
+example : GlobalEquiv nonnegative manualSquare := manualSquare.equiv
 
 end
 

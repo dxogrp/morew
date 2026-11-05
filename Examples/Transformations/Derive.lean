@@ -39,7 +39,7 @@ reformulation logarithmicConic : logarithmic := by
   conic
 
 #printp logarithmicConic
-example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equivalence
+example : GlobalEquiv logarithmic logarithmicConic := logarithmicConic.equiv
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
 -- The same bound allows exponential coordinates; `1 ≤ exp u` remains a constraint.
@@ -49,8 +49,8 @@ reformulation exponentialCoordinates : logarithmic := by
   nlp
 
 #printp exponentialCoordinates
-example : GlobalEquivalence logarithmic exponentialCoordinates :=
-  exponentialCoordinates.equivalence
+example : GlobalEquiv logarithmic exponentialCoordinates :=
+  exponentialCoordinates.equiv
 example : IsSmoothNLP exponentialCoordinates := exponentialCoordinates.isSmoothNLP
 
 def interval :=
@@ -75,7 +75,7 @@ reformulation absoluteNLP : interval := by
 
 #printp absoluteNLP
 example (x : ℝ) : absoluteNLP.feasible x ↔ -1 ≤ x ∧ x ≤ 1 := Iff.rfl
-example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
+example : GlobalEquiv interval absoluteNLP := absoluteNLP.equiv
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
 
 end

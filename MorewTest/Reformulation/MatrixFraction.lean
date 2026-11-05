@@ -29,11 +29,11 @@ reformulation fractionFirst : (source n) := by
   conic at domain
   conic
 
-example : GlobalEquivalence (source n) (terminal n) := terminal.equivalence n
+example : GlobalEquiv (source n) (terminal n) := terminal.equiv n
 example : IsConic (terminal n) := terminal.isConic n
 example : (terminal.conicForm n).data.rowCount = 2 := rfl
-example : GlobalEquivalence (source n) (domainFirst n) := domainFirst.equivalence n
-example : GlobalEquivalence (source n) (fractionFirst n) := fractionFirst.equivalence n
+example : GlobalEquiv (source n) (domainFirst n) := domainFirst.equiv n
+example : GlobalEquiv (source n) (fractionFirst n) := fractionFirst.equiv n
 
 def reverseSource (n : Nat) :=
   problem (x : Fin n → ℝ) (P : SymmetricMatrix n) (t : ℝ)
@@ -64,8 +64,8 @@ def marginSource (n : Nat) (epsilon : ℝ) :=
 variable (epsilon : ℝ) (h : 0 < epsilon)
 
 reformulation marginTarget : (marginSource n epsilon) := by conic
-example : GlobalEquivalence (marginSource n epsilon) (marginTarget n epsilon) :=
-  marginTarget.equivalence n epsilon h
+example : GlobalEquiv (marginSource n epsilon) (marginTarget n epsilon) :=
+  marginTarget.equiv n epsilon h
 
 def fixedSource (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) :=
   problem (x : Fin n → ℝ) (t : ℝ)
@@ -81,26 +81,26 @@ variable (Q : Matrix (Fin n) (Fin n) ℝ)
 section Nested
 variable (hQ : True ∧ (Q.PosDef ∧ True))
 reformulation fixedConjoinedNested : (fixedSource n Q) := by conic
-example : GlobalEquivalence (fixedSource n Q) (fixedConjoinedNested n Q hQ) :=
-  fixedConjoinedNested.equivalence n Q hQ
+example : GlobalEquiv (fixedSource n Q) (fixedConjoinedNested n Q hQ) :=
+  fixedConjoinedNested.equiv n Q hQ
 end Nested
 
 section Universal
 variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
   (hFamily : ∀ i, True ∧ ((family i).PosDef ∧ True))
 reformulation fixedConjoinedUniversal : (fixedSource n (family 0)) := by conic
-example : GlobalEquivalence (fixedSource n (family 0))
+example : GlobalEquiv (fixedSource n (family 0))
     (fixedConjoinedUniversal n family hFamily) :=
-  fixedConjoinedUniversal.equivalence n family hFamily
+  fixedConjoinedUniversal.equiv n family hFamily
 end Universal
 
 section OuterConjunction
 variable (family : Fin 2 → Matrix (Fin n) (Fin n) ℝ)
   (hFamily : True ∧ (∀ i, (family i).PosDef ∧ True))
 reformulation fixedConjoinedOuterUniversal : (fixedSource n (family 0)) := by conic
-example : GlobalEquivalence (fixedSource n (family 0))
+example : GlobalEquiv (fixedSource n (family 0))
     (fixedConjoinedOuterUniversal n family hFamily) :=
-  fixedConjoinedOuterUniversal.equivalence n family hFamily
+  fixedConjoinedOuterUniversal.equiv n family hFamily
 end OuterConjunction
 
 end ConjoinedDomains
@@ -108,8 +108,8 @@ end ConjoinedDomains
 variable (P : Matrix (Fin n) (Fin n) ℝ) (hP : P.PosDef)
 
 reformulation fixedTarget : (fixedSource n P) := by conic
-example : GlobalEquivalence (fixedSource n P) (fixedTarget n P hP) :=
-  fixedTarget.equivalence n P hP
+example : GlobalEquiv (fixedSource n P) (fixedTarget n P hP) :=
+  fixedTarget.equiv n P hP
 
 def witnessedSource (n : Nat) :=
   problem (x : Fin n → ℝ) (P W : SymmetricMatrix n) (t : ℝ)
@@ -129,8 +129,8 @@ def bundledMarginSource (n : Nat) :=
       bound : Fn.matFrac x P.toMatrix ≤ t
 
 reformulation bundledMarginTarget : (bundledMarginSource n) := by conic
-example : GlobalEquivalence (bundledMarginSource n) (bundledMarginTarget n) :=
-  bundledMarginTarget.equivalence n
+example : GlobalEquiv (bundledMarginSource n) (bundledMarginTarget n) :=
+  bundledMarginTarget.equiv n
 
 end
 end MorewTest.Reformulation.MatrixFraction

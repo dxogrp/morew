@@ -49,7 +49,7 @@ reformulation target : source := by
   nlp at hypograph_row using hypographRule
   nlp at grouped using exactRule
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x y : ℝ) : target.feasible (x, y) ↔
     y = x ^ 2 ∧ x ^ 2 ≤ y ∧ y ≤ x ^ 2 ∧ x ≤ 5 ∧ y ≤ 6 := Iff.rfl
 
@@ -74,8 +74,8 @@ def absoluteGraphSource :=
 reformulation absoluteGraphTarget : absoluteGraphSource := by
   nlp at graph using absoluteGraph
 
-example : GlobalEquivalence absoluteGraphSource absoluteGraphTarget :=
-  absoluteGraphTarget.equivalence
+example : GlobalEquiv absoluteGraphSource absoluteGraphTarget :=
+  absoluteGraphTarget.equiv
 
 -- A generated guard may establish the domain only after unconditional exactness
 -- has been checked. The target's `log` is smooth on the open set `u > 0`.
@@ -95,7 +95,7 @@ def guardedSource :=
 reformulation guardedTarget : guardedSource := by
   nlp at positive using guardedLift
 
-example : GlobalEquivalence guardedSource guardedTarget := guardedTarget.equivalence
+example : GlobalEquiv guardedSource guardedTarget := guardedTarget.equiv
 example (x u : ℝ) : guardedTarget.feasible (x, u) ↔
     x < 10 ∧ u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x ∧ x ≤ 20 := Iff.rfl
 
@@ -125,7 +125,7 @@ def restrictedSource :=
 reformulation restrictedTarget : restrictedSource := by
   nlp at magnitude
 
-example : GlobalEquivalence restrictedSource restrictedTarget := restrictedTarget.equivalence
+example : GlobalEquiv restrictedSource restrictedTarget := restrictedTarget.equiv
 
 section FiniteEvidence
 
@@ -141,7 +141,7 @@ def familySource :=
 reformulation familyTarget : (familySource n) := by
   nlp at magnitude
 
-example : GlobalEquivalence (familySource n) (familyTarget n) := familyTarget.equivalence n
+example : GlobalEquiv (familySource n) (familyTarget n) := familyTarget.equiv n
 
 def literalSource :=
   problem (v : Fin 2 → ℝ)
@@ -153,7 +153,7 @@ def literalSource :=
 reformulation literalTarget : literalSource := by
   nlp at magnitude
 
-example : GlobalEquivalence literalSource literalTarget := literalTarget.equivalence
+example : GlobalEquiv literalSource literalTarget := literalTarget.equiv
 
 end FiniteEvidence
 
@@ -171,8 +171,8 @@ def supportedSource :=
 reformulation supportedTarget : (supportedSource s hs a) := by
   nlp at magnitude
 
-example : GlobalEquivalence (supportedSource s hs a) (supportedTarget s a) :=
-  supportedTarget.equivalence s hs a
+example : GlobalEquiv (supportedSource s hs a) (supportedTarget s a) :=
+  supportedTarget.equiv s hs a
 
 end ParameterEvidence
 
@@ -203,7 +203,7 @@ variable (c : ℝ)
 reformulation target : (source c) := by
   nlp at graph using weightedGraph c
 
-example : GlobalEquivalence (source c) (target c) := target.equivalence c
+example : GlobalEquiv (source c) (target c) := target.equiv c
 
 example (x y : ℝ) : (target c).feasible (x, y) ↔
     y = Real.log (coefficient c) * x := Iff.rfl
@@ -230,7 +230,7 @@ def source :=
 reformulation target : source := by
   nlp at bound using lift
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 example (x : ℝ) : target.feasible x ↔ 2 * x ≤ 3 := Iff.rfl
 
 end StructuralModelArgument

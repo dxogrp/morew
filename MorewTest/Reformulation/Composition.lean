@@ -31,8 +31,8 @@ reformulation minimumTarget : minimumSource := by
   epigraph t as squared_log_bound
   substitute x := Real.exp u
 
-example : GlobalEquivalence minimumSource minimumTarget :=
-  minimumTarget.equivalence
+example : GlobalEquiv minimumSource minimumTarget :=
+  minimumTarget.equiv
 
 example (u t : ℝ) : minimumTarget.objective (u, t) = t := rfl
 
@@ -50,8 +50,8 @@ reformulation maximumTarget : maximumSource := by
   hypograph t as logarithm_bound
   substitute x := Real.exp u
 
-example : GlobalEquivalence maximumSource maximumTarget :=
-  maximumTarget.equivalence
+example : GlobalEquiv maximumSource maximumTarget :=
+  maximumTarget.equiv
 
 example (u t : ℝ) : maximumTarget.objective (u, t) = t := rfl
 
@@ -76,7 +76,7 @@ reformulation target : source := by
   epigraph t as objective_bound
   substitute x := Real.exp u
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (a u b t : ℝ) :
     target.objective (((a, u), b), t) = t :=
@@ -88,7 +88,7 @@ example (a u b t : ℝ) :
   Iff.rfl
 
 example (point : FeasiblePoint source) :
-    let mapped := target.equivalence.forward.map point
+    let mapped := target.equiv.forward.map point
     mapped.1.1.1.1 = point.1.1.1 ∧
       mapped.1.1.1.2 = Real.log point.1.1.2 ∧
       mapped.1.1.2 = point.1.2 := by
@@ -97,7 +97,7 @@ example (point : FeasiblePoint source) :
   constructor <;> rfl
 
 example (point : FeasiblePoint target) :
-    let mapped := target.equivalence.backward.map point
+    let mapped := target.equiv.backward.map point
     mapped.1.1.1 = point.1.1.1.1 ∧
       mapped.1.1.2 = Real.exp point.1.1.1.2 ∧
       mapped.1.2 = point.1.1.2 := by
@@ -124,7 +124,7 @@ reformulation target : source := by
   epigraph t as square_bound
   substitute x := u using epigraphIdentityCoverage
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u t : ℝ) : target.objective (u, t) = t := rfl
 
@@ -152,7 +152,7 @@ reformulation target : source := by
   substitute x := Real.exp u
   epigraph t as positive
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u t : ℝ) :
     target.feasible (u, t) ↔ True ∧ True ∧ u ≤ t :=
@@ -222,7 +222,7 @@ reformulation target : source := by
   substitute y := Real.exp v
   epigraph t as sum_bound
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u v t : ℝ) : target.objective ((u, v), t) = t := rfl
 

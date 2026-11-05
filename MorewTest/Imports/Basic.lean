@@ -37,7 +37,7 @@ reformulation generic : source certificate aliasProof := by
   remove at copied
   epigraph t
 
-example : GlobalEquivalence source generic := aliasProof
+example : GlobalEquiv source generic := aliasProof
 example (u t : ℝ) : generic.feasible (u, t) ↔ True ∧ u ≤ t := Iff.rfl
 
 def coverage : GlobalImprovement source (source.addConstraint (fun _ => True)) where
@@ -51,17 +51,17 @@ example : restricted = source := rfl
 
 reformulation selectedSubstitution : source := by
   substitute x := u via Morew.Substitution.identity
-example : GlobalEquivalence source selectedSubstitution := selectedSubstitution.equivalence
+example : GlobalEquiv source selectedSubstitution := selectedSubstitution.equiv
 
 def minimum := problem (x : ℝ) minimize x ^ 2 + x
 reformulation occurrenceUpper : minimum := by epigraph t at (x ^ 2)
-example : GlobalEquivalence minimum occurrenceUpper := occurrenceUpper.equivalence
+example : GlobalEquiv minimum occurrenceUpper := occurrenceUpper.equiv
 
 def maximum := problem (x : ℝ) maximize x ^ 2 + x
 reformulation objectiveLower : maximum := by hypograph t
 reformulation occurrenceLower : maximum := by hypograph t at (x ^ 2)
-example : GlobalEquivalence maximum objectiveLower := objectiveLower.equivalence
-example : GlobalEquivalence maximum occurrenceLower := occurrenceLower.equivalence
+example : GlobalEquiv maximum objectiveLower := objectiveLower.equiv
+example : GlobalEquiv maximum occurrenceLower := occurrenceLower.equiv
 
 /--
 info: problem (u t : ℝ)

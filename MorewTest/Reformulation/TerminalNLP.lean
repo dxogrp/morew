@@ -29,7 +29,7 @@ def polynomial :=
 reformulation polynomialTarget : polynomial := by
   nlp
 
-example : GlobalEquivalence polynomial polynomialTarget := polynomialTarget.equivalence
+example : GlobalEquiv polynomial polynomialTarget := polynomialTarget.equiv
 example : NLP.Form polynomialTarget := polynomialTarget.nlpForm
 example : IsSmoothNLP polynomialTarget := polynomialTarget.isSmoothNLP
 example : polynomialTarget.nlpForm.data.toProblem = polynomialTarget :=
@@ -105,7 +105,7 @@ def localDefinitions :=
 
 reformulation localTarget : localDefinitions := by
   nlp
-example : GlobalEquivalence localDefinitions localTarget := localTarget.equivalence
+example : GlobalEquiv localDefinitions localTarget := localTarget.equiv
 example : localTarget.nlpForm.data.rowCount = 4 := rfl
 
 /--
@@ -125,14 +125,14 @@ info: problem (x y : ℝ)
 reformulation continued : localTarget := by
   epigraph t at first
   nlp
-example : GlobalEquivalence localTarget continued := continued.equivalence
+example : GlobalEquiv localTarget continued := continued.equiv
 example : IsSmoothNLP continued := continued.isSmoothNLP
 
 reformulation targetedFirst : localDefinitions := by
   epigraph a at (|x|) in bound
   nlp at epigraph_a
   nlp
-example : GlobalEquivalence localDefinitions targetedFirst := targetedFirst.equivalence
+example : GlobalEquiv localDefinitions targetedFirst := targetedFirst.equiv
 example : IsSmoothNLP targetedFirst := targetedFirst.isSmoothNLP
 
 -- Terminal selection uses the existing direct-bound rules in source order.
@@ -174,7 +174,7 @@ def retryDomain :=
 reformulation retryDomainTarget : retryDomain := by
   nlp
 example : retryDomainTarget.nlpForm.data.rowCount = 4 := rfl
-example : GlobalEquivalence retryDomain retryDomainTarget := retryDomainTarget.equivalence
+example : GlobalEquiv retryDomain retryDomainTarget := retryDomainTarget.equiv
 
 namespace AllocatedNames
 

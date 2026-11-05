@@ -81,7 +81,7 @@ reformulation ambiguous : ambiguousSource := by
 reformulation selected : ambiguousSource := by
   nlp at bound using Rewrite.maxEpigraph
 
-example : GlobalEquivalence ambiguousSource selected := selected.equivalence
+example : GlobalEquiv ambiguousSource selected := selected.equiv
 
 /-- error: constraint `bound`: expected ExactConstraintLift -/
 #guard_msgs (substring := true) in
@@ -150,7 +150,7 @@ reformulation validAfterFailures : source := by
   nlp at bound
   epigraph t
 
-example : GlobalEquivalence source validAfterFailures := validAfterFailures.equivalence
+example : GlobalEquiv source validAfterFailures := validAfterFailures.equiv
 
 run_cmd do
   let env ← Lean.getEnv
@@ -158,7 +158,7 @@ run_cmd do
       `missingDomain, `noIdentity, `ambiguous, `wrongRecord, `wrongPredicate,
       `unresolvedRule, `invalidGeneratedDomain, `strict, `afterAuxiliary] do
     let name := `MorewTest.Reformulation.NLPFailures ++ target
-    for declaration in #[name, name ++ `equivalence] do
+    for declaration in #[name, name ++ `equiv] do
       if env.contains declaration then
         Lean.throwError "failed NLP reformulation emitted {declaration}"
     if (Morew.Syntax.getProblemView? env name).isSome then

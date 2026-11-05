@@ -24,7 +24,7 @@ def twoFamily (offset : ℝ) :=
 reformulation twoLift : (twoFamily 2) := by
   epigraph t at ((x - 2) ^ 2)
 
-example : GlobalEquivalence (twoFamily 2) twoLift := twoLift.equivalence
+example : GlobalEquiv (twoFamily 2) twoLift := twoLift.equiv
 example (x y t : ℝ) : twoLift.objective ((x, y), t) = (t + t) + y := rfl
 example (x y t : ℝ) : twoLift.feasible ((x, y), t) ↔ (x - 2) ^ 2 ≤ t := Iff.rfl
 
@@ -37,7 +37,7 @@ def threeFamily (offset : ℝ) :=
 reformulation threeLift : (threeFamily 2) := by
   epigraph t at ((x - 2) ^ 2)
 
-example : GlobalEquivalence (threeFamily 2) threeLift := threeLift.equivalence
+example : GlobalEquiv (threeFamily 2) threeLift := threeLift.equiv
 example (x y z t : ℝ) : threeLift.objective (((x, y), z), t) =
     (t + t) + y + z := rfl
 example (x y z t : ℝ) : threeLift.feasible (((x, y), z), t) ↔
@@ -46,7 +46,7 @@ example (x y z t : ℝ) : threeLift.feasible (((x, y), z), t) ↔
 reformulation threeCapLift : (threeFamily 2) := by
   epigraph t at (y ^ 2) in cap
 
-example : GlobalEquivalence (threeFamily 2) threeCapLift := threeCapLift.equivalence
+example : GlobalEquiv (threeFamily 2) threeCapLift := threeCapLift.equiv
 example (x y z t : ℝ) : threeCapLift.objective (((x, y), z), t) =
     ((x - 2) ^ 2 + (x - 2) ^ 2) + y + z := rfl
 example (x y z t : ℝ) : threeCapLift.feasible (((x, y), z), t) ↔
@@ -82,7 +82,7 @@ def pairFamily (offset : ℝ) :=
 reformulation pairLift : (pairFamily 2) := by
   epigraph t at ((p.1 - 2) ^ 2)
 
-example : GlobalEquivalence (pairFamily 2) pairLift := pairLift.equivalence
+example : GlobalEquiv (pairFamily 2) pairLift := pairLift.equiv
 example (p : ℝ × ℝ) (t : ℝ) : pairLift.objective (p, t) = (t + t) + p.2 := rfl
 example (p : ℝ × ℝ) (t : ℝ) : pairLift.feasible (p, t) ↔
     (p.1 - 2) ^ 2 ≤ t := Iff.rfl
@@ -106,8 +106,8 @@ def functionFamily (f : ℝ → ℝ) :=
 reformulation functionLift : (functionFamily (fun u => u + u)) := by
   epigraph t at (x ^ 2)
 
-example : GlobalEquivalence (functionFamily (fun u => u + u)) functionLift :=
-  functionLift.equivalence
+example : GlobalEquiv (functionFamily (fun u => u + u)) functionLift :=
+  functionLift.equiv
 example (x y t : ℝ) : functionLift.objective ((x, y), t) = (t + t) + y := rfl
 example (x y t : ℝ) : functionLift.feasible ((x, y), t) ↔ x ^ 2 ≤ t := Iff.rfl
 

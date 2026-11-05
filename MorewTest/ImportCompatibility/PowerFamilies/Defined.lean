@@ -33,7 +33,7 @@ include hn in
 reformulation lowered : (source n) := by
   conic at reciprocal
 
-example : GlobalEquivalence (source n) (lowered n hn) := lowered.equivalence n hn
+example : GlobalEquiv (source n) (lowered n hn) := lowered.equiv n hn
 
 end
 end MorewTest.ImportCompatibility.PowerFamilies.Defined

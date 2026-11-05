@@ -35,7 +35,7 @@ variable (n : Nat)
 reformulation vectorTarget : (vectors n) := by
   conic
 
-example : GlobalEquivalence (vectors n) (vectorTarget n) := vectorTarget.equivalence n
+example : GlobalEquiv (vectors n) (vectorTarget n) := vectorTarget.equiv n
 example : (vectorTarget.conicForm n).data.toProblem = vectorTarget n :=
   (vectorTarget.conicForm n).represents
 example : (vectorTarget.conicForm n).data.rowCount = 3 := rfl
@@ -47,7 +47,7 @@ end
 reformulation vectorAgain : (vectorTarget 2) := by
   conic
 
-example : GlobalEquivalence (vectorTarget 2) vectorAgain := vectorAgain.equivalence
+example : GlobalEquiv (vectorTarget 2) vectorAgain := vectorAgain.equiv
 example : vectorAgain.conicForm.data.toProblem = vectorAgain := vectorAgain.conicForm.represents
 
 reformulation emptyVector : (vectorTarget 0) := by
@@ -66,14 +66,14 @@ def singletons :=
 reformulation singletonTarget : singletons := by
   conic
 
-example : GlobalEquivalence singletons singletonTarget := singletonTarget.equivalence
+example : GlobalEquiv singletons singletonTarget := singletonTarget.equiv
 example : singletonTarget.conicForm.data.toProblem = singletonTarget :=
   singletonTarget.conicForm.represents
 
 reformulation singletonAgain : singletonTarget := by
   conic
 
-example : GlobalEquivalence singletonTarget singletonAgain := singletonAgain.equivalence
+example : GlobalEquiv singletonTarget singletonAgain := singletonAgain.equiv
 example : singletonAgain.conicForm.data.rowCount = 2 := rfl
 example : singletonAgain.conicForm.data.toProblem = singletonAgain :=
   singletonAgain.conicForm.represents

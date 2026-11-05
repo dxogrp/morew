@@ -32,7 +32,7 @@ example : (2 + 3 : Nat) = 0 := rfl
 reformulation target : source := by
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
@@ -108,7 +108,7 @@ def identityCoverage : FeasibleSurjection source (fun u : Nat => u) where
 reformulation target : source := by
   substitute x := u using identityCoverage
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (u : Nat) : target.objective u = Score.score u := rfl
 
@@ -148,7 +148,7 @@ reformulation target : Provider.source := by
 
 example (t : β) : target.objective ((), t) = t := rfl
 
-example : GlobalEquivalence Provider.source target := target.equivalence
+example : GlobalEquiv Provider.source target := target.equiv
 
 end
 end Consumer
@@ -180,7 +180,7 @@ example (box : Box) : (box : Nat) = 0 := rfl
 reformulation target : source := by
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (box : Box) (t : Nat) :
     target.feasible (box, t) ↔ box.value + 1 ≤ t := Iff.rfl
@@ -270,7 +270,7 @@ def source := generatedProblemForReformulation
 reformulation target : source := by
   epigraph t
 
-example : GlobalEquivalence source target := target.equivalence
+example : GlobalEquiv source target := target.equiv
 
 example (x t : ℝ) :
     target.feasible (x, t) ↔ x ≤ x ∧ x ≤ t := Iff.rfl

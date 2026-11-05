@@ -28,7 +28,7 @@ def source :=
 reformulation lowered : source := by
   conic at loss
 
-example : GlobalEquivalence source lowered := lowered.equivalence
+example : GlobalEquiv source lowered := lowered.equiv
 
 namespace SymbolicDimension
 
@@ -47,7 +47,7 @@ def source :=
 reformulation lowered : source := by
   conic at infinity
 
-example : GlobalEquivalence source lowered := lowered.equivalence
+example : GlobalEquiv source lowered := lowered.equiv
 
 end SymbolicDimension
 
