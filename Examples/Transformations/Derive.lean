@@ -7,14 +7,14 @@ import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 
 /-!
-# Making a proved consequence available to later steps
+# Deriving constraints
 
-`derive label : proposition using proof` appends a visible constraint without
-changing the feasible set. The proof must show that the proposition follows
-from the current problem's feasibility.
+`derive label : proposition using proof` appends a consequence of the current
+constraints. The first example derives a positive lower bound for a logarithm;
+the second derives, rewrites, and removes a redundant absolute-value bound.
 -/
 
-namespace Examples.Derive
+namespace Examples.Transformations.Derive
 
 open Morew
 noncomputable section
@@ -32,8 +32,7 @@ theorem marginOfFeasible :
   intro point hp
   exact hp.1.trans hp.2
 
--- Once the transitive bound is an explicit row, the logarithm rule can use
--- it to establish positivity and certify the hypograph with an EXP cone.
+-- The derived bound supplies positivity for the logarithm rule.
 reformulation logarithmicConic : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   hypograph t as logarithm_bound
@@ -43,10 +42,7 @@ reformulation logarithmicConic : logarithmic := by
 example : GlobalEquivalence logarithmic logarithmicConic := logarithmicConic.equivalence
 example : IsConic logarithmicConic := logarithmicConic.isConic
 
--- The derived bound proves positivity, allowing `x := Real.exp u`.
--- After substitution, the margin becomes `1 ≤ Real.exp u`.
--- This row remains because it is not a tautology, although it is still
--- implied by the other constraints.
+-- The same bound allows exponential coordinates; `1 ≤ exp u` remains a constraint.
 reformulation exponentialCoordinates : logarithmic := by
   derive margin : 1 ≤ x using marginOfFeasible
   substitute x := Real.exp u
@@ -64,11 +60,8 @@ def interval :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
--- The existing bounds imply |x| ≤ 1. Split this into x ≤ 1 and -x ≤ 1,
--- then remove both: x ≤ 1 already appears among the constraints, while
--- -x ≤ 1 needs a short proof that it follows from -1 ≤ x.
--- This is a teaching example: the extra steps illustrate how `derive`, `nlp`,
--- and `remove` work together but are unnecessary for this problem.
+-- Derive `|x| ≤ 1` and split it into two bounds. Remove the duplicate `x ≤ 1`
+-- automatically and prove `-x ≤ 1` from the remaining lower bound.
 reformulation absoluteNLP : interval := by
   derive abs_bound : |x| ≤ 1 using (by
     intro point hp
@@ -86,4 +79,4 @@ example : GlobalEquivalence interval absoluteNLP := absoluteNLP.equivalence
 example : IsSmoothNLP absoluteNLP := absoluteNLP.isSmoothNLP
 
 end
-end Examples.Derive
+end Examples.Transformations.Derive

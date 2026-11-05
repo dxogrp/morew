@@ -8,10 +8,9 @@ import Morew.Elab.Conic
 import MorewTest.Surface.Conic
 
 /-!
-# Affine recognition from existing surface presentations
+# Affine recognition from problem presentations
 
-These regressions consume the same typed objective projections and predicates
-used by the reformulation runner, without installing a conic surface command.
+Check the typed objective projections and predicates used by the reformulation runner.
 -/
 
 namespace MorewTest.Surface.Affine

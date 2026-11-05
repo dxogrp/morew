@@ -7,11 +7,11 @@ import Morew.NLP.Basic
 import Morew.NLP.Domain
 
 /-!
-# Semantic evaluation-domain regression examples
+# Evaluation-domain semantics
 
-These examples exercise nested restricted functions, finite families, and
-membership-sensitive sums without the expression certifier or command DSL.
-The final representation keeps the objective and its sole closed-bound row.
+Nested restricted functions, finite families, and membership-sensitive sums
+compose independently of expression certification and the DSL. The final
+representation preserves the objective and its closed-bound row.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView Morew.Elab.Reformulation.RunnerState
@@ -158,7 +158,7 @@ private def logData : Data ℝ where
     have hx : 1 ≤ x := (Bounds.contains_lowerBound 1 x).mp (h 0)
     exact ⟨Set.mem_univ x, lt_of_lt_of_le zero_lt_one hx⟩
 
--- Domain inference is proof data; the closed-bound row stays exactly x ≥ 1.
+-- Domain inference is proof data; the closed-bound row stays exactly `x ≥ 1`.
 example (x : ℝ) : logData.toProblem.feasible x ↔ 1 ≤ x := by
   simp [Data.toProblem, logData, lowerRow, Row.Holds]
 

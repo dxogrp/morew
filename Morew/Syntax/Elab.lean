@@ -9,7 +9,7 @@ import Morew.Syntax.Presentation
 # Problem term elaboration
 
 Elaborate minimization and maximization terms into semantic problems and
-register their source presentations. Public elaborator names remain in `Morew`.
+register their source presentations.
 -/
 
 namespace Morew
@@ -35,12 +35,12 @@ private def decodeDefinition (stx : Lean.Syntax) : MacroM Morew.Syntax.Definitio
   | _ => Macro.throwErrorAt stx "invalid model-local definition"
 
 private def mkProductType : List (TSyntax `term) → MacroM (TSyntax `term)
-  | [] => Macro.throwError "a problem requires at least one decision variable"
+  | [] => Macro.throwError "a problem requires at least one optimization variable"
   | first :: rest => rest.foldlM (fun accumulated typeSyntax => do
       `($accumulated × $typeSyntax)) first
 
 private def mkProductPattern : List (TSyntax `ident) → MacroM (TSyntax `term)
-  | [] => Macro.throwError "a problem requires at least one decision variable"
+  | [] => Macro.throwError "a problem requires at least one optimization variable"
   | first :: rest =>
       let restTerms : List (TSyntax `term) := rest.map fun name => ⟨name.raw⟩
       restTerms.foldlM (fun accumulated name => do
@@ -62,7 +62,7 @@ private def ensureDistinct (what : String) (names : Array Name) (refs : Array Le
           s!"duplicate {what} name `{names[i]!.eraseMacroScopes}`"
 
 private def decisionProjections (point : Expr) : Nat → MetaM (Array Expr)
-  | 0 => throwError "a problem requires at least one decision variable"
+  | 0 => throwError "a problem requires at least one optimization variable"
   | 1 => pure #[point]
   | count + 2 => do
       let first ← mkAppM ``Prod.fst #[point]
@@ -70,7 +70,7 @@ private def decisionProjections (point : Expr) : Nat → MetaM (Array Expr)
       return previous.push (← mkAppM ``Prod.snd #[point])
 
 private def decisionTypes (domain : Expr) : Nat → MetaM (Array Expr)
-  | 0 => throwError "a problem requires at least one decision variable"
+  | 0 => throwError "a problem requires at least one optimization variable"
   | 1 => pure #[domain]
   | count + 2 => do
       let domain ← whnf domain
@@ -92,18 +92,15 @@ private partial def splitModelPair (expression : Expr) : TermElabM (Expr × Expr
         throwError "internal error: model-local body is not an objective/feasibility pair"
       pure (expression.getArg! 2, expression.getArg! 3)
 
--- Original source views normally retain their spelling. Norm notation is
--- instance-sensitive, so its replay copy must retain the instance selected by
--- the source elaboration. The readable view continues to use the original term.
+-- Reconstruction preserves the source norm instance; printing preserves its notation.
 private def explicitReplayHelperUniverses (value : Expr) : MetaM (Array Bool) :=
   withoutModifyingState do
     let .const name originalLevels := value.getAppFn | return #[]
     let helper ← getConstInfo name
     let levels ← originalLevels.mapM fun _ => mkFreshLevelMVar
     let mut type := helper.type.instantiateLevelParams helper.levelParams levels
-    -- A parameter merely occurring in the helper's type need not be inferable:
-    -- an argument of type Type (max u v), for example, does not determine u or v.
-    -- Replay inference with fresh levels to retain precisely the missing ones.
+    -- Infer fresh universe levels to identify those requiring explicit arguments.
+    -- For example, `Type (max u v)` leaves `u` and `v` undetermined.
     for argument in value.getAppArgs do
       let .forallE _ domain body _ ← whnf type
         | return originalLevels.toArray.map fun _ => true
@@ -132,16 +129,12 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
             return source
           return mkCIdentFrom stx name
       | .fvar id =>
-          -- Delaboration introduces fresh locals beneath lambda operands. Their
-          -- printed names already respect shadowing and belong to that syntax,
-          -- not to the original source local context.
+          -- Fresh locals under lambdas already have names respecting shadowing.
           let some declaration := (← getLCtx).find? id | return stx
           if let some value := declaration.value? (allowNondep := true) then
             if (← isClass? declaration.type).isSome then
-              -- Enclosing instance initializers are outside the field's info
-              -- tree. Close their values over source parameters so universes
-              -- tied to a parameter type can be inferred in the replay context.
-              -- Expanding ordinary let dependencies also avoids stale local names.
+              -- Make source parameters explicit in stored instance definitions.
+              -- Expand local lets and retain their universe dependencies.
               let name ← mkAuxDeclName `_normReplay
               let value ← mkAuxDefinitionFor name value (zetaDelta := true) (compile := false)
               modifyEnv (addNoncomputable · name)
@@ -157,8 +150,7 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
               let (value, valueInfos) ← PrettyPrinter.delabCore value {}
                 PrettyPrinter.Delaborator.delab
               return ← freezeNormReplayReferences valueInfos explicitUniverses value.raw
-          -- Replay retains the source binder's macro scopes. References must
-          -- keep the same identity, including in whole-problem macros.
+          -- Preserve the source binder's macro scopes in stored references.
           let name := mkIdentFrom stx declaration.userName
           if declaration.binderInfo.isInstImplicit then
             let (type, typeInfos) ← PrettyPrinter.delabCore declaration.type {}
@@ -173,10 +165,10 @@ private partial def freezeNormReplayReferences (infos : SubExpr.PosMap Elab.Info
 private def normReplaySyntax (expression : Expr)
     (explicitUniverses : Array (Expr × Lean.Syntax) := #[]) :
     TermElabM (Option Lean.Syntax) := do
-  -- Expressions checked outside declarations do not register replay metadata.
+  -- Reconstruction data is registered for declarations.
   if (← getDeclName?).isNone then return none
   let expression ← instantiateMVars expression
-  -- Keep this low-level syntax module independent of the normed-space library.
+  -- Match by name to keep norm-library imports optional.
   unless (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome do return none
   if expression.hasMVar then return none
   withOptions (fun options => options.set `pp.all true
@@ -189,9 +181,8 @@ private def normReplaySyntax (expression : Expr)
       PrettyPrinter.Delaborator.delab
     return some (← freezeNormReplayReferences infos explicitUniverses term.raw)
 
--- Explicit universe arguments are not always inferable from the surrounding term.
--- Preserve explicit source arguments, including macro expansions, without
--- fixing inferred universes to the names of the source declaration's context.
+-- Preserve explicit source universe arguments, including macro expansions.
+-- Inferred universes are resolved during re-elaboration.
 private partial def explicitUniverseHead? (stx : Lean.Syntax) : Option Lean.Syntax :=
   if stx.isOfKind ``Lean.Parser.Term.explicitUniv then some stx
   else if stx.isOfKind ``Lean.Parser.Term.app then explicitUniverseHead? stx[0]
@@ -199,18 +190,15 @@ private partial def explicitUniverseHead? (stx : Lean.Syntax) : Option Lean.Synt
     explicitUniverseHead? stx[1]
   else none
 
--- Applied constants have information on the head identifier but not always
--- on its universe suffix. Match that identifier's own information so a
--- coercion added around the application cannot receive the suffix instead.
+-- Attach universe arguments to the head constant's information node.
+-- Coercions around the application have separate nodes.
 private partial def explicitUniverseConstant? (head : Lean.Syntax) (tree : InfoTree) :
     TermElabM (Option Expr) := do
   match tree with
   | .context _ child => explicitUniverseConstant? head child
   | .node info children =>
       if let .ofTermInfo info := info then
-        -- Name resolution can remove a quoted identifier's macro scopes in
-        -- its own info node. Its source position and user spelling still
-        -- identify the same head within this application's subtree.
+        -- Source position and spelling identify the head after macro-scope erasure.
         let sameHead := info.stx == head ||
           (info.stx.isIdent && head.isIdent && info.stx.getPos? == head.getPos? &&
             info.stx.getId.eraseMacroScopes == head.getId.eraseMacroScopes)
@@ -247,8 +235,7 @@ private def inferredDefinitionTypes (definitions : List Morew.Syntax.DefinitionV
   | definition :: remaining =>
       let .letE _ type value body _ := body.consumeMData
         | throwError "internal error: model-local definition spine was erased during elaboration"
-      -- Inferred types have no original source node in the information tree.
-      -- Preserve any instance-sensitive norm while the checked type is available.
+      -- Preserve norm instances directly from the checked inferred type.
       let typeSyntax ← match ← normReplaySyntax type with
         | some replay => pure replay
         | none => pure (← PrettyPrinter.delab type).raw
@@ -266,9 +253,8 @@ private partial def collectNormReplays (fields : Array Lean.Syntax) (tree : Info
   | .node info children =>
       let mut replays := replays
       if let .ofTermInfo info := info then
-        -- Serialize the whole source field. A macro can insert norms beneath
-        -- lets, or splice one norm syntax into different instance contexts.
-        -- Replacing individual syntax occurrences would lose those contexts.
+        -- Serialize the whole field to retain norm instances under macro-generated
+        -- lets and across repeated syntax in different instance contexts.
         if fields.contains info.stx then
           let expression ← instantiateMVars info.expr
           if !expression.hasMVar && (expression.find? (·.isAppOfArity `Norm.norm 3)).isSome then
@@ -297,8 +283,7 @@ private def elaborateModelBody (view : Morew.Syntax.ProblemView)
     unless ← isDefEq domain (expected.getArg! 0) do
       throwErrorAt productType
         "problem decision domain is{indentExpr domain}\nbut is expected to be{indentExpr (expected.getArg! 0)}"
-  -- Share the domain's metavariables with the local decision binders. In
-  -- particular, an inferred annotation must not be elaborated a second time.
+  -- Reuse the domain's metavariables in the local decision binders.
   let types ← decisionTypes domain view.binders.size
   let declarations := view.binders.mapIdx fun index binder => (binder.name, types[index]!)
   let expectedValue? := expectedProblem?.map (·.getArg! 1)
@@ -314,8 +299,7 @@ private def elaborateModelBody (view : Morew.Syntax.ProblemView)
     let pair ← instantiateMVars pair
     let definitions ← inferredDefinitionTypes view.definitions.toList pair
     let (objective, feasible) ← splitModelPair pair
-    -- The bodies can infer decision types even without an expected Problem
-    -- type. Build checked projections only after those types are resolved.
+    -- Resolve decision types inferred from the bodies before constructing projections.
     let domain ← instantiateMVars domain
     withLocalDeclD `point domain fun point => do
       let projections ← decisionProjections point view.binders.size
@@ -343,12 +327,12 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
     match ref with
     | `(problemBinder| ($names:ident* : $_)) => names.map fun _ => ref
     | _ => #[]
-  liftMacroM <| ensureDistinct "decision variable" (binders.map (fun binder => binder.name)) binderRefs
+  liftMacroM <| ensureDistinct "optimization variable" (binders.map (fun binder => binder.name)) binderRefs
   liftMacroM <| ensureDistinct "constraint" (constraints.map (fun constraint => constraint.name)) constraintsStx
   liftMacroM <| ensureDistinct "model-local definition" (definitions.map (·.name)) definitionsStx
   for definition in definitions, ref in definitionsStx do
     if binders.any (fun binder => binder.name.eraseMacroScopes == definition.name.eraseMacroScopes) then
-      throwErrorAt ref "model-local definition `{definition.name.eraseMacroScopes}` conflicts with a decision variable"
+      throwErrorAt ref "model-local definition `{definition.name.eraseMacroScopes}` conflicts with an optimization variable"
     if (← getLCtx).any (fun declaration =>
         !declaration.isImplementationDetail &&
           declaration.userName.eraseMacroScopes == definition.name.eraseMacroScopes) then

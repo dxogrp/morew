@@ -10,17 +10,16 @@ import Mathlib.Analysis.Real.Sqrt
 /-!
 # Reusable coordinate substitution rules
 
-Each descriptor provides coverage of a coordinate independently of the
-surrounding optimization problem. Coefficients may depend on the retained
-coordinates. In particular, nonzero slopes are range conditions checked at
-feasible source points, rather than assumptions on all retained values.
+Coordinate parameterizations with right inverses on specified ranges.
+Coefficients may depend on unchanged coordinates; affine substitutions require
+nonzero slopes at feasible points.
 -/
 
 namespace Morew.Substitution
 
 universe u v
 
-/-- Renaming any coordinate requires no domain condition. -/
+/-- The identity map covers every coordinate value. -/
 def identity {R : Type u} {X : Type v} :
     CoordinateParameterization (fun (_ : R) (a : X) => a) where
   range _ _ := True
@@ -93,8 +92,8 @@ noncomputable def exp {R : Type u} :
   preimage _ x := Real.log x.1
   rightInverse _ x := Real.exp_log x.2
 
-/-- Squaring covers the nonnegative real values, including zero. The chosen
-preimage is nonnegative; other preimages may also exist. -/
+/-- Squaring covers the nonnegative reals using the nonnegative square root
+as a preimage. -/
 noncomputable def square {R : Type u} :
     CoordinateParameterization (fun (_ : R) (u : ℝ) => u ^ 2) where
   range _ x := 0 ≤ x

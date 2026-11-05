@@ -128,7 +128,7 @@ run_cmd liftTermElabM do
       ← `(fun p : (ℝ × ℝ) × ℝ => -(p.1.1 - p.1.2 + p.2) ≤ 3)])
 
 -- Exact inputs: composition does not depend on whether the operand and the
--- decision variable have the same type.
+-- optimization variable have the same type.
 noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 @[morew_conic]
@@ -144,8 +144,8 @@ run_cmd liftTermElabM do
     (expected := #[← `(fun p : ℝ × ℝ => p.1 + 1 ≤ 3),
       ← `(fun p : ℝ × ℝ => -(p.1 + 1) ≤ 3)])
 
--- Concrete exact lifts certify their entire source. A named declaration may
--- infer an input map, while a concrete record keeps its original decision space.
+-- Concrete exact representations certify the entire source. A named declaration
+-- may infer an input map; a concrete record retains its decision space.
 run_cmd liftTermElabM do
   let concreteRule ← elaborate (← `(boundedRule))
   check (← `(fun x : ℝ => bounded x)) 2
@@ -272,7 +272,7 @@ run_cmd liftTermElabM do
 private def hiddenPositive (c : ℝ) : Prop := 0 < c
 
 -- A retained row about parameters still belongs to the controlled row policy;
--- it cannot become an independent local hypothesis merely by ignoring x.
+-- it cannot become an independent local hypothesis merely by ignoring `x`.
 run_cmd liftTermElabM do
   for row in #[← `(fun c : ℝ => fun _x : ℝ => 0 < c),
       ← `(fun c : ℝ => fun _x : ℝ => hiddenPositive c)] do

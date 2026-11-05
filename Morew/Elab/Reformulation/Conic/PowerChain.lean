@@ -8,13 +8,8 @@ import Morew.Syntax.PowerChainView
 import Mathlib.Tactic.NormNum
 import Lean.Elab.Term
 
-/-!
-# Conservative mathematical printing of finite power chains
-
-Recognize complete canonical chains in the final typed rows of a reformulation.
-This changes only print metadata. No expression, instance, dimension, or proof
-is rewritten, and incomplete or ambiguous chains keep their ordinary display.
--/
+/-! Construct mathematical notation for complete chains of power cone constraints.
+Incomplete or ambiguous chains use ordinary presentation. -/
 
 namespace Morew.Elab.Reformulation.Conic
 
@@ -32,8 +27,7 @@ private def nativeZeroMembership (value : ℝ) : Prop := value ∈ ({0} : Set �
 private def nativeNonnegativeMembership (value : ℝ) : Prop :=
   value ∈ Cone.nonnegativeScalar.carrier
 
--- Check the operation independently of its current operands: altered instances
--- can agree with native arithmetic at one particular value.
+-- Check operation instances independently of their operands.
 private def nativePrefix (value canonical : Expr) (operands : Nat) : MetaM Bool := do
   let args := value.getAppArgs
   let expected := canonical.getAppArgs
@@ -71,9 +65,7 @@ private def nativeNatBinary? (value : Expr) (addition : Bool) :
   unless ← isDefEq (value.getBoundedAppFn 2) (mkConst name) do return none
   return some (value.getAppArgs[4]!, value.getAppArgs[5]!)
 
--- Mathematical dimensions keep named leaves opaque, but an explicit numeral
--- or arithmetic operation must have its native meaning. In particular, a
--- custom `OfNat Nat 3` must not become the mathematical dimension three.
+-- Preserve named dimensions and validate literal arithmetic instances.
 private partial def nativeDimension (value : Expr) : MetaM Bool := do
   let value := value.consumeMData
   if value.isFVar || value.isConst then return true
@@ -107,8 +99,7 @@ private def nativeRealCast? (value : Expr) : MetaM (Option Expr) := do
 private def same (a b : Expr) : Bool := a.consumeMData == b.consumeMData
 
 private def vectorDimension? (value : Expr) : MetaM (Option Expr) := do
-  -- Replayed tuple-binder types can carry pattern-reference annotations around
-  -- `Fin` and its arguments. These are presentation metadata, not type casts.
+  -- Remove pattern-reference annotations from stored `Fin` types.
   let type ← erasePatternRefAnnotations (← inferType value)
   let .forallE _ index result _ := (← whnf type) | return none
   unless !result.hasLooseBVars && (← isDefEq result q(ℝ)) do return none
@@ -143,9 +134,7 @@ private def membershipHead (row : Expr) : Nat → Option Expr
       if row.isApp && row.getAppFn.isLambda then membershipHead row.headBeta fuel else some row
 
 private def powerMembership? (row : Expr) : MetaM (Option (Expr × Expr × Expr × Expr)) := do
-  -- The conic planner applies a literal membership template. Remove just that
-  -- application scaffolding, including wrappers retained after replay. Do not
-  -- unfold a named predicate or its instances.
+  -- Reduce literal membership-template applications while preserving named predicates and instances.
   let some row := membershipHead row 32 | return none
   unless row.isAppOfArity ``Membership.mem 5 do return none
   let args := row.getAppArgs
@@ -282,8 +271,7 @@ private def bound? (chain : Chain) (row : Expr) : MetaM (Option (Expr × Bool)) 
   unless ← isCoordinate left chain.auxiliary chain.dimension chain.size do return none
   return some (right, true)
 
--- `some true` is the original cast-bearing expression; `some false` is its
--- already-normalized literal form. The distinction controls only formatting.
+-- Distinguish original cast expressions from normalized literals for formatting.
 private def inverseExponent? (exponent dimension : Expr) : MetaM (Option Bool) := do
   if let some (one, denominator) ← nativeRealBinary? exponent ``HDiv.hDiv then
     if ← realLiteral one 1 then
@@ -291,8 +279,7 @@ private def inverseExponent? (exponent dimension : Expr) : MetaM (Option Bool) :
         if ← realLiteral one 1 then
           if let some n ← nativeRealCast? n then
             if same n dimension then return some true
-  -- Literal dimensions may already have the proof-producing rational
-  -- normalization performed by the conic planner. Named dimensions stay named.
+  -- Retain normalized literal dimensions and named symbolic dimensions.
   let some n ← naturalLiteral? dimension | return none
   unless n < 100000 do return none
   let some (numerator, denominator) ← nativeRealBinary? exponent ``HDiv.hDiv | return none
@@ -330,8 +317,7 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
   let auxiliary ← renderLeaf chain.auxiliary
   let source ← renderLeaf chain.source
   let size ← renderLeaf chain.size
-  -- Global names need protection too: a vector printed as `j` must not become
-  -- captured by the mathematical recurrence's natural-number binder.
+  -- Protect global names from capture by the recurrence binder.
   let mut indexName := chain.indexName
   let mut suffix := 1
   while #[auxiliary, source, size].any (syntaxMentions indexName) do
@@ -341,9 +327,7 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
     (step, .step auxiliary source indexName size)]
   if let [(final, (value, exponent, hasCast))] := inverses.toList then
     unless signs.isEmpty && bounds.isEmpty do return none
-    -- A dimension is a natural-number value. Removing its cast is harmless for
-    -- an atomic name or numeral, but moving a compound expression into real
-    -- arithmetic can change its meaning (notably truncated Nat subtraction).
+    -- Remove natural-to-real casts only from atomic names or numerals.
     let dimension := chain.dimension.consumeMData
     let atomicDimension := dimension.isFVar || dimension.isConst ||
       (← naturalLiteral? dimension).isSome
@@ -361,9 +345,8 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
   return some ⟨initial ++ #[(sign, .nonnegative auxiliary size signMembership),
     (final, .bound (← renderLeaf value) auxiliary size membership)]⟩
 
-/-- Build optional mathematical recipes for complete canonical finite power
-chains. Rows retain their positions. Incomplete, ambiguous, overlapping, or
-unsupported shapes fall back independently to the ordinary presentation. -/
+/-- Construct mathematical notation for complete chains, retaining constraint positions.
+Use ordinary presentation for unsupported, ambiguous, or overlapping chains. -/
 def powerChainPrintRows (rows : Array Expr) (renderLeaf : Expr → TermElabM Syntax) :
     TermElabM (Array (Option Morew.Syntax.PowerChainRow)) := do
   let mut candidates := #[]

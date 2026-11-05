@@ -12,18 +12,16 @@ import Mathlib.Tactic.Ring
 /-!
 # Second-order cones and exact quadratic bounds
 
-The second-order cone uses the Euclidean norm of an ordinary finite coordinate
-vector. The rotated cone is the linear preimage of a second-order cone and uses
-the convention `‖x‖² ≤ 2 * u * v`, with both scalar coordinates nonnegative.
-The representation lemmas include dimension zero and require strict positivity
-of the denominator for quadratic-over-linear bounds.
+The second-order cone is `{(t, x) | ‖x‖₂ ≤ t}`. The rotated cone uses
+`‖x‖₂² ≤ 2uv`, with `u ≥ 0` and `v ≥ 0`. Quadratic-over-linear representations
+require a positive denominator.
 -/
 
 namespace Morew.Conic
 
 namespace Cone
 
-/-- The second-order cone `{(t,x) | ‖x‖₂ ≤ t}` in ordinary coordinates. -/
+/-- The second-order cone `{(t, x) | ‖x‖₂ ≤ t}`. -/
 noncomputable def secondOrder (n : Nat) : Cone where
   Space := ℝ × (Fin n → ℝ)
   carrier := {
@@ -71,9 +69,7 @@ noncomputable def rotatedSecondOrderMap (n : Nat) :
       · simp
         ring
 
-/-- The rotated second-order cone with convention `‖x‖₂² ≤ 2*u*v`.
-It is constructed as a linear preimage, so its cone laws follow from those of
-the second-order cone. -/
+/-- The rotated second-order cone `{(u, v, x) | ‖x‖₂² ≤ 2uv, u ≥ 0, v ≥ 0}`. -/
 noncomputable def rotatedSecondOrder (n : Nat) : Cone where
   Space := ℝ × ℝ × (Fin n → ℝ)
   carrier := (secondOrder (n + 1)).carrier.comap (rotatedSecondOrderMap n)
@@ -91,8 +87,7 @@ private theorem rotated_norm_sq {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
   intro i _
   rw [mul_pow, Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2)]
 
-/-- Rotated second-order membership retains both nonnegative coordinates,
-including when the vector has dimension zero. -/
+/-- Rotated second-order cone membership in coordinates. -/
 @[simp]
 theorem mem_rotatedSecondOrder {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
     (u, v, x) ∈ (rotatedSecondOrder n).carrier ↔
@@ -127,26 +122,26 @@ theorem mem_rotatedSecondOrder {n : Nat} (u v : ℝ) (x : Fin n → ℝ) :
 end Cone
 
 set_option quotPrecheck false in
-/-- The second-order cone carrier, where `n` is the vector dimension. -/
+/-- The second-order cone, where `n` is the vector dimension. -/
 notation:max (name := socCarrier) "SOC " n:arg => (Morew.Conic.Cone.secondOrder n).carrier
 
 set_option quotPrecheck false in
-/-- The rotated second-order cone carrier, where `n` is the vector dimension. -/
+/-- The rotated second-order cone, where `n` is the vector dimension. -/
 notation:max (name := rsocCarrier) "RSOC " n:arg => (Morew.Conic.Cone.rotatedSecondOrder n).carrier
 
 namespace SecondOrder
 
-/-- A native finite Euclidean norm bound is a second-order cone row. -/
+/-- A Euclidean norm bound is equivalent to a second-order cone constraint. -/
 theorem norm_toLp_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 2 v‖ ≤ t ↔ (t, v) ∈ (Cone.secondOrder n).carrier :=
   (Cone.mem_secondOrder t v).symm
 
-/-- Native Euclidean-space decisions use their ordinary coordinate vector. -/
+/-- A norm bound in Euclidean space is a second-order cone constraint on its coordinates. -/
 theorem norm_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (t : ℝ) :
     ‖z‖ ≤ t ↔ (t, WithLp.ofLp z) ∈ (Cone.secondOrder n).carrier :=
   Iff.rfl
 
-/-- A squared Euclidean norm bound is a rotated-cone row with rational scaling. -/
+/-- A squared Euclidean norm bound is equivalent to `(t, 1/2, v) ∈ RSOC n`. -/
 theorem norm_toLp_sq_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 2 v‖ ^ 2 ≤ t ↔
       (t, 1 / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
@@ -158,26 +153,26 @@ theorem norm_toLp_sq_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
   · rintro ⟨_, _, h⟩
     nlinarith
 
-/-- A native squared Euclidean norm uses its ordinary coordinates. -/
+/-- A squared norm bound in Euclidean space is a rotated cone constraint on its coordinates. -/
 theorem norm_sq_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (t : ℝ) :
     ‖z‖ ^ 2 ≤ t ↔
       (t, 1 / 2, WithLp.ofLp z) ∈ (Cone.rotatedSecondOrder n).carrier :=
   norm_toLp_sq_le_iff (WithLp.ofLp z) t
 
-/-- A full finite sum of coordinate squares is a rotated-cone row. -/
+/-- A sum-of-squares bound is equivalent to a rotated second-order cone constraint. -/
 theorem sumSquares_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     (∑ i, v i ^ 2) ≤ t ↔
       (t, 1 / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
   simpa only [EuclideanSpace.real_norm_sq_eq, PiLp.toLp_apply] using
     norm_toLp_sq_le_iff v t
 
-/-- A scalar square uses a singleton vector and the same rational scaling. -/
+/-- A scalar square bound is equivalent to `(t, 1/2, ![a]) ∈ RSOC 1`. -/
 theorem square_le_iff (a t : ℝ) :
     a ^ 2 ≤ t ↔ (t, 1 / 2, ![a]) ∈ (Cone.rotatedSecondOrder 1).carrier := by
   simpa using sumSquares_le_iff (![a] : Fin 1 → ℝ) t
 
-/-- A positive denominator makes a Euclidean quadratic-over-linear bound
-exactly equivalent to a rotated-cone row. -/
+/-- With a positive denominator, a quadratic-over-linear bound is equivalent to
+a rotated second-order cone constraint. -/
 theorem norm_toLp_sq_div_le_iff {n : Nat} (v : Fin n → ℝ) (y t : ℝ) (hy : 0 < y) :
     ‖WithLp.toLp 2 v‖ ^ 2 / y ≤ t ↔
       (t, y / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
@@ -193,21 +188,21 @@ theorem norm_toLp_sq_div_le_iff {n : Nat} (v : Fin n → ℝ) (y t : ℝ) (hy : 
   · rintro ⟨_, _, h⟩
     nlinarith
 
-/-- Native Euclidean quadratic-over-linear bounds use ordinary coordinates. -/
+/-- The quadratic-over-linear representation for vectors in Euclidean space. -/
 theorem norm_sq_div_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (y t : ℝ)
     (hy : 0 < y) :
     ‖z‖ ^ 2 / y ≤ t ↔
       (t, y / 2, WithLp.ofLp z) ∈ (Cone.rotatedSecondOrder n).carrier :=
   norm_toLp_sq_div_le_iff (WithLp.ofLp z) y t hy
 
-/-- A positive-denominator sum of squares is a rotated-cone row. -/
+/-- A sum of squares divided by a positive denominator has a rotated cone epigraph. -/
 theorem sumSquares_div_le_iff {n : Nat} (v : Fin n → ℝ) (y t : ℝ) (hy : 0 < y) :
     (∑ i, v i ^ 2) / y ≤ t ↔
       (t, y / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
   simpa only [EuclideanSpace.real_norm_sq_eq, PiLp.toLp_apply] using
     norm_toLp_sq_div_le_iff v y t hy
 
-/-- A scalar quadratic-over-linear bound uses a singleton rotated-cone row. -/
+/-- A scalar quadratic-over-linear bound is equivalent to `(t, y/2, ![a]) ∈ RSOC 1`. -/
 theorem square_div_le_iff (a y t : ℝ) (hy : 0 < y) :
     a ^ 2 / y ≤ t ↔ (t, y / 2, ![a]) ∈ (Cone.rotatedSecondOrder 1).carrier := by
   simpa using sumSquares_div_le_iff (![a] : Fin 1 → ℝ) y t hy

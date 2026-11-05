@@ -10,7 +10,7 @@ import Mathlib.Data.Real.Basic
 # Tests for the semantic core
 
 These compile-time examples exercise the order-generic definitions directly,
-without depending on the surface syntax or transformation framework.
+without depending on the modeling syntax or transformation framework.
 -/
 
 namespace MorewTest.Core
@@ -187,8 +187,7 @@ example : integerLine.IsUnbounded ↔ taggedIntegerLine.IsUnbounded :=
 
 /-! ## A nonconvex objective -/
 
-/-- The double-well quartic is nonconvex on `ℝ`; the semantic core accepts it
-without asking for, or storing, any convexity evidence. -/
+/-- The semantic core accepts the nonconvex double-well quartic on `ℝ`. -/
 def doubleWell : Problem ℝ ℝ where
   objective := fun x => (x ^ 2 - 1) ^ 2
   feasible := fun _ => True

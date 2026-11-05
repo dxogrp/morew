@@ -5,11 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.Runner
 
-/-!
-# Surface reformulation state
-
-Shared surface state and certificate syntax. This is an internal implementation API.
--/
+/-! Problem syntax and certificates retained by reformulation commands. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -18,25 +14,25 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 private def namedTerm (name : Name) : TSyntax `term :=
   ⟨mkIdent name⟩
 
-/-- Build the surface syntax for a certificate relation. -/
+/-- Construct the syntax for a certificate relation. -/
 def certificateRelationTerm (runner : CertificateRunner)
     (source target : TSyntax `term) : MacroM (TSyntax `term) := do
   let relation := namedTerm runner.relation
   `($relation $source $target)
 
-/-- Build the surface syntax for a reflexive certificate. -/
+/-- Construct the syntax for a reflexive certificate. -/
 def certificateReflTerm (runner : CertificateRunner)
     (optimizationProblem : TSyntax `term) : MacroM (TSyntax `term) := do
   let refl := namedTerm runner.refl
   `($refl $optimizationProblem)
 
-/-- Build the surface syntax composing two certificates. -/
+/-- Construct the syntax composing two certificates. -/
 def certificateTransTerm (runner : CertificateRunner)
     (left right : TSyntax `term) : MacroM (TSyntax `term) := do
   let trans := namedTerm runner.trans
   `($trans $left $right)
 
-/-- Lift an equivalence proof into the selected certificate relation. -/
+/-- Convert an equivalence proof to the selected certificate relation. -/
 def liftCertificateEquivalence (runner : CertificateRunner)
     (proofTerm : TSyntax `term) : MacroM (TSyntax `term) := do
   match runner.liftEquivalence? with
@@ -45,21 +41,17 @@ def liftCertificateEquivalence (runner : CertificateRunner)
       let lift := namedTerm liftName
       `($lift $proofTerm)
 
-/-- The exact problem whose ordered rows are protected while later standard
-steps are normalized. A rewrite may establish a new checkpoint without changing
-the original source of the accumulated certificate. -/
+/-- A problem whose ordered rows are preserved during later normalization. -/
 structure CanonicalCheckpoint where
   /-- Checked row source supplying the protected objective and ordered rows. -/
   semantic : TSyntax `term
-  /-- Raw semantic problem replaced by the protected row source when normalizing
-  later transformations. Keeping this separate preserves explicit certificates
-  against the natural transformation history. -/
+  /-- Problem expression replaced by the stored reference problem during normalization. -/
   semanticAnchor : TSyntax `term
-  /-- The checkpoint's ordered binder and constraint presentation. -/
+  /-- The stored problem description, with variables and constraints in order. -/
   view : Morew.Syntax.ProblemView
 
-/-- Check that the internal row inventory is an ordered partition of the
-checkpoint, with one live identity for each displayed row. -/
+/-- Check that retained and removed constraints partition the stored problem,
+with one retained index per displayed constraint in the original order. -/
 def validateCheckpointRows (checkpointCount rowCount : Nat)
     (live : Array Nat) (removed : Std.HashSet Nat) : Except String Unit := do
   unless live.size == rowCount do
@@ -89,12 +81,12 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
-/-- Backend-owned operations for terminal evidence. Adapters are static values:
-all section-dependent expressions belong to `CheckedTerminalArtifact`. -/
+/-- Operations for the selected conic or NLP representation.
+Section-dependent expressions are stored in `CheckedTerminalArtifact`. -/
 structure TerminalAdapter where
   /-- User-facing representation name. -/
   description : String
-  /-- Suffix of the concrete form declaration. -/
+  /-- Suffix of the representation declaration. -/
   formSuffix : Name
   /-- Suffix of the representability theorem. -/
   propertySuffix : Name
@@ -106,10 +98,9 @@ structure TerminalAdapter where
   /-- Construct representability evidence from the emitted form. -/
   property : Expr → TermElabM Expr
 
-/-- Checked structural evidence retained until the final target is declared.
-Its free variables belong to the containing state's section-variable context. -/
+/-- Terminal evidence in the containing state's section-variable context. -/
 structure CheckedTerminalArtifact where
-  /-- Static operations supplied by the selected backend. -/
+  /-- Operations for the selected conic or NLP representation. -/
   adapter : TerminalAdapter
   /-- A kernel-checked form of the final canonical problem. -/
   form : Expr
@@ -131,7 +122,7 @@ structure ReformState where
   typed : Morew.Elab.Reformulation.RunnerState
   /-- Section variables used by the retained typed expressions. -/
   sectionFVars : Array Expr
-  /-- Current source-aligned presentation. -/
+  /-- Current presentation retaining source binding structure. -/
   view : Morew.Syntax.ProblemView
   /-- Syntax describing the current natural semantic problem. -/
   semantic : TSyntax `term
@@ -139,17 +130,14 @@ structure ReformState where
   semanticDomainType : TSyntax `term
   /-- Stable syntax for the semantic objective-value type. -/
   semanticValueType : TSyntax `term
-  /-- Re-elaboratable mirror of the checked typed certificate, retained only
-  for command emission so section variables keep their source binders. -/
+  /-- Certificate syntax retaining section binders for declaration emission. -/
   certificateSyntax : TSyntax `term
   /-- Stable syntax referring to the original source problem. -/
   source : TSyntax `term
   /-- Fully qualified declaration name of the source problem. -/
   sourceName : Name
-  /-- Outer parameter names used by the applied source or introduced into the
-  current semantic problem by later steps. Decision binders must avoid these
-  names when the presentation is re-elaborated. Certificate-only dependencies
-  do not add reservations. -/
+  /-- Outer names used by the current problem and reserved against decision binders.
+Certificate-only dependencies do not reserve names. -/
   usedSourceParameterNames : Array Name := #[]
   /-- Whether the source presentation was instantiated from an application. -/
   instantiatedSource : Bool := false
@@ -161,20 +149,18 @@ structure ReformState where
   simplifyExpLogTerms : Bool := false
   /-- Whether the script has committed a substitution step. -/
   hasSubstitution : Bool := false
-  /-- Original checkpoint positions, aligned with the current displayed rows. -/
+  /-- Original positions of the currently displayed constraints in the stored problem. -/
   liveCheckpointRows : Array Nat
-  /-- Checkpoint positions whose rows have been proved removable. -/
+  /-- Original positions of constraints proved redundant. -/
   removedCheckpointRows : Std.HashSet Nat := {}
   /-- Checked predicate equivalences retained across successive steps. -/
   normalizationLemmas : Array (TSyntax `term) := #[]
   /-- Structural evidence produced by terminal validation. -/
   terminalArtifact? : Option CheckedTerminalArtifact := none
 
-/-- A handler describes one uncommitted primitive step.  Certificate
-composition and state mutation are deliberately centralized in
-`commitSurfaceStep`. -/
+/-- An uncommitted primitive step; `commitSurfaceStep` composes certificates and updates state. -/
 structure SurfaceStepResult where
-  /-- Proposed source-aligned presentation after the step. -/
+  /-- Proposed presentation retaining source binding structure. -/
   view : Morew.Syntax.ProblemView
   /-- Syntax describing the step's natural semantic problem. -/
   semantic : TSyntax `term
@@ -186,14 +172,13 @@ structure SurfaceStepResult where
   simplifyExpLogTerms : Bool
   /-- Whether the proposed state includes a substitution. -/
   hasSubstitution : Bool
-  /-- Original checkpoint positions, aligned with the proposed displayed rows. -/
+  /-- Original positions of the proposed constraints in the stored problem. -/
   liveCheckpointRows : Array Nat
-  /-- Checkpoint positions removed by the proposed state. -/
+  /-- Original positions of constraints removed in the proposed state. -/
   removedCheckpointRows : Std.HashSet Nat
   /-- Accumulated checked predicate equivalences. -/
   normalizationLemmas : Array (TSyntax `term)
-  /-- Optional new base for normalization after a checked rewrite. Its removal
-  inventory starts empty; subsequent standard steps inherit this checkpoint. -/
+  /-- A new reference problem for normalization, initially with no removed constraints. -/
   checkpoint? : Option CanonicalCheckpoint := none
   /-- Ordered replacements indexed by entries at step entry. -/
   constraintSplices : Array ConstraintSplice := #[]
@@ -204,11 +189,9 @@ structure SurfaceStepResult where
   /-- Additional declarations requested by the step. -/
   companions : Array Morew.Elab.Reformulation.CompanionRequest := #[]
 
-/-- Surface-specific preparation retained around the reusable typed plan.  Its
-materializer is not run until the typed name-request batch has passed
-preflight. -/
+/-- A proposed step whose construction waits until its names have been allocated. -/
 structure SurfaceStepDraft where
-  /-- Complete presentation-name batch to preflight before materialization. -/
+  /-- Names to check and allocate before constructing the step. -/
   nameRequests : Array Morew.Elab.Reformulation.NameRequest
   /-- Build the step using its successfully allocated names. -/
   materialize : Morew.Elab.Reformulation.NameAllocation →
@@ -216,7 +199,7 @@ structure SurfaceStepDraft where
 
 /-- The syntax needed to emit a checked typed result. -/
 structure SurfaceMaterialization where
-  /-- Surface result corresponding to the checked typed result. -/
+  /-- Problem syntax corresponding to the checked result. -/
   surface : SurfaceStepResult
   /-- Section variables used while validating the typed result. -/
   sectionFVars : Array Expr

@@ -8,15 +8,8 @@ import Morew.Elab.Rewrite.Plan
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked matching of exact representations
-
-Matching preserves the operation spelling of the selected predicate. It exposes
-local binding syntax and representation fields, not the implementations of
-mathematical helpers. Product and subtype representation inputs are reconstructed
-from the matched operands; a consumer may supply checked evidence for subtype
-conditions. Evidence provision never changes the selected source predicate.
--/
+/-! Match exact representations while preserving mathematical operation heads.
+Reconstruct product and subtype inputs from operands, using caller evidence for subtype conditions. -/
 
 namespace Morew.Elab.Rewrite.Match
 
@@ -30,10 +23,10 @@ structure Result where
   target : Expr
   /-- Exactness for the complete original predicate at the current point. -/
   sourceIff : Expr
-  /-- Whether the consumer's controlled evidence callback supplied a proof. -/
+  /-- Whether the caller's evidence callback supplied a proof. -/
   usedEvidence : Bool := false
 
-/-- Consumer-controlled proof search; no retained assumptions are used by default. -/
+/-- Caller-supplied proof search; no retained assumptions are used by default. -/
 abbrev Prove := Expr → MetaM (Option Expr)
 
 private partial def inputValue (type : Expr) (depth : Nat := 0) :
@@ -52,9 +45,7 @@ private partial def inputValue (type : Expr) (depth : Nat := 0) :
     return (input, proofs.push proof)
   return (← mkFreshExprMVar type, #[])
 
--- Concrete exact records describe the whole current point. A subtype domain
--- may add checked guards around that point, but cannot infer a different input
--- map. Nested guards are collected from the innermost carrier outwards.
+-- Match concrete records to the whole decision point; collect subtype conditions from inside out.
 private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
     MetaM (Expr × Array Expr) := do
   if depth > 32 then throwError "representation input structure is too deeply nested"
@@ -71,11 +62,8 @@ private partial def subtypeInputValue (point type : Expr) (depth : Nat := 0) :
 private def normalizeComparison (expression : Expr) : MetaM Expr :=
   Comparison.normalize expression (fun e => Registry.structural e)
 
--- Fixed data parameters may compute to the same value, including section
--- parameters such as `n + 0` and `n`. Mathematical coordinates, functions,
--- types, proofs, and instances keep their separate typed syntax checks.
--- Data-value comparison occurs only below an already matched operation,
--- never at a comparison endpoint.
+-- Compare fixed data values definitionally only beneath matched operations.
+-- Keep typed syntax checks for coordinates, functions, types, proofs, and instances.
 private def sameFixedDataValue (point expected actual type : Expr) : MetaM Bool := do
   if (← Expr.hasUnresolved expected) || (← Expr.hasUnresolved actual) then return false
   let type ← whnf type
@@ -86,8 +74,7 @@ private def sameFixedDataValue (point expected actual type : Expr) : MetaM Bool 
   if (← Expr.depends point expected) || (← Expr.depends point actual) then return false
   withNewMCtxDepth <| isDefEq expected actual
 
--- Value syntax is matched before definitional equality. In particular, an
--- opaque/named helper cannot accidentally match its unfolded implementation.
+-- Match value syntax before definitional equality.
 private partial def matchValue (point expected actual : Expr)
     (operationArgument : Bool := false) : MetaM Unit := do
   let expected ← Registry.structural expected
@@ -110,8 +97,7 @@ private partial def matchValue (point expected actual : Expr)
         throwError "unsupported order instance in {actual}"
       throwError "unsupported type or instance in {actual}"
     return
-  -- Reconstructed inputs may be matched against an intact pair or subtype.
-  -- Project only their fields; the surrounding mathematical head stays opaque.
+  -- Project reconstructed pairs and subtypes while preserving mathematical heads.
   if expected.isAppOfArity ``Prod.mk 4 || expected.isAppOfArity ``Subtype.mk 4 then
     unless ← isDefEq type (← inferType actual) do
       throwError "representation input types differ at {actual}"
@@ -132,9 +118,7 @@ private partial def matchValue (point expected actual : Expr)
     withLocalDeclD `index type fun index =>
       matchValue point (mkApp expected index) (body.instantiate1 index)
   | .forallE _ type body _, .forallE _ otherType otherBody _ =>
-    -- Implication antecedents are proposition-valued binder domains; compare
-    -- their mathematical heads just like the body, while ordinary types retain
-    -- the type/instance comparison above.
+    -- Compare implication antecedents as predicates.
     matchValue point type otherType
     withLocalDeclD `index type fun index =>
       matchValue point (body.instantiate1 index) (otherBody.instantiate1 index)
@@ -192,18 +176,16 @@ private def checkIndependent (point : Expr) (arguments : Array Expr) : MetaM Uni
   for argument in arguments do
     let argument ← instantiateMVars argument
     let type ← instantiateMVars (← inferType argument)
-    -- Instances, including Prop-valued classes, cannot acquire a decision-local
-    -- interpretation through typeclass synthesis. Ordinary proof parameters
-    -- instead come from the source itself, independent hypotheses, or the
-    -- consumer's checked callback, whose use is recorded in the result.
+    -- Require decision-independent instances. Obtain proof parameters from source evidence,
+    -- independent hypotheses, or the caller's evidence callback.
     if (← isClass? type).isSome then
       if (← Expr.depends point type) || (← Expr.depends point argument) then
-        throwError "representation instance depends on the decision variable: {argument}"
+        throwError "representation instance depends on the optimization variable: {argument}"
     else if !(← isProof argument) then
       if ← Expr.depends point type then
-        throwError "representation parameter type depends on the decision variable: {type}"
+        throwError "representation parameter type depends on the optimization variable: {type}"
       if (← Expr.depends point argument) && !(← Expr.isSupportedSpace type) then
-        throwError "representation shape parameter depends on the decision variable: {argument}"
+        throwError "representation shape parameter depends on the optimization variable: {argument}"
 
 /-- Expose representation fields and binding syntax while retaining every
 mathematical function and predicate head in the target. -/
@@ -300,7 +282,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
       throwError "internal error: representation target is not existential"
     let auxiliary ← expose (← instantiateMVars existsType.getAppArgs[0]!)
     if ← Expr.depends point auxiliary then
-      throwError "representation auxiliary type depends on the decision variable"
+      throwError "representation auxiliary type depends on the optimization variable"
     checkWithKernel proof
     let target ← expose existsType.getAppArgs[1]!
     return .ok { auxiliary, target, sourceIff := proof, usedEvidence }
@@ -308,9 +290,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
 
 private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
     (accept : Result → MetaM α) (prove? : Prove) (exactInput : ExactInput) : MetaM α := do
-  -- Diagnose the furthest successful stage: operation matching, domain/proof
-  -- validation, then target certification. An adapted domain failure should
-  -- not be hidden behind the original negative head's shape mismatch.
+  -- Report the furthest failure stage: matching, domain validation, then target certification.
   let result : Except (Nat × Exception) α ← State.withIsolatedMVars do
     let tryAttempt := fun reverse inputMode view? => State.withIsolatedMVars do
       let matched ← try attempt point sourceBody (← prepare) prove? reverse inputMode view?
@@ -346,12 +326,10 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
           (← whnf inputType).isAppOfArity ``Subtype 2 &&
           !(← isDefEq inputType (← inferType point))
       if exactInput == .whole && subtypeWhole then
-        -- Retry only subtype wrappers around the same complete decision point.
-        -- Concrete records never acquire declaration-style input inference.
+        -- Retry subtype conditions on the same complete decision point.
         return ← tryAttempt false .subtypeWhole none
       if family == .exact && exactInput == .infer then
-        -- Exact records retain the whole-input fallback for unused inputs or
-        -- coordinates, including subtype guards around the complete point.
+        -- Retain whole-input matching for unused coordinates and subtype conditions.
         match ← tryAttempt false
             (if subtypeWhole then .subtypeWhole else .whole) none with
         | .ok value => return .ok value
@@ -363,12 +341,11 @@ private def checked {α : Type} (point sourceBody : Expr) (prepare : MetaM Expr)
   | .ok value => pure value
   | .error (_, error) => throw error
 
-/-- Match and certify exactly the supplied record. Each alternative includes
-`accept` in its isolated attempt, preserving only a successful result's proof
-dependencies. Concrete exact lifts retain their whole-decision interpretation;
-subtype wrappers may add checked guards around that same point. Graph
-orientations and checked real negation views count as one candidate per record.
-Whole-predicate lifts do not receive comparison adaptations. -/
+/-- Match and certify the supplied record in isolated attempts including `accept`.
+Retain successful proof dependencies. Concrete `ExactConstraintLift` records use
+the whole decision point, possibly as a subtype.
+Graph orientations and sign views form one candidate.
+Whole-predicate records keep literal matching. -/
 def rule {α : Type} (point sourceBody expression : Expr)
     (accept : Result → MetaM α) (prove? : Prove := fun _ => pure none) : MetaM α :=
   checked point sourceBody (pure expression) accept prove? .whole

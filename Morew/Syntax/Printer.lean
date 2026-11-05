@@ -8,15 +8,14 @@ import Lean.Elab.Command
 import Lean.PrettyPrinter
 
 /-!
-# Source-aligned problem printing
+# Problem printing
 
 Validate registered problem declarations and format their stored presentations
 for `#printp`, preserving user names, objective sense, and constraint order.
 
-Refreshed reformulations also carry print-only compact and detailed views.
-Recognized power chains use an explicitly marked mathematical display by default;
+Reformulations carry compact and detailed display views.
+Recognized power-cone representations use a marked mathematical display by default;
 `pp.proofs true` selects ordinary Lean syntax with proof details at print time.
-Neither choice changes the separate syntax views consumed by reconstruction.
 -/
 
 namespace Morew
@@ -75,10 +74,10 @@ private def ensureViewNamesDistinct (what : String) (names : Array Name) : CoreM
 private def formatProblemView (view : Morew.Syntax.ProblemView)
     (mathematicalRows : Array (Option Morew.Syntax.PowerChainRow) := #[]) : CoreM Format := do
   if view.binders.isEmpty then
-    throwError "problem presentation metadata contains no decision-variable binders"
+    throwError "problem presentation metadata contains no optimization-variable binders"
   unless mathematicalRows.isEmpty || mathematicalRows.size == view.constraints.size do
     throwError "problem presentation metadata contains misaligned mathematical rows"
-  ensureViewNamesDistinct "decision variable" (view.binders.map (·.name))
+  ensureViewNamesDistinct "optimization variable" (view.binders.map (·.name))
   ensureViewNamesDistinct "constraint" (view.constraints.map (·.name))
   ensureViewNamesDistinct "model-local definition" (view.definitions.map (·.name))
 
@@ -90,7 +89,7 @@ private def formatProblemView (view : Morew.Syntax.ProblemView)
   for definition in view.definitions do
     if view.binders.any (fun binder =>
         binder.name.eraseMacroScopes == definition.name.eraseMacroScopes) then
-      throwError "problem presentation metadata contains a model-local definition shadowing a decision variable"
+      throwError "problem presentation metadata contains a model-local definition shadowing an optimization variable"
     let name ← nameFormat "model-local definition" definition.name (atomic := true)
     let value ← syntaxFormat s!"value for model-local definition `{definition.name.eraseMacroScopes}`"
       definition.value
@@ -104,7 +103,7 @@ private def formatProblemView (view : Morew.Syntax.ProblemView)
     body := Format.joinSep definitionFormats.toList Format.line ++ Format.line ++ body
   let mut binderGroups : Array (Array Name × String × Format) := #[]
   for binder in view.binders do
-    let typeFormat ← syntaxFormat s!"type for decision variable `{binder.name.eraseMacroScopes}`"
+    let typeFormat ← syntaxFormat s!"type for optimization variable `{binder.name.eraseMacroScopes}`"
       binder.typeSyntax
     let typeKey := typeFormat.pretty
     match binderGroups.back? with
@@ -118,7 +117,7 @@ private def formatProblemView (view : Morew.Syntax.ProblemView)
         binderGroups := binderGroups.push (#[binder.name], typeKey, typeFormat)
   let binderFormats ← binderGroups.mapM fun (names, _, typeFormat) => do
     let nameFormats ← names.toList.mapM fun name =>
-      nameFormat "decision variable" name (atomic := true)
+      nameFormat "optimization variable" name (atomic := true)
     pure f!"({Format.joinSep nameFormats (Format.text " ")} : {typeFormat})"
   unless view.constraints.isEmpty do
     body := body ++ Format.line ++ "subject to"
@@ -151,12 +150,8 @@ def elabPrintProblem : CommandElab := fun stx => do
     | some presentation =>
       if detailed then (presentation.detailed, #[])
       else (presentation.compact, presentation.mathematicalRows)
-  -- A `problem` term can occur as a proper subterm of another declaration.
-  -- During elaboration it still sees the enclosing declaration name, so such
-  -- a term may leave presentation metadata behind.  Metadata is deliberately
-  -- outside the trusted semantics; validate the result type beneath the
-  -- declaration's parameters before using it. Reduction also admits transparent
-  -- aliases hiding further parameters or the final `Problem` type.
+  -- A nested `problem` term can register metadata for its enclosing declaration.
+  -- Check the declaration's result type, reducing aliases and parameters.
   let isProblem ← liftTermElabM do
     let info ← getConstInfo declName
     Lean.Meta.forallTelescopeReducing info.type

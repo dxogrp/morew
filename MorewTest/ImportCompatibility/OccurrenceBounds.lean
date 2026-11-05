@@ -52,7 +52,7 @@ example (x t s : ℝ) : generatedLift.feasible ((x, t), s) ↔
       LocalDefinitions.Defined.External.score 4 x ≤ t) ∧
         LocalDefinitions.Defined.External.score 4 x ≤ s := Iff.rfl
 
--- Generated decision names remain usable after importing an applied family.
+-- Generated optimization variable names remain usable after importing an applied family.
 reformulation generatedObjective : (LocalDefinitions.Defined.generated 4) := by
   epigraph s at (t)
 

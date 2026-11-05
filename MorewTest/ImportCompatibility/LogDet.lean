@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LogDet.Defined
 import MorewTest.Reformulation.LogDet.Objectives
 
-/-! Imported log-det certificates retain domain evidence and exact presentation replay. -/
+/-! Imported log-det certificates retain domain evidence and exact presentation reconstruction. -/
 
 namespace MorewTest.ImportCompatibility.LogDet
 

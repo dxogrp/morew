@@ -1,4 +1,4 @@
-"""Regression tests for release identity and exact-commit workflow gates."""
+"""Tests for release versions, commits, and required CI runs."""
 
 from __future__ import annotations
 
@@ -178,7 +178,7 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.api = patch.object(release, "fetch_workflow_runs")
         self.fetch = self.api.start()
         self.addCleanup(self.api.stop)
-        # Keep the expected CI identity independent of the validator's query arguments.
+        # The expected CI workflow is fixed by this test.
         self.fetch.return_value = [workflow_run(head_sha=self.sha)]
 
     def git(self, *args):

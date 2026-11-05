@@ -10,7 +10,7 @@ import Mathlib.Data.Real.Basic
 # Exact ordered constraint rewrites
 
 These tests check the target problem and the full equivalence type, including
-the order instance for maximization, without relying on surface planning.
+the order instance for maximization, without relying on command elaboration.
 -/
 
 namespace MorewTest.Rewrite.Replace
@@ -97,11 +97,11 @@ private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
   checkWithKernel result.equivalence
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  -- Removing the only row must result in True, with no Unit decision binder.
+  -- Removing the only row must result in `True`, with no `Unit` decision binder.
   checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueLift)) none #[]
     (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
     (← `(Problem.mk (fun x : ℝ => x) (fun _ => True)))
-  -- A custom Unit target may also retain a literal True or False row.
+  -- A custom `Unit` target may also retain a literal `True` or `False` row.
   checkRewrite #[← `(fun _ : ℝ => True)] 0 (← `(trueLift)) none
     #[← `(fun _ : ℝ => True)]
     (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
@@ -150,7 +150,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   -- A contextual replacement uses exactly the retained rows, including their
-  -- nested conjunction and literal True entry. The selected row supplies no evidence.
+  -- nested conjunction and literal `True` entry. The selected row supplies no evidence.
   let domain := Lean.mkConst ``Real
   let objective ← checkedTerm (← `(fun x : ℝ => x))
   let predicates ← #[← `(fun x : ℝ => 0 ≤ x ∧ x ≤ 3),
@@ -234,7 +234,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       pure false
     catch _ => pure true
     unless rejected do throwError "conditional auxiliary replacement used its selected row as evidence"
-    -- Unit exactness uses the same certificate path without changing coordinates.
+    -- `Unit` exactness uses the same certificate path without changing coordinates.
     let target ← checkedTerm (← `(fun (_ : ℝ) (_ : Unit) => True))
     let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
       (show x ≤ 5 ↔ ∃ _ : Unit, True from
@@ -247,7 +247,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless ← isDefEq result.targetProblem (← mkAppM ``Problem.mk #[objective, feasible]) do
       throwError "conditional Unit replacement changed the decision domain"
     checkWithKernel result.equivalence
-    -- An unused non-Unit auxiliary is still part of the exact decision layout.
+    -- An unused non-`Unit` auxiliary is still part of the exact decision layout.
     let target ← checkedTerm (← `(fun (_ : ℝ) (_ : ℝ) => True))
     let proof ← checkedTerm (← `(fun (x : ℝ) (h : (x ≤ 3 ∧ 0 ≤ x) ∧ True) =>
       (show x ≤ 5 ↔ ∃ _ : ℝ, True from

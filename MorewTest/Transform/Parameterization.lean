@@ -9,9 +9,9 @@ import Mathlib.Tactic.NormNum
 /-!
 # Semantic coordinate parameterization tests
 
-The lifting theorem preserves retained coordinates in both equivalence maps,
-including when the coordinate types differ or the selected coordinate is in
-the middle of a product. Surjectivity is required only on feasible points.
+Both equivalence maps preserve retained coordinates, including when coordinate
+types differ or the selected coordinate lies inside a product. Surjectivity is
+required only on feasible points.
 -/
 
 namespace MorewTest.Transform.Parameterization
@@ -32,7 +32,7 @@ private def subtypeCoverage := subtypeRule.toFeasibleSurjection positiveSource
   (Equiv.prodComm ℝ ℕ) (Equiv.prodComm {x : ℝ // 0 ≤ x} ℕ)
   (fun _ h => h)
 
-/-- The semantic API permits a genuinely different new coordinate type. -/
+/-- The new coordinate may have a different type. -/
 example : GlobalEquivalence positiveSource
     (positiveSource.pullback fun point : {x : ℝ // 0 ≤ x} × ℕ => (point.1.1, point.2)) :=
   pullbackEquivalence positiveSource _ subtypeCoverage

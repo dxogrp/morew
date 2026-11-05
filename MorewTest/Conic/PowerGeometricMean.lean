@@ -139,8 +139,7 @@ example {n : Nat} (hn : 0 < n) (xs : Fin n → ℝ) (hx : ∀ i, 0 < xs i)
   rw [← (invProdEpigraph hn).source_iff_exists]
   exact not_le.mpr (lt_of_le_of_lt ht (Fn.invProd_pos xs hx))
 
-/-! The raw zero case is different, which is why inverse-product records
-cannot relax their strictly positive domain to nonnegative coordinates. -/
+/-! Totalized inverse products at zero differ from the strictly positive-domain model. -/
 
 example : Fn.invProd ![0, 2] = 0 := by norm_num [Fn.invProd, Fin.prod_univ_succ]
 example (t : ℝ) : (t, 0, 1) ∉ POW (1 / 3) := by norm_num

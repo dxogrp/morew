@@ -7,22 +7,15 @@ import Morew.Rewrite.Basic
 import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Decomposition
 
-/-!
-# Shared exact replacement planning data
-
-Conic and smooth planners share exact-lift adaptation, scoped evidence, and the
-checked relation between a lift target and its ordered rows. Each planner keeps
-its own target exposure, supported-space checks, and row certification policy.
-This module neither recognizes operations nor certifies affine or smooth rows.
--/
+/-! Shared exact replacement data, scoped evidence, and ordered target equivalence.
+Conic and NLP planners provide target reduction, space checks, and row certification. -/
 
 namespace Morew.Elab.Rewrite.Plan
 
 open Lean Lean.Meta
 
-/-- Exactness is either unconditional or checked under precisely the retained
-constraints. Contextual targets have a uniform auxiliary type and do not take
-a retained-feasibility proof as an argument. -/
+/-- Unconditional exactness or exactness under retained constraints.
+Auxiliary types are uniform and targets are independent of feasibility proofs. -/
 inductive Certificate where
   | exact (lift : Expr)
   | contextual (auxiliary target sourceIffExists : Expr)
@@ -61,7 +54,7 @@ structure Result where
   nextDomain : Expr
   /-- Replacement predicates in deterministic conjunction order. -/
   rowPredicates : Array Expr
-  /-- The instantiated lift target is equivalent to the row conjunction. -/
+  /-- The instantiated representation target is equivalent to the row conjunction. -/
   targetIff : Expr
 
 /-- Substitute scoped evidence through every expression in an exact replacement. -/
@@ -97,7 +90,7 @@ partial def withScopedEvidence {α : Type}
       return replace result #[binding] #[value]
   else action
 
--- Do not let unification specialize a caller's unresolved local declarations.
+-- Keep caller metavariables in local declarations unassigned.
 /-- Detect unresolved expressions, including evidence hidden in local declarations. -/
 partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
     MetaM Bool := do
@@ -136,7 +129,7 @@ def predicateDomain (predicate : Expr) : MetaM Expr := do
     throwError "expected a predicate on the current decision domain"
   return domain
 
-/-- Check that a supplied lift describes the complete selected predicate. -/
+/-- Check that a record describes the complete selected predicate. -/
 def checkLift (source lift : Expr) : MetaM Expr := do
   let type ← whnf (← inferType lift)
   unless type.isAppOfArity ``Morew.ExactConstraintLift 2 do
@@ -149,9 +142,7 @@ def checkLift (source lift : Expr) : MetaM Expr := do
   checkWithKernel lift
   return lift
 
-/-- Check exactness against the selected predicate and the current ordered
-retained rows. Rechecking here prevents a contextual certificate from being
-applied with stale or selected-row assumptions. -/
+/-- Check exactness against the selected predicate and current ordered retained rows. -/
 def Certificate.check (certificate : Certificate) (source : Expr)
     (retained : Array Expr) : MetaM Unit := do
   let expressions := match certificate with
@@ -184,8 +175,7 @@ def Certificate.check (certificate : Certificate) (source : Expr)
     unless ← isDefEq (← inferType sourceIffExists) expected do
       throwError "conditional exact certificate does not match the selected row and retained constraints"
 
-/-- Close a pointwise match without letting retained proofs enter its target
-or auxiliary type. Independent exactness keeps the unconditional fast path. -/
+/-- Close a pointwise match with auxiliary types and targets independent of retained proofs. -/
 def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
     MetaM Certificate := do
   let auxiliary ← instantiateMVars auxiliary
@@ -197,7 +187,7 @@ def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
     if ← hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
   if ← Expr.depends point auxiliary then
-    throwError "the auxiliary type depends on a decision variable"
+    throwError "the auxiliary type depends on an optimization variable"
   if ← Expr.depends evidence auxiliary then
     throwError "the auxiliary type depends on retained feasibility evidence"
   if ← Expr.depends evidence target then
@@ -250,12 +240,8 @@ def customLift (source domain rule : Expr) : MetaM Expr := do
       ``Morew.HypographRepresentation.toExactConstraintLift args[0]! args[1]!
   throwError "expected an ExactConstraintLift, GraphRepresentation, EpigraphRepresentation, or HypographRepresentation for the entire selected predicate"
 
-/-- Check the exact target equivalence without reducing or certifying its rows.
-
-The expected proposition retains the supplied lift, decision layout, and row
-order. Target-specific planners choose when to run this check; in particular,
-smooth planning checks exactness before using generated rows as domain evidence.
--/
+/-- Check target equivalence with the supplied decision layout and row order.
+Smooth planning checks this before using generated rows as domain evidence. -/
 def Result.checkTargetIff (result : Result)
     (mismatchMessage : MessageData :=
       "internal error: target decomposition does not match the exact lift") : MetaM Unit := do

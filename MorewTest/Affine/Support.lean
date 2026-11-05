@@ -10,9 +10,8 @@ import MorewTest.ElabSupport
 /-!
 # Shared affine test assertions
 
-Elaborate test inputs, check generated maps against their exact source
-propositions, and reject incomplete certificates. This module contains
-helpers only, so each behavior suite can be compiled independently.
+Check generated maps against their source propositions and reject incomplete
+certificates. Each behavior suite imports these helpers independently.
 -/
 
 namespace MorewTest.Affine

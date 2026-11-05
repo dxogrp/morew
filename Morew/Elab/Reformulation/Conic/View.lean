@@ -9,47 +9,36 @@ import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.PSD
 
-/-!
-# Conic reformulation presentation
-
-Import-installed cone notation, checked replay templates, and mathematical print
-recipes. The shared presentation machinery does not depend on this module.
--/
+/-! Conic notation and syntax for reconstructing and displaying constraints. -/
 
 namespace Morew.Elab.Reformulation.Conic
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
--- Exact syntax can share a power cone's proof without enabling readable cone
--- notation. This internal flag is also kept separate from ordinary printing.
+-- Share power-cone proofs in exact syntax without readable notation.
 private def powerMembershipReplayOption : Name :=
   `Morew.Elab.Reformulation.powerMembershipReplay
 
--- PSD coordinates use a proof-bearing symmetric subtype internally. Only the
--- compact print payload may abbreviate its conversion to the ordinary matrix.
+-- Abbreviate symmetric-subtype conversions only in compact printing.
 private def compactPSDOption : Name :=
   `Morew.Elab.Reformulation.compactPSD
 
--- Enabled only inside the coordinates of a checked PSD membership. Nested
--- block matrices may omit conversions without affecting unrelated terms.
+-- Allow nested matrix conversion shorthand only within certified PSD coordinates.
 private def compactPSDCoordinatesOption : Name :=
   `Morew.Elab.Reformulation.compactPSDCoordinates
 
--- Matrix literals infer dimensions as successor constructors. Render just
--- these literal constructors as numerals, retaining symbolic dimensions.
+-- Render literal successor dimensions as numerals; retain symbolic dimensions.
 private partial def psdDimensionLiteral? (dimension : Expr) : MetaM (Option Nat) := do
   let dimension := dimension.consumeMData
   if dimension.isConstOf ``Nat.zero then return some 0
   if dimension.isAppOfArity ``Nat.succ 1 then
     return (← psdDimensionLiteral? dimension.getAppArgs[0]!).map (· + 1)
   let some n ← getNatValue? dimension | return none
-  -- `getNatValue?` reads the numeral index without checking its `OfNat`
-  -- instance. A custom instance can give that same index a different value.
+  -- Check `OfNat` instances before interpreting numeral indices.
   if ← isDefEq dimension (mkNatLit n) then return some n
   return none
 
--- Ordinary display syntax can be reconstructed. A freshly written numeral
--- must therefore select an instance with the same value in its current context.
+-- Use numeral syntax only when its current instance has the same value.
 private def psdDimensionNumeralResynthesizes (dimension : Expr) (n : Nat) : MetaM Bool :=
   withoutModifyingState do
     let type ← mkAppM ``OfNat #[mkConst ``Nat, mkNatLit n]
@@ -75,10 +64,9 @@ private def delabConeCarrier : Delab := do
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1
-  -- Keep the original subexpression position, so dimension references are
-  -- frozen by the same pass as the rest of the generated presentation.
+  -- Retain subexpression positions for fixed dimension references.
   let dimension ← withAppArg <| withAppArg do
-    -- Exact replay retains the original numeral instances and constructors.
+    -- Syntax used to reconstruct expressions retains the original numeral instances and constructors.
     if cone.isAppOfArity ``Morew.Conic.Cone.positiveSemidefinite 1 &&
         !(← getOptions).getBool `pp.explicit then
       if let some n ← psdDimensionLiteral? (← getExpr) then
@@ -114,10 +102,7 @@ private def presentationPowerMembershipInstance :
 private def presentationPowerSetMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
   value ∈ Morew.Conic.Cone.powerSet α
 
--- Preserve the exact bundled cone and proof once, rather than repeating them
--- in dependent coordinate and membership-instance arguments. Replaying the
--- closed lambda template leaves ordinary structural beta reduction available
--- to later commands, without introducing an opaque predicate helper.
+-- Use a closed function to retain the cone and its proof when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabPowerConeReplay : Delab := do
@@ -143,8 +128,7 @@ private def delabPowerConeReplay : Delab := do
       ($(mkCIdent ``Morew.Conic.Cone.carrier) ($(mkCIdent ``Morew.Conic.Cone.power) α hα)) value)
   `($function $exponent $evidence $value)
 
--- The bundled cone and the raw set use different membership instances. Rewrite
--- only the complete readable proposition; exact replay retains the cone proof.
+-- Display membership in the defining set; retain cone proofs when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabPowerConeMembership : Delab := do
@@ -157,8 +141,7 @@ private def delabPowerConeMembership : Delab := do
   guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
   let cone := carrier.getAppArgs[0]!.consumeMData
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.power 2
-  -- The shared stored-instance renderer preceded this renderer before the
-  -- module split. Preserve that precedence independently of registration order.
+  -- Give the stored-instance renderer precedence.
   unless ← presentationInstanceResynthesizes args[2]! do
     return ← withOptions (fun options => options.setBool `pp.explicit true
       |>.setBool `pp.instances true) delabApp
@@ -172,9 +155,7 @@ private def delabPowerConeMembership : Delab := do
   let value ← withNaryArg 4 delab
   let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
   unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
-    -- Protect just the canonical set-membership instance. Making the whole
-    -- bundled proposition explicit also exposes arithmetic proofs, which the
-    -- readable printer can omit and thereby make impossible to replay.
+    -- Make only canonical membership explicit; retain arithmetic syntax for reconstruction.
     return ← `(@Membership.mem _ _ $(mkCIdent ``Set.instMembership) (POW $exponent) $value)
   `($value ∈ POW $exponent)
 
@@ -192,8 +173,7 @@ private def delabCompactPSDCoordinate : Delab := do
   guard <| (← getExpr).isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
   withNaryArg 1 delab
 
--- Constant diagonals have no meaningful index name. Rename only the unused
--- binder in this display copy, retaining the normal application delaborator.
+-- Rename unused constant-diagonal binders in the display copy.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Matrix.diagonal]
 private def delabCompactConstantDiagonal : Delab := do
@@ -207,9 +187,7 @@ private def delabCompactConstantDiagonal : Delab := do
   let expression := mkApp expression.appFn! (.lam `_ domain body binderInfo)
   withTheReader SubExpr (fun context => { context with expr := expression }) delabApp
 
--- This mathematical display deliberately omits symmetric-subtype conversions,
--- including those nested inside block matrices in the PSD coordinates.
--- Ordinary display syntax, detailed printing, and exact replay retain them.
+-- Omit symmetric-subtype conversions only in compact PSD printing.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
 @[delab app.Membership.mem]
 private def delabCompactPSDMembership : Delab := do
@@ -239,8 +217,7 @@ def viewHooks : Morew.Elab.Reformulation.ViewHooks where
     | .compact => options.setBool compactPSDOption true
     | .detailed => options
   prepareReadable expression := do
-    -- Exact cone replay shares the range proof through a closed lambda.
-    -- Readable presentations expose its resulting membership directly.
+    -- Display the membership relation defined by the stored function.
     if expression.isApp && expression.getAppFn.isLambda &&
         (expression.getAppFn.find? (·.isConstOf ``presentationPowerMembershipInstance)).isSome then
       return some expression.headBeta

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.RenameBackends
 
-/-! # Renamed labels and exact presentation replay survive module imports -/
+/-! # Renamed labels and exact presentation reconstruction survive module imports -/
 
 namespace MorewTest.Reformulation.ImportedRename
 

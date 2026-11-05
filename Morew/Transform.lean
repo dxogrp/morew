@@ -9,19 +9,15 @@ import Morew.Syntax
 /-!
 # Verified primitive transformations
 
-This module contains the semantic building blocks used by the surface
-`reformulation` command.  None of these definitions assumes convexity.
+Problem transformations and their global equivalence proofs, used by the
+`reformulation` command.
 -/
 
 namespace Morew
 
 universe u v w z
 
-/-- An exact decomposition of a problem's feasible predicate into the source
-constraint selected for replacement or removal and the remainder left unchanged.
-
-For removal, exactness requires a separate proof that the remainder implies
-the selected constraint. The decomposition itself makes no redundancy claim. -/
+/-- Decompose feasibility into a selected constraint and the retained constraints. -/
 structure ConstraintDecomposition {X : Type u} {V : Type v}
     (p : Problem X V) (source : X → Prop) where
   /-- The part of the feasible predicate left unchanged by the transformation. -/
@@ -32,12 +28,9 @@ structure ConstraintDecomposition {X : Type u} {V : Type v}
 
 namespace Problem
 
-/-- Append a constraint without changing the decision space or objective.
-
-The constructor itself does not assert that the new constraint preserves global
-optimization behavior. `addConstraintEquivalence` supplies exactness when it
-follows from current feasibility; `restrictionEquivalence` instead accepts a
-feasible repair into the constraint whose objective is no worse. -/
+/-- Append a constraint, preserving the decision space and objective.
+For global equivalence, use `addConstraintEquivalence` with an implication
+from feasibility, or `restrictionEquivalence` with a feasible improvement map. -/
 def addConstraint {X : Type u} {V : Type v}
     (p : Problem X V) (constraint : X → Prop) : Problem X V where
   objective := p.objective
@@ -54,11 +47,9 @@ theorem addConstraint_feasible {X : Type u} {V : Type v}
     (p.addConstraint constraint).feasible point ↔
       p.feasible point ∧ constraint point := Iff.rfl
 
-/-- Remove a selected constraint without changing the decision space or objective.
-
-The decomposition identifies the retained feasible predicate. Exactness requires
-that this remainder imply the selected constraint, as checked by
-`removeConstraintEquivalence`. -/
+/-- Remove a selected constraint, preserving the decision space and objective.
+`removeConstraintEquivalence` proves equivalence when the retained constraints
+imply the removed constraint. -/
 def removeConstraint {X : Type u} {V : Type v}
     {selected : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p selected) : Problem X V where
@@ -77,11 +68,9 @@ theorem removeConstraint_feasible {X : Type u} {V : Type v}
     (decomposition : ConstraintDecomposition p selected) (point : X) :
     (p.removeConstraint decomposition).feasible point ↔ decomposition.remainder point := Iff.rfl
 
-/-- Replace a selected constraint by a predicate over a uniform auxiliary space.
-
-The target is defined on the original coordinates without a feasibility proof.
-Exactness may be supplied under the retained constraints by
-`conditionalConstraintLiftEquivalence`. -/
+/-- Replace a selected constraint by a predicate on the original and auxiliary
+coordinates. `conditionalConstraintLiftEquivalence` proves equivalence under
+the retained constraints. -/
 def liftConstraintConditional {X : Type u} {V : Type v} {A : Type w}
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
@@ -105,12 +94,8 @@ theorem liftConstraintConditional_feasible
     (p.liftConstraintConditional decomposition target).feasible point ↔
       decomposition.remainder point.1 ∧ target point.1 point.2 := Iff.rfl
 
-/-- Replace one factor of a problem's feasible predicate by an exact
-auxiliary-variable lift.
-
-The decomposition identifies the selected source predicate while leaving all
-other feasibility conditions in `remainder`.  Presentation details such as
-constraint labels are intentionally absent from this semantic constructor. -/
+/-- Replace a selected constraint by an existentially equivalent predicate,
+retaining the other constraints. -/
 def liftConstraint {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
     (lift : ExactConstraintLift.{u, w} source)
@@ -157,9 +142,9 @@ theorem pullback_feasible {X : Type u} {Y : Type v} {V : Type w}
     (p : Problem X V) (f : Y → X) (y : Y) :
     (p.pullback f).feasible y ↔ p.feasible (f y) := Iff.rfl
 
-/-- Introduce an objective bound as a new decision variable.
+/-- Introduce an objective bound as a new optimization variable.
 
-For an ordinary order this is an epigraph.  For an `OrderDual` objective it is
+For an ordinary order this is an epigraph. For an `OrderDual` objective it is
 the corresponding hypograph in the underlying order. -/
 def epigraph {X : Type u} {V : Type v} [LE V]
     (p : Problem X V) : Problem (X × V) V where
@@ -177,9 +162,8 @@ theorem epigraph_feasible {X : Type u} {V : Type v} [LE V]
     p.epigraph.feasible xt ↔
       p.feasible xt.1 ∧ p.objective xt.1 ≤ xt.2 := Iff.rfl
 
-/-- Introduce an objective bound for a maximization problem represented over
-the dual order.  The new variable is kept in the underlying value type so the
-surface constraint has its natural orientation `t ≤ f x`. -/
+/-- Introduce a hypograph bound `t ≤ f x` for maximization. The new variable
+uses the underlying objective-value type. -/
 def hypograph {X : Type u} {V : Type v} [LE V]
     (p : Problem X (OrderDual V)) : Problem (X × V) (OrderDual V) where
   objective xt := xt.2
@@ -198,10 +182,7 @@ theorem hypograph_feasible {X : Type u} {V : Type v} [LE V]
 
 end Problem
 
-/-- Evidence that a change of variables covers every feasible source point.
-
-Only a right inverse on feasible points is required.  In particular, the map
-need not be injective or globally surjective. -/
+/-- A right inverse on feasible source points for a change of variables. -/
 structure FeasibleSurjection {X : Type u} {Y : Type v} {V : Type w}
     (p : Problem X V) (f : Y → X) where
   /-- Choose a transformed representative for each feasible source point. -/
@@ -210,11 +191,7 @@ structure FeasibleSurjection {X : Type u} {Y : Type v} {V : Type w}
   rightInverse : ∀ x : FeasiblePoint p, f (preimage x) = x.1
 
 /-- Pointwise-equal objectives and pointwise-equivalent feasible predicates
-give a global equivalence via the identity map on decision points.
-
-The surface reformulation engine uses this primitive to turn expression and
-constraint simplification into a checked certificate rather than merely
-changing presentation metadata. -/
+give a global equivalence via the identity map on decision points. -/
 def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
     (p q : Problem X V)
     (objective_eq : ∀ x, p.objective x = q.objective x)
@@ -227,11 +204,8 @@ def pointwiseEquivalence {X : Type u} {V : Type v} [Preorder V]
     map := fun x => ⟨x.1, (feasible_iff x.1).mpr x.2⟩
     objective_le := fun x => le_of_eq (objective_eq x.1) }
 
-/-- Adding a consequence of current feasibility preserves the problem exactly.
-
-Both maps preserve the decision point and its objective value. The implication
-is checked against the original feasible predicate, before the new constraint
-is added. -/
+/-- Add a consequence of current feasibility, preserving decision points and
+objective values. -/
 def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (implied : ∀ point, p.feasible point → constraint point) :
@@ -239,11 +213,8 @@ def addConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
   pointwiseEquivalence p (p.addConstraint constraint) (fun _ => rfl)
     (fun point => ⟨fun feasible => ⟨feasible, implied point feasible⟩, And.left⟩)
 
-/-- Removing a consequence of the retained constraints preserves the problem
-exactly. Both maps preserve the decision point and its objective value.
-
-The implication uses only the remainder, so the selected constraint cannot
-justify its own removal. -/
+/-- Remove a constraint implied by the retained constraints, preserving decision
+points and objective values. -/
 def removeConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
     {selected : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p selected)
@@ -253,9 +224,8 @@ def removeConstraintEquivalence {X : Type u} {V : Type v} [Preorder V]
     (fun point => ⟨fun feasible => ((decomposition.feasible_iff point).mp feasible).1,
       fun retained => (decomposition.feasible_iff point).mpr ⟨retained, implied point retained⟩⟩)
 
-/-- A feasible repair into an added constraint preserves global optimization
-behavior when its objective is no worse. The backward map is inclusion; the
-repair need not fix points already satisfying the constraint or be invertible. -/
+/-- Restrict to an added constraint using a feasible improvement map.
+The backward map is inclusion. -/
 def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
     (p : Problem X V) (constraint : X → Prop)
     (repair : GlobalImprovement p (p.addConstraint constraint)) :
@@ -265,11 +235,9 @@ def restrictionEquivalence {X : Type u} {V : Type v} [Preorder V]
     map := fun point => ⟨point.1, point.2.1⟩
     objective_le := fun _ => le_rfl }
 
-/-- Replacing a constraint by an existentially equivalent auxiliary-variable
-predicate preserves global optimization behavior.
-
-The forward map uses classical choice only to select an auxiliary witness.
-The certificate does not require that witness to be unique or computable. -/
+/-- Replacing a constraint by equivalent constraints with auxiliary variables
+preserves global optimization. The forward map chooses feasible auxiliary
+values; the backward map projects to the original coordinates. -/
 noncomputable def conditionalConstraintLiftEquivalence
     {X : Type u} {V : Type v} {A : Type w} {source : X → Prop} [Preorder V]
     (p : Problem X V)
@@ -296,8 +264,8 @@ noncomputable def conditionalConstraintLiftEquivalence
           ⟨point.2.1, hsource⟩⟩
     objective_le := fun _ => le_rfl }
 
-/-- Replacing a constraint by an unconditional exact lift preserves global
-optimization behavior. -/
+/-- Replacing a constraint by an existentially equivalent predicate preserves
+global optimization. -/
 noncomputable def exactConstraintLiftEquivalence
     {X : Type u} {V : Type v} {source : X → Prop} [Preorder V]
     (p : Problem X V)
@@ -340,9 +308,8 @@ def pullbackEquivalence {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
 
 namespace FeasibleSurjection
 
-/-- Choose an admissible representative of each feasible pulled-back point.
-The chosen preimage represents exactly the same source point, so the repair
-preserves the objective. Admissibility is separate from source coverage. -/
+/-- Choose an admissible preimage of each feasible source point, preserving
+the represented point and its objective. -/
 def restrictionImprovement
     {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
     {p : Problem X V} {f : Y → X} (coverage : FeasibleSurjection p f)

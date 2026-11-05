@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Reformulation.Restrict
 
-/-! # Restriction continuations and presentation replay across imports -/
+/-! # Restriction continuations and presentation reconstruction across imports -/
 
 namespace MorewTest.Reformulation.ImportedRestrict
 

@@ -9,7 +9,7 @@ import Morew.Reformulation.Conic
 # Type aliases in final cone membership
 
 Definitionally constant vector codomains and singleton collection aliases work
-through final conversion, continuation, checked forms, and presentation replay.
+through final conversion, continuation, checked forms, and presentation reconstruction.
 -/
 
 namespace MorewTest.Reformulation.ConeMembershipAliases

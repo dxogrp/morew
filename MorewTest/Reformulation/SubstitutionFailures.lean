@@ -9,9 +9,7 @@ import MorewTest.DiagnosticsSupport
 /-!
 # Substitution diagnostics and failed-command rollback
 
-These tests exercise localized failures in typed substitution steps.  Every
-failed command requests a certificate alias and is followed by an environment
-check, so a regression that commits any part of the command is caught.
+Check localized failures and declaration rollback, including certificate aliases.
 -/
 
 namespace MorewTest.Reformulation.SubstitutionFailures
@@ -40,7 +38,7 @@ def positiveSource :=
 
 /-! A replacement must introduce exactly one new decision binder. -/
 
-/-- error: unknown decision variable `missing` -/
+/-- error: unknown optimization variable `missing` -/
 #guard_msgs in
 reformulation unknownBinderTarget : positiveSource
     certificate unknownBinderAlias := by
@@ -51,7 +49,7 @@ run_cmd do
     `MorewTest.Reformulation.SubstitutionFailures.unknownBinderTarget
     `MorewTest.Reformulation.SubstitutionFailures.unknownBinderAlias
 
-/-- error: cannot determine the new decision variable; the substitution expression must contain one new identifier -/
+/-- error: cannot determine the new optimization variable; the substitution expression must contain one new identifier -/
 #guard_msgs in
 reformulation noFreshBinderTarget : positiveSource
     certificate noFreshBinderAlias := by
@@ -62,7 +60,7 @@ run_cmd do
     `MorewTest.Reformulation.SubstitutionFailures.noFreshBinderTarget
     `MorewTest.Reformulation.SubstitutionFailures.noFreshBinderAlias
 
-/-- error: ambiguous substitution: expected exactly one new decision variable -/
+/-- error: ambiguous substitution: expected exactly one new optimization variable -/
 #guard_msgs (substring := true) in
 reformulation ambiguousFreshBindersTarget : positiveSource
     certificate ambiguousFreshBindersAlias := by
@@ -120,8 +118,7 @@ run_cmd do
 
 end ShadowedReal
 
-/-! A manual certificate is checked against the semantic problem and map at
-its actual script position, rather than against the original source. -/
+/-! A manual certificate is checked against the current semantic problem and map. -/
 
 def quadraticSource :=
   problem (x : ℝ)

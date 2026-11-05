@@ -14,8 +14,7 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 # Certified affine constructions
 
 Each construction retains both an affine map and its pointwise equality with
-the original function. These algebraic helpers are independent of elaboration
-and of the modeling surface language.
+the original function.
 -/
 
 namespace Morew.Affine
@@ -27,20 +26,20 @@ variable [AddCommGroup Z] [Module ℝ Z]
 
 /-- An affine map together with its pointwise agreement with a function. -/
 structure Certified (f : X → Y) where
-  /-- The concrete affine map. -/
+  /-- The affine map. -/
   map : X →ᵃ[ℝ] Y
   /-- The map agrees with the original function at every decision point. -/
   correct : ∀ x, map x = f x
 
 namespace Certified
 
-/-- A decision-independent constant is affine. -/
+/-- A constant function is affine. -/
 noncomputable def const (X : Type*) [AddCommGroup X] [Module ℝ X] (c : Y) :
     Certified (fun _ : X => c) where
   map := AffineMap.const ℝ X c
   correct _ := rfl
 
-/-- The complete decision point is an affine function of itself. -/
+/-- The identity map is affine. -/
 noncomputable def id (X : Type*) [AddCommGroup X] [Module ℝ X] :
     Certified (fun x : X => x) where
   map := AffineMap.id ℝ X
@@ -70,13 +69,13 @@ noncomputable def neg {f : X → Y} (a : Certified f) :
   map := -a.map
   correct x := congrArg Neg.neg (a.correct x)
 
-/-- Multiply by a decision-independent real scalar. -/
+/-- Multiply by a fixed real scalar. -/
 noncomputable def realSMul {f : X → Y} (c : ℝ) (a : Certified f) :
     Certified (fun x => c • f x) where
   map := c • a.map
   correct x := congrArg (c • ·) (a.correct x)
 
-/-- Multiply by a decision-independent natural scalar. -/
+/-- Multiply by a fixed natural scalar. -/
 noncomputable def natSMul {f : X → Y} (n : ℕ) (a : Certified f) :
     Certified (fun x => n • f x) where
   map := n • a.map
@@ -98,11 +97,7 @@ noncomputable def mulConstRight {f : X → ℝ} (a : Certified f) (c : ℝ) :
     Certified (fun x => f x * c) :=
   smulConst a c
 
-/-- Divide by a certified nonzero constant.
-
-The nonzero witness records the reifier's supported fragment, even though
-totalized real division would also define an affine function at zero.
--/
+/-- Divide by a constant with a supplied nonzero proof. -/
 noncomputable def divConst {f : X → ℝ} (a : Certified f) (c : ℝ) (_h : c ≠ 0) :
     Certified (fun x => f x / c) where
   map := (mulConstRight a c⁻¹).map
@@ -115,7 +110,7 @@ noncomputable def powZero {f : X → ℝ} (_a : Certified f) :
   map := AffineMap.const ℝ X 1
   correct x := (pow_zero (f x)).symm
 
-/-- The zeroth power is constant without requiring its base to be affine. -/
+/-- The zeroth power of any real-valued function is constant. -/
 noncomputable def powZeroSource (f : X → ℝ) :
     Certified (fun x => f x ^ (0 : ℕ)) where
   map := AffineMap.const ℝ X 1
@@ -127,23 +122,23 @@ noncomputable def powOne {f : X → ℝ} (a : Certified f) :
   map := a.map
   correct x := (a.correct x).trans (pow_one (f x)).symm
 
-/-- The real zeroth power is constant even for a nonaffine base. -/
+/-- The real zeroth power of any real-valued function is constant. -/
 noncomputable def rpowZeroSource (f : X → ℝ) :
     Certified (fun x => Real.rpow (f x) 0) where
   map := AffineMap.const ℝ X 1
   correct x := (Real.rpow_zero (f x)).symm
 
-/-- The real first power preserves a scalar affine function without a sign premise. -/
+/-- The real first power preserves a scalar affine function. -/
 noncomputable def rpowOne {f : X → ℝ} (a : Certified f) :
     Certified (fun x => Real.rpow (f x) 1) where
   map := a.map
   correct x := (a.correct x).trans (Real.rpow_one (f x)).symm
 
-/-- The canonical real-power notation for the zeroth-power construction. -/
+/-- The constant-one function written as `f x ^ (0 : ℝ)`. -/
 noncomputable def rpowNotationZeroSource (f : X → ℝ) :
     Certified (fun x => f x ^ (0 : ℝ)) := rpowZeroSource f
 
-/-- The canonical real-power notation for the first-power construction. -/
+/-- An affine function written as `f x ^ (1 : ℝ)`. -/
 noncomputable def rpowNotationOne {f : X → ℝ} (a : Certified f) :
     Certified (fun x => f x ^ (1 : ℝ)) := rpowOne a
 
@@ -194,13 +189,13 @@ noncomputable def vecEmpty (X : Type*) [AddCommGroup X] [Module ℝ X] :
     Certified (fun _ : X => (Matrix.vecEmpty : Fin 0 → ℝ)) :=
   const X Matrix.vecEmpty
 
-/-- Equip an affine finite real vector with its Euclidean norm. -/
+/-- View an affine coordinate vector in Euclidean space. -/
 noncomputable def toEuclidean {n : ℕ} {f : X → Fin n → ℝ} (a : Certified f) :
     Certified (fun x => WithLp.toLp 2 (f x)) where
   map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).symm.toAffineEquiv.toAffineMap.comp a.map
   correct x := congrArg (WithLp.toLp 2) (a.correct x)
 
-/-- Forget the norm of a Euclidean affine vector to obtain its coordinates. -/
+/-- Extract the coordinates of an affine map into Euclidean space. -/
 noncomputable def ofEuclidean {n : ℕ} {f : X → EuclideanSpace ℝ (Fin n)}
     (a : Certified f) : Certified (fun x => WithLp.ofLp (f x)) where
   map := (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).toAffineEquiv.toAffineMap.comp a.map

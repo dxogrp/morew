@@ -119,8 +119,8 @@ run_cmd liftTermElabM do
   unless result.rowOrigins == #[0, 1, 1] && result.replacedIndices == #[0, 1] do
     throwError "deferred domain planning did not preserve source row order"
 
-/-! Each subsequent auxiliary lifts all earlier rows and the objective through
-the new product domain, while append provenance remains deterministic. -/
+/-! Each new auxiliary composes earlier rows and the objective with the product
+projection. Appended rows retain deterministic provenance. -/
 run_cmd liftTermElabM do
   let source ← makePresentation (← `(fun p : ℝ × ℝ => p.2)) #[
     (`first, ← `(fun p : ℝ × ℝ => Morew.Fn.softplus p.1 ≤ p.2)),
@@ -135,10 +135,9 @@ run_cmd liftTermElabM do
   unless result.presentation.constraints.back!.name == `keep do
     throwError "terminal auxiliary pullback renamed an untouched row"
 
-/-! Accepted affine certificates survive the original source's independent
-proof-let scope. Later auxiliary lifts must pull back these maps and proofs,
-including the stored leaves of an untouched conjunction, without recognizing
-the now evidence-free predicates again. -/
+/-! Accepted affine certificates survive the source's proof-let scope.
+Subsequent product projections preserve those maps and proofs, including
+stored conjunction leaves, after their local evidence is removed. -/
 run_cmd liftTermElabM do
   let expressions ← elaborate (← `(fun (c : ℝ) (h : c ≠ 0 ∧ True) =>
     ((fun p : ℝ × ℝ => let hn : c ≠ 0 := h.1; |p.1 / c| ≤ p.2),

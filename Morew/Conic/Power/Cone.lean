@@ -13,19 +13,18 @@ import Mathlib.Tactic.Ring
 /-!
 # Three-dimensional power cones
 
-Power cones use ordinary right-associated triples `(x, y, z)`, with nonnegative
-first and second coordinates and `|z| ≤ x ^ α * y ^ (1 - α)`. The raw set is
-available for every real parameter; its bundled cone and cone laws require
-`0 < α ∧ α < 1`. The definition includes both zero-coordinate boundaries.
+Power cones consist of triples `(x, y, z)` with `x ≥ 0`, `y ≥ 0`, and
+`|z| ≤ x ^ α * y ^ (1 - α)`, where `0 < α < 1`. The underlying set is defined
+for every real `α`; the cone laws require the stated range.
 -/
 
 namespace Morew.Conic.Cone
 
-/-- The power-cone predicate, available independently of a parameter certificate. -/
+/-- The set defined by the power-cone inequalities. -/
 noncomputable def powerSet (α : ℝ) : Set (ℝ × ℝ × ℝ) :=
   {p | 0 ≤ p.1 ∧ 0 ≤ p.2.1 ∧ |p.2.2| ≤ p.1 ^ α * p.2.1 ^ (1 - α)}
 
-/-- Power-set membership in ordinary coordinates. -/
+/-- Membership in `powerSet α` expressed in coordinates. -/
 @[simp]
 theorem mem_powerSet (α x y z : ℝ) :
     (x, y, z) ∈ powerSet α ↔
@@ -63,7 +62,7 @@ private theorem weighted_product_smul (α c x y : ℝ) (hα : 0 < α ∧ α < 1)
         = (c ^ α * c ^ (1 - α)) * (x ^ α * y ^ (1 - α)) := by ring
     _ = _ := by rw [hsum]
 
-/-- The power set is closed under nonnegative scaling, including scale zero. -/
+/-- The power cone is closed under nonnegative scaling. -/
 theorem smul_mem_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1)
     (c : ℝ) (hc : 0 ≤ c) (p : ℝ × ℝ × ℝ) (hp : p ∈ powerSet α) :
     c • p ∈ powerSet α := by
@@ -74,7 +73,7 @@ theorem smul_mem_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1)
   rw [abs_mul, abs_of_nonneg hc, weighted_product_smul α c p.1 p.2.1 hα hc hx hy]
   exact mul_le_mul_of_nonneg_left hz hc
 
-/-- The power set is closed under addition, also when leading coordinates vanish. -/
+/-- The power cone is closed under addition. -/
 theorem add_mem_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1)
     (p q : ℝ × ℝ × ℝ) (hp : p ∈ powerSet α) (hq : q ∈ powerSet α) :
     p + q ∈ powerSet α := by
@@ -84,7 +83,7 @@ theorem add_mem_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1)
   exact (abs_add_le _ _).trans ((add_le_add hpz hqz).trans
     (weighted_product_add_le α hα p.1 q.1 p.2.1 q.2.1 hpx hqx hpy hqy))
 
-/-- A closed convex power cone with a checked parameter in `(0, 1)`. -/
+/-- A closed convex power cone with parameter in `(0, 1)`. -/
 noncomputable def power (α : ℝ) (hα : 0 < α ∧ α < 1) : Cone where
   Space := ℝ × ℝ × ℝ
   carrier := {
@@ -92,7 +91,7 @@ noncomputable def power (α : ℝ) (hα : 0 < α ∧ α < 1) : Cone where
     smul_mem' := fun c hc p hp => smul_mem_powerSet α hα c hc.le p hp
     add_mem' := fun p hp q hq => add_mem_powerSet α hα p q hp hq }
 
-/-- The bundled power cone has exactly the raw power-set carrier. -/
+/-- `Cone.power α hα` represents the set `powerSet α`. -/
 @[simp]
 theorem mem_power (α : ℝ) (hα : 0 < α ∧ α < 1) (p : ℝ × ℝ × ℝ) :
     p ∈ (power α hα).carrier ↔ p ∈ powerSet α :=
@@ -114,7 +113,7 @@ theorem mem_powerSet_zero_right (α x z : ℝ) (hα : 0 < α ∧ α < 1) :
     (x, 0, z) ∈ powerSet α ↔ 0 ≤ x ∧ z = 0 := by
   simp [Real.zero_rpow (sub_pos.mpr hα.2).ne']
 
-/-- Power cones are convex with their zero-coordinate boundaries included. -/
+/-- Power cones are convex. -/
 theorem convex_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1) :
     Convex ℝ (powerSet α) :=
   (power α hα).carrier.convex
@@ -131,13 +130,12 @@ theorem isClosed_powerSet (α : ℝ) (hα : 0 < α ∧ α < 1) :
     ((isClosed_le continuous_const (continuous_fst.comp continuous_snd)).inter
       (isClosed_le (continuous_snd.comp continuous_snd).abs (hx.mul hy)))
 
-/-- The checked power cone has a closed carrier. -/
+/-- The power cone is closed. -/
 theorem isClosed_power (α : ℝ) (hα : 0 < α ∧ α < 1) :
     IsClosed (↑(power α hα).carrier : Set (power α hα).Space) :=
   isClosed_powerSet α hα
 
-/-- A finite product of power cones with possibly different parameters. The
-empty product contains its unique coordinate vector. -/
+/-- A finite product of power cones with possibly different parameters. -/
 noncomputable def powerProduct (n : Nat) (α : Fin n → ℝ)
     (hα : ∀ i, 0 < α i ∧ α i < 1) : Cone where
   Space := Fin n → (ℝ × ℝ × ℝ)
@@ -146,14 +144,14 @@ noncomputable def powerProduct (n : Nat) (α : Fin n → ℝ)
     smul_mem' := fun _ hc _ h i => (power (α i) (hα i)).carrier.smul_mem hc (h i)
     add_mem' := fun _ hp _ hq i => (power (α i) (hα i)).carrier.add_mem (hp i) (hq i) }
 
-/-- Product membership is exactly the grouped family of power memberships. -/
+/-- Product membership is componentwise power cone membership. -/
 @[simp]
 theorem mem_powerProduct {n : Nat} (α : Fin n → ℝ)
     (hα : ∀ i, 0 < α i ∧ α i < 1) (v : Fin n → (ℝ × ℝ × ℝ)) :
     v ∈ (powerProduct n α hα).carrier ↔ ∀ i, v i ∈ powerSet (α i) :=
   Iff.rfl
 
-/-- Finite products of power cones are closed, including the empty product. -/
+/-- Finite products of power cones are closed. -/
 theorem isClosed_powerProduct (n : Nat) (α : Fin n → ℝ)
     (hα : ∀ i, 0 < α i ∧ α i < 1) :
     IsClosed (↑(powerProduct n α hα).carrier : Set (powerProduct n α hα).Space) := by
@@ -166,7 +164,7 @@ end Morew.Conic.Cone
 namespace Morew.Conic
 
 set_option quotPrecheck false in
-/-- The raw power-cone set. Conic classification separately checks `0 < α < 1`. -/
+/-- The power-cone set. Conic certification requires `0 < α < 1`. -/
 notation:max (name := powerCarrier) "POW " α:arg => Morew.Conic.Cone.powerSet α
 
 end Morew.Conic

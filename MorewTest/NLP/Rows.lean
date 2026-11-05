@@ -107,7 +107,7 @@ run_elab assertRows (← `(fun s : Finset (Fin 2) =>
   ((fun x : Fin 2 → ℝ => ∀ i ∈ s, 1 ≤ x i),
     #[fun x : Fin 2 → ℝ => Real.log (x 0) ≤ 0]))) 1 (some .feasibleInclusion)
 
--- A custom membership relation cannot masquerade as native finite support.
+-- Finite support requires the native membership relation.
 run_elab assertRows (← `(fun s : Finset (Fin 2) =>
   ((fun x : Fin 2 → ℝ => ∀ i, @Membership.mem (Fin 2) (Finset (Fin 2))
       ⟨fun _ _ => True⟩ s i → 1 ≤ x i),

@@ -167,7 +167,7 @@ reformulation restrictBeforeHypograph : maximum certificate restrictBeforeHypogr
 section
 variable (cap : ℝ)
 
-#guard_error_fragments ["decision variable `cap` conflicts with a source parameter"] in
+#guard_error_fragments ["optimization variable `cap` conflicts with a source parameter"] in
 assert_restrict_atomic% operandCollision operandCollisionAlias in
 reformulation operandCollision : free certificate operandCollisionAlias := by
   restrict operand : cap = cap using {

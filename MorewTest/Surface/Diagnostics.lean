@@ -8,7 +8,7 @@ import MorewTest.Surface.Fixtures
 import MorewTest.DiagnosticsSupport
 
 /-!
-# Surface diagnostics and rollback
+# Command diagnostics and rollback
 
 Exercise parser rejection, name collisions, certificate errors, and atomic rollback.
 -/
@@ -18,7 +18,7 @@ namespace MorewTest.Surface
 open Morew
 noncomputable section
 
-/-! Expected failures are local diagnostics, not claims of non-equivalence. -/
+/-! Each rejection checks the local diagnostic. -/
 
 def negativeSource :=
   problem (x : ℝ)
@@ -31,12 +31,12 @@ def negativeSource :=
 reformulation noCoverageTarget : negativeSource := by
   substitute x := u ^ 3
 
-/-- error: unknown decision variable `y` -/
+/-- error: unknown optimization variable `y` -/
 #guard_msgs in
 reformulation badVariableTarget : negativeSource := by
   substitute y := Real.exp u
 
-/-- error: decision variable `x` already exists -/
+/-- error: optimization variable `x` already exists -/
 #guard_msgs in
 reformulation collisionTarget : negativeSource := by
   epigraph x

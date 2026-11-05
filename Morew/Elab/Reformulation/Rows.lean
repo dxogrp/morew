@@ -7,21 +7,15 @@ import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Reformulation.View
 import Lean.Meta.Closure
 
-/-!
-# Surface construction of replacement and appended rows
-
-Checked planners retain their own recognition and validation policies. This
-module handles names, stored certificates, generated-row presentation,
-and checkpoints for replacement and append operations. The runner owns name
-allocation, transactional declaration emission, and committing the step.
--/
+/-! Construct replacement and added constraints, storing their names, certificates,
+and reference problems. -/
 
 namespace Morew.Elab.Reformulation.Rows
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 open Morew.Elab.Reformulation
 
-/-- Existing naming and diagnostic conventions of a replacement command. -/
+/-- Naming and diagnostic conventions of a replacement command. -/
 structure Style where
   /-- Generated-row marker and shared-proof prefix, such as `conic` or `nlp`. -/
   family : String
@@ -37,12 +31,8 @@ def findConstraint (state : ReformState) (selector : TSyntax `ident) : CommandEl
     | throwErrorAt selector "unknown or stale constraint label `{selector.getId.eraseMacroScopes}`"
   return index
 
-/-- Resolve a parameterized declaration without prematurely inserting its parameters.
-
-The selected-rule matcher infers those parameters from the complete constraint.
-Closed declarations, local records, and general certificate expressions retain
-ordinary term elaboration and the existing checked representation adapters.
-Neither case searches the registry or falls back to another rule on failure. -/
+/-- Resolve parameterized declarations for inference from the selected constraint.
+Elaborate closed records and certificate expressions as terms, without registry fallback. -/
 def elaborateRule (selector : TSyntax `ident) (rule? : Option (TSyntax `term)) :
     TermElabM (Option Expr × Option Name) := do
   let some ruleSyntax := rule? | return (none, none)
@@ -100,8 +90,7 @@ partial def shareCertificate (certificate : Expr)
         (remaining.map fun (name, value) => (name, replace value))
       mkLetFVars #[binding] body
 
-/-- Store a kernel-checked certificate once before the presentation syntax round trip.
-The closure retains section parameters; the enclosing command transaction owns rollback. -/
+/-- Store a kernel-checked certificate with section parameters in the command transaction. -/
 def storeCertificate (kind : Name) (certificate : Expr)
     (candidates : List (Name × Expr)) : TermElabM Expr := do
   let certificate ← shareCertificate (← instantiateMVars certificate) candidates
@@ -111,8 +100,7 @@ def storeCertificate (kind : Name) (certificate : Expr)
   modifyEnv (addNoncomputable · name)
   return certificate
 
-/-- A validated replacement and the data needed to display and share it.
-All expressions already belong to the current term elaboration context. -/
+/-- A validated replacement in the current term elaboration context. -/
 structure Materialization where
   /-- Optional decision coordinates appended by the replacement. -/
   auxiliary? : Option Expr
@@ -159,7 +147,7 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
     let point ← packPoint decisions
     let names := decisions.mapIdx fun i decision => (decision.fvarId!, binders[i]!.name)
     rows.mapIdxM fun i row => do
-      -- Only generated scaffolding is reduced; untouched row syntax stays in the view.
+      -- Reduce generated structure while retaining untouched row syntax.
       let body ← dsimpPreservingProofLets (mkApp data.rowPredicates[i]! point)
       pure { row with proposition := ← delabPresentationTerm body names }
   let view := {
@@ -207,8 +195,7 @@ private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
       let last ← mkAppM ``Prod.snd #[point]
       return (← pointComponents first (n + 1)).push last
 
-/-- Close the proposed row over exactly the current model bindings. The caller
-checks its semantic certificate after these temporary bindings leave scope. -/
+/-- Close the proposed row over current model bindings before checking its semantic certificate. -/
 def elaboratePredicate (style : Style) (state : ReformState)
     (typed : Morew.Elab.Reformulation.RunnerState) (proposition : TSyntax `term) :
     TermElabM (Expr × Syntax) :=
@@ -233,8 +220,7 @@ def elaboratePredicate (style : Style) (state : ReformState)
         mkLambdaFVars #[point] (body.replaceFVars binders components)
       return (predicate, propositionSyntax)
 
-/-- Append one certified row, normalizing only its conjunction with the current
-presentation. A new checkpoint protects existing row boundaries and labels. -/
+/-- Add a certified constraint and retain the resulting problem, constraint order, and labels. -/
 def finish (style : Style) (state : ReformState)
     (typed : Morew.Elab.Reformulation.RunnerState) (name : Name)
     (proposition : TSyntax `term) (predicate : Expr) (propositionSyntax : Syntax)

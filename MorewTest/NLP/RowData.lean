@@ -40,7 +40,7 @@ example : (fixed.rows (0 : Fin 1)).residual = fun x => x - 1 := rfl
 example : (fixed.rows (0 : Fin 1)).bounds = Bounds.fixed 0 := rfl
 example (x : ℝ) : (∀ i, (upper.rows i).Holds x) ↔ x ^ 2 ≤ x + 3 := upper.holds_iff x
 
--- A displayed True contributes no row; adjacent comparisons remain separate.
+-- A displayed `True` contributes no row; adjacent comparisons remain separate.
 def grouped := (Block.truth (Set.univ : Set ℝ)).and (upper.and (lower.and fixed))
 
 example : grouped.rowCount = 3 := rfl

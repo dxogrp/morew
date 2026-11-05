@@ -7,10 +7,9 @@ import Morew.Transform
 import Mathlib.Data.Real.Basic
 
 /-!
-# Tests for exact auxiliary-variable constraint lifts
+# Exact auxiliary-variable constraint representations
 
-These tests exercise the semantic API directly.  In particular, they do not
-depend on the reformulation command or its presentation metadata.
+Test the semantic API independently of the reformulation command and its metadata.
 -/
 
 namespace MorewTest.ExactConstraintLift
@@ -19,8 +18,7 @@ open Morew
 
 noncomputable section
 
-/-! A pointwise equivalence can be packaged as a lift with `Unit` auxiliary
-data. -/
+/-! A pointwise equivalence gives an exact representation with `Unit` auxiliary data. -/
 
 def zeroSymmetryLift : ExactConstraintLift (fun x : ℤ => x = 0) :=
   ExactConstraintLift.ofIff
@@ -140,7 +138,7 @@ example : ExactConstraintLift
     (fun point : ℤ × ℤ => point.2 ≤ point.1 ^ 2) :=
   squareHypographRepresentation.toExactConstraintLift Prod.fst Prod.snd
 
-/-! Exactness requires existence, not a unique auxiliary witness. -/
+/-! Auxiliary values need not be unique. -/
 
 def nonuniqueProductLift : ExactConstraintLift (fun x : ℤ => x = 0) where
   Auxiliary := ℤ × Bool
@@ -226,7 +224,7 @@ example : GlobalEquivalence nonconvexProblem liftedNonconvexProblem :=
     nonconvexLift
     nonconvexDecomposition
 
-/-! Independently certified lifts compose through transitivity. -/
+/-! Independently certified representations compose by transitivity. -/
 
 def twoConstraintProblem : Problem ℤ ℤ where
   objective x := x

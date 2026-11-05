@@ -6,13 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Removing selected constraints with checked evidence
+# Removing redundant constraints
 
-`remove at label` removes a whole-row duplicate or a supported tautology.
-`remove at label using proof` removes a row implied by the remaining rows.
+`remove at label` removes a duplicate constraint or a supported tautology.
+`remove at label using proof` removes a constraint implied by the remaining ones.
+Here `1 ≤ x` implies the weaker bound `0 ≤ x`.
 -/
 
-namespace Examples.Remove
+namespace Examples.Transformations.Remove
 
 open Morew
 noncomputable section
@@ -43,4 +44,4 @@ example : GlobalEquivalence bounded simplified := simplified.equivalence
 example : IsConic simplified := simplified.isConic
 
 end
-end Examples.Remove
+end Examples.Transformations.Remove

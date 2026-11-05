@@ -10,9 +10,9 @@ import Morew.Elab.Expr
 /-!
 # Typed exponential planning and domain certificates
 
-Every success is checked against its exact source, decision domain, ordered row
-conjunction, and semantic cone rows. Domain facts come from retained margins;
-finite lifts keep their nonempty-index proof separate from their coordinates.
+Certificates retain the exact source, decision domain, ordered conjunction, and
+cone rows. Retained margins supply domain facts; finite representations carry
+nonempty-index evidence separately from their coordinates.
 -/
 
 namespace MorewTest.Conic.ExponentialElab
@@ -211,9 +211,9 @@ run_cmd liftTermElabM do
     ((fun p : ℝ × ℝ => p.2 ≤ Real.log p.1),
       #[fun p : ℝ × ℝ => let h : 0 < Real.exp a := Real.exp_pos a; Real.exp a ≤ p.1]))) 1
 
-/-! A supported composite may also be a constant lower bound for a logarithm.
-Try complete certified orientations: a failed upper representation must not
-hide the valid same-domain lower-log representation or retain its auxiliary. -/
+/-! A supported composite can be a constant lower bound for a logarithm.
+After a failed upper representation, the lower-log representation succeeds
+with the original decision domain. -/
 
 run_cmd liftTermElabM do
   contextCase (← `(Prod.mk (fun x : ℝ => Morew.Fn.softplus 0 ≤ Real.log x)

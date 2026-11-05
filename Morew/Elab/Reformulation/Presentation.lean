@@ -6,11 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Core
 import Morew.Elab.Reformulation.Names
 
-/-!
-# Typed reformulation presentations
-
-Typed presentation entries, atomic deltas, structural validation, and rebasing.
--/
+/-! Typed problem descriptions, ordered edits, validation, and changes of variable context. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -28,8 +24,7 @@ structure BinderEntry where
   ref : Syntax := Syntax.missing
   deriving Inhabited
 
-/-- One typed, named constraint.  `predicate` is the closed function from the
-current decision domain to `Prop`, not reparsable source syntax. -/
+/-- A named constraint whose predicate is a closed function on the current decision domain. -/
 structure ConstraintEntry where
   /-- User-visible constraint label. -/
   name : Name
@@ -67,15 +62,13 @@ private def ensureIsType (type : Expr) (description : String) : MetaM Unit := do
 
 private def leftAssociatedDomain (binders : Array BinderEntry) : MetaM Expr := do
   let some first := binders[0]?
-    | throwError "a problem presentation requires at least one decision variable"
+    | throwError "a problem presentation requires at least one optimization variable"
   let mut domain := first.type
   for index in [1:binders.size] do
     domain ← mkAppM ``Prod #[domain, binders[index]!.type]
   pure domain
 
-/-- Construct the canonical semantic problem represented by a presentation.
-The feasibility predicate is deliberately normalized to `True`, a singleton,
-or a right-associated conjunction. -/
+/-- Build the canonical problem with `True`, a single predicate, or right-associated conjunction. -/
 def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr := do
   ensureIsType state.domainType "presentation decision domain"
   ensureIsType state.valueType "presentation objective-value type"
@@ -97,12 +90,11 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
     let propositions := state.constraints.map fun constraint =>
       mkApp constraint.predicate point
     mkLambdaFVars #[point] <| rightAssociatedConjunction propositions.toList
-  -- A reduced real expression can infer the plain codomain even when this
-  -- presentation maximizes through OrderDual. Retain the declared value type.
+  -- Retain the declared `OrderDual` value type for maximization.
   mkAppOptM ``Morew.Problem.mk
     #[some state.domainType, some state.valueType, some state.objective, some feasible]
 
-/-- Build the active-name inventory for a typed presentation. -/
+/-- Collect the names used by a typed problem description. -/
 def PresentationState.nameInventory (state : PresentationState) : NameInventory :=
   let decisionBinders := state.binders.foldl
     (fun inventory binder => inventory.insert .decisionBinder binder.name) {}
@@ -110,8 +102,7 @@ def PresentationState.nameInventory (state : PresentationState) : NameInventory 
     (fun inventory constraint => inventory.insert .constraintLabel constraint.name)
     decisionBinders
 
-/-- Replace one binder in place.  The equality is checked by the runner before
-the edit is committed and explains how the old and new component types agree. -/
+/-- Replace a binder with type equality checked before commit. -/
 structure BinderReplacement where
   /-- Position of the binder replaced in place. -/
   index : Nat
@@ -120,8 +111,7 @@ structure BinderReplacement where
   /-- Evidence that the component type is preserved. -/
   typeEquality : Expr
 
-/-- Append one binder.  `domainEquality` relates the semantic next domain to
-the product domain represented by the resulting binder list. -/
+/-- Append a binder with equality between the next semantic domain and presented product domain. -/
 structure BinderAddition where
   /-- Binder appended to the presentation. -/
   entry : BinderEntry
@@ -135,8 +125,7 @@ structure ObjectiveReplacement where
   /-- Pointwise equality between the semantic and presented objectives. -/
   pointwiseEquality : Expr
 
-/-- Replace one original constraint in place by zero, one, or several ordered
-constraints.  An empty `entries` array is a proof-producing removal. -/
+/-- Replace an original constraint by ordered entries; an empty array removes it. -/
 structure ConstraintReplacement where
   /-- Position of the original constraint. -/
   index : Nat
@@ -152,8 +141,7 @@ structure ConstraintAddition where
   /-- Pointwise feasibility equivalence supporting the addition. -/
   pointwiseIff : Expr
 
-/-- An atomic, ordered change to typed presentation state.  Replacement indices
-refer to the state at step entry, never to a partially edited array. -/
+/-- An atomic ordered change, with indices relative to the incoming presentation. -/
 structure PresentationDelta where
   /-- Optional replacement decision-domain type. -/
   domainType? : Option Expr := none
@@ -205,9 +193,7 @@ private def validateConstraintReplacements (state : PresentationState)
       throw (.duplicateConstraintReplacement replacement.index)
     seen := seen.push replacement.index
 
-/-- Apply a validated presentation delta atomically.  Constraint replacements
-are spliced at their original locations, which preserves order for zero, one,
-and many replacement entries. -/
+/-- Apply ordered edits atomically, replacing constraints at their original positions. -/
 def PresentationState.applyDelta (state : PresentationState)
     (delta : PresentationDelta) : Except PresentationError PresentationState := do
   validateBinderReplacements state delta
@@ -248,8 +234,8 @@ private def ConstraintEntry.replaceFVars (entry : ConstraintEntry)
     (oldFVars newFVars : Array Expr) : ConstraintEntry :=
   { entry with predicate := entry.predicate.replaceFVars oldFVars newFVars }
 
-/-- Rebase all expressions in a presentation onto a new set of section free
-variables created by `runTermElabM`. -/
+/-- Replace section variables in all presentation expressions with those created by
+`runTermElabM`. -/
 def PresentationState.replaceFVars (state : PresentationState)
     (oldFVars newFVars : Array Expr) : PresentationState := {
   state with
@@ -260,7 +246,7 @@ def PresentationState.replaceFVars (state : PresentationState)
   constraints := state.constraints.map (·.replaceFVars oldFVars newFVars)
 }
 
-/-- Rebase all proof and type expressions in a presentation delta. -/
+/-- Replace section variables throughout the proposed changes. -/
 def PresentationDelta.replaceFVars (delta : PresentationDelta)
     (oldFVars newFVars : Array Expr) : PresentationDelta := {
   domainType? := delta.domainType?.map (·.replaceFVars oldFVars newFVars)

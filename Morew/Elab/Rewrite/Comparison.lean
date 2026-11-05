@@ -7,14 +7,8 @@ import Mathlib.Data.Real.Basic
 import Lean
 import Qq
 
-/-!
-# Checked comparison views
-
-Representation discovery and matching may expose a real function beneath outer unary
-negations. Every alternative retains an exact proof from the original predicate.
-The caller supplies structural reduction, so this module does not unfold named
-mathematical functions or depend on the representation registry.
--/
+/-! Build equivalent real comparison views by adapting outer negations.
+Use the caller's structural reducer and preserve named function heads. -/
 
 namespace Morew.Elab.Rewrite.Comparison
 
@@ -81,7 +75,7 @@ private def Relation.negRight : Relation → Name
   | .le => ``realNegRight
   | .eq => ``realEqNegRight
 
--- Comparison checks must not assign a caller's unresolved instance metavariable.
+-- Keep caller instance metavariables fixed during comparison checks.
 private def same (first second : Expr) : MetaM Bool :=
   withNewMCtxDepth <| isDefEq first second
 
@@ -100,8 +94,7 @@ private structure Endpoint where
   value : Expr
   equality : Expr
 
--- Consume pairs from an original endpoint only. These alternatives preserve
--- its sign; the single-negation transfer below changes comparison orientation.
+-- Consume original negation pairs without changing sign.
 private partial def endpoints (expression : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (Array Endpoint) := do
   let value ← reduce expression
@@ -117,8 +110,7 @@ private partial def endpoints (expression : Expr) (reduce : Expr → MetaM Expr)
     result := result.push { value, equality }
   return result
 
--- Only a newly introduced double negation is simplified. In particular, this
--- function never feeds its output back into the enumeration of source signs.
+-- Simplify only newly introduced double negations.
 private def introducedNeg (expression : Expr) (reduce : Expr → MetaM Expr) :
     MetaM Endpoint := do
   let value : Q(ℝ) := expression
@@ -133,9 +125,7 @@ private def checked (source predicate proof : Expr) : MetaM View := do
   checkWithKernel proof
   return { predicate, sourceIff := proof }
 
--- Deduplication follows only the comparison and negation syntax introduced by
--- this module. Definitional equality is reserved for their types and instances;
--- distinct named mathematical heads remain distinct even when they unfold alike.
+-- Deduplicate introduced comparison and negation syntax; preserve distinct named heads.
 private partial def sameSpelling (first second : Expr) (reduce : Expr → MetaM Expr) :
     MetaM Bool := do
   let first ← reduce first
@@ -165,13 +155,8 @@ private def pushView (views : Array View) (source predicate proof : Expr)
     if ← sameSpelling view.predicate predicate reduce then return views
   return views.push (← checked source predicate proof)
 
-/-- Enumerate deterministic, checked sign views for real equalities and canonical inequalities.
-
-The direct view is always first, including for predicates that do not support
-sign adaptation. Alternatives consume only negations found on the original
-endpoints. This finite enumeration preserves intermediate negative heads for
-direct negative registrations and never repeatedly processes inserted signs.
--/
+/-- Enumerate equivalent sign views, starting with the original predicate.
+Consume only original endpoint negations and retain intermediate negative heads. -/
 def signedViews (source : Expr) (reduce : Expr → MetaM Expr) : MetaM (Array View) := do
   let body ← normalize source reduce
   let directProof ← mkAppM ``Iff.refl #[body]

@@ -6,19 +6,19 @@ SPDX-License-Identifier: Apache-2.0
 import Lean.PrettyPrinter
 
 /-!
-# Mathematical display recipes for finite power chains
+# Displaying finite power-cone representations
 
-These recipes are used only by the problem printer. Their syntax leaves retain
-the names of the checked presentation; they are never reconstructed as terms.
+Format geometric-mean and inverse-product constraints using names from the checked
+presentation.
 -/
 
 namespace Morew.Syntax
 
 open Lean
 
-/-- One of the fixed rows in a geometric-mean or inverse-product chain.
-`membership` retains a terminal cone membership rather than displaying the
-earlier comparison. All syntax leaves are closed presentation syntax. -/
+/-- A constraint in a geometric-mean or inverse-product representation.
+`membership` selects cone notation for the final bound. Operands are closed
+syntax expressions. -/
 inductive PowerChainRow where
   /-- Equality of the first auxiliary and input coordinates. -/
   | first (auxiliary source : Syntax) (membership : Bool)
@@ -40,15 +40,14 @@ private def coordinate (render : Syntax → CoreM Format) (vector : Syntax)
 
 private def operand (render : Syntax → CoreM Format) (value : Syntax) : CoreM Format := do
   let valueFormat ← render value
-  -- Parentheses also protect conditional, lambda, and compound scalar leaves.
+  -- Parentheses also protect conditional, lambda, and compound scalar expressions.
   return if value.isIdent || value.isOfKind numLitKind then valueFormat else f!"({valueFormat})"
 
 private def powerMembership (x y z exponent : Format) : Format :=
   Format.group <| f!"({x}, {y}, {z}) ∈" ++
     Format.nest 2 (Format.line ++ f!"POW ({exponent})")
 
-/-- Format one recognized chain row using the caller's ordinary syntax printer
-for every retained leaf. Grouping leaves line wrapping to the active width. -/
+/-- Format a chain row with the caller's syntax printer and current line width. -/
 def PowerChainRow.format (row : PowerChainRow)
     (render : Syntax → CoreM Format) : CoreM Format := do
   match row with

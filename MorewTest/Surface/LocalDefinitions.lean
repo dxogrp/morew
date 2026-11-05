@@ -118,7 +118,7 @@ def duplicate :=
     let loss := |x|
     minimize loss
 
-/-- error: model-local definition `x` conflicts with a decision variable -/
+/-- error: model-local definition `x` conflicts with an optimization variable -/
 #guard_msgs in
 def shadowsDecision :=
   problem (x : ℝ)

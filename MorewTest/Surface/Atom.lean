@@ -8,7 +8,7 @@ import MorewTest.Atom.Support
 import MorewTest.DiagnosticsSupport
 
 /-!
-# Atom recognition in surface models
+# Atom recognition in models
 
 Ordinary custom functions remain valid model expressions, while atom recognition
 preserves source spelling and presentation metadata.

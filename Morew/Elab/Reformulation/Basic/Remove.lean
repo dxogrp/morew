@@ -7,13 +7,7 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Remove
 import Morew.Elab.Reformulation.Rows
 
-/-!
-# User-selected constraint removal
-
-Remove one current row after checking its implication from the remaining rows.
-The shared replacement materializer establishes a fresh canonical checkpoint;
-context-dependent redundancy is not an unconditional simplification lemma.
--/
+/-! Remove an implied constraint and retain the resulting problem for normalization. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -32,8 +26,7 @@ private def materializeRemove (state : ReformState) (selector : TSyntax `ident)
   runTermElabM fun sectionFVars => withoutErrToSorry do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let expected ← Morew.Elab.Reformulation.Remove.implicationType typed.presentation index
-    -- The proof quantifies over current semantic coordinates. Displayed
-    -- decision names and constraint labels are not added as local hypotheses.
+    -- Quantify over current semantic coordinates; displayed names supply no hypotheses.
     let implied ← match provided? with
       | some provided => withRef provided do
           let proof ← elabTermEnsuringType provided expected
@@ -63,7 +56,7 @@ private def materializeRemove (state : ReformState) (selector : TSyntax `ident)
         replacement
       } allocation
 
-/-- Select exactly one current constraint. No names or auxiliaries are allocated. -/
+/-- Select one current constraint for removal. -/
 def prepareRemove (state : ReformState) (selector : TSyntax `ident)
     (provided? : Option (TSyntax `term)) : CommandElabM SurfaceStepDraft := do
   let index ← Rows.findConstraint state selector

@@ -8,15 +8,9 @@ import Morew.Elab.Conic.Nonnegative
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Expr
 
-/-!
-# Retained lower bounds for checked sign evidence
-
-Only independent constants with checked sign evidence, or native non-strict
-lower bounds in retained entries, establish a domain fact. Finite coordinate
-goals project canonical vector bounds or specialize one retained finite family.
-Search preserves presentation order and conjunction boundaries. Strict rows,
-arithmetic deductions, and the selected predicate are not sources of evidence.
--/
+/-! Prove signs from independent constants or retained non-strict lower bounds.
+Project finite vector bounds or specialize retained finite families in presentation
+order. Exclude strict rows, arithmetic deductions, and the selected predicate. -/
 
 namespace Morew.Elab.Evidence.Sign
 

@@ -1,4 +1,4 @@
-"""Check release prerequisites without changing tags, releases, or source files."""
+"""Check the version, commit, and CI run required for a release."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def require_unused_tag(root: Path, tag: str) -> None:
 def fetch_workflow_runs(
     repository: str, workflow: str, sha: str, event: str
 ) -> list[dict[str, Any]]:
-    """Fetch all matching pages, deliberately including failed and pending runs."""
+    """Fetch every page of matching workflow runs."""
     required_environment("GH_TOKEN")
     result = subprocess.run(
         [
@@ -92,7 +92,7 @@ def fetch_workflow_runs(
         timeout=120,
     )
     if result.returncode:
-        # Do not echo command output: authentication errors may contain credentials.
+        # Report a fixed message to keep credentials out of logs.
         raise VerificationError(
             "Cannot read GitHub Actions runs; check GH_TOKEN and actions: read permission."
         )

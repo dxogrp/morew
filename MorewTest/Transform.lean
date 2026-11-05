@@ -76,8 +76,7 @@ example : ¬ (∀ x : ℕ, x ≤ 5 ↔ ∃ a : ℕ, a = x) := by
   have impossible := (h 6).mpr ⟨6, rfl⟩
   exact (by decide : ¬ 6 ≤ 5) impossible
 
-/-- A false retained context needs neither an inhabited auxiliary type nor a
-global witness outside the feasible set. -/
+/-- An infeasible retained constraint permits an empty auxiliary type. -/
 def impossibleProblem : Problem ℕ ℕ where
   objective x := x
   feasible _ := False ∧ True

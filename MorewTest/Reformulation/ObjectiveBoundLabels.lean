@@ -9,9 +9,8 @@ import MorewTest.Environment
 /-!
 # Explicit epigraph and hypograph labels
 
-These tests keep the optional presentation label separate from the semantic
-epigraph and hypograph transformations.  They also exercise label hygiene,
-collision handling, parser rejection, and command atomicity.
+Optional labels preserve the semantic problem. Check label hygiene, collisions,
+parser rejection, and command rollback.
 -/
 
 namespace MorewTest.Reformulation.ObjectiveBoundLabels
@@ -332,7 +331,7 @@ def occupiedMacroLabel :=
 #guard_msgs in
 makeLabeledMinimum macroCollision from occupiedMacroLabel
 
-/-! Existing validation remains active with the optional-label syntax. -/
+/-! Optional labels retain binder and label validation. -/
 
 elab "assert_objective_bound_atomic% " nested:command : command => do
   let before ← Lean.getEnv
@@ -357,7 +356,7 @@ elab "assert_objective_bound_atomic% " nested:command : command => do
         (Morew.Syntax.getProblemPrintPresentation? after name).isSome then
       Lean.throwError "failed objective-bound step registered presentation metadata for {name}"
 
-/-- error: decision variable `x` already exists -/
+/-- error: optimization variable `x` already exists -/
 #guard_msgs in
 assert_objective_bound_atomic%
 reformulation binderCollision : minimumSource certificate binderCollisionAlias := by

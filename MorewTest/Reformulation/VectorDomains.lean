@@ -127,7 +127,7 @@ reformulation familyTerminal : (familyTargeted n ε) := by
 
 end Parameterized
 
--- Strict Pi order is not coordinatewise strict positivity: one coordinate
+-- Strict `Pi` order is not coordinatewise strict positivity: one coordinate
 -- may remain zero. An exact proof of vector positivity must not fill the gap.
 section
 variable (n : ℕ) (ε : Fin n → ℝ) (hvector : 0 < ε)
@@ -237,9 +237,8 @@ run_cmd liftTermElabM do
     let ε : Fin 2 → ℝ := fun _ => 1
     True ∧ ε ≤ p.1))
   checkPlan source #[vector] true
-  -- These fake instances even agree with native operations on the particular
-  -- operands below. Checking only the complete proposition would therefore
-  -- miss the unsupported vector order, subtraction, or membership instance.
+  -- Altered instances agree with native operations on these operands.
+  -- Certification checks the vector order, subtraction, and membership instances.
   let fakeLE ← elaborate (← `(fun p : (Fin 2 → ℝ) × ℝ =>
     @LE.le (Fin 2 → ℝ) ⟨fun _ x => (fun _ => (1 : ℝ)) ≤ x⟩ (fun _ => 1) p.1))
   checkPlan source #[fakeLE] false "coordinatewise positive"
@@ -252,7 +251,7 @@ run_cmd liftTermElabM do
       ⟨fun _ x => x ∈ ℝ₊^2⟩ (ℝ₊^2) (p.1 - fun _ => 1)))
   checkPlan source #[fakeMembership] false "coordinatewise positive"
   -- Strict rows are deliberately not converted into constant margins, and
-  -- Pi's strict order must not be mistaken for coordinatewise strict order.
+  -- `Pi`'s strict order must not be mistaken for coordinatewise strict order.
   let strictFamily ← elaborate (← `(fun p : (Fin 2 → ℝ) × ℝ =>
     ∀ i, (0 : ℝ) < p.1 i))
   checkPlan source #[strictFamily] false "coordinatewise positive"

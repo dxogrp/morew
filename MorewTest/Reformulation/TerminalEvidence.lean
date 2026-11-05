@@ -8,7 +8,7 @@ import Morew.Reformulation.NLP
 import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
 
-/-! Backend adapters reject malformed evidence before committing any declarations. -/
+/-! Command adapters reject malformed evidence before committing any declarations. -/
 
 namespace MorewTest.Reformulation.TerminalEvidence
 
@@ -26,9 +26,8 @@ reformulation goodNLP : source := by nlp
 reformulation alienConic : alien := by conic
 reformulation alienNLP : alien := by nlp
 
--- These test-only syntax kinds alter a real backend's draft, retaining its
--- checked primitive certificate, names, and presentation. They exercise the
--- adapter boundary without exposing another public extension interface.
+-- Test-only syntax alters a proposed reformulation while retaining its checked primitive
+-- certificate, names, and presentation.
 syntax (name := faultyConic) "test_conic_form " term : reformulationStep
 syntax (name := faultyNLP) "test_nlp_form " term : reformulationStep
 syntax (name := nonterminalConic) "test_conic_nonterminal" : reformulationStep

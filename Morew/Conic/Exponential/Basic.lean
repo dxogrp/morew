@@ -11,15 +11,8 @@ import Mathlib.Tactic.Linarith
 /-!
 # Exact exponential-cone representations
 
-Exponential upper bounds need no domain assumptions. Logarithmic lower bounds
-require a positive argument; relative-entropy upper bounds require a
-nonnegative first argument and a positive second argument. These hypotheses
-are essential because native real logarithm and division are totalized.
-
-Finite log-sum-exp and softplus use one auxiliary finite vector, a grouped
-family of exponential memberships, and one sum bound. Empty log-sum-exp is
-excluded by an explicit dimension hypothesis. All results are semantic and
-independent of elaboration or reformulation commands.
+Exponential, logarithm, relative-entropy, log-sum-exp, and softplus bounds
+represented by exponential cone constraints.
 -/
 
 namespace Morew.Conic.Exponential
@@ -34,14 +27,12 @@ theorem le_log_iff (a t : ℝ) (ha : 0 < a) :
   rw [← exp_le_iff]
   exact Real.le_log_iff_exp_le ha
 
-/-- Relative entropy at a zero first argument agrees with the closed cone's
-boundary, including the corner where the second argument is also zero. -/
+/-- At a zero first argument, the relative-entropy formula agrees with the cone boundary. -/
 theorem relativeEntropy_zero_le_iff (b t : ℝ) (hb : 0 ≤ b) :
     Fn.relativeEntropy 0 b ≤ t ↔ (-t, 0, b) ∈ EXP := by
   simp [Fn.relativeEntropy, Cone.mem_exponential, hb]
 
-/-- Relative entropy has an exact exponential-cone epigraph on its finite
-domain. Nonnegativity, rather than positivity, retains the zero boundary. -/
+/-- Relative entropy has an exponential-cone epigraph for `a ≥ 0` and `b > 0`. -/
 theorem relativeEntropy_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     Fn.relativeEntropy a b ≤ t ↔ (-t, a, b) ∈ EXP := by
   rcases eq_or_lt_of_le ha with hzero | hpos
@@ -54,8 +45,8 @@ theorem relativeEntropy_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     Real.log_div hpos.ne' hb.ne', Real.log_div hb.ne' hpos.ne', neg_div]
   constructor <;> intro h <;> linarith
 
-/-- A nonempty finite log-sum-exp bound is represented by exponential
-memberships and one affine sum bound, with no coordinatewise scalar expansion. -/
+/-- A nonempty finite log-sum-exp bound is represented by a family of
+exponential-cone constraints and one affine sum bound. -/
 theorem logSumExp_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n) :
     Fn.logSumExp xs ≤ t ↔
       ∃ u : Fin n → ℝ,

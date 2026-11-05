@@ -6,13 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Rows
 
-/-!
-# Certified restrictions
-
-Append a constraint using an explicit improvement from the current problem to
-its restriction. This may discard feasible points; the proof supplies
-retained representatives with objectives no worse in the optimization order.
--/
+/-! Append a restriction with an improvement certificate providing retained feasible
+representatives whose objectives are no worse. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -36,8 +31,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
       Rows.Append.elaboratePredicate restrictStyle state typed proposition
     let natural ← mkAppM ``Morew.Problem.addConstraint #[typed.semantic, predicate]
     let expected ← mkAppM ``Morew.GlobalImprovement #[typed.semantic, natural]
-    -- The repair concerns the complete current problem. Neither temporary
-    -- model bindings nor the proposed restriction enter its source evidence.
+    -- Prove improvement from the complete current problem before adding the restriction.
     let improvement ← withRef provided do
       let proof ← elabTermEnsuringType provided expected
       synthesizeSyntheticMVarsNoPostponing
@@ -53,7 +47,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
     Rows.Append.finish restrictStyle state typed name proposition
       predicate propositionSyntax addition
 
-/-- Preflight the explicit label before elaborating a restriction or its certificate. -/
+/-- Check the requested label before elaborating a restriction or its certificate. -/
 def prepareRestrict (state : ReformState) (label : TSyntax `ident)
     (proposition provided : TSyntax `term) : CommandElabM SurfaceStepDraft :=
   pure {

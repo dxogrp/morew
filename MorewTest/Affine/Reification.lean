@@ -69,7 +69,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     | .ok result => checkResult source result
     | .error error => throwError "did not use supplied nonzero evidence: {error.reason}"
 
-/-! The domain follows the product grouping chosen by the modeling frontend. -/
+/-! The domain follows the product grouping chosen by the problem elaborator. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertAffine (← `(fun x : ℝ × ℝ => x.1 + 2 * x.2))

@@ -9,8 +9,7 @@ import Lean.Elab.SyntheticMVars
 /-!
 # Complete elaboration of test inputs
 
-This helper has no dependency on affine or conic certification. Its existing
-namespace is retained for test callers.
+Shared elaboration checks independent of affine and conic certification.
 -/
 
 namespace MorewTest.Affine

@@ -168,8 +168,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertRow (← `(fun (m n : Nat) (f : Fin m → Fin n) =>
     fun x : Fin n → ℝ => ((Matrix.diagonal x).submatrix f f).PosSemidef)) 3
 
-/-! A native PSD predicate cannot silently impose symmetry on an arbitrary
-matrix, and non-affine symmetric expressions remain unsupported rows. -/
+/-! Native PSD rows require global symmetry and affine entries. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertSymmetry (← `(fun n : Nat => fun x : Matrix (Fin n) (Fin n) ℝ => x)) 1 false
@@ -184,8 +183,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertRowUnsupported (← `(fun (n : Nat) => fun x : Matrix (Fin n) (Fin n) ℝ =>
     (x.transpose * x).PosSemidef)) 1
 
-/-! Neither a feasibility-local assumption nor an unresolved/placeholder
-independent witness may become a global symmetry certificate. -/
+/-! A proof of global symmetry must be complete and independent of feasibility. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← elaborate (← `(fun (n : Nat) (F : ℝ → Matrix (Fin n) (Fin n) ℝ) =>

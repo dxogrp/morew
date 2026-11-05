@@ -8,23 +8,14 @@ import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Algebra.Order.Group.PosPart
 import Lean.Meta.Basic
 
-/-!
-# Typed recognition of mathematical operations
-
-This internal, unstable interface identifies selected native mathlib operations
-without rewriting their expressions. It does not restrict what users can write
-in a problem, establish domain conditions, or certify a transformation.
-
-Additional mathematical functions may live under `Morew.Fn`. They are ordinary
-Lean definitions: namespace membership alone does not register an operation.
--/
+/-! Recognize standard mathlib operations by their elaborated heads and instances.
+Callers supply domain evidence and transformation certificates. -/
 
 namespace Morew.Elab.Atom
 
 open Lean Lean.Meta
 
-/-- An operation understood by the native-operation recognizer.
-This is an internal implementation interface, not a public modeling type. -/
+/-- A recognized mathlib operation. -/
 inductive AtomKind where
   /-- The real exponential function. -/
   | exp
@@ -56,8 +47,7 @@ inductive AtomKind where
   | rpow
   deriving Inhabited, BEq, Repr
 
-/-- A recognized application, retaining its original expression for consumers
-that construct proofs or preserve presentation. This interface is internal. -/
+/-- A recognized operation with its original expression and operands. -/
 structure AtomApplication where
   /-- The expression supplied to the recognizer, without rewriting. -/
   original : Expr
@@ -90,8 +80,7 @@ private def atomHeads : Array AtomHead := #[
   ⟨``HPow.hPow, .rpow, 6, 2⟩
 ]
 
--- Ignore metadata on the application spine, but retain it on operands and
--- preserve the complete original expression in the result.
+-- Ignore metadata on function applications; retain operand metadata and the original expression.
 private def applicationParts (expression : Expr) : Expr × Array Expr :=
   let rec visit (expression : Expr) (reversed : Array Expr) : Expr × Array Expr :=
     match expression with
@@ -100,8 +89,7 @@ private def applicationParts (expression : Expr) : Expr × Array Expr :=
     | head => (head, reversed.reverse)
   visit expression #[]
 
--- These instances are fixed explicitly. In particular, recognition must not
--- synthesize a potentially overridden local instance as its expected value.
+-- Use fixed canonical instances when matching operations.
 private def canonicalPrefix (head : AtomHead) : Array Expr :=
   let real := mkConst ``Real
   let lattice := mkConst ``Real.lattice
@@ -124,8 +112,7 @@ private def canonicalPrefix (head : AtomHead) : Array Expr :=
   | .minimum => #[real, mkConst ``Real.instMin]
 
 private def recognizeApplication? (original : Expr) : MetaM (Option AtomApplication) := do
-  -- Unresolved elaboration is not enough evidence for an operation's identity.
-  -- In particular, do not specialize metavariables to make a candidate match.
+  -- Require resolved type and instance arguments.
   if original.hasMVar then return none
   let (function, arguments) := applicationParts original
   let .const name _ := function | return none
@@ -141,20 +128,12 @@ private def recognizeApplication? (original : Expr) : MetaM (Option AtomApplicat
     unless ← isDefEq type (mkConst ``Real) do return none
   return some { original, kind := head.kind, operands }
 
-/-- Recognize a fully applied, supported native real operation.
-
-Only the explicit constant-head table chooses an operation identity. Known type
-and instance arguments are checked against fixed canonical mathlib values by
-definitional equality; arbitrary function heads are never unfolded. Unsupported
-or incompletely elaborated expressions return `none`.
-
-Recognition preserves the supplied expression and the caller's metavariable
-state. Domain obligations belong to consumers, not to this internal API. -/
+/-- Recognize a supported, fully applied real operation by constant head and canonical
+instances. Return `none` for unsupported or unresolved inputs. Preserve caller metavariables. -/
 def recognizeAtom? (expression : Expr) : MetaM (Option AtomApplication) := do
   let saved ← saveState
   try
-    -- Existing metavariables must also remain rigid when hidden in a local
-    -- declaration's type or value, where `expression.hasMVar` cannot see them.
+    -- Keep metavariables in local declaration types and values unassigned.
     withNewMCtxDepth <| recognizeApplication? expression
   finally
     saved.restore

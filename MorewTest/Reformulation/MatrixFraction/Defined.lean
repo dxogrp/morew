@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 
-/-! # Separately compiled matrix-fraction domain lift for imported continuation -/
+/-! # Separately compiled matrix-fraction domain certificate for imported continuation -/
 
 namespace MorewTest.Reformulation.MatrixFraction
 

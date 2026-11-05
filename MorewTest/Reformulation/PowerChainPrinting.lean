@@ -9,12 +9,10 @@ import MorewTest.Reformulation.PowerFamilies
 import MorewTest.Reformulation.PrintSupport
 
 /-!
-# Mathematical chain output and ordinary detailed inspection
+# Mathematical chain output and detailed inspection
 
-The existing chain fixtures supply concrete, singleton, symbolic, targeted, and
-terminal models. Targeted snapshots live in PowerPrinting; terminal snapshots
-below complete the dimension matrix. The command checks also exercise print-time
-selection without replacing either stored replay view.
+Check terminal output for concrete, singleton, and symbolic dimensions.
+Print-time options preserve both stored reconstruction views.
 -/
 
 namespace MorewTest.Reformulation.PowerChainPrinting

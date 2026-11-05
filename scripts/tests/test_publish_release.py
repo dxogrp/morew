@@ -1,4 +1,4 @@
-"""Regression tests for publication gates and create-only GitHub operations."""
+"""Tests for release prerequisites and publication."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ publication = importlib.util.module_from_spec(SPEC)
 with patch.object(sys, "path", [str(SCRIPTS), *sys.path]):
     SPEC.loader.exec_module(publication)
 
-# Synthetic release data: independent of the real repository's versions and tags.
+# Sample release data.
 REPOSITORY = "dxogrp/morew"
 SHA = "a" * 40
 TAG = "v1.2.3"

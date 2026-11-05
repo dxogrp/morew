@@ -11,9 +11,9 @@ import MorewTest.Conic.Form.Defined
 /-!
 # Imported spectral and matrix-fraction certificates
 
-An imported positive-definite domain lift remains evidence for a subsequent
-matrix-fraction rewrite. Spectral witnesses and the source operator-norm
-instance survive continued transformations and presentation replay.
+An imported positive-definite domain certificate supports a subsequent
+matrix-fraction rewrite. Spectral certificates and the source operator-norm
+instance survive continued transformations and presentation reconstruction.
 -/
 
 namespace MorewTest.ImportCompatibility.Spectral
@@ -69,7 +69,7 @@ namespace FiniteOnly
 
 open MorewTest.Conic.Form
 
--- In particular, compiled form types do not require Fintype at the use site.
+-- Compiled form types require no Fintype at the use site.
 def importedForm (ι : Type) [Finite ι] (i : ι) : Conic.Form (finiteSource ι i) :=
   inferredFiniteForm ι i
 
@@ -167,8 +167,7 @@ def normDependentTypeSource :=
     let index := normSized A
     minimize (index.val : ℝ)
 
--- The macro splices identical norm syntax into two different local instances.
--- Replacing only norm subterms would accidentally retain the first instance twice.
+-- Identical norm syntax in two local instances retains each source instance.
 def splicedNormSource :=
   problem (A : Matrix (Fin 1) (Fin 1) ℝ) (t : ℝ)
     minimize twiceNorm% ‖A‖
@@ -192,12 +191,12 @@ def delayedNumeralSource :=
 
 namespace ChangedNorm
 
--- Replaying an imported source must keep its original L2 operator norm even
--- when a different matrix norm is in scope at the replay site.
+-- Re-elaboration must preserve the imported `L2` operator norm when another
+-- matrix norm is in scope.
 local instance (m n : Nat) : Norm (Matrix (Fin m) (Fin n) ℝ) := ⟨fun _ => 37⟩
 
--- The unrelated norm also cannot obstruct imported certificates or subsequent
--- conic rewriting of a source whose operator norm was already fixed.
+-- Imported certificates and conic rewrites retain the source operator norm
+-- under an unrelated ambient norm instance.
 example : IsConic (MorewTest.Reformulation.Spectral.normTarget (m := m) (n := n)) :=
   MorewTest.Reformulation.Spectral.normTarget.isConic (m := m) (n := n)
 example : IsConic (MorewTest.Reformulation.Spectral.nuclearTarget (m := m) (n := n)) :=
@@ -306,7 +305,7 @@ def mixed (E : Type v) [Norm E] :=
   problem (x : E) minimize ‖x‖ + mixedValue.{_, u} E
 
 -- A universe appearing in a constant's type can still be unconstrained by
--- the enclosing term: Nonempty discards the sort level from its result.
+-- the enclosing term: `Nonempty` discards the sort level from its result.
 def hidden :=
   problem (x : ℝ) minimize ‖x‖ + if Nonempty levelType.{u} then 1 else 0
 
@@ -363,8 +362,8 @@ def real :=
   letI : Norm ℝ := ⟨fun _ => ExplicitUniverseSource.levelValue.{w}⟩
   problem (x : ℝ) minimize ‖x‖
 
--- The instance's value refers to the universe of E even though the reference
--- itself has type ℝ. Replaying under another universe name must preserve that link.
+-- The instance's value refers to the universe of `E` even though the reference
+-- itself has type `ℝ`. Re-elaborating under another universe name must preserve that link.
 def anchored (E : Type u) :=
   letI : Norm E := ⟨fun _ => ExplicitUniverseSource.levelValue.{u}⟩
   problem (x : E) minimize ‖x‖
@@ -434,7 +433,7 @@ example : copied.{u, v} E = source.{u, v} E := rfl
 
 end AmbiguousInstanceUniverses
 
--- Checking a term without registering a declaration must not create replay helpers.
+-- Checking a term without registering a declaration must not create reconstruction helpers.
 run_cmd Lean.Elab.Command.liftTermElabM do
   let before ← Lean.getEnv
   let term ← `(letI : Norm ℝ := ⟨fun _ => 1⟩

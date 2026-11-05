@@ -39,8 +39,8 @@ def github_api(
             f"GitHub {method} {endpoint} could not be confirmed; inspect GitHub before retrying."
         ) from error
     if result.returncode:
-        # Neither API errors nor timeouts prove that a write had no effect.
-        # Do not print command output, which may contain credentials.
+        # A failed response can follow a completed write.
+        # Report a fixed message to keep credentials out of logs.
         raise VerificationError(
             f"GitHub {method} {endpoint} did not succeed; check permissions and existing "
             "tags/releases before retrying."
@@ -61,8 +61,7 @@ def api_post(repository: str, endpoint: str, payload: dict[str, Any]) -> dict[st
 
 
 def require_unused_release(repository: str, tag: str) -> None:
-    # Listing also detects drafts with no tag yet and releases whose tag was deleted.
-    # The publishing job's token has push permission, so drafts are visible here.
+    # Include drafts and releases whose tags were deleted.
     pages = github_api(repository, "GET", "releases?per_page=100", paginate=True)
     if not isinstance(pages, list):
         raise VerificationError("GitHub returned an invalid release list.")
@@ -86,8 +85,7 @@ def publish(root: Path) -> str:
     repository = required_environment("GITHUB_REPOSITORY")
     require_unused_release(repository, tag)
 
-    # Create, never update: GitHub rejects an existing ref, including one created
-    # since the verification checkout. Do not let release creation auto-create it.
+    # Create the tag at the verified commit; GitHub rejects an existing tag.
     ref = api_post(repository, "git/refs", {"ref": f"refs/tags/{tag}", "sha": sha})
     target = ref.get("object")
     if (

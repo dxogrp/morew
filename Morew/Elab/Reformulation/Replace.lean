@@ -8,14 +8,8 @@ import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Rewrite.Plan
 import Morew.Transform
 
-/-!
-# Exact replacement of ordered constraint rows
-
-Shared proof assembly for targeted conic and NLP rewrites. This layer applies
-checked replacement rows to a typed problem; command-level naming and
-presentation updates belong to `Morew.Elab.Reformulation.Rows`. Conjunction proofs preserve the
-boundaries of unselected rows, even when a row itself contains a conjunction.
--/
+/-! Assemble exact replacements in ordered constraints, preserving unselected row boundaries.
+`Rows` updates names and displayed constraints. -/
 
 namespace Morew.Elab.Reformulation.Replace
 
@@ -97,8 +91,8 @@ structure RewriteResult where
   /-- `GlobalEquivalence` from the old canonical problem to `targetProblem`. -/
   equivalence : Expr
 
-/-- Assemble an exact selected-row replacement from a checked lift and ordered
-target rows. `targetIff` identifies the lift target with their conjunction. -/
+/-- Assemble a selected-row replacement; `targetIff` equates the representation target
+with the ordered replacement conjunction. -/
 private def rewriteConstraintCore (presentation : PresentationState) (index : Nat)
     (certificate : Rewrite.Plan.Certificate) (auxiliary? : Option Expr) (nextDomain : Expr)
     (rows : Array Expr) (targetIff : Expr) : MetaM RewriteResult := do
@@ -188,8 +182,7 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
   checkWithKernel equivalence
   return { targetProblem, equivalence }
 
-/-- Validate and apply either kind of checked replacement. Retained evidence is
-always reconstructed from the current presentation with the selected row removed. -/
+/-- Validate and apply a replacement using current retained constraints. -/
 def applyReplacement (presentation : PresentationState) (index : Nat)
     (replacement : Rewrite.Plan.Result) : MetaM RewriteResult := do
   unless index < presentation.constraints.size do
@@ -199,9 +192,8 @@ def applyReplacement (presentation : PresentationState) (index : Nat)
   rewriteConstraintCore presentation index replacement.certificate replacement.auxiliary?
     replacement.nextDomain replacement.rowPredicates replacement.targetIff
 
-/-- Replace a selected row using a pointwise equivalence conditional on exactly
-the retained rows. The remainder is reconstructed in both directions; no
-assumption about the selected source row may escape into the reverse proof. -/
+/-- Replace a row using equivalence conditional on retained rows.
+Reconstruct retained evidence in both directions. -/
 def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
     (rows : Array Expr) (conditionalIff : Expr) : MetaM RewriteResult := do
   unless index < presentation.constraints.size do

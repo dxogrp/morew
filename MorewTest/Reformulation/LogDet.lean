@@ -10,4 +10,4 @@ import MorewTest.Reformulation.LogDet.Domains
 import MorewTest.Reformulation.LogDet.Objectives
 import MorewTest.Reformulation.LogDet.Printing
 
-/-! Exact log-determinant integration tests, split into independent behavior groups. -/
+/-! Exact log-determinant integration tests. -/

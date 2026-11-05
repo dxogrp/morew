@@ -7,16 +7,8 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Step
 import Lean.Elab.MutualDef
 
-/-!
-# Reformulation command
-
-This module implements the small, proof-producing transformation language used
-by Morew's first release.  A reformulation command declares both the transformed
-problem and a `GlobalEquivalence` certificate. Terminal `conic` and `nlp`
-validation also retain a concrete structural form and a representability proof.
-Targeted `nlp at label` steps certify only their replacement rows and remain
-nonterminal.
--/
+/-! Declare a transformed problem and its `GlobalEquivalence` certificate.
+Terminal `conic` and `nlp` steps also emit structural forms and representability proofs. -/
 
 namespace Morew
 
@@ -59,10 +51,7 @@ private def withDeclarationTransaction (action : CommandElabM Unit) : CommandEla
     set { savedState with messages := savedState.messages ++ generatedMessages }
     throw exception
 
-/-- Emit an already elaborated definition and retain its actual section arguments.
-Use the same dependency collection as Lean's definition generalization, before
-proof extraction can hide occurrences in auxiliary theorems. Embedding the
-expressions avoids a pretty-printing round trip changing those dependencies. -/
+/-- Emit an elaborated definition with section arguments collected before proof extraction. -/
 private def emitDefinitionWithParameters (target : TSyntax `ident)
     (sectionVars : Array Expr) (scope : Command.Scope) (type value : Expr) :
     TermElabM Expr := do
@@ -78,8 +67,7 @@ private def emitDefinitionWithParameters (target : TSyntax `ident)
   Term.elabMutualDef sectionVars scope #[
     Command.mkDefViewOfDef { computeKind := .noncomputable } definition]
   let name := target.getId.replacePrefix `_root_ Name.anonymous
-  -- With no unresolved metavariables, declaration generalization preserves the
-  -- checked expressions' universe names as well as their section variables.
+  -- Retain checked universe names and section parameters during generalization.
   let info ← getConstInfo name
   let mut application := Lean.mkConst name (info.levelParams.map Level.param)
   let mut applicationType ← inferType application
@@ -99,12 +87,12 @@ private def emitDefinitionWithParameters (target : TSyntax `ident)
     throwErrorAt target "emitted definition contains unresolved universe parameters"
   pure application
 
-/-- Freeze the retained application before leaving its section-variable context. -/
+/-- Fix references in the retained application before leaving its section-variable context. -/
 private def emitDefinition (target : TSyntax `ident)
     (elaborate : Array Expr → TermElabM (Expr × Expr)) :
     CommandElabM (TSyntax `term) := do
   let scope ← getScope
-  -- Lean's quotation-context wrapper returns Unit.
+  -- `withInitQuotContext` returns `Unit`.
   let result ← IO.mkRef (none : Option (TSyntax `term))
   withExporting (isExporting := scope.isPublic) do
   withInitQuotContext (some (hash #[target.getId])) do
@@ -127,10 +115,9 @@ private inductive RawDeclarationStage where
   | alias
   deriving BEq
 
-/-- Try the source-aligned target first. Target and certificate failures retry
-with the checked target's explicit type and normalization evidence. Retain the
-original diagnostics if that retry also fails. Alias failures and internal
-exceptions are not retried. -/
+/-- Emit declarations using source syntax, retrying target and certificate failures with
+explicit semantic types and normalization. Preserve the original error if retry fails;
+alias failures and internal exceptions propagate. -/
 private def tryRawDeclarations (emitTarget : CommandElabM (TSyntax `term))
     (emitCertificate : TSyntax `term → CommandElabM (TSyntax `term))
     (emitAlias : TSyntax `term → CommandElabM Unit) : CommandElabM RawDeclarationResult := do
@@ -194,24 +181,20 @@ private def emitCompanionDeclaration
     noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
   elabCommand command
 
--- Retain the occurrence structure in applied and terminal output after checking
--- agreement with the canonical expression. The value type retains OrderDual.
+-- Preserve occurrence structure and `OrderDual` after checking canonical agreement.
 private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
     CommandElabM (TSyntax `term) :=
   emitDefinition target fun sectionVars => do
     let typed := state.typed.replaceFVars state.sectionFVars sectionVars
     let type ← mkAppM ``Morew.Problem
       #[typed.presentation.domainType, typed.semanticValueType]
-    -- Keep definitions and direct occurrences in the actual declaration value.
-    -- Its normal declaration telescope supplies exact parameter and universe
-    -- instantiation when the presentation is imported or applied.
+    -- Retain definitions and occurrences in the emitted declaration value.
     let term ← liftMacroM state.view.toTermSyntax
     let carrier ← elabTerm term (some type)
     synthesizeSyntheticMVarsNoPostponing
     let carrier ← instantiateMVars carrier
     unless ← isDefEq carrier typed.canonical do
-      -- Dependent definitions retain their exact substituted bodies. Check
-      -- agreement without rewriting the types of their proof-bearing uses.
+      -- Prove canonical agreement while retaining dependent definition types.
       discard <| checkedPointwiseNormalization state.sourceName carrier
         typed.canonical state.normalizationLemmas
     pure (type, carrier)
@@ -240,8 +223,7 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       let equality ← if ← isDefEq represented target then
           mkEqRefl represented
         else do
-          -- Retained dependent definitions can agree with the canonical
-          -- target by proved normalization rather than definitional equality.
+          -- Use proved normalization for retained dependent definitions.
           let some targetBody ← unfoldDefinition? target
             | throwErrorAt artifact.ref
                 "cannot inspect the emitted {artifact.adapter.description} target"
@@ -276,9 +258,7 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
       let propertyDefinition ← `(Parser.Command.theorem|
         theorem $propertyIdent : $(← exactExpressionSyntax propertyType) :=
           $(← exactExpressionSyntax property))
-      -- Source-domain hypotheses can be necessary for equivalence but absent
-      -- from the final form. Keep the proof's complete dependency closure and
-      -- explicitly omit unused instances, which Lean otherwise adds automatically.
+      -- Retain the certificate's dependency closure and omit unused instances.
       let used ←
         (Lean.collectFVars (Lean.collectFVars {} propertyType) property).addDependencies
       let mut propertyScope := { scope with includedVars := {} }
@@ -337,7 +317,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       for id in dependencies.fvarSet.toArray do
         let name := (← id.getDecl).userName.eraseMacroScopes
         if template.binders.any (sameVisibleName ·.name name) then
-          throwError "source parameter `{name}` conflicts with a decision variable; rename the outer parameter"
+          throwError "source parameter `{name}` conflicts with an optimization variable; rename the outer parameter"
         if template.definitions.any (sameVisibleName ·.name name) then
           throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
         unless usedSourceParameterNames.contains name do
@@ -501,10 +481,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       unless (← get).messages.hasErrors do
         refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
 
-/-- Elaborate a reformulation declaration and emit the transformed problem and
-its composed global-equivalence certificate.  Planning, typed step validation,
-declaration emission, companions, and metadata registration share one rollback
-boundary. -/
+/-- Elaborate steps and generate the target, certificates, and metadata in one transaction. -/
 @[command_elab reformulationCmd, command_elab appliedReformulationCmd]
 def elabReformulation : CommandElab := fun stx =>
   withDeclarationTransaction (elabReformulationCore stx)

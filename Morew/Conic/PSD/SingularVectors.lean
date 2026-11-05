@@ -8,9 +8,9 @@ import Morew.Fn.Matrix
 /-!
 # Thin singular-vector decomposition
 
-Only positive singular values need left singular vectors. This construction
-therefore applies to rectangular and rank-deficient matrices without extending
-an orthonormal family to a full basis.
+The left singular vectors are indexed by positive singular values and form an
+orthonormal family. This construction applies to rectangular and rank-deficient
+matrices.
 -/
 
 namespace Morew.Conic.Spectral

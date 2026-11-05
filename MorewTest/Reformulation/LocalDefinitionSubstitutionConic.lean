@@ -6,15 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LocalDefinitionSubstitution
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Integration cases sharing the generic suite's declarations. -/
 
 namespace MorewTest.Reformulation.LocalDefinitionSubstitution
 
 open Morew
 noncomputable section
 
--- A preserved proof block keeps log(exp u) in the source presentation, while
--- terminal conic certification recognizes the checked affine objective u.
+-- A preserved proof block keeps `log(exp u)` in the source presentation, while
+-- terminal conic certification recognizes the checked affine objective `u`.
 reformulation proofConic : proofSource := by
   substitute x := Real.exp u
   conic

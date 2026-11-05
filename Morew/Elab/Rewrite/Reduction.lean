@@ -6,19 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked reduction for direct certification
-
-A surface reduction may expose a directly certifiable function or predicate.
-Failed reductions retain the original operation instances for rule discovery.
--/
+/-! Replace expressions by reduced forms only after direct certification succeeds. -/
 
 namespace Morew.Elab.Rewrite.Reduction
 
 open Lean Lean.Meta
 
-/-- Retain a definitionally equal reduction only after complete direct checking.
-The reducer and certifier cannot change caller metavariables on failure. -/
+/-- Accept definitionally equal reductions after complete direct checking.
+Preserve caller metavariables on failure. -/
 def normalize (expression : Expr) (reduce : Expr → MetaM Expr)
     (certify : Expr → MetaM Bool) : MetaM Expr := do
   let checked : Except Unit Expr ← State.withIsolatedMVars do
@@ -51,8 +46,8 @@ private partial def normalizeBody (point body : Expr) (reduce : Expr → MetaM E
       (usedLetOnly := false) (generalizeNondepLet := false)
     certify (← mkLambdaFVars #[point] scopedBody)
 
-/-- Check conjunction leaves independently, retaining their original grouping
-and scoped proof lets. An unsuccessful leaf stays unchanged for exact matching. -/
+/-- Check conjuncts independently, retaining their original grouping and scoped proof lets.
+An unsuccessful conjunct stays unchanged for exact matching. -/
 def normalizePredicate (predicate : Expr) (reduce : Expr → MetaM Expr)
     (certify : Expr → MetaM Bool) (opaqueProblemDependencies : Bool := false) : MetaM Expr := do
   let .forallE _ domain _ _ ← whnf (← inferType predicate)

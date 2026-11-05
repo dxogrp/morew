@@ -9,14 +9,8 @@ import Lean.Meta.Basic
 import Lean.Meta.Transform
 import Qq
 
-/-!
-# Canonical real vector-space structures for affine reification
-
-This internal module builds standard real, Euclidean, product, and function-space
-structures explicitly. Ambient local instances therefore cannot change the
-meaning of a certified affine construction. Finiteness of function indices is
-checked by the caller; it is not needed to construct their algebraic structures.
--/
+/-! Canonical algebra for real, Euclidean, product, and function spaces.
+Callers check any finite-index requirements. -/
 
 namespace Morew.Elab.Affine.Space
 
@@ -31,8 +25,7 @@ structure Structure (X : Type*) where
 
 namespace Structure
 
--- Persisted conic forms expose these structures in their public types. Keep
--- them reducible so ordinary instance search recognizes the canonical algebra.
+-- Keep persisted instance structures reducible for instance search.
 
 /-- Standard real structures, resolved in this declaration's fixed context. -/
 noncomputable abbrev real : Structure ℝ where
@@ -71,8 +64,7 @@ private structure BuiltSpace where
 
 private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
     MetaM BuiltSpace := do
-  -- Keep aliases such as `Matrix` in the inferred instance types. Instance
-  -- synthesis need not unfold these aliases when matching a local instance.
+  -- Preserve aliases such as `Matrix` in local instance types for typeclass matching.
   let dataType ← mkAppM ``Structure #[type]
   let data ← mkAppOptM ``id #[some dataType, some data]
   let group ← mkAppM ``Structure.group #[data]
@@ -82,8 +74,7 @@ private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
 private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← finishSpace type (← mkAppM ``Structure.symmetricMatrix #[n])
-  -- This reduction concerns types only, so aliases such as `Matrix` can expose
-  -- their product/function structure. It never unfolds a modeled expression.
+  -- Reduce type aliases to expose product and function structure.
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
@@ -104,12 +95,8 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   else
     throwError "unsupported affine vector-space type {type}; expected ℝ, a finite Euclidean space, a product, or a function space over these"
 
-/-- Return canonical `AddCommGroup` and `Module ℝ` instance expressions.
-
-This function does not synthesize either structure from ambient instances.
-It accepts real and finite Euclidean spaces, products, and nondependent function
-spaces, reducing type aliases only. Callers are responsible for any finite-index restriction.
--/
+/-- Construct canonical `AddCommGroup` and `Module ℝ` instances for real, Euclidean,
+product, and nondependent function spaces. Callers check finite-index requirements. -/
 def canonicalSpace (type : Expr) : MetaM (Expr × Expr) := do
   let result ← buildSpace type
   pure (← mkAppM ``Structure.group #[result.data],
@@ -123,15 +110,8 @@ private def installInstances (remaining : List Expr) (action : MetaM Expr) : Met
       mapLetDeclZeta `_affineCanonical (← inferType inst) inst fun _ =>
         installInstances rest action
 
-/-- Construct an expression with canonical structures taking local precedence.
-
-The supplied spaces, all their component spaces, and `ℝ` receive canonical
-local instances. Other local instances, including index `Fintype` instances,
-remain available. Inserted let instances are substituted back into the result
-before their scope ends, so the returned expression has no escaping instance
-free variables. The result is deliberately an `Expr`, rather than arbitrary
-data whose embedded expressions could accidentally retain those variables.
--/
+/-- Use canonical instances for the supplied spaces, their components, and `ℝ`.
+Keep other local instances available and substitute temporary bindings into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
   let mut instances := #[]
   for type in #[mkConst ``Real] ++ types do

@@ -9,24 +9,15 @@ import Mathlib.Data.ENNReal.Inv
 import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 
-/-!
-# Independent parameter and sign evidence
-
-Exponent ranges use independent local hypotheses, their conjunction projections,
-one supplied finite-index specialization, and bounded exact numeral/rational
-evaluation. The `ofReal` bridge transports a checked real exponent greater than
-one. This does not combine symbolic inequalities or obtain decision-dependent
-premises from selected/generated rows.
-The same policy serves registered rules, direct parameterized-cone membership,
-coordinate coverage, and objective-context recognition without importing a planner.
--/
+/-! Parameter and sign evidence from independent hypotheses, conjunction projections,
+one finite-index specialization, and bounded numeral/rational evaluation.
+Transport real exponents through `ofReal`; exclude decision-dependent premises. -/
 
 namespace Morew.Elab.Evidence
 
 open Lean Lean.Meta Qq
 
-/-- Detect placeholders transitively through local types and values, including
-proof lets that would otherwise hide a placeholder behind a free variable. -/
+/-- Detect placeholders through referenced local types and values. -/
 partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM Bool := do
   let expression ← instantiateMVars expression
   if expression.hasSorry then return true
@@ -59,8 +50,7 @@ private theorem one_lt_toReal_ofReal {q : ℝ} (h : 1 < q) :
   rw [ENNReal.toReal_ofReal (le_trans zero_le_one h.le)]
   exact h
 
-/-- Normalize `ENNReal.toReal` of native numerals, inverses and divisions with
-checked equalities. No contextual simp set or unfolding of named operands is used. -/
+/-- Normalize standard `ENNReal.toReal` numerals, inverses, and divisions by proved equalities. -/
 def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
   let mut theorems : SimpTheorems := {}
   for declaration in #[``ENNReal.toReal_zero, ``ENNReal.toReal_one,
@@ -125,10 +115,8 @@ private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
     return some proof
   catch _ => return none
 
-/-- Produce checked parameter evidence without modifying caller metavariables.
-Only exact hypotheses/conjunction projections, one supplied `Fin` index,
-the checked `ofReal` bridge, and bounded numerical inequalities are available.
-Decision-dependent and unresolved goals or indices return `none`. -/
+/-- Prove parameter conditions from independent hypotheses, one supplied `Fin` index,
+the `ofReal` bridge, or bounded numerical evaluation. Reject unresolved inputs. -/
 def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
@@ -155,8 +143,7 @@ def constantSign? (point value : Expr) (strict : Bool)
   if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value
   let obligation : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
-  -- A coordinate of the canonical zero vector reduces to `Real.zero` rather
-  -- than numeral syntax; reflexivity supplies its sign without arithmetic search.
+  -- Prove the sign of canonical `Real.zero` by reflexivity.
   if !strict && (← isDefEq value q((0 : ℝ))) then return some q(le_refl (0 : ℝ))
   if let some proof ← proveIndependent? point obligation index? then return some proof
   if !strict then

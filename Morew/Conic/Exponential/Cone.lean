@@ -14,15 +14,10 @@ import Mathlib.Tactic.Ring
 /-!
 # The closed exponential cone
 
-The exponential cone uses ordinary right-associated triples `(x, y, z)`.
-Its positive branch is `y * exp (x / y) ≤ z`, and its zero-scale boundary
-is `x ≤ 0 ∧ 0 ≤ z`. The boundary is part of the definition: replacing it
-with totalized real division would describe a different set.
-
-The cone laws and closedness follow from an equivalent intersection of
-homogeneous closed halfspaces. Finite products certify grouped exponential
-membership rows without expanding their coordinates or requiring a concrete
-dimension.
+The exponential cone consists of triples `(x, y, z)` with
+`y > 0` and `y * exp (x / y) ≤ z`, or `y = 0`, `x ≤ 0`, and `0 ≤ z`.
+Its closedness and cone laws follow from an intersection of homogeneous
+closed halfspaces.
 -/
 
 namespace Morew.Conic.Cone
@@ -82,8 +77,7 @@ private theorem exponential_iff_halfspaces (x y z : ℝ) :
       rw [heq] at hxy
       simpa only [mul_comm] using hxy
 
-/-- The closed exponential cone in ordinary coordinates `(x, y, z)`.
-Its zero-scale boundary is included explicitly. -/
+/-- The closed exponential cone in coordinates `(x, y, z)`. -/
 noncomputable def exponential : Cone where
   Space := ℝ × ℝ × ℝ
   carrier := {
@@ -110,14 +104,14 @@ noncomputable def exponential : Cone where
             Real.exp a * (q.1 + (1 - a) * q.2.1) := by ring
         _ ≤ _ := add_le_add (hp a) (hq a) }
 
-/-- Exponential cone membership includes its exact zero-scale boundary. -/
+/-- Exponential cone membership in coordinates. -/
 @[simp]
 theorem mem_exponential (x y z : ℝ) :
     (x, y, z) ∈ exponential.carrier ↔
       (0 < y ∧ y * Real.exp (x / y) ≤ z) ∨ (y = 0 ∧ x ≤ 0 ∧ 0 ≤ z) :=
   Iff.rfl
 
-/-- At zero scale, exponential cone membership retains both boundary signs. -/
+/-- At zero scale, membership requires `x ≤ 0` and `0 ≤ z`. -/
 theorem mem_exponential_zero (x z : ℝ) :
     (x, 0, z) ∈ exponential.carrier ↔ x ≤ 0 ∧ 0 ≤ z := by
   simp only [mem_exponential, lt_self_iff_false, false_and, true_and, false_or]
@@ -133,7 +127,7 @@ theorem not_mem_exponential_of_neg (x y z : ℝ) (hy : y < 0) :
   simp only [mem_exponential]
   rintro (⟨hy', _⟩ | ⟨hy', _⟩) <;> linarith
 
-/-- The exponential cone is closed, including its zero-scale boundary. -/
+/-- The exponential cone is closed. -/
 theorem isClosed_exponential :
     IsClosed (↑exponential.carrier : Set exponential.Space) := by
   have heq : (↑exponential.carrier : Set exponential.Space) =
@@ -145,8 +139,7 @@ theorem isClosed_exponential :
   exact (isClosed_le continuous_const (by fun_prop)).inter
     (isClosed_iInter fun _ => isClosed_le (by fun_prop) (by fun_prop))
 
-/-- The finite product of exponential cones. Each coordinate is an ordinary
-triple; the empty product contains its unique coordinate vector. -/
+/-- The finite product of exponential cones. -/
 noncomputable def exponentialProduct (n : Nat) : Cone where
   Space := Fin n → (ℝ × ℝ × ℝ)
   carrier := {
@@ -154,13 +147,13 @@ noncomputable def exponentialProduct (n : Nat) : Cone where
     smul_mem' := fun _ hc _ h i => exponential.carrier.smul_mem hc (h i)
     add_mem' := fun _ hp _ hq i => exponential.carrier.add_mem (hp i) (hq i) }
 
-/-- Finite-product membership is a grouped family of exponential memberships. -/
+/-- Product membership is componentwise exponential cone membership. -/
 @[simp]
 theorem mem_exponentialProduct {n : Nat} (v : Fin n → (ℝ × ℝ × ℝ)) :
     v ∈ (exponentialProduct n).carrier ↔ ∀ i, v i ∈ exponential.carrier :=
   Iff.rfl
 
-/-- The finite product of exponential cones is closed, also at dimension zero. -/
+/-- The finite product of exponential cones is closed. -/
 theorem isClosed_exponentialProduct (n : Nat) :
     IsClosed (↑(exponentialProduct n).carrier : Set (exponentialProduct n).Space) := by
   change IsClosed {v : Fin n → (ℝ × ℝ × ℝ) | ∀ i, v i ∈ exponential.carrier}
@@ -172,7 +165,7 @@ end Morew.Conic.Cone
 namespace Morew.Conic
 
 set_option quotPrecheck false in
-/-- The closed exponential cone carrier, in coordinates `(x, y, z)`. -/
+/-- The closed exponential cone, in coordinates `(x, y, z)`. -/
 notation:max (name := exponentialCarrier) "EXP" => Morew.Conic.Cone.exponential.carrier
 
 end Morew.Conic

@@ -8,28 +8,17 @@ import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Complete checked smooth-NLP forms
-
-`buildForm` certifies every displayed row and the unchanged objective on a common
-open domain. Comparisons are normalized only in the stored data; predicates and
-their presentation groups remain unchanged. Symbolic finite families contribute
-symbolic counts, with their coordinates in increasing order.
-
-Optional cached blocks retain evidence already checked while planning exact
-rewrites. Each cache entry must represent precisely its current predicate and
-prove inclusion of the current feasibility, including any auxiliary variables.
-The builder checks all cached terms and exact representation equality with the
-kernel. No condition is added to feasibility and no convexity is required.
--/
+/-! Certify the objective and all rows on a common open domain.
+Stored data uses scalar residuals; presentation groups remain intact. Finite families
+retain symbolic counts and increasing coordinate order. Validate cached blocks against
+the current predicates and feasibility, including auxiliary variables. -/
 
 namespace Morew.Elab.NLP
 
 open Lean Lean.Meta Qq
 open Reformulation
 
--- Stored forms expose structural types, so ordinary field notation can synthesize
--- the same canonical structures for Matrix and finite-index aliases.
+-- Expose structural types for field notation on `Matrix` and finite-index aliases.
 private partial def structuralDomain (type : Expr) : MetaM Expr := do
   let shape ← whnf type
   if shape.isConstOf ``Real then return shape
@@ -53,8 +42,7 @@ private def formError (expression : Expr) (reason : MessageData)
     reason := ← addMessageContext m!"NLP form: {reason}"
   }
 
--- Cached blocks are data as well as proofs: check their completeness and their
--- exact predicates before projecting the stored finite table.
+-- Check cached blocks for completeness and agreement with current predicates.
 private def checkCached (decision feasible predicate : Expr) (result : Rows.Result) :
     MetaM Rows.Result := do
   unless result.rowCertificates.size == 1 && result.rowBlocks.size == 1 do
@@ -110,9 +98,7 @@ private def buildFormCore (presentation : PresentationState)
         rowIndex? := some index
         reason := ← addMessageContext m!"constraint `{entry.name}`: {error.reason}" }
     | .ok result => certificates := certificates.push result
-  -- Fix only the analytic codomain spelling. The projection is definitionally
-  -- the original objective, including on OrderDual-valued maximizing problems.
-  -- No analytic instances are installed on OrderDual itself.
+  -- Use a real analytic codomain while retaining the `OrderDual`-valued objective.
   let realObjective ← mkAppOptM ``Morew.Problem.objective
     #[some presentation.domainType, some q(ℝ), some canonical]
   let objective ← Domain.certifyWithEvidence feasible #[realObjective] Rows.factsProvider
@@ -168,18 +154,15 @@ private def buildFormCore (presentation : PresentationState)
     checkWithKernel form
     return form
   let decision ← structuralDomain presentation.domainType
-  -- Nested aliases also occur inside the chosen instance expressions. Rebuild
-  -- those expressions over the exposed shape so ordinary projections match them.
+  -- Rebuild canonical instance expressions over exposed structural aliases.
   let publicType ← Space.withCanonicalSpaces #[decision] <|
     mkAppOptM ``Morew.NLP.Form #[some decision, none, none, none, some canonical]
   let form ← mkAppOptM ``id #[some publicType, some form]
   checkWithKernel form
   return .ok form
 
-/-- Build concrete smooth-NLP data representing the entire presentation exactly.
-The optional cache has one slot per displayed row, each certifying that row and
-the current feasibility. Failed and successful attempts leave caller metavariables
-unchanged. Objective sense is retained separately from representation equality. -/
+/-- Build smooth-NLP data for the complete presentation, retaining objective sense.
+An optional cache has one optional certified block per row. Preserve caller metavariables. -/
 def buildForm (presentation : PresentationState) (cached : Array (Option Rows.Result) := #[]) :
     MetaM (Except Domain.DomainError Expr) :=
   State.withIsolatedMVars do

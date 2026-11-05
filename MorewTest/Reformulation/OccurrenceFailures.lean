@@ -125,12 +125,12 @@ def nonmonotoneSource := problem (x : ℝ) minimize |x ^ 2|
 reformulation nonmonotone : nonmonotoneSource certificate nonmonotoneAlias := by
   epigraph t at (x ^ 2)
 
-/-- error: decision variable `x` already exists -/
+/-- error: optimization variable `x` already exists -/
 #guard_msgs in
 reformulation binderCollision : source certificate binderCollisionAlias := by
   epigraph x at loss
 
-/-- error: decision variable `loss` conflicts with a model-local definition -/
+/-- error: optimization variable `loss` conflicts with a model-local definition -/
 #guard_msgs (substring := true) in
 reformulation definitionCollision : source certificate definitionCollisionAlias := by
   epigraph loss at penalty
@@ -187,7 +187,7 @@ def dependentSource :=
   problem (n : ℕ)
     minimize ((⟨0, Nat.zero_lt_succ n⟩ : Fin (n + 1)) : ℕ)
 
-/-- error: the selected type depends on a decision variable; dependent auxiliaries are unsupported -/
+/-- error: the selected type depends on an optimization variable; dependent auxiliaries are unsupported -/
 #guard_msgs in
 reformulation dependent : dependentSource certificate dependentAlias := by
   epigraph t at ((⟨0, Nat.zero_lt_succ n⟩ : Fin (n + 1)))

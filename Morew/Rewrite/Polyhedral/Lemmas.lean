@@ -10,9 +10,8 @@ import Mathlib.Data.Fintype.EquivFin
 /-!
 # Exact polyhedral bounds
 
-These identities express native real operations using scalar and coordinatewise
-inequalities. They are independent of affine recognition and reformulation.
-The norm bounds retain their scalar condition in dimension zero.
+Scalar and coordinatewise inequalities for absolute values, extrema, and vector
+norms. The norm bounds retain their scalar condition in dimension zero.
 -/
 
 namespace Morew.Rewrite.Polyhedral
@@ -35,8 +34,7 @@ theorem max_le_iff (a b t : ℝ) : max a b ≤ t ↔ a ≤ t ∧ b ≤ t :=
 theorem le_min_iff (a b t : ℝ) : t ≤ min a b ↔ t ≤ a ∧ t ≤ b :=
   _root_.le_min_iff
 
-/-- Reindex a nonempty finite maximum into one coordinatewise inequality.
-The ambient index type need not be finite. -/
+/-- Reindex a maximum over a nonempty finite support as a coordinatewise inequality. -/
 theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     s.sup' hs f ≤ t ↔
@@ -48,8 +46,7 @@ theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
   · intro h i hi
     simpa using h (s.equivFin ⟨i, hi⟩)
 
-/-- Reindex a nonempty finite minimum into one coordinatewise inequality.
-The ambient index type need not be finite. -/
+/-- Reindex a minimum over a nonempty finite support as a coordinatewise inequality. -/
 theorem le_inf'_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     t ≤ s.inf' hs f ↔
@@ -77,7 +74,7 @@ theorem norm_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     intro i
     simpa only [Real.norm_eq_abs] using abs_le'.mpr ⟨hp i, hn i⟩
 
-/-- An explicit native infinity-norm carrier has the same polyhedral bound. -/
+/-- The infinity-norm bound on `WithLp ∞` is equivalent to componentwise bounds. -/
 theorem norm_toLp_top_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp ∞ v‖ ≤ t ↔
       0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) := by
@@ -100,7 +97,7 @@ theorem sum_abs_le_iff_exists {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     intro i _hi
     exact abs_le'.mpr ⟨hp i, hn i⟩
 
-/-- The native finite one-norm has an exact auxiliary-vector representation. -/
+/-- The one-norm epigraph represented by linear inequalities with an auxiliary vector. -/
 theorem norm_toLp_one_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 1 v‖ ≤ t ↔
       ∃ u : Fin n → ℝ, v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t := by

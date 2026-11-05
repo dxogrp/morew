@@ -11,19 +11,10 @@ import Morew.Elab.Rewrite.Reduction
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Whole-problem smooth-NLP planning
-
-Bare `nlp` certifies smooth rows before considering exact direct-bound rules.
-The objective is retained and certified against the final feasibility predicate.
-Accepted row data and its analytic evidence survive later auxiliary insertions;
-normalization to scalar residuals belongs to the form, not the presentation.
-
-Only a successful local rewrite splits an original conjunction group. Failed
-rows are retried after later rewrites expose useful domain evidence. Every
-successful rewrite supplies fully certified replacement rows, so this process
-never recursively peels a generated nonsmooth expression or loops on a rule.
--/
+/-! Certify smooth rows before trying exact bound rewrites. Retain accepted row data
+through auxiliary insertions and certify the objective against final feasibility.
+Split conjunction groups only after a successful replacement. Retry failed rows when
+later rewrites expose domain evidence; generated rows are already certified. -/
 
 namespace Morew.Elab.NLP.Terminal
 
@@ -41,12 +32,12 @@ structure Result where
   form : Expr
   /-- Original presentation index of each final entry. -/
   rowOrigins : Array Nat
-  /-- Original entries split or replaced by exact lowering. -/
+  /-- Original entries split or replaced by equivalent constraints. -/
   replacedIndices : Array Nat
   /-- Origin and type of each appended auxiliary, in binder order. -/
   auxiliaries : Array (Nat × Expr)
 
-/-- Rebase terminal evidence before command materialization. -/
+/-- Express terminal evidence in a new variable context before constructing the command. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
@@ -77,8 +68,7 @@ private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) :
 private def feasibility (presentation : PresentationState) : MetaM Expr := do
   mkAppM ``Morew.Problem.feasible #[← presentation.canonicalProblem]
 
--- The checked replacement's backward map is the identity or first projection.
--- Check that precise map before using it to transport a cached domain proof.
+-- Validate the backward map as identity or first projection before transporting domains.
 private def backwardFeasibility (old : PresentationState) (nextDomain : Expr)
     (auxiliary? : Option Expr) (replacement : Replace.RewriteResult) : MetaM Expr := do
   let nextFeasible ← mkAppM ``Morew.Problem.feasible #[replacement.targetProblem]
@@ -148,7 +138,7 @@ private def applyPrepared (work : Work) (index : Nat) (prepared : Rewrite.Result
     (prepared.rowPredicates.mapIdx fun i _ => some (prepared.certified.select i))
     prepared.nextDomain prepared.auxiliary? replacement
 
--- Use the NLP reduction boundary, never the affine helper-expansion policy.
+-- Use NLP structural reduction.
 private def decompose (domain predicate : Expr) : MetaM (Array Expr × Expr) :=
   withLocalDeclD `point domain fun point => do
     let (bodies, proof) ← Decomposition.split (mkApp predicate point)
@@ -159,8 +149,7 @@ private def decompose (domain predicate : Expr) : MetaM (Array Expr × Expr) :=
     checkWithKernel proof
     return (predicates, proof)
 
--- Splitting is speculative: retain the original named group unless one of its
--- leaves actually needs and admits a fully certified automatic replacement.
+-- Split a named group only after a conjunct has a certified replacement.
 private def tryGroupCore (work : Work) (index : Nat) : MetaM (Option Work) := do
   let source := work.presentation.constraints[index]!.predicate
   let (leaves, decomposition) ← decompose work.presentation.domainType source
@@ -201,9 +190,7 @@ private def originalError (original : PresentationState) (origin : Nat)
     rowIndex? := some origin
     reason := ← addMessageContext m!"constraint `{label}` is not certified as a smooth NLP by the available rules: {error.reason}\nexact rewriting: {ruleError.reason}\nuse `nlp at {label}` or `nlp at {label} using ruleName` before `nlp`; expose nested nonsmooth occurrences with an explicit epigraph or hypograph step" }
 
--- A surface reduction is accepted only for directly smooth leaves. Retrying
--- after accepted reductions lets a later guard provide domain evidence to an
--- earlier row without exposing unsuccessful reductions to rule discovery.
+-- Accept reduced predicates after smoothness certification; retry when later constraints establish domains.
 private partial def normalizeDirectRows (work : Work) (reduce : Expr → MetaM Expr) : MetaM Work := do
   let feasible ← feasibility work.presentation
   let constraints ← work.presentation.constraints.mapIdxM fun index row => do
@@ -255,9 +242,7 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
   let work ← match ← lower presentation work reduce? with
     | .ok work => pure work
     | .error error => return .error error
-  -- Final feasibility can expose margins only after exact row lowering. Check
-  -- the complete reduced objective against that predicate, then let buildForm
-  -- combine its domain with the already certified row domains as usual.
+  -- Certify the reduced objective against final feasibility before combining row domains.
   let work ← match reduce? with
     | none => pure work
     | some reduce => do
@@ -287,10 +272,8 @@ private def planCore (presentation : PresentationState) (reduce? : Option (Expr 
     replacedIndices := work.replacedIndices.qsort (· < ·)
     auxiliaries := work.auxiliaries }
 
-/-- Plan deterministic exact lowering and certify the complete final problem.
-No visible names or declarations are emitted. Failures restore caller state.
-An optional surface reducer is admitted only after direct certification; failed
-reductions never enter registered matching. -/
+/-- Plan exact replacements and certify the final problem before name allocation.
+Restore state on failure. Accept reduced predicates only after direct certification. -/
 def plan (presentation : PresentationState) (reduce? : Option (Expr → MetaM Expr) := none) :
     MetaM (Except Domain.DomainError Result) :=
   State.withIsolatedMVars do

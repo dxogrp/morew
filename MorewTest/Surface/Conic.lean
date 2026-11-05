@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import Morew.Conic
 
 /-!
-# Manual conic forms for surface problems
+# Manual conic forms for problem declarations
 
 Certified conic data shares the semantic objective sense with the DSL and its
 typed runner. Attaching a form leaves source and transformed printer output intact.

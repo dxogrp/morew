@@ -5,22 +5,17 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Syntax
 
-/-!
-# Reformulation command syntax
-
-Grammar for proof-producing reformulation scripts. Parser names remain in `Morew`.
--/
+/-! Reformulation grammar with parser names in `Morew`. -/
 
 namespace Morew
 
-/-- Syntax category for one proof-producing reformulation step. -/
+/-- Syntax category for a reformulation step. -/
 declare_syntax_cat reformulationStep
 
-/-- Substitute a decision variable with a registered parameterization, optionally
-using an explicit whole-problem feasible-surjection certificate. -/
+/-- Substitute an optimization variable using a map whose range contains every feasible source point. -/
 syntax (name := substituteStep)
   "substitute " ident " := " term (" using " term)? : reformulationStep
-/-- Select a coordinate parameterization without registry fallback. -/
+/-- Select an explicit coordinate parameterization. -/
 syntax (name := substituteViaStep)
   "substitute " ident " := " term " via " term : reformulationStep
 /-- Append a named consequence of the complete current feasible predicate. -/
@@ -32,16 +27,13 @@ syntax (name := restrictStep)
 /-- Change one current constraint label without changing its predicate. -/
 syntax (name := renameConstraintStep)
   "rename " ident &" to " ident : reformulationStep
-/-- Remove one selected row implied by the remaining constraints, optionally
-checking explicit implication evidence instead of bounded proof automation. -/
+/-- Remove a row implied by retained constraints, using explicit evidence or bounded proof search. -/
 syntax (name := removeStep)
   "remove " "at " ident (" using " term)? : reformulationStep
-/-- Introduce an epigraph variable for a minimization objective, optionally
-choosing the generated constraint's presentation label. -/
+/-- Introduce a minimization epigraph variable with an optional constraint label. -/
 syntax (name := epigraphStep)
   "epigraph " ident (" as " ident)? : reformulationStep
-/-- Introduce a hypograph variable for a maximization objective, optionally
-choosing the generated constraint's presentation label. -/
+/-- Introduce a maximization hypograph variable with an optional constraint label. -/
 syntax (name := hypographStep)
   "hypograph " ident (" as " ident)? : reformulationStep
 
@@ -52,22 +44,20 @@ syntax (name := namedBoundOccurrence) ident : boundOccurrence
 /-- Parentheses distinguish expression matching from named selection. -/
 syntax (name := expressionBoundOccurrence) "(" term ")" : boundOccurrence
 
-/-- Lift one occurrence in the objective or a named constraint. -/
+/-- Introduce an upper bound `f(x) ≤ t` for a selected expression. -/
 syntax (name := epigraphAtStep)
   "epigraph " ident " at " boundOccurrence (" in " ident)?
     (" as " ident)? (" using " term)? : reformulationStep
-/-- Lift one occurrence using a lower bound. -/
+/-- Introduce a lower bound `t ≤ f(x)` for a selected expression. -/
 syntax (name := hypographAtStep)
   "hypograph " ident " at " boundOccurrence (" in " ident)?
     (" as " ident)? (" using " term)? : reformulationStep
 
-/-- Replace one current constraint by an exact conic representation,
-optionally using an explicitly supplied representation certificate. -/
+/-- Replace a constraint by an exact conic representation, optionally supplying its certificate. -/
 syntax (name := conicAtStep)
   "conic " "at " ident (" using " term)? : reformulationStep
 
-/-- Replace one current constraint by an exact smooth representation,
-optionally using an explicitly supplied representation certificate. -/
+/-- Replace a constraint by an exact smooth representation, optionally supplying its certificate. -/
 syntax (name := nlpAtStep)
   "nlp " "at " ident (" using " term)? : reformulationStep
 
@@ -83,8 +73,7 @@ syntax (name := reformulationCmd)
   "reformulation" ident ":" ident ("certificate" ident)? ":=" "by" ppLine
     ppIndent(reformulationStep*) : command
 
-/-- Reformulate an explicitly applied registered problem family. Keep this
-separate from the bare-name grammar so existing command quotations still work. -/
+/-- Reformulate an applied registered problem family. -/
 syntax (name := appliedReformulationCmd)
   "reformulation" ident ":" "(" term ")" ("certificate" ident)? ":=" "by" ppLine
     ppIndent(reformulationStep*) : command

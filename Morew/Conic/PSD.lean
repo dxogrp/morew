@@ -10,66 +10,59 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 /-!
 # Symmetric matrices and positive-semidefinite cones
 
-The cone space consists of ordinary real symmetric matrices, with their exact
-entries and the inherited finite-coordinate supremum norm. Constructing a
-symmetric matrix requires a symmetry proof; no entries are packed, rescaled, or
-symmetrized.
+Real symmetric matrices inherit the entrywise supremum norm. Schur-complement
+identities use positive-definite pivots; block matrices are indexed by
+`Fin (m + n)`.
 
-The Schur-complement certificates use an explicitly positive-definite pivot.
-Block matrices use the first `m` and last `n` indices of `Fin (m + n)`.
-
-The `Morew.Conic.PSD.*` modules prove exact representations of spectral bounds,
-matrix fractions, log-determinants, and positive-definite domains using this cone.
-Their rewrite records are available from `Morew.Conic.PSD.Representations`.
+`Morew.Conic.PSD.Representations` provides rewrite records for spectral bounds,
+matrix-fractional functions, log-determinants, and positive definiteness.
 -/
 
 namespace Morew.Conic
 
-/-- Symmetric real matrices form a submodule of the ordinary coordinate space.
-Writing the ambient space as a function type selects its existing supremum norm
-without introducing a global choice of matrix norm. -/
+/-- The submodule of symmetric real matrices. -/
 def symmetricMatrixSubmodule (n : Nat) : Submodule ℝ (Fin n → Fin n → ℝ) where
   carrier := {M | Matrix.IsSymm M}
   zero_mem' := Matrix.isSymm_zero
   add_mem' := Matrix.IsSymm.add
   smul_mem' c _ h := h.smul c
 
-/-- Real symmetric matrices of dimension `n`, retaining all ordinary entries. -/
+/-- Symmetric real `n × n` matrices. -/
 abbrev SymmetricMatrix (n : Nat) : Type := ↥(symmetricMatrixSubmodule n)
 
 namespace SymmetricMatrix
 
-/-- Construct a symmetric matrix from its unchanged entries and a symmetry proof. -/
+/-- Construct a `SymmetricMatrix` from a real matrix and a symmetry proof. -/
 def ofMatrix {n : Nat} (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     SymmetricMatrix n := ⟨M, hM⟩
 
-/-- The ordinary real matrix underlying a symmetric matrix. -/
+/-- The underlying real matrix. -/
 def toMatrix {n : Nat} (M : SymmetricMatrix n) : Matrix (Fin n) (Fin n) ℝ := M.val
 
 /-- The underlying matrix is symmetric. -/
 theorem toMatrix_isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
   M.property
 
-/-- Symmetry of a bundled matrix, exposed independently of its representation. -/
+/-- The underlying matrix is symmetric. -/
 theorem isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
   M.toMatrix_isSymm
 
-/-- Converting a supplied matrix back to ordinary entries preserves it exactly. -/
+/-- Conversion to `SymmetricMatrix` preserves the underlying matrix. -/
 @[simp]
 theorem toMatrix_ofMatrix {n : Nat} (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     (ofMatrix M hM).toMatrix = M := rfl
 
-/-- Rebundling the underlying entries preserves the symmetric matrix. -/
+/-- Reconstructing a `SymmetricMatrix` from its entries recovers the original. -/
 @[simp]
 theorem ofMatrix_toMatrix {n : Nat} (M : SymmetricMatrix n) :
     ofMatrix M.toMatrix M.toMatrix_isSymm = M := rfl
 
-/-- The ordinary matrix uniquely determines the bundled symmetric matrix. -/
+/-- The underlying matrix determines the symmetric matrix. -/
 theorem toMatrix_injective {n : Nat} :
     Function.Injective (toMatrix : SymmetricMatrix n → Matrix (Fin n) (Fin n) ℝ) :=
   Subtype.coe_injective
 
-/-- Symmetric matrices are equal when their ordinary entries agree. -/
+/-- Symmetric matrices are equal when their entries agree. -/
 @[ext]
 theorem ext {n : Nat} {M N : SymmetricMatrix n}
     (h : ∀ i j, M.toMatrix i j = N.toMatrix i j) : M = N :=
@@ -121,7 +114,7 @@ noncomputable def positiveSemidefinite (n : Nat) : Cone where
       intro M hM N hN
       exact hM.add hN }
 
-/-- Cone membership is exactly positive semidefiniteness of the original matrix. -/
+/-- Cone membership is equivalent to positive semidefiniteness. -/
 @[simp]
 theorem mem_positiveSemidefinite {n : Nat} (M : SymmetricMatrix n) :
     M ∈ (positiveSemidefinite n).carrier ↔ M.toMatrix.PosSemidef := Iff.rfl
@@ -129,7 +122,7 @@ theorem mem_positiveSemidefinite {n : Nat} (M : SymmetricMatrix n) :
 end Cone
 
 set_option quotPrecheck false in
-/-- The positive-semidefinite cone carrier in symmetric dimension `n`. -/
+/-- The positive-semidefinite cone of symmetric `n × n` matrices. -/
 notation:max (name := psdCarrier) "PSD " n:arg =>
   (Morew.Conic.Cone.positiveSemidefinite n).carrier
 
@@ -137,8 +130,8 @@ section Blocks
 
 variable {m n : Nat}
 
-/-- An ordinary block matrix with the first `m` and last `n` indices of
-`Fin (m + n)`. Only the canonical block index equivalence is applied. -/
+/-- An ordinary block matrix indexed by the first `m` and last `n` elements of
+`Fin (m + n)`. -/
 def fromBlocksFin
     (A : Matrix (Fin m) (Fin m) ℝ) (B : Matrix (Fin m) (Fin n) ℝ)
     (C : Matrix (Fin n) (Fin m) ℝ) (D : Matrix (Fin n) (Fin n) ℝ) :
@@ -168,13 +161,13 @@ theorem fromBlocksFin_apply₂₂ (i j : Fin n) :
     fromBlocksFin A B C D (Fin.natAdd m i) (Fin.natAdd m j) = D i j := by
   simp [fromBlocksFin, Matrix.reindex_apply]
 
-/-- Canonical block indexing preserves positive semidefiniteness exactly. -/
+/-- Block reindexing preserves positive semidefiniteness. -/
 theorem posSemidef_fromBlocksFin_iff :
     (fromBlocksFin A B C D).PosSemidef ↔
       (Matrix.fromBlocks A B C D).PosSemidef :=
   Matrix.posSemidef_submatrix_equiv finSumFinEquiv.symm
 
-/-- A symmetric block matrix remains symmetric after canonical block indexing. -/
+/-- Block reindexing preserves symmetry. -/
 theorem isSymm_fromBlocksFin (hA : A.IsSymm) (hBC : B.transpose = C) (hD : D.IsSymm) :
     (fromBlocksFin A B C D).IsSymm :=
   (hA.fromBlocks hBC hD).reindex finSumFinEquiv
@@ -183,7 +176,7 @@ end Blocks
 
 namespace SymmetricMatrix
 
-/-- The symmetric block matrix `[A B; Bᵀ D]`, in canonical finite coordinates. -/
+/-- The symmetric block matrix `[A B; Bᵀ D]`, indexed by `Fin (m + n)`. -/
 def fromBlocks {m n : Nat} (A : SymmetricMatrix m)
     (B : Matrix (Fin m) (Fin n) ℝ) (D : SymmetricMatrix n) : SymmetricMatrix (m + n) :=
   ofMatrix (fromBlocksFin A.toMatrix B B.transpose D.toMatrix)
@@ -196,9 +189,8 @@ theorem toMatrix_fromBlocks {m n : Nat} (A : SymmetricMatrix m)
 
 end SymmetricMatrix
 
-/-- With a positive-definite upper-left pivot, a Schur complement is positive
-semidefinite exactly when the symmetric block matrix belongs to the PSD cone.
-Symmetry of both diagonal blocks is carried by their types. -/
+/-- With a positive-definite upper-left block, the block matrix is positive
+semidefinite if and only if its Schur complement is positive semidefinite. -/
 theorem schurComplement_mem_iff {m n : Nat} (A : SymmetricMatrix m)
     (B : Matrix (Fin m) (Fin n) ℝ) (D : SymmetricMatrix n)
     (hA : A.toMatrix.PosDef) :
@@ -210,9 +202,8 @@ theorem schurComplement_mem_iff {m n : Nat} (A : SymmetricMatrix m)
   simpa only [Matrix.conjTranspose_eq_transpose_of_trivial] using
     (Matrix.PosDef.fromBlocks₁₁ B D.toMatrix hA).symm
 
-/-- With a positive-definite lower-right pivot, a Schur complement is positive
-semidefinite exactly when the symmetric block matrix belongs to the PSD cone.
-The upper-right block is `B`, and the lower-left block is its transpose. -/
+/-- With a positive-definite lower-right block, the block matrix is positive
+semidefinite if and only if its Schur complement is positive semidefinite. -/
 theorem schurComplement_mem_iff_right {m n : Nat} (A : SymmetricMatrix m)
     (B : Matrix (Fin m) (Fin n) ℝ) (D : SymmetricMatrix n)
     (hD : D.toMatrix.PosDef) :

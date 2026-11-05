@@ -30,7 +30,7 @@ def macroCoverage : FeasibleSurjection macroSource
   preimage point := (point.1.1 - (point.1.2 + 1), point.1.2)
   rightInverse point := by simp
 
--- The inserted expression must retain y's macro scope after expanding shift.
+-- The inserted expression must retain `y`'s macro scope after expanding `shift`.
 reformulation macroTarget : macroSource := by
   substitute x := u + shift using macroCoverage
 
@@ -53,7 +53,7 @@ reformulation shadowed : macroSource := by
 example : GlobalEquivalence macroSource shadowed := shadowed.equivalence
 example (u y : ℝ) : shadowed.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 
-/-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
+/-- error: substitution replacement uses model-local definition `loss`, which depends on the optimization variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : macroSource := by
   substitute x := u + loss using macroCoverage
@@ -68,7 +68,7 @@ def generatedCoverage : FeasibleSurjection squareLift
   preimage point := (point.1.1 - point.1.2, point.1.2)
   rightInverse point := by simp
 
--- No model-local definitions are present: a's identity must still be replayed.
+-- No model-local definitions are present: `a`'s identity must still be preserved.
 reformulation generatedTarget : squareLift := by
   substitute x := u + a using generatedCoverage
 
@@ -103,7 +103,7 @@ def recordCoverage : FeasibleSurjection recordSource
   preimage point := (point.1.1 - (point.1.2 + 1), point.1.2)
   rightInverse point := by simp
 
--- A named projection is part of an existing binding, not a new decision name.
+-- A named projection is part of an existing binding, not a new optimization variable name.
 reformulation projected : recordSource := by
   substitute x := u + shift.value using recordCoverage
 
@@ -126,7 +126,7 @@ def capturedCoverage : FeasibleSurjection macroSource
   preimage point := (point.1.1 - 7, point.1.2)
   rightInverse point := by simp
 
--- A macro's captured global shift is not the model-local shift := y + 1.
+-- A macro's captured global `shift` is not the model-local `shift := y + 1`.
 reformulation captured : macroSource := by
   substitute x := withCapturedShift u using capturedCoverage
 

@@ -6,13 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Rows
 
-/-!
-# Constraint-label renaming
-
-Rename one current presentation row without changing its predicate or the
-natural semantic problem. The shared runner owns exact-name preflight,
-certificate composition, and atomic commitment.
--/
+/-! Rename a constraint label while preserving its predicate and semantic problem. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -45,8 +39,8 @@ private def materializeRenameConstraint (state : ReformState) (index : Nat)
     constraintSplices := #[{ index, count := 1 }]
   }
 
-/-- Resolve the current source label before preflighting the exact destination.
-An existing row may keep its visible name, including across macro scopes. -/
+/-- Resolve the source label before checking the destination name.
+A row may retain its visible name across macro scopes. -/
 def prepareRenameConstraint (state : ReformState)
     (source destination : TSyntax `ident) : CommandElabM SurfaceStepDraft := do
   let index ← Rows.findConstraint state source

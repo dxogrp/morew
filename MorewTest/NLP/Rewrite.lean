@@ -131,7 +131,7 @@ run_cmd liftTermElabM do
   rejected (← `(input (fun x : ℝ => |Real.log x| ≤ 2) #[])) "domain"
   rejected (← `(input (fun x : ℝ => |Real.log x| ≤ 2) #[(fun x : ℝ => 0 < x)])) "domain"
 
--- Symbolic families stay grouped and use the source support, including n = 0.
+-- Symbolic families stay grouped and use the source support, including `n = 0`.
 run_cmd liftTermElabM do
   expect (← `(fun n : ℕ => (input (fun v : Fin n → ℝ => ‖v‖ ≤ 3) #[]))) 3 false 1
   expect (← `(fun n : ℕ => (input (fun v : Fin n → ℝ => ‖WithLp.toLp 1 v‖ ≤ 3) #[])))

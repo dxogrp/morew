@@ -8,11 +8,10 @@ import Morew.Rewrite.Basic
 import Mathlib.Analysis.Normed.Lp.PiLp
 
 /-!
-# Exact finite p-norm epigraphs
+# Exact finite `p`-norm epigraphs
 
-The source is the native `PiLp` norm, with its exact extended-nonnegative-real
-exponent. A checked real exponent greater than one supplies the power-cone
-parameter. The explicit nonnegative bound also covers empty coordinate spaces.
+Power-cone representations of the `PiLp` norm for a finite exponent `p > 1`.
+A scalar nonnegativity constraint handles empty coordinate spaces.
 -/
 
 namespace Morew.Conic.Power
@@ -41,8 +40,7 @@ private theorem bound_mul_rpow (q t : ℝ) (hq : 1 < q) (ht : 0 ≤ t) :
       (Real.rpow_add_of_nonneg ht zero_le_one (sub_nonneg.mpr hq.le)).symm
     _ = t ^ q := by congr 1; ring
 
-/-- The native finite p-norm has an exact power-cone epigraph, including empty
-coordinate spaces, signed coordinates, and a zero upper bound. -/
+/-- A power-cone representation of the finite `p`-norm epigraph. -/
 theorem norm_toLp_le_iff {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal)
     (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp p v‖ ≤ t ↔
@@ -89,8 +87,8 @@ theorem norm_toLp_le_iff {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal)
         mul_le_mul_of_nonneg_right hsumr (Real.rpow_nonneg ht _)
       _ = t ^ p.toReal := bound_mul_rpow _ _ hp ht
 
-/-- The native finite p-norm epigraph, represented with one auxiliary vector
-and a finite family of power-cone memberships. -/
+/-- The finite `p`-norm epigraph, represented by an auxiliary vector
+and a finite family of power-cone constraints. -/
 noncomputable def normEpigraph {n : ℕ} (p : ℝ≥0∞) (hp : 1 < p.toReal) :
     EpigraphRepresentation (fun v : Fin n → ℝ => ‖WithLp.toLp p v‖) where
   Auxiliary := Fin n → ℝ

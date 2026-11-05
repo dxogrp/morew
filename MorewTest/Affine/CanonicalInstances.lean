@@ -9,9 +9,8 @@ import Morew.Elab.Affine.Space
 /-!
 # Canonical structures for affine maps and rows
 
-Unrelated ambient instances must not affect certification. Source operations
-that actually change the arithmetic or order remain unsupported, and temporary
-canonical instances must not escape into certificates.
+Unrelated ambient instances leave certification unchanged. Source operations
+that change arithmetic or order are rejected; certificates use canonical instances.
 -/
 
 namespace MorewTest.Affine.CanonicalInstances

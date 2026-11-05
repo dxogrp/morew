@@ -6,12 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Finite power-cone chains and exact presentation replay
+# Finite power-cone chains and exact presentation reconstruction
 
-Finite power-cone chains retain exact replay under conflicting consumer-side
-declarations. Their mathematical print views preserve dimensions and arithmetic structure while
-omitting canonical casts and index proofs. Readable replay is checked for the
-original source views; mathematical rows never enter either stored replay view.
+Exact reconstruction retains checked references under conflicting declarations.
+Mathematical views preserve dimensions and arithmetic while omitting canonical
+casts and index proofs. They remain separate from stored reconstruction views.
 -/
 
 namespace MorewTest.Reformulation.PowerPrinting
@@ -183,7 +182,7 @@ def Cone.powerSet (_ : ℝ) : Set (ℝ × ℝ × ℝ) := Set.univ
 variable (n : ℕ) (hn : 0 < n)
 
 -- Captured references and original proofs must survive exact re-elaboration.
--- Readable replay covers source views; lowered chain views omit Fin.mk proofs.
+-- Readable source reconstruction includes the `Fin.mk` proofs omitted by mathematical chain views.
 -- Checking the declaration also rules out unresolved proofs.
 run_cmd do
   let readable := #[``GeometricMean.source, ``InverseProduct.source]

@@ -161,7 +161,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       unless (← error.reason.toString).contains "morew.affine.maxExpansionDepth" do
         throwError "matrix equivalence helper lost the expansion depth diagnostic: {error.reason}"
 
-/-! The restriction certificate proves equality for every entry, including n=0. -/
+/-! The restriction certificate proves equality for every entry, including `n = 0`. -/
 
 example {X : Type*} [AddCommGroup X] [Module ℝ X] {n : Nat}
     (f : X →ᵃ[ℝ] Matrix (Fin n) (Fin n) ℝ) (h : ∀ x, (f x).IsSymm)

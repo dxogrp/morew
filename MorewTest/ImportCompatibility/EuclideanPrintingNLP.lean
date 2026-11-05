@@ -37,7 +37,7 @@ local instance (priority := high) :
 example (x : EuclideanSpace ℝ (Fin 2)) : x 0 = x.ofLp 0 + 11 := rfl
 
 run_cmd do
-  -- Stored print syntax keeps the producer's notation, while both replay
+  -- Stored print syntax keeps the producer's notation, while both reconstruction
   -- views must retain the checked coordinate function under consumer instances.
   checkReadable ``target
   checkReadable ``continued

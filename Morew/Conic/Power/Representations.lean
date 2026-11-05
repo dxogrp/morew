@@ -9,12 +9,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact scalar-power representations
 
-Base domains are explicit subtype inputs. Real exponents remain exact parameters;
-their range proofs determine the bundled power cone. Hypographs use a nonnegative
-auxiliary above the original bound, so negative bounds remain feasible.
-
-Native `Real.rpow` and canonical real-exponent notation have distinct registered
-source patterns. The endpoint records require no sign condition on the base.
+Input types include the base-domain hypotheses. Hypographs use a nonnegative
+auxiliary variable above the bound. `Real.rpow x p` and `x ^ p` have separate
+representations; exponents zero and one require no sign condition on the base.
 -/
 
 namespace Morew.Conic.Power
@@ -28,7 +25,7 @@ noncomputable def rpowEpigraph (p : ℝ) (hp : 1 < p) :
     change x.1 ^ p ≤ t ↔ ∃ _ : Unit, (t, 1, x.1) ∈ POW (1 / p)
     simpa only [exists_const] using rpow_le_iff x.1 t p x.2 hp
 
-/-- Canonical real-power notation for convex positive powers. -/
+/-- The epigraph of `x ^ p` for `p > 1` on nonnegative bases. -/
 noncomputable def rpowNotationEpigraph (p : ℝ) (hp : 1 < p) :
     EpigraphRepresentation (fun x : {x : ℝ // 0 ≤ x} => x.1 ^ p) :=
   rpowEpigraph p hp
@@ -43,7 +40,7 @@ noncomputable def rpowNegativeEpigraph (p : ℝ) (hp : p < 0) :
     change x.1 ^ p ≤ t ↔ ∃ _ : Unit, (t, x.1, 1) ∈ POW (1 / (1 - p))
     simpa only [exists_const] using rpow_neg_le_iff x.1 t p x.2 hp
 
-/-- Canonical real-power notation for convex negative powers. -/
+/-- The epigraph of `x ^ p` for `p < 0` on positive bases. -/
 noncomputable def rpowNegativeNotationEpigraph (p : ℝ) (hp : p < 0) :
     EpigraphRepresentation (fun x : {x : ℝ // 0 < x} => x.1 ^ p) :=
   rpowNegativeEpigraph p hp
@@ -55,7 +52,7 @@ noncomputable def rpowHypograph (p : ℝ) (hp : 0 < p ∧ p < 1) :
   target x t u := 0 ≤ u ∧ t ≤ u ∧ (x.1, 1, u) ∈ (Cone.power p hp).carrier
   source_iff_exists x t := le_rpow_iff x.1 t p x.2 hp
 
-/-- Canonical real-power notation for concave fractional powers. -/
+/-- The hypograph of `x ^ p` for `0 < p < 1` on nonnegative bases. -/
 noncomputable def rpowNotationHypograph (p : ℝ) (hp : 0 < p ∧ p < 1) :
     HypographRepresentation (fun x : {x : ℝ // 0 ≤ x} => x.1 ^ p) :=
   rpowHypograph p hp
@@ -115,19 +112,19 @@ noncomputable def rpowOneHypograph : HypographRepresentation (fun x : ℝ => Rea
     change t ≤ x ^ (1 : ℝ) ↔ ∃ _ : Unit, t ≤ x
     simp only [Real.rpow_one, exists_const]
 
-/-- Notation spelling of the zeroth-power epigraph. -/
+/-- The epigraph of `x ^ (0 : ℝ)`. -/
 noncomputable def rpowZeroNotationEpigraph : EpigraphRepresentation (fun x : ℝ => x ^ (0 : ℝ)) :=
   rpowZeroEpigraph
 
-/-- Notation spelling of the zeroth-power hypograph. -/
+/-- The hypograph of `x ^ (0 : ℝ)`. -/
 noncomputable def rpowZeroNotationHypograph : HypographRepresentation (fun x : ℝ => x ^ (0 : ℝ)) :=
   rpowZeroHypograph
 
-/-- Notation spelling of the first-power epigraph. -/
+/-- The epigraph of `x ^ (1 : ℝ)`. -/
 noncomputable def rpowOneNotationEpigraph : EpigraphRepresentation (fun x : ℝ => x ^ (1 : ℝ)) :=
   rpowOneEpigraph
 
-/-- Notation spelling of the first-power hypograph. -/
+/-- The hypograph of `x ^ (1 : ℝ)`. -/
 noncomputable def rpowOneNotationHypograph : HypographRepresentation (fun x : ℝ => x ^ (1 : ℝ)) :=
   rpowOneHypograph
 

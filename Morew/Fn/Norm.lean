@@ -8,9 +8,8 @@ import Mathlib.Analysis.Normed.Lp.PiLp
 /-!
 # Named real vector norms
 
-These functions fix the usual one-, two-, and infinity-norms on ordinary finite
-real vectors. Their meanings do not depend on a caller's local norm instances or
-scopes. Each norm is zero on an empty vector.
+The one-, two-, and infinity-norms on finite real vectors, independent of local
+norm instances. Each norm is zero on an empty vector.
 -/
 
 namespace Morew.Fn

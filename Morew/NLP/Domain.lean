@@ -11,13 +11,9 @@ import Mathlib.Analysis.SpecialFunctions.Sqrt
 /-!
 # Open evaluation domains for smooth nonlinear expressions
 
-Domains combine through intersections and finite families. Positivity and
-nonzero restrictions use continuity on the current domain, so nested restricted
-functions need no extension to a globally continuous function. Feasibility
-inclusion is separate evidence and does not alter the represented constraints.
-
-The smoothness rules apply to arbitrary domains in real normed spaces. They
-retain the native total expressions, including their values outside the domain.
+Open domains from intersections, positivity, and nonzero conditions, with
+proofs of feasible-set inclusion. Smoothness rules for logarithms, square roots,
+reciprocals, and real powers apply on these domains.
 -/
 
 namespace Morew.NLP.Domain
@@ -116,25 +112,25 @@ section RestrictedFunctions
 
 variable [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-/-- Native logarithms are smooth where their argument is positive. -/
+/-- Logarithms are smooth where their argument is positive. -/
 theorem log (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain)
     (hpos : ∀ x ∈ domain, 0 < f x) :
     ContDiffOn ℝ 2 (fun x => Real.log (f x)) domain :=
   hf.log fun x hx => (hpos x hx).ne'
 
-/-- Native square roots are smooth where their argument is positive. -/
+/-- Square roots are smooth where their argument is positive. -/
 theorem sqrt (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain)
     (hpos : ∀ x ∈ domain, 0 < f x) :
     ContDiffOn ℝ 2 (fun x => Real.sqrt (f x)) domain :=
   hf.sqrt fun x hx => (hpos x hx).ne'
 
-/-- Native reciprocals are smooth where their argument is nonzero. -/
+/-- Reciprocals are smooth where their argument is nonzero. -/
 theorem inv (f : X → ℝ) (hf : ContDiffOn ℝ 2 f domain)
     (hne : ∀ x ∈ domain, f x ≠ 0) :
     ContDiffOn ℝ 2 (fun x => (f x)⁻¹) domain :=
   hf.inv hne
 
-/-- Native quotients are smooth where the denominator is nonzero. -/
+/-- Quotients are smooth where the denominator is nonzero. -/
 theorem div (f g : X → ℝ) (hf : ContDiffOn ℝ 2 f domain)
     (hg : ContDiffOn ℝ 2 g domain) (hne : ∀ x ∈ domain, g x ≠ 0) :
     ContDiffOn ℝ 2 (fun x => f x / g x) domain :=

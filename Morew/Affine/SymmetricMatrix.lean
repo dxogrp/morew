@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Affine.Matrix
 import Morew.Conic.PSD
 
-/-! Exact restriction of affine matrix maps to the symmetric-matrix space. -/
+/-! Restrict affine matrix maps to the space of symmetric matrices. -/
 
 namespace Morew.Affine
 
@@ -29,7 +29,7 @@ noncomputable def restrictSymmetricMatrix
     apply Subtype.ext
     exact f.map_vadd p v
 
-/-- Restriction preserves every ordinary matrix entry exactly. -/
+/-- Restriction preserves the matrix entries. -/
 @[simp]
 theorem toMatrix_restrictSymmetricMatrix
     (f : X →ᵃ[ℝ] Matrix (Fin n) (Fin n) ℝ) (h : ∀ x, (f x).IsSymm) (x : X) :
@@ -37,20 +37,20 @@ theorem toMatrix_restrictSymmetricMatrix
 
 namespace Certified
 
-/-- Convert a certified ordinary matrix using a universal symmetry witness. -/
+/-- Convert a certified matrix-valued function whose values are symmetric. -/
 noncomputable def toSymmetricMatrix {f : X → Matrix (Fin n) (Fin n) ℝ}
     (a : Certified f) (h : ∀ x, (f x).IsSymm) :
     Certified (fun x => SymmetricMatrix.ofMatrix (f x) (h x)) where
   map := restrictSymmetricMatrix a.map fun x => (a.correct x).symm ▸ h x
   correct x := SymmetricMatrix.toMatrix_injective (a.correct x)
 
-/-- Forget a symmetry witness while retaining the certified ordinary entries. -/
+/-- Extract the underlying matrix from a certified symmetric-matrix function. -/
 noncomputable def fromSymmetricMatrix {f : X → SymmetricMatrix n} (a : Certified f) :
     Certified (fun x => (f x).toMatrix) where
   map := (SymmetricMatrix.toMatrixLinearMap n).toAffineMap.comp a.map
   correct x := congrArg SymmetricMatrix.toMatrix (a.correct x)
 
-/-- Assemble finite-indexed blocks with their original affine entries. -/
+/-- Assemble affine matrix blocks indexed by `Fin`. -/
 noncomputable def fromBlocksFin {m n : Nat}
     {f : X → Matrix (Fin m) (Fin m) ℝ} {g : X → Matrix (Fin m) (Fin n) ℝ}
     {h : X → Matrix (Fin n) (Fin m) ℝ} {k : X → Matrix (Fin n) (Fin n) ℝ}

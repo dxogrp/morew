@@ -9,26 +9,24 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Finite geometric means and inverse products
 
-These are ordinary total real functions. The empty geometric mean and inverse
-product both equal one. Their exact conic representations separately require a
-nonempty dimension and coordinatewise nonnegative or strictly positive inputs.
-In particular, an inverse product with a zero factor is zero under real
-division's totalized semantics, outside its intended positive modeling domain.
+The geometric mean and reciprocal product, with their conic representation domains.
 -/
 
 namespace Morew.Fn
 
-/-- The unweighted geometric mean of a finite real vector. Its usual domain is
-coordinatewise nonnegative; the empty vector has value one. -/
+/-- The unweighted geometric mean of a finite real vector. Its conic
+representation requires a nonempty vector with nonnegative coordinates.
+The empty vector has value one. -/
 noncomputable def geoMean {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   Real.rpow (∏ i, xs i) (1 / (n : ℝ))
 
-/-- The reciprocal of a finite product. Its intended modeling domain is
-coordinatewise strictly positive; the empty vector has value one. -/
+/-- The reciprocal of a finite product. Its conic representation requires a
+nonempty positive vector. The empty product has reciprocal one; a zero product
+has reciprocal zero under real division. -/
 noncomputable def invProd {n : Nat} (xs : Fin n → ℝ) : ℝ :=
   (∏ i, xs i)⁻¹
 
-/-- The geometric mean uses the native real power of the product. -/
+/-- The geometric mean is the real power of the product. -/
 theorem geoMean_eq_rpow_prod {n : Nat} (xs : Fin n → ℝ) :
     geoMean xs = Real.rpow (∏ i, xs i) (1 / (n : ℝ)) := rfl
 
@@ -38,12 +36,11 @@ theorem geoMean_eq_prod_rpow {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 ≤ x
     geoMean xs = ∏ i, Real.rpow (xs i) (1 / (n : ℝ)) :=
   (Real.finsetProd_rpow Finset.univ xs (fun i _ => hx i) _).symm
 
-/-- The inverse product uses the native reciprocal of the product. -/
+/-- The inverse product is the reciprocal of the product. -/
 theorem invProd_eq_inv_prod {n : Nat} (xs : Fin n → ℝ) :
     invProd xs = (∏ i, xs i)⁻¹ := rfl
 
-/-- The reciprocal of a product is the product of the reciprocals, including
-the totalized zero cases. -/
+/-- The reciprocal of a product is the product of the reciprocals. -/
 theorem invProd_eq_prod_inv {n : Nat} (xs : Fin n → ℝ) :
     invProd xs = ∏ i, (xs i)⁻¹ := by
   simp [invProd]
@@ -82,7 +79,7 @@ theorem geoMean_eq_zero {n : Nat} (xs : Fin n → ℝ) (i : Fin n) (hi : xs i = 
   rw [Finset.prod_eq_zero (Finset.mem_univ i) hi]
   exact Real.zero_rpow (one_div_ne_zero hn)
 
-/-- An inverse product is positive on its intended positive domain. -/
+/-- An inverse product of strictly positive coordinates is positive. -/
 theorem invProd_pos {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 < xs i) :
     0 < invProd xs :=
   inv_pos.mpr (Finset.prod_pos (fun i _ => hx i))

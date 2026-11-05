@@ -56,8 +56,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
     let callerHole ← mkFreshExprMVar (mkConst ``Nat)
     for _ in [:2] do
       let before ← getMCtx
-      -- An escaping exception fails the regression instead of being accepted
-      -- as equivalent to the public API's explicit error result.
+      -- Exceptions differ from the public API's explicit error result.
       let .error error ← Conic.Rewrite.planUnique source #[] provider
         | throwError "conic rewriting exceeded the helper-depth limit"
       unless (← error.reason.toString).contains "maxExpansionDepth" do

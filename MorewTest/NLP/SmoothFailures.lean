@@ -11,8 +11,7 @@ import Mathlib.Analysis.SpecialFunctions.Sqrt
 # Structured rejection of unsupported smoothness expressions
 
 Each input elaborates before certification. Assertions check the failure class,
-original source, failing operand, and its type, so an unrelated elaboration
-error cannot satisfy a negative test.
+original source, failing operand, and operand type.
 -/
 
 namespace MorewTest.NLP.Smooth
@@ -148,8 +147,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun x : ℝ =>
     @HAdd.hAdd ℝ ℝ ℝ ⟨fun a _ => |a|⟩ 2 3 + x))
 
-/-! The initial decision-space whitelist is intentionally narrower than all
-finite-dimensional normed spaces. -/
+/-! Decision-space recognition supports a fixed subset of finite-dimensional
+normed spaces. -/
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertRejected (← `(fun x : ℕ => (x : ℝ))) .unsupportedSpace

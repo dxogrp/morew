@@ -6,12 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Affine
 import Morew.Elab.Expansion
 
-/-!
-# Bounded helper expansion for affine certification
-
-Affine recognition retains its eager expansion policy and its own locally
-scoped options. The shared engine supplies accounting and structural reduction.
--/
+/-! Bounded expansion of affine helpers with shared size, depth, and step limits. -/
 
 /-- Maximum nested helper expansions; zero disables expansion. -/
 register_option morew.affine.maxExpansionDepth : Nat := {
@@ -59,10 +54,7 @@ private def config : MetaM Morew.Elab.Expansion.Config := do
 def enabled : MetaM Bool := do
   return Morew.Elab.Expansion.enabled (← config)
 
--- Keep each native operation's type/instance prefix intact, including when
--- its result is applied to further arguments (for example, a vector index).
--- Visit supplied value operands even before the operation is fully applied:
--- a helper can return a partial operation through a projection or local alias.
+-- Preserve type and instance arguments; visit value operands of partial and applied operations.
 private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
   let first ←
     if ([``HAdd.hAdd, ``HSub.hSub, ``HMul.hMul, ``HDiv.hDiv, ``HSMul.hSMul,
@@ -100,8 +92,7 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else none
   if first < arity then some first else none
 
--- Preserve blocked field selections without leaving named inner projections
--- for the downstream structural reducer to open through unrestricted whnf.
+-- Keep blocked projections closed during structural reduction.
 private partial def rawProblemProjections (source : Expr) : Expr :=
   source.replace fun expression =>
     let head := expression.getAppFn
@@ -113,9 +104,7 @@ private partial def rawProblemProjections (source : Expr) : Expr :=
         ((arguments.extract 3 arguments.size).map rawProblemProjections))
     else none
 
--- Expose a container by opening exactly one eligible helper along its head.
--- Rebuilding projections/applications lets visit keep the increased depth for
--- the entire field selection, without traversing unused constructor fields.
+-- Unfold one helper defining a structure; visit its selected field at the increased depth.
 private partial def unfoldContainer? (expression : Expr) (bounds : Morew.Elab.Expansion.Config)
     (depth : Nat) : ExpandM (Option Expr) := do
   if let some step ← unfoldHead? bounds expression depth then
@@ -149,9 +138,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       let body ← visit (body.instantiate1 binding) reduce bounds depth
       return .forallE name type (body.abstract #[binding]) info
   | .letE name type value body nondep =>
-    -- Evidence and instances must stay in scope, including unused proof lets.
-    -- A container's selected field must be visited inside the depth of the
-    -- helper that produces it, even when the container has a local name.
+    -- Keep proof and instance lets in scope; count the structure's helper toward expansion depth.
     let isContainer := (← whnf type).isAppOfArity ``Morew.Problem 2
     let value ← if (← isProp type) || (← isClass? type).isSome || isContainer then pure value
       else visit value reduce bounds depth
@@ -167,10 +154,7 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   | _ => pure ()
   let head := expression.getAppFn
   let arguments := expression.getAppArgs
-  -- Matrix.of and Matrix.reindex are equivalences applied through a canonical
-  -- coercion. Preserve that coercion and its fixed parameters, visiting only
-  -- the matrix operand; recognition checks the complete typed prefix. Expose
-  -- local aliases structurally and named aliases with the same helper budget.
+  -- Preserve `Matrix.of` and `Matrix.reindex` coercions; expand their matrix operands and aliases within budget.
   if head.isConstOf ``DFunLike.coe && arguments.size >= 6 then
     let operation ← reduceChecked arguments[4]! reduce bounds
     if operation.isAppOf ``Matrix.of || operation.isAppOf ``Matrix.reindex then
@@ -195,37 +179,28 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
   if (head.isConstOf ``Morew.Problem.objective ||
       head.isConstOf ``Morew.Problem.feasible) && arguments.size ≥ 3 then
     if let some expanded ← unfoldContainer? arguments[2]! bounds depth then
-      -- Revisit the whole projection at the increased depth so helpers in the
-      -- selected field remain nested under the container's unfolding.
+      -- Visit the selected field at the structure's increased expansion depth.
       return ← visit (mkAppN head (arguments.set! 2 expanded)) reduce bounds (depth + 1)
-    -- A blocked container can still supply a decision-independent coefficient.
-    -- Keep an equivalent raw projection: the downstream structural reducer
-    -- must not reopen this named field with an unrestricted container whnf.
-    -- Its value arguments remain eligible for bounded helper expansion.
+    -- Retain blocked projections as coefficients; expand value arguments within budget.
     let mut expanded := arguments
     for i in [3:arguments.size] do
       expanded := expanded.set! i (← visit arguments[i]! reduce bounds depth)
     return rawProblemProjections (mkAppN head expanded)
   if let some step ← unfoldHead? bounds expression depth then
     return ← visit step.expression reduce bounds (depth + 1)
-  -- An applied local vector or lambda may contain helper expressions. Unknown
-  -- constant heads remain boundaries, including predicates and native atoms.
+  -- Visit applied local functions; stop at unknown constants, predicates, and standard mathematical operations.
   if !head.isConst then
     if let .app function argument := expression then
       let rebuilt := mkApp (← visit function reduce bounds depth)
         (← visit argument reduce bounds depth)
-      -- Child expansion can expose a beta redex, including through a projection.
-      -- Charge its substitution before constructing the result, then visit any
-      -- helpers that become applicable only after that substitution.
+      -- Charge beta substitution before visiting newly exposed helpers.
       let reduced ← reduceChecked rebuilt reduce bounds
       if reduced != rebuilt then return ← visit reduced reduce bounds depth
       return rebuilt
   return expression
 
-/-- Prepare one source expression with one shared budget. The supplied reducer
-handles only existing structural reductions; helper unfolding lives here.
-Proof and instance lets remain available to evidence collection and reification.
-Zero in any option disables all helper expansion. -/
+/-- Expand helpers with one shared budget and the supplied structural reducer.
+Retain proof and instance lets. A zero limit disables expansion. -/
 def prepare (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Result := do
   let bounds ← config
   if !Morew.Elab.Expansion.enabled bounds then
@@ -234,7 +209,7 @@ def prepare (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Resu
   | .ok (expression, state) => return { expression, expansions := state.steps }
   | .error error => throwError error.toMessageData bounds.label
 
-/-- Expand safe helper heads without modifying the source presentation. -/
+/-- Expand eligible helper heads for proof construction. -/
 def expand (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Expr := do
   return (← prepare source reduce).expression
 

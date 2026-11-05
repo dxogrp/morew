@@ -12,7 +12,7 @@ import Mathlib.Analysis.SpecialFunctions.Exp
 
 These tests check exactness, ordered row decomposition, native instance
 recognition, local evidence, caller metavariable state, and custom whole-predicate
-certificate adapters independently of the surface reformulation command.
+certificate adapters independently of the reformulation command.
 -/
 
 namespace MorewTest.Conic.PolyhedralElab
@@ -191,7 +191,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   expectRejected (← `(fun x : ℝ => |x * x| ≤ 1)) "generated row"
   expectRejected (← `(fun x : ℝ => 1 ≤ |x|)) "no supported"
   expectRejected (← `(fun x : ℝ => |x| = 1)) "no supported"
-  -- L2 prefers the direct one-row SOC representation. Selecting L1 still
+  -- `L2` prefers the direct one-row SOC representation. Selecting `L1` still
   -- rejects the incompatible norm carrier.
   expectPlan (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) 1 false
   expectRejected (← `(fun v : Fin 2 → ℝ => ‖WithLp.toLp 2 v‖ ≤ 1)) "instance"
@@ -207,7 +207,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       {0} (by simp) (fun _ => x) ≤ 1)) "instance"
   expectRejected (← `(fun x : ℝ =>
     (if x ≤ 0 then ({0} : Finset ℕ) else {1}).sup'
-      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "decision variable"
+      (by split <;> simp) (fun i => (i : ℝ) * x) ≤ 1)) "optimization variable"
   expectRejected (← `(fun x : ℝ => 0 ≤ x ∨ x ≤ 0)) "unsupported exact target"
     (some (← `(disjunctiveTarget)))
   expectRejected (← `(predicateHelper)) "unsupported exact target"

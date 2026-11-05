@@ -15,7 +15,7 @@ namespace Morew.Affine.Certified
 variable {X : Type*} [AddCommGroup X] [Module ℝ X]
 variable {l m n o : Type*}
 
-/-- Retain the ordinary matrix constructor without exposing arbitrary coercions. -/
+/-- Apply `Matrix.of` to an affine family of entries. -/
 noncomputable def matrixOf {f : X → m → n → ℝ} (a : Certified f) :
     Certified (fun x => Matrix.of (f x)) where
   map := (Matrix.ofLinearEquiv ℝ : (m → n → ℝ) ≃ₗ[ℝ] Matrix m n ℝ).toAffineEquiv.toAffineMap.comp a.map
@@ -33,13 +33,13 @@ noncomputable def diagonal [DecidableEq n] {f : X → n → ℝ} (a : Certified 
   map := (Matrix.diagonalLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.diagonal (a.correct x)
 
-/-- The trace of an affine square matrix is affine, with its original finite sum. -/
+/-- The trace of an affine square matrix is affine. -/
 noncomputable def trace [Fintype n] {f : X → Matrix n n ℝ} (a : Certified f) :
     Certified (fun x => Matrix.trace (f x)) where
   map := (Matrix.traceLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.trace (a.correct x)
 
-/-- Embed affine lower-triangular coordinates without exposing their conditional entries. -/
+/-- Embed affine coordinates in a lower-triangular matrix. -/
 noncomputable def lowerTriangularMatrix {n : Nat}
     {f : X → Conic.LowerTriangularEntries n} (a : Certified f) :
     Certified (fun x => Conic.lowerTriangularMatrix (f x)) where
@@ -61,7 +61,7 @@ noncomputable def reindex {f : X → Matrix m n ℝ} (rows : m ≃ l) (cols : n 
     (a : Certified f) : Certified (fun x => Matrix.reindex rows cols (f x)) :=
   submatrix a rows.symm cols.symm
 
-/-- Assemble four affine blocks without enumerating any matrix dimension. -/
+/-- Assemble four affine matrix blocks. -/
 noncomputable def fromBlocks {f : X → Matrix n l ℝ} {g : X → Matrix n m ℝ}
     {h : X → Matrix o l ℝ} {k : X → Matrix o m ℝ}
     (a : Certified f) (b : Certified g) (c : Certified h) (d : Certified k) :

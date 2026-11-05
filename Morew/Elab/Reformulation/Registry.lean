@@ -6,12 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Reformulation.State
 import Morew.Elab.Reformulation.Syntax
 
-/-!
-# Internal reformulation dispatch
-
-Entry points install exactly one handler for each supported syntax kind. This
-registry is command implementation machinery, not a public extension API.
--/
+/-! Associate each reformulation syntax kind with one command procedure supplied by an import. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -27,10 +22,10 @@ private unsafe def mkStepAttributeUnsafe (ref : Name) : IO (KeyedDeclsAttribute 
 @[implemented_by mkStepAttributeUnsafe]
 private opaque mkStepAttribute (ref : Name) : IO (KeyedDeclsAttribute StepHandler)
 
-/-- Internal syntax-kind dispatch table populated by the selected entry point. -/
+/-- Registered command procedures indexed by syntax kind. -/
 initialize stepAttribute : KeyedDeclsAttribute StepHandler ← mkStepAttribute decl_name%
 
-/-- Resolve exactly one installed handler and prepare its uncommitted step. -/
+/-- Select one registered command procedure and prepare its proposed step. -/
 def prepareStep (state : ReformState) (step : Syntax) : CommandElabM SurfaceStepDraft := do
   match stepAttribute.getEntries (← getEnv) step.getKind with
   | [entry] => withRef step <| entry.value state step

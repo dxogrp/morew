@@ -8,10 +8,10 @@ import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.Matrix.ToLin
 
 /-!
-# Imported helpers for affine expansion regressions
+# Imported helpers for affine expansion tests
 
-Keep these definitions in a separate module to exercise declaration parameters,
-universe instantiation, and finite evidence stored only inside helper bodies.
+Separate declarations exercise parameters, universe instantiation, and finite
+evidence stored inside helper bodies.
 -/
 
 namespace MorewTest.Affine.HelperFixtures

@@ -9,9 +9,9 @@ import Morew.Elab.Conic.Space
 /-!
 # Affine coordinates of Euclidean decision spaces
 
-The L2 type wrapper preserves affine structure while its ordinary coordinates
-remain distinct from the existing L∞ function space. Certificates retain the
-canonical operations even when unrelated local instances are available.
+The `L2` wrapper preserves affine structure and differs from the `L∞` norm on
+function spaces. Certificates retain canonical operations under unrelated
+local instances.
 -/
 
 namespace MorewTest.Conic.EuclideanAffine
@@ -64,8 +64,7 @@ run_cmd liftTermElabM do
   assertRow (← `(fun [NormedAddCommGroup (Nested 2)] [NormedSpace ℝ (Nested 2)] =>
     fun x : Nested 2 => (x.1 0) 0 ≤ x.2)) 2
 
-/-! A changed operation, nonlinear coordinate, or unsupported Lp wrapper must
-be rejected instead of being silently interpreted with Euclidean operations. -/
+/-! Changed operations, nonlinear coordinates, and unsupported Lp wrappers are rejected. -/
 
 run_cmd liftTermElabM do
   assertUnsupported (← `(fun x : Vector 2 =>

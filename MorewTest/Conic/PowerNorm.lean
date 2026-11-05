@@ -7,7 +7,7 @@ import Morew.Conic.Power.Norm
 import Mathlib.NumberTheory.Real.Irrational
 
 /-!
-# Exact native p-norm semantics
+# Exact native `p`-norm semantics
 
 These tests check the representation independently of registry selection and
 elaboration, including signed inputs, empty dimensions, zero bounds, and exact
@@ -106,7 +106,7 @@ example {n : ℕ} (q : ℝ) (hq : 1 < q) (v : Fin n → ℝ) (t : ℝ) :
   simpa only [ENNReal.toReal_ofReal (zero_lt_one.trans hq).le] using
     Power.norm_toLp_le_iff (ENNReal.ofReal q) hp v t
 
-/-! The irrational example retains sqrt(2) exactly in its cone parameter. -/
+/-! The irrational example retains `sqrt(2)` exactly in its cone parameter. -/
 
 example : Irrational (Real.sqrt 2) := irrational_sqrt_two
 

@@ -78,7 +78,7 @@ example : GlobalEquivalence absoluteGraphSource absoluteGraphTarget :=
   absoluteGraphTarget.equivalence
 
 -- A generated guard may establish the domain only after unconditional exactness
--- has been checked. The target's log is smooth on the open set u > 0.
+-- has been checked. The target's `log` is smooth on the open set `u > 0`.
 def guardedLift : ExactConstraintLift (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ
   target x u := u = 1 ∧ Real.log u = 0 ∧ 0 ≤ x

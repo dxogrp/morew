@@ -8,11 +8,11 @@ import Morew.Reformulation.Conic
 /-!
 # Naming constraints during a reformulation
 
-`rename old to new` changes a current label in place. Later steps
-select the new label; the predicate and its position stay the same.
+`rename old to new` changes a constraint's label. Later steps use the new label;
+the constraint and its position are unchanged.
 -/
 
-namespace Examples.Rename
+namespace Examples.Transformations.Rename
 
 open Morew
 noncomputable section
@@ -41,7 +41,7 @@ def logarithmic :=
       cap : x ≤ 3
 
 reformulation exponential : logarithmic := by
-  -- Renaming the domain row does not interfere with its later removal.
+  -- Substitution removes the renamed domain row after proving it tautological.
   rename positive to domain
   substitute x := Real.exp u
   rename cap to upper
@@ -52,4 +52,4 @@ reformulation exponential : logarithmic := by
 example : GlobalEquivalence logarithmic exponential := exponential.equivalence
 
 end
-end Examples.Rename
+end Examples.Transformations.Rename

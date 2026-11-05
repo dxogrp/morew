@@ -11,14 +11,8 @@ import Lean.Meta.Transform
 import Lean.Meta.Match.MatcherInfo
 import Qq
 
-/-!
-# Shared expression inspection for proof-producing elaborators
-
-These utilities inspect local dependencies, unresolved metavariables, structural
-presentations, and supported real-space shapes. Structural reduction preserves
-named arithmetic and user function heads; source finiteness discovery never
-expands named helpers or promotes evidence mentioning a source binder.
--/
+/-! Inspect dependencies, unresolved terms, presentation structure, and real-space shapes.
+Structural reduction preserves arithmetic and user-function heads. -/
 
 namespace Morew.Elab.Expr
 
@@ -33,9 +27,7 @@ structure Error where
 
 instance : ToMessageData Error := ⟨(·.reason)⟩
 
-/-- Inspect dependence on a local decision variable and unresolved metavariables,
-following referenced local declaration values and types. Merely checking `hasFVar`
-misses dependencies hidden behind a local let or an instance. -/
+/-- Inspect decision dependence and unresolved metavariables through referenced local types and values. -/
 partial def inspectLocals (expression : Expr) (point? : Option FVarId)
     (seen : FVarIdSet := {}) : MetaM (Bool × Bool) := do
   let expression ← instantiateMVars expression
@@ -61,21 +53,14 @@ local declaration values and types as well as resolved metavariables. -/
 def depends (point expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression (some point.fvarId!)).1
 
-/-- Check for unresolved metavariables, including those hidden in the types or
-values of referenced local declarations. Shared by proof-producing recognizers. -/
+/-- Detect unresolved metavariables through referenced local types and values. -/
 def hasUnresolved (expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression none).2
 
-/-- Reduce local lets, applications, projections, and compiler-generated tuple
-matches while preserving named arithmetic and user function heads.
-
-Only problem-container fields and single-alternative product matchers may
-unfold named declarations. This is internal support for typed presentations.
-With `preserveLets`, stop at a head let so the caller can retain its evidence
-and local instances while recognizing the body. When `opaqueProblemDependencies?`
-is supplied, named problem containers depending on that local variable remain
-opaque; inline structural containers are still reduced.
--/
+/-- Reduce local lets, applications, projections, and tuple matches.
+Named unfolding is limited to fields of problem definitions and single-alternative
+product matchers. `preserveLets` stops at outer lets. `opaqueProblemDependencies?`
+preserves named problems depending on that variable; directly constructed problems still reduce. -/
 partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
     (opaqueProblemDependencies? : Option Expr := none) : MetaM Expr := do
   let expression := (← instantiateMVars expression).consumeMData
@@ -90,8 +75,7 @@ partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
   | .proj name index value =>
     let value ← reduceStructure value preserveLets opaqueProblemDependencies?
     if let .letE binding type value body nondep := value then
-      -- Move only the projection through a preserved let. Recognition can then
-      -- inspect its evidence in the original scope before reducing the body.
+      -- Move projections through preserved lets while retaining evidence scope.
       pure (.letE binding type value (.proj name index body) nondep)
     else if value.isAppOf ``Prod.mk then
       reduceStructure value.getAppArgs[index + 2]! preserveLets opaqueProblemDependencies?
@@ -134,8 +118,7 @@ partial def reduceStructure (expression : Expr) (preserveLets : Bool := false)
         preserveLets opaqueProblemDependencies?
     if (function.isConstOf ``Morew.Problem.objective ||
         function.isConstOf ``Morew.Problem.feasible) && arguments.size >= 3 then
-      -- The model declaration is the container being inspected; its objective
-      -- and constraint function heads remain intact after selecting the field.
+      -- Select model fields while preserving objective and constraint function heads.
       let problem ← match opaqueProblemDependencies? with
         | some point =>
           if ← depends point arguments[2]! then
@@ -163,8 +146,7 @@ def euclideanDimension? (type : Expr) : MetaM (Option Expr) := do
   unless index.isAppOfArity ``Fin 1 do return none
   return some index.getAppArgs[0]!
 
-/-- Recognize the canonical symmetric-matrix subtype, including aliases.
-The final definitional-equality check excludes all other subtype predicates. -/
+/-- Recognize the canonical symmetric-matrix subtype, including aliases. -/
 def symmetricMatrixDimension? (type : Expr) : MetaM (Option Expr) := do
   let shape ← whnf type
   unless shape.isAppOfArity ``Subtype 2 do return none
@@ -189,18 +171,14 @@ partial def isSupportedSpace (type : Expr) : MetaM Bool := do
   if let .forallE _ index body _ := type then
     let body ← Core.betaReduce (← whnf body)
     if body.hasLooseBVars || (← isProp index) then return false
-    -- Shape validation needs finiteness, not an enumeration in the ambient
-    -- context. Indexed operations retain their own elaborated Fintype instance.
+    -- Require finite indices; retain each operation's own `Fintype` instance.
     let finiteType ← mkAppM ``Finite #[index]
     unless (← synthInstance? finiteType).isSome do return false
     return ← isSupportedSpace body
   return false
 
-/-- Recover finiteness proofs from `Finite` evidence and `Fintype` indexing
-instances already present in the typed source. Local lets are substituted, but
-named helpers are not expanded.
-Instances mentioning a source binder are never promoted into the caller's scope.
-Only `Finite` proofs are collected: each operation keeps its own enumeration. -/
+/-- Collect independent `Finite` proofs from source `Finite` and `Fintype` instances.
+Substitute local lets and keep named helpers closed. Preserve operation enumerations. -/
 def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
   let mut pending := [source]
   let mut seen : ExprSet := {}
@@ -213,9 +191,7 @@ def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
         pure expression.consumeMData.headBeta
       else reduceStructure expression (preserveLets := true)
     unless expression.hasLooseBVars do
-      -- Inspect the elaborated type rather than operation names or the spelling
-      -- of a let annotation. This also handles aliased classes and coefficients
-      -- such as Fintype.card, without expanding their definitions.
+      -- Inspect elaborated instance types, including aliases and coefficient instances.
       let type ← whnf (← inferType expression)
       if type.isAppOfArity ``Finite 1 then
         unless instances.contains expression do

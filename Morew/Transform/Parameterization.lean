@@ -9,9 +9,8 @@ import Morew.Transform
 # Certified coordinate parameterizations
 
 A coordinate parameterization supplies a right inverse on a specified range.
-Coverage of a problem's feasible points is checked separately, so one record
-can be reused with different objectives and constraints. The range is a
-sufficient coverage condition, not necessarily the exact image of the map.
+To apply it to a problem, prove that every feasible source coordinate lies in
+that range.
 -/
 
 namespace Morew
@@ -19,13 +18,13 @@ namespace Morew
 universe u v w x y z
 
 /-- A reusable right inverse for one coordinate, possibly depending on the
-coordinates retained by a substitution. Injectivity is not required. -/
+coordinates retained by a substitution. -/
 structure CoordinateParameterization
     {Retained : Type u} {New : Type v} {Old : Type w}
     (f : Retained → New → Old) where
-  /-- Old values for which the record supplies a preimage. -/
+  /-- Coordinate values for which the parameterization supplies a preimage. -/
   range : Retained → Old → Prop
-  /-- Choose a new value for an old value in the certified range. -/
+  /-- Choose a preimage for a coordinate value in the specified range. -/
   preimage : ∀ r, {a : Old // range r a} → New
   /-- The chosen value recovers the original coordinate. -/
   rightInverse : ∀ r a, f r (preimage r a) = a.1
@@ -36,8 +35,8 @@ variable {Retained : Type u} {New : Type v} {Old : Type w}
   {X : Type x} {Y : Type y} {V : Type z}
 
 /-- Replace the selected coordinate and preserve every retained coordinate.
-The equivalences describe where those coordinates sit in the complete source
-and target decision spaces. -/
+The equivalences decompose the original and transformed decision spaces
+into the selected coordinate and the remaining coordinates. -/
 abbrev coordinateMap (f : Retained → New → Old)
     (sourceSplit : X ≃ Retained × Old) (targetSplit : Y ≃ Retained × New)
     (point : Y) : X :=
@@ -57,9 +56,9 @@ theorem coordinateMap_selected (f : Retained → New → Old)
       f (targetSplit point).1 (targetSplit point).2 := by
   simp only [coordinateMap, Equiv.apply_symm_apply]
 
-/-- Lift a coordinate rule to coverage of a complete problem. The source
-feasibility proof is used only to establish the rule's range condition.
-Both the substitution and its chosen preimage preserve retained coordinates. -/
+/-- Construct a feasible surjection from a coordinate parameterization and
+proof that its range contains every feasible source coordinate. The substitution
+and its chosen preimage preserve retained coordinates. -/
 def toFeasibleSurjection {f : Retained → New → Old}
     (rule : CoordinateParameterization f) (p : Problem X V)
     (sourceSplit : X ≃ Retained × Old) (targetSplit : Y ≃ Retained × New)

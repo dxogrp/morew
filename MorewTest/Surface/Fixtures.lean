@@ -7,10 +7,9 @@ import Morew.Syntax
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
-# Shared surface problem fixtures
+# Shared problem declarations
 
-Source declarations used by the successful reformulation and diagnostic suites.
-Keep assertions and reformulations in their behavior-specific test modules.
+Source declarations for reformulation and diagnostic tests.
 -/
 
 namespace MorewTest.Surface

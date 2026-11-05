@@ -9,8 +9,7 @@ import Mathlib.Data.Real.Basic
 /-!
 # Lower-triangular matrix coordinates
 
-The auxiliary coordinates contain exactly the entries on and below the diagonal.
-Their matrix embedding is linear, including when the dimension is empty.
+Independent coordinates on and below the diagonal, with a linear matrix embedding.
 -/
 
 namespace Morew.Conic
@@ -44,7 +43,7 @@ theorem lowerTriangularMatrix_isLowerTriangular {n : Nat} (z : LowerTriangularEn
   intro i j h
   exact lowerTriangularMatrix_apply_of_lt z h
 
-/-- Restricting a lower-triangular matrix to these coordinates loses no entries. -/
+/-- Restriction to the lower-triangular coordinates reconstructs the original matrix. -/
 theorem lowerTriangularMatrix_restrict {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A.IsLowerTriangular) :
     lowerTriangularMatrix (fun ij => A ij.1.1 ij.1.2) = A := by

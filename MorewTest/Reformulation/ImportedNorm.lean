@@ -32,7 +32,7 @@ example : (continuedNLP.nlpForm n).data.toProblem = continuedNLP n :=
   (continuedNLP.nlpForm n).represents
 
 -- Terminal certification preserves the imported coordinate norm's symbolic
--- dimension and introduces no auxiliary decision variables.
+-- dimension and introduces no auxiliary optimization variables.
 reformulation nativeContinuedNLP : (nativeSelectedNLP n) := by nlp
 
 example : Problem ((Fin n → ℝ) × ℝ) ℝ := nativeContinuedNLP n
@@ -46,7 +46,7 @@ example : (nativeContinuedNLP.nlpForm n).data.toProblem = nativeContinuedNLP n :
 example : GlobalEquivalence (nativeSource n) (nativeContinuedNLP n) :=
   (nativeSelectedNLP.equivalence n).trans (nativeContinuedNLP.equivalence n)
 
--- Replay under unrelated caller norms must keep the imported mathematical
+-- Reconstruction under unrelated caller norms must keep the imported mathematical
 -- functions and certificates intact.
 section Shadow
 local instance : Norm (Fin 2 → ℝ) := ⟨fun _ => 101⟩

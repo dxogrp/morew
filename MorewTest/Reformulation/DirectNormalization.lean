@@ -8,7 +8,7 @@ import Morew.Reformulation.NLP
 import MorewTest.DiagnosticsSupport
 
 /-!
-# Direct certification of reducible surface operations
+# Direct certification of reducible operations in problem expressions
 
 Constructor-backed operations can expose complete affine or smooth expressions.
 Unsuccessful reductions must retain their instances for registered matching.

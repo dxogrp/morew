@@ -13,7 +13,7 @@ Positive powers greater than one have an epigraph on nonnegative inputs;
 negative powers have an epigraph on strictly positive inputs. Powers between
 zero and one and binary weighted geometric means have hypographs on
 nonnegative inputs. Their auxiliary nonnegative scalar preserves negative
-lower bounds, which direct membership with the lower bound would exclude.
+lower bounds.
 -/
 
 namespace Morew.Conic.Power
@@ -42,8 +42,8 @@ theorem rpow_le_iff (x t p : ℝ) (hx : 0 ≤ x) (hp : 1 < p) :
   · rintro ⟨ht, h⟩
     exact (Real.le_rpow_inv_iff_of_pos hx ht hp₀).mp h
 
-/-- A weighted geometric-mean hypograph retains arbitrary real lower bounds.
-The auxiliary scalar is nonnegative, while the bound itself need not be. -/
+/-- A weighted geometric-mean hypograph uses a nonnegative auxiliary scalar
+above an arbitrary real lower bound. -/
 theorem le_weightedGeomMean_iff (x y t α : ℝ) (hx : 0 ≤ x) (hy : 0 ≤ y)
     (_hα : 0 < α ∧ α < 1) :
     t ≤ x ^ α * y ^ (1 - α) ↔
@@ -82,8 +82,7 @@ private theorem one_le_power_product_iff (x t p : ℝ) (hx : 0 < x)
     rw [← Real.rpow_add hx, add_neg_cancel, Real.rpow_zero]
   rw [← hcancel, mul_le_mul_iff_left₀ (Real.rpow_pos_of_pos hx (-p))]
 
-/-- Negative real powers have this exact epigraph on strictly positive inputs.
-At zero, native real exponentiation is totalized and this equivalence fails. -/
+/-- Negative real powers have this exact epigraph on strictly positive inputs. -/
 theorem rpow_neg_le_iff (x t p : ℝ) (hx : 0 < x) (hp : p < 0) :
     x ^ p ≤ t ↔ (t, x, 1) ∈ POW (1 / (1 - p)) := by
   rw [Cone.mem_powerSet]

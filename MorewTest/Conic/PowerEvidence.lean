@@ -7,7 +7,7 @@ import Morew.Elab.Evidence
 import MorewTest.ElabSupport
 import MorewTest.Environment
 
-/-! # Independent exponent evidence and its deliberately bounded policy -/
+/-! # Independent exponent evidence and supported proof forms -/
 
 namespace MorewTest.Conic.PowerEvidence
 

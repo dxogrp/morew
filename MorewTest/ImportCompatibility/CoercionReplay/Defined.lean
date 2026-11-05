@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Basic
 
-/-! Problems whose coercion functions must survive imported presentation replay. -/
+/-! Problems whose coercion functions must survive imported presentation reconstruction. -/
 
 namespace MorewTest.ImportCompatibility.CoercionReplay.Defined
 

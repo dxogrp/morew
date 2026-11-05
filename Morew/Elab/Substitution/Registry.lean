@@ -6,14 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Transform.Parameterization
 import Morew.Elab.Rewrite.Registry
 
-/-!
-# Registered coordinate parameterizations
-
-`@[morew_substitute]` records reusable, proof-bearing coordinate rules. Local,
-scoped, imported, and removed registrations have Lean's usual attribute behavior.
-The registry stores only discovery metadata: matching checks complete maps and
-their actual operation instances before a rule supplies any certificate.
--/
+/-! Register coordinate parameterizations through `morew_substitute` with Lean attribute scope.
+Store discovery metadata; matching checks complete maps and operation instances. -/
 
 namespace Morew.Elab.Substitution.Registry
 
@@ -25,7 +19,7 @@ inductive Key where
   | operation (head : Name)
   deriving BEq, Inhabited
 
-/-- Closed metadata for a declaration, never a trusted coverage certificate. -/
+/-- Discovery metadata for a parameterization declaration. -/
 structure Entry where
   /-- The registered declaration. -/
   declaration : Name
@@ -88,8 +82,7 @@ def entries : CoreM (Array Entry) := do
   return (extension.getState (← getEnv)).qsort fun a b =>
     a.declaration.toString < b.declaration.toString
 
-/-- Discover matching shapes; types, instances, premises, and coverage are
-checked by the matcher before any candidate is accepted. -/
+/-- Discover map shapes for later type, instance, premise, and coverage checks. -/
 def candidates (map : Expr) : MetaM (Array Name) := do
   let some key ← mapKey? map | return #[]
   return (← entries).filterMap fun entry =>

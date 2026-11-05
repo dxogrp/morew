@@ -130,8 +130,7 @@ reformulation restored : (source center) := by
 example : GlobalEquivalence (source center) (restored center) :=
   restored.equivalence center
 
--- Targeted conic selection now reports genuine overlaps instead of accepting
--- the first successful native family. Explicit selection resolves either way.
+-- Overlapping successful rules produce ambiguity; explicit selection resolves it.
 def overlapping :=
   problem (x : ℝ)
     minimize x

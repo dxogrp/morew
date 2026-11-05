@@ -9,7 +9,7 @@ import Morew.Reformulation.Basic
 # Substitution through model-local definitions
 
 Definition values and annotations follow renamed decisions, while replacement
-inference distinguishes existing aliases from the one new decision variable.
+inference distinguishes existing aliases from the one new optimization variable.
 -/
 
 namespace MorewTest.Reformulation.LocalDefinitionSubstitution
@@ -73,8 +73,8 @@ def shiftedCoverage : FeasibleSurjection shiftedSource
     · exact sub_add_cancel _ _
     · rfl
 
--- The replacement's aliases are declared after loss. Expanding their typed
--- values in the replacement avoids introducing forward references in loss.
+-- The replacement's aliases are declared after `loss`. Expanding their typed
+-- values in the replacement avoids introducing forward references in `loss`.
 reformulation shifted : shiftedSource := by
   substitute x := u + shift using shiftedCoverage
 
@@ -112,8 +112,8 @@ def proofSource :=
     subject to
       positive : 0 < x
 
--- Simplifying only the proof's annotation would turn it into exp u = exp u,
--- while Real.log_exp (exp u) still has its original, nondefinitional type.
+-- Simplifying only the proof's annotation would turn it into `exp u = exp u`,
+-- while `Real.log_exp (exp u)` still has its original, nondefinitional type.
 reformulation proofTarget : proofSource := by
   substitute x := Real.exp u
 
@@ -161,7 +161,7 @@ def fixedSubtypeSource :=
       positive : 0 < x
 
 -- This is data with a fixed type, not a proof-valued definition or a type
--- depending on x. Simplifying its predicate would invalidate its proof field.
+-- depending on `x`. Simplifying its predicate would invalidate its proof field.
 reformulation fixedSubtypeTarget : fixedSubtypeSource := by
   substitute x := Real.exp u
 
@@ -212,7 +212,7 @@ def inlineObjectiveSource :=
     subject to
       positive : 0 < x
 
--- Checking just the simplified definitions would accept loss := exp u,
+-- Checking just the simplified definitions would accept `loss := exp u`,
 -- leaving the constructor's proof incompatible with its dependent argument.
 reformulation inlineObjectiveTarget : inlineObjectiveSource := by
   substitute x := Real.exp u
@@ -276,12 +276,12 @@ example (u t : ℝ) : inlineConstraintLifted.objective (u, t) = u := by
 example (u t : ℝ) : inlineConstraintLifted.feasible (u, t) ↔
     t ≤ 10 ∧ Real.exp u ≤ t := Iff.rfl
 
-/-- error: substitution replacement uses model-local definition `loss`, which depends on the decision variable being replaced -/
+/-- error: substitution replacement uses model-local definition `loss`, which depends on the optimization variable being replaced -/
 #guard_msgs (substring := true) in
 reformulation dependentReplacement : source := by
   substitute x := Real.exp u + loss
 
-/-- error: decision variable `loss` conflicts with a model-local definition; choose a different decision name -/
+/-- error: optimization variable `loss` conflicts with a model-local definition; choose a different optimization variable name -/
 #guard_msgs in
 reformulation collidingBinder : source := by
   epigraph loss

@@ -6,29 +6,30 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Native matrix PSD constraints and explicit Schur reformulations
+# Schur-complement reformulation
+
+For a positive definite 2 × 2 matrix `A`, the variables are a 2 × 2 matrix `B`
+and a scalar `t`:
+
+```math
+\begin{array}{ll}
+\text{minimize} & t \\
+\text{subject to} & tI-B^T A^{-1}B \succeq 0.
+\end{array}
+```
+
+The Schur complement gives the equivalent linear matrix inequality:
+
+```math
+\begin{bmatrix} A & B \\ B^T & tI \end{bmatrix} \succeq 0.
+```
 -/
 
-namespace Morew.Examples.PositiveSemidefinite
+namespace Examples.Advanced.Schur
 
 open Morew Morew.Conic
 noncomputable section
 
-def diagonalModel :=
-  problem (x : ℝ)
-    let matrix := Matrix.diagonal ![x, 1]
-    minimize x
-    subject to
-      semidefinite : matrix.PosSemidef
-
-reformulation diagonalConic : diagonalModel := by conic
-
-#printp diagonalConic
-example : IsConic diagonalConic := diagonalConic.isConic
-
--- Package the Schur complement theorem `schurComplement_mem_iff` from
--- `Morew.Conic.PSD` as an exact reformulation rule for PSD constraints.
--- The pivot `A` is assumed positive definite.
 def schurCertificate {m n : Nat} (A : SymmetricMatrix m) (hA : A.toMatrix.PosDef) :
     ExactConstraintLift (fun p : Matrix (Fin m) (Fin n) ℝ × ℝ =>
       (Matrix.diagonal (fun _ : Fin n => p.2) - p.1.transpose * A.toMatrix⁻¹ * p.1).PosSemidef) :=
@@ -49,14 +50,17 @@ def schurModel (A : SymmetricMatrix 2) :=
 
 variable (A : SymmetricMatrix 2) (hA : A.toMatrix.PosDef)
 
+-- The Schur-complement rule uses the positive definiteness hypothesis `hA`.
 reformulation schurConic : (schurModel A) := by
   conic at schur using schurCertificate
   conic
 
 #printp schurConic
+
 example : GlobalEquivalence (schurModel A) (schurConic A) := schurConic.equivalence A hA
 example : (schurConic.conicForm A).data.toProblem = schurConic A :=
   (schurConic.conicForm A).represents
+example : IsConic (schurConic A) := schurConic.isConic A
 
 end
-end Morew.Examples.PositiveSemidefinite
+end Examples.Advanced.Schur

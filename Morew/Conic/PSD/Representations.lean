@@ -14,11 +14,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact positive-semidefinite representation records
 
-These records express spectral bounds, matrix fractions, log-determinants, and
-positive-definite domains using the existing PSD and exponential cones and scalar
-inequalities, and connect their mathematical equivalences to the public rewrite API.
-The narrower mathematical imports remain independent of rewrite certificates
-and do not install the modeling language or any global matrix norm instance.
+Rewrite records for spectral bounds, matrix-fractional functions,
+log-determinants, and positive definiteness using semidefinite and exponential
+cones and scalar inequalities.
 -/
 
 open scoped Matrix Matrix.Norms.L2Operator
@@ -36,7 +34,7 @@ end Morew.Conic
 
 namespace Morew.Conic.MatrixFraction
 
-/-- Matrix-fraction epigraph with an explicit positive-definite input domain. -/
+/-- Matrix-fractional epigraph on positive-definite inputs. -/
 noncomputable def epigraph {n : Nat} :
     EpigraphRepresentation (fun p : (Fin n → ℝ) ×
       {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => Fn.matrixFrac p.1 p.2.1) where
@@ -47,7 +45,7 @@ noncomputable def epigraph {n : Nat} :
   source_iff_exists p t := by
     simpa only [exists_const] using matrixFrac_le_iff p.1 p.2.1 p.2.2 t
 
-/-- Native dot-product/inverse spelling of the same exact epigraph. -/
+/-- The matrix-fractional epigraph for `x ⬝ᵥ (P⁻¹ *ᵥ x)`. -/
 noncomputable def nativeEpigraph {n : Nat} :
     EpigraphRepresentation (fun p : (Fin n → ℝ) ×
       {P : Matrix (Fin n) (Fin n) ℝ // P.PosDef} => p.1 ⬝ᵥ (p.2.1⁻¹ *ᵥ p.1)) :=
@@ -66,7 +64,7 @@ noncomputable def lambdaMaxEpigraph {n : Nat} (hn : 0 < n) :
   source_iff_exists A t := by
     simpa only [exists_const] using lambdaMax_le_iff A.1 A.2 hn t
 
-/-- Exact PSD epigraph of the native matrix L2 operator norm. -/
+/-- A semidefinite representation of the Euclidean operator-norm epigraph. -/
 noncomputable def spectralNormEpigraph {m n : Nat} :
     EpigraphRepresentation (fun A : Matrix (Fin m) (Fin n) ℝ => ‖A‖) where
   Auxiliary := Unit
@@ -75,7 +73,7 @@ noncomputable def spectralNormEpigraph {m n : Nat} :
   source_iff_exists A t := by
     simpa only [exists_const] using spectralNorm_le_iff A t
 
-/-- A proof-bearing nuclear-norm epigraph representation. -/
+/-- A semidefinite representation of the nuclear-norm epigraph. -/
 noncomputable def nuclearNormEpigraph {m n : Nat} :
     EpigraphRepresentation (Fn.nuclearNorm (m := m) (n := n)) where
   Auxiliary := SymmetricMatrix m × SymmetricMatrix n
@@ -89,7 +87,7 @@ end Morew.Conic.Spectral
 namespace Morew.Conic.LogDet
 
 /-- Exact PSD/exponential hypograph of log-determinant on its positive-definite
-domain. Triangular coordinates introduce no upper-triangle equality rows. -/
+domain, with auxiliary coordinates on and below the diagonal. -/
 noncomputable def hypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
       Fn.logDet X.1) where
@@ -101,7 +99,7 @@ noncomputable def hypograph {n : Nat} (hn : 0 < n) :
   source_iff_exists X t := by
     simpa only [Prod.exists] using le_logDet_iff X.1 X.2 t hn
 
-/-- The ordinary logarithm-of-determinant spelling has the same domain and lift. -/
+/-- The ordinary logarithm-of-determinant expression has the same domain and representation. -/
 noncomputable def nativeHypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun X : {X : Matrix (Fin n) (Fin n) ℝ // X.PosDef} =>
       Real.log (Matrix.det X.1)) :=

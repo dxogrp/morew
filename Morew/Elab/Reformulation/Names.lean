@@ -5,11 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Lean.Meta.Basic
 
-/-!
-# Reformulation name allocation
-
-Visible-name allocation and exact global declaration-name preflight.
--/
+/-! Allocate visible names and check exact global declaration names. -/
 
 namespace Morew.Elab.Reformulation
 
@@ -17,8 +13,7 @@ open Lean Lean.Meta
 
 /-! ## Visible names -/
 
-/-- The user-visible part of a name.  Macro scopes are irrelevant for name
-allocation, but ordinary namespace components are retained. -/
+/-- Visible name with macro scopes removed and namespace components retained. -/
 def visibleName (name : Name) : Name :=
   name.eraseMacroScopes
 
@@ -26,8 +21,7 @@ def visibleName (name : Name) : Name :=
 def sameVisibleName (left right : Name) : Bool :=
   visibleName left == visibleName right
 
-/-- Presentation names live in independent namespaces.  In particular, a
-decision binder and a constraint label may have the same visible spelling. -/
+/-- Separate namespaces for decision binders and constraint labels. -/
 inductive NameNamespace where
   | decisionBinder
   | constraintLabel
@@ -50,14 +44,12 @@ def NameRequestKind.namespace : NameRequestKind → NameNamespace
   | .explicitConstraintLabel | .fixedPublicDefault | .generatedRowFamily =>
       .constraintLabel
 
-/-- Exact requests are rejected on collision; generated requests are the only
-requests which may receive a deterministic numeric suffix. -/
+/-- Reject exact-name collisions; freshen generated names with numeric suffixes. -/
 def NameRequestKind.isGenerated : NameRequestKind → Bool
   | .generatedBinderFamily | .generatedRowFamily => true
   | _ => false
 
-/-- One atomic presentation-name request.  `id` is an internal key used by the
-step materializer; it need only be unique within the request batch. -/
+/-- A presentation-name request whose `id` is unique within its batch. -/
 structure NameRequest where
   /-- Key used to recover this request's allocation. -/
   id : Nat
@@ -72,8 +64,7 @@ structure NameRequest where
 def NameRequest.namespace (request : NameRequest) : NameNamespace :=
   request.kind.namespace
 
-/-- Names active at the beginning of a step.  Keeping the two arrays separate
-is what permits a binder and a constraint label to share a spelling. -/
+/-- Active binder and constraint-label names in separate namespaces. -/
 structure NameInventory where
   /-- Occupied decision-binder names. -/
   decisionBinders : Array Name := #[]
@@ -122,11 +113,11 @@ inductive NamePreflightError where
   | duplicateRequestId (request : NameRequest)
   | collision (request : NameRequest) (occupied : Name)
 
-/-- The source location associated with a name preflight failure. -/
+/-- The source location of a name validation error. -/
 def NamePreflightError.ref : NamePreflightError → Syntax
   | .duplicateRequestId request | .collision request _ => request.ref
 
-/-- A concise diagnostic for a name preflight failure. -/
+/-- A diagnostic for a name validation error. -/
 def NamePreflightError.message : NamePreflightError → MessageData
   | .duplicateRequestId request =>
       m!"duplicate internal name-request id `{request.id}`"
@@ -135,14 +126,13 @@ def NamePreflightError.message : NamePreflightError → MessageData
       | .fixedPublicDefault =>
           m!"default constraint label `{visibleName occupied}` is already in use; choose an explicit label with `as`"
       | .explicitDecisionBinder | .inferredDecisionBinder =>
-          m!"decision variable `{visibleName occupied}` already exists"
+          m!"optimization variable `{visibleName occupied}` already exists"
       | .explicitConstraintLabel =>
           m!"constraint label `{visibleName occupied}` already exists"
       | .generatedBinderFamily | .generatedRowFamily =>
           m!"internal error: generated name `{visibleName occupied}` was not freshened"
 
-/-- Candidate zero is the stem itself; later candidates use `_1`, `_2`, and
-so on while preserving the stem's qualified prefix. -/
+/-- Use the qualified stem, then suffixes `_1`, `_2`, and so on. -/
 def generatedCandidate (stem : Name) (index : Nat) : Name :=
   let stem := visibleName stem
   if index == 0 then stem else stem.appendIndexAfter index
@@ -155,10 +145,8 @@ private partial def firstAvailableGeneratedName (inventory : NameInventory)
   else
     candidate
 
-/-- Preflight and allocate a complete name batch without changing the supplied
-inventory.  Exact and fixed-default requests are reserved first, so generated
-families cannot steal a later exact request.  Generated requests are then
-freshened in source order. -/
+/-- Reserve exact and fixed-default names first, then freshen generated requests in
+source order. Preserve the supplied inventory. -/
 def preflightNameRequests (active : NameInventory)
     (requests : Array NameRequest) : Except NamePreflightError NameAllocation := do
   let mut requestIds : Array Nat := #[]
@@ -195,8 +183,7 @@ def preflightNameRequests (active : NameInventory)
 
 /-! ## Global declaration names -/
 
-/-- One exact global declaration name requested by the command or a terminal
-step.  Global declaration names are never freshened. -/
+/-- An exact global declaration name; global names are never freshened. -/
 structure DeclarationNameRequest where
   /-- Exact global declaration name requested. -/
   name : Name
@@ -208,7 +195,7 @@ inductive DeclarationPreflightError where
   | duplicate (request : DeclarationNameRequest)
   | alreadyDeclared (request : DeclarationNameRequest)
 
-/-- Preflight exact global names against both the current environment and the
+/-- Check requested global names against both the current environment and the
 rest of the batch. -/
 def preflightDeclarationNames (env : Environment)
     (requests : Array DeclarationNameRequest) :

@@ -92,7 +92,7 @@ private noncomputable def hiddenPower (x : ℝ) : ℝ := Real.rpow x (3 / 2)
 run_cmd liftTermElabM do
   let domain ← elaborate (← `(fun p : ℝ × ℝ => 0 ≤ p.1))
   rejected (← `(fun p : ℝ × ℝ => hiddenPower p.1 ≤ p.2)) #[domain]
-  -- The canonical native operation is required, not merely the same surface token.
+  -- The canonical native operation is required, not merely the same notation.
   rejected (← `(fun [HPow ℝ ℝ ℝ] => fun p : ℝ × ℝ => p.1 ^ (3 / 2 : ℝ) ≤ p.2))
     #[domain] (parameterCount := 1)
   rejected (← `(fun [LE ℝ] => fun p : ℝ × ℝ => Real.rpow p.1 (3 / 2) ≤ p.2))

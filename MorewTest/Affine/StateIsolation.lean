@@ -156,8 +156,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let affine ← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) => fun x : ℝ => x / c)
   let row ← `(fun c : ℝ => fun (_ : c ≠ 0 ∧ True) => fun x : ℝ => x / c ≤ 1)
   checkSuccess .affine affine
-  -- Fresh declarations ensure each outer adapter must retain its nested
-  -- recognizer's environment changes, rather than reusing the affine proof.
+  -- Fresh declarations exercise each outer adapter's retention of nested
+  -- recognizer environment changes.
   checkSuccess .row row false
   checkSuccess .objective affine false
   checkSuccess .affine affine false

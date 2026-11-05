@@ -77,7 +77,7 @@ example (a t : ℝ) : |a| ≤ t ↔
     simp
   simpa only [hnorm] using Spectral.spectralNorm_le_iff (!![a]) t
 
--- The ordinary entrywise supremum norm of this matrix is four. The native L2
+-- The ordinary entrywise supremum norm of this matrix is four. The native `L2`
 -- operator norm is larger, so this guards the norm instance in the source API.
 example : 4 < ‖(!![3, 4] : Matrix (Fin 1) (Fin 2) ℝ)‖ := by
   have h := (Matrix.l2_opNorm_mulVec

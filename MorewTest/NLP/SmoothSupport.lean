@@ -9,9 +9,8 @@ import Lean.Meta.Check
 /-!
 # Assertions for global smoothness certificates
 
-Every success is checked by the kernel against the original function on the
-whole domain. Rejections inspect the structured diagnostic, rather than merely
-checking that some elaboration failed.
+Successful proofs are kernel-checked against the original function on the
+whole domain. Rejections check the structured diagnostic.
 -/
 
 namespace MorewTest.NLP.Smooth

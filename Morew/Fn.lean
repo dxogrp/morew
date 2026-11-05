@@ -8,4 +8,4 @@ import Morew.Fn.Matrix
 import Morew.Fn.Norm
 import Morew.Fn.Power
 
-/-! Ordinary mathematical modeling functions and named conveniences for native mathlib operations. -/
+/-! Mathematical functions for optimization models. -/

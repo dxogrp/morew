@@ -11,13 +11,8 @@ import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Whole-problem exact conic planning
-
-Plan all row rewrites before allocating surface names. Already-conic named
-groups retain their boundaries; groups containing unsupported leaves are split
-exactly so their affine siblings can supply retained domain evidence.
--/
+/-! Plan all conic row replacements before allocating names. Split unsupported groups
+so affine siblings can supply retained domain evidence. -/
 
 namespace Morew.Elab.Conic.Terminal
 
@@ -36,15 +31,14 @@ structure Result where
   form : Expr
   /-- Original presentation-entry index for every final constraint entry. -/
   rowOrigins : Array Nat
-  /-- Original entries replaced by splitting or exact automatic lowering. -/
+  /-- Original entries replaced by splitting or automatic constraint replacement. -/
   replacedIndices : Array Nat
-  /-- Original entries changed by final membership normalization. This alone
-  does not require allocating new labels. -/
+  /-- Original entries changed by membership normalization. Normalization alone preserves labels. -/
   changedBodies : Array Nat
   /-- Original entry and auxiliary type, in decision-binder append order. -/
   auxiliaries : Array (Nat × Expr)
 
-/-- Rebase all terminal evidence onto a fresh section-variable context. -/
+/-- Express terminal evidence in a fresh section-variable context. -/
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
@@ -94,8 +88,7 @@ private noncomputable def pullbackConstraint {X A : Type*}
     (row : Morew.Conic.Constraint X) : Morew.Conic.Constraint (X × A) :=
   ⟨row.cone, row.map.comp AffineMap.fst⟩
 
--- Compose an accepted affine map with the product projection. Re-recognizing
--- its source syntax would lose independent proof lets from the original rule.
+-- Compose accepted affine maps with the product projection to retain local evidence.
 private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowResult := do
   let nextDomain ← mkAppM ``Prod #[domain, auxiliary]
   let constraint ← Space.withCanonicalDomain domain do
@@ -114,8 +107,7 @@ private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowR
   checkWithKernel pointwiseIff
   return { constraint, pointwiseIff, normalization? }
 
-/-- Apply the same domain pullback as the checked rewrite and retain original
-entry provenance independently of the temporary presentation names. -/
+/-- Pull back domains and retain each entry's original index. -/
 private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     (certificates : Array (Option (Array RowResult)))
     (nextDomain : Expr) (auxiliary? : Option Expr)
@@ -173,8 +165,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     nextName
   }
 
-/-- Split all nonlinear groups before searching for exact rewrites. This makes
-affine domain margins in the same original group available to sibling leaves. -/
+/-- Split nonlinear groups so affine siblings can supply domain margins. -/
 private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvider) : MetaM Work := do
   let mut work := work
   let mut index := 0
@@ -229,8 +220,7 @@ private partial def lower (original : PresentationState) (work : Work)
     match ← Morew.Elab.Conic.Rewrite.planUnique predicate retained provider with
     | .ok prepared =>
       let next ← applyPrepared work index prepared
-      -- Every successful automatic plan certifies its generated rows. Therefore
-      -- each restart removes one unresolved row and cannot create a cycle.
+      -- Each successful plan removes one unresolved row and introduces only certified rows.
       return ← lower original next provider
     | .error error =>
       if firstError?.isNone then
@@ -254,8 +244,7 @@ private partial def lower (original : PresentationState) (work : Work)
   | some error => return .error error
   | none => return .ok work
 
--- Retain the accepted affine maps and their local evidence. Only their
--- equivalence endpoints change from the original leaves to membership leaves.
+-- Transport accepted affine maps and evidence to normalized membership predicates.
 private def prepareNormalizations (domain source : Expr) (rows : Array RowResult) :
     MetaM (Array PredicateNormalization) := do
   let (leaves, _) ← decomposePredicate source
@@ -328,10 +317,9 @@ private def normalizeFinal (work : Work) : MetaM Work := do
     }
   return work
 
-/-- Plan an entire conic terminal step without allocating visible names or
-emitting declarations. Failed attempts restore caller metavariables and the
-environment. The first unresolved row is reported only after all later rows
-have had an opportunity to supply a newly exposed retained margin. -/
+/-- Plan a terminal step before name allocation and declaration emission.
+Restore state on failure. Report the first unresolved row after later rows
+have supplied any newly exposed margins. -/
 def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do

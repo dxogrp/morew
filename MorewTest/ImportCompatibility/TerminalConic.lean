@@ -34,7 +34,7 @@ example : importedMaximumForm.data.rowCount = 2 := rfl
 example : GlobalEquivalence minimumSource minimumTarget := minimumEquivalence hn hε
 example : GlobalEquivalence maximumSource maximumTarget := maximumEquivalence hε
 
--- The source sections' NeZero/Nonempty instances are absent after import.
+-- The source sections' `NeZero`/`Nonempty` instances are absent after import.
 -- The named property must have the same prerequisites as the stored form.
 example : IsConic nonzeroTarget := nonzeroTarget.conicForm.isConic
 example : IsConic nonzeroTarget := nonzeroTarget.isConic

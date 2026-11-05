@@ -5,14 +5,26 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Basic
 
+/-!
+# Problems, epigraphs, and optimality certificates
+
+A `problem` specifies its variables, objective, and constraints. A `reformulation`
+constructs an equivalent problem and maps feasible points and global optima
+between the two. We begin with the scalar problem:
+
+```math
+\begin{array}{ll}
+\text{minimize} & x^2 \\
+\text{subject to} & x \geq 0.
+\end{array}
+```
+-/
+
 open Morew
 open Real
 
-namespace Examples.Basic
+namespace Examples.GettingStarted.Basic
 
-/-
-Epigraph rewriting example
--/
 namespace Epigraph
 noncomputable
 
@@ -24,7 +36,6 @@ def p :=
 
 #printp p
 
--- Default epigraph rewriting
 reformulation epigraphForm : p := by
   epigraph t
 
@@ -32,21 +43,21 @@ reformulation epigraphForm : p := by
 #check epigraphForm.equivalence
 
 example : p.IsGlobalOptimum ⟨0, le_rfl⟩ := by
-  -- The epigraph point (0, 0) satisfies both constraints.
+  -- The epigraph point `(0, 0)` satisfies both constraints.
   let z : FeasiblePoint epigraphForm := ⟨(0, 0), by
     change 0 ≤ (0 : ℝ) ∧ (0 : ℝ) ^ 2 ≤ 0
     norm_num⟩
 
-  -- Every feasible point has objective t ≥ x² ≥ 0.
+  -- Every feasible point has objective `t ≥ x² ≥ 0`.
   have hz : epigraphForm.IsGlobalOptimum z := by
     intro y
     change (0 : ℝ) ≤ y.1.2
     exact le_trans (sq_nonneg y.1.1) y.2.2
 
-  -- The certificate's backward map recovers x and transfers optimality.
+  -- The certificate's backward map recovers `x` and transfers optimality.
   exact epigraphForm.equivalence.map_isGlobalOptimum_backward hz
 
--- Epigraph rewriting with explicit label
+-- Name the epigraph constraint.
 reformulation labeledEpigraphForm : p := by
   epigraph t as objectiveBound
 
@@ -55,9 +66,6 @@ reformulation labeledEpigraphForm : p := by
 
 end Epigraph
 
-/-
-Parameterized problem examples
--/
 namespace Parameterized
 noncomputable section
 
@@ -67,7 +75,7 @@ def p (a : ℝ) :=
     subject to
       lower : x ≥ a
 
--- Printing the family retains the parameter `a` symbolically.
+/-! Printing the family retains the parameter `a` symbolically. -/
 #printp p
 
 -- Reformulate a particular member of the problem family.
@@ -95,28 +103,4 @@ end
 end
 end Parameterized
 
-/-
-Substitute and epigraph rewriting example
--/
-namespace LogSquared
-noncomputable section
-
-def p :=
-  problem (x : ℝ)
-    minimize (log x)^2
-    subject to
-      pos : x > 0
-
-#printp p
-
-reformulation exponentialEpigraph : p := by
-  substitute x := exp u
-  epigraph t
-
-#printp exponentialEpigraph
-example : GlobalEquivalence p exponentialEpigraph := exponentialEpigraph.equivalence
-
-end
-end LogSquared
-
-end Examples.Basic
+end Examples.GettingStarted.Basic

@@ -38,8 +38,7 @@ example : Morew.Fn.lambdaMax (Matrix.diagonal ![-3, -2]) ≤ -1 := by
   rw [he]
   simp [Matrix.posSemidef_diagonal_iff, Fin.forall_fin_succ]
 
--- Repeated negative eigenvalues retain their sign and multiplicity; the atom
--- must not silently become a spectral radius or a matrix norm.
+-- Repeated negative eigenvalues retain their sign and multiplicity.
 example : Morew.Fn.lambdaMax (Matrix.diagonal ![-3, -3]) = -3 := by
   let A : Matrix (Fin 2) (Fin 2) ℝ := Matrix.diagonal ![-3, -3]
   have hA : A.IsSymm := Matrix.isSymm_diagonal _

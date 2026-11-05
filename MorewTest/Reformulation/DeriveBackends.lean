@@ -8,7 +8,7 @@ import Morew.Reformulation.NLP
 import MorewTest.Reformulation.Derive
 import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 
-/-! Backend integration cases sharing the generic suite's declarations. -/
+/-! Integration cases sharing the generic suite's declarations. -/
 
 namespace MorewTest.Reformulation.Derive
 

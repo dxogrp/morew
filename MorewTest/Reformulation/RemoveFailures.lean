@@ -324,8 +324,8 @@ reformulation latePlaceholder : source := by
 example : GlobalEquivalence source latePlaceholder := latePlaceholder.equivalence
 example (n : Nat) : latePlaceholder.feasible n ↔ n ≤ 3 ∧ n ≤ 3 := Iff.rfl
 
--- A distinct relation requires the handler to lift its primitive equivalence
--- through the runner, instead of hard-coding the public relation throughout.
+-- A distinct runner relation checks composition of the primitive equivalence
+-- through the configured relation.
 structure TestRelation (left right : Problem Nat Nat) where
   equivalence : GlobalEquivalence left right
 

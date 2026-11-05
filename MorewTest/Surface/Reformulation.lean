@@ -7,7 +7,7 @@ import Morew.Reformulation.Basic
 import MorewTest.Surface.Fixtures
 
 /-!
-# Surface reformulation composition
+# Reformulation command composition
 
 Exercise the public DSL, printer metadata, and successful reformulation composition.
 -/
@@ -165,7 +165,7 @@ info: problem (x t : ℝ)
 #guard_msgs in
 #printp nonconvexEpigraph
 
-/-! An unregistered substitution can supply its feasible-coverage witness. -/
+/-! An unregistered substitution can supply its certificate of surjectivity on feasible points. -/
 
 def identityCoverage :
     FeasibleSurjection identitySource (fun u : ℝ => u) where

@@ -8,9 +8,9 @@ import Morew.Reformulation.Conic
 /-!
 # Exact exponential-cone reformulations
 
-These executable examples exercise native and named atoms, retained domain
-evidence, grouped finite lifts, and composition with the existing targeted
-rewrites. Margins remain ordinary constraints in their original positions.
+Check native and named atoms, retained domain evidence, grouped finite
+representations, and composition with targeted rewrites. Margins retain their
+original constraint positions.
 -/
 
 namespace MorewTest.Reformulation.Exponential

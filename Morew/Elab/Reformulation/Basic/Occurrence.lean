@@ -11,22 +11,15 @@ import Morew.Transform.Context
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.Expr
 
-/-!
-# Bounds at selected occurrences
-
-Selection runs before reducing model-local definitions. A named reference is
-identified by its binding, while an expression selector compares rigid typed
-terms. The selected context and every emitted presentation are checked against
-the current semantic problem before the runner commits the step.
--/
+/-! Select occurrences before reducing model-local definitions. Named selectors use
+binding identity; expression selectors compare rigid typed terms. Check the selected
+context and resulting presentation against the current problem. -/
 
 namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- Only computational operands and logical predicate operands are selectable.
--- Type parameters, proof arguments, and instances are not occurrences in the
--- mathematical expression, even when they contain the selected value.
+-- Select computational and logical operands; exclude type, proof, and instance arguments.
 private partial def replaceOccurrence (expression needle hole : Expr) (predicate := false) :
     StateT Nat MetaM Expr := do
   if ← Morew.Elab.ObjectiveContext.sameExpression expression needle then
@@ -49,21 +42,17 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
         if (parameter.any fun parameter =>
             parameter.binderInfo.isInstImplicit || parameter.isInstance) ||
             (← isProof argument) || (← isClass? argumentType).isSome then
-          -- Explicit class operands carry instances too; their internals are
-          -- excluded independently of how the parameter was declared.
+          -- Exclude explicit class operands' instance contents.
           updated := updated.push argument
         else
-          -- `Or`'s propositions and `Exists`' predicate are type-formers too.
-          -- A proposition indexing a later proof or instance remains a type
-          -- parameter: replacing it would also require transporting evidence.
+          -- Visit logical predicates unless later proofs or instances depend on their types.
           let predicateArgument ← if predicate && !(parameter.any (·.hasFwdDeps)) then
               isPropFormerType argumentType
             else pure false
           if !predicateArgument && (← isTypeFormer argument) then
             updated := updated.push argument
           else
-            -- Computational containers may carry predicate operands, as in
-            -- `(P, Q).1`. Keep predicate traversal enabled through the container.
+            -- Traverse predicate operands through computational containers.
             updated := updated.push
               (← replaceOccurrence argument needle hole predicate)
       return mkAppN function updated
@@ -75,9 +64,7 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       set count
       return result
   | .forallE name type body info =>
-      -- An independent proposition domain is an implication antecedent. A
-      -- dependent proof binder keeps its original type: changing it would
-      -- also require transporting uses of the bound proof in the body.
+      -- Visit independent implication antecedents; preserve dependent proof-binder types.
       let type ← if predicate && !info.isInstImplicit && !body.hasLooseBVar 0 &&
           (← isProp type) then
           replaceOccurrence type needle hole true
@@ -159,13 +146,13 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
     let auxiliaryType ← zetaReduce (← inferType needle)
     for binding in binders do
       if ← Morew.Elab.Expr.depends binding auxiliaryType then
-        throwErrorAt selector "the selected type depends on a decision variable; dependent auxiliaries are unsupported"
+        throwErrorAt selector "the selected type depends on an optimization variable; dependent auxiliaries are unsupported"
     let preorderType ← mkAppM ``Preorder #[auxiliaryType]
     let preorder ← synthInstance preorderType
     let preorder ← zetaReduce preorder
     for binding in binders do
       if ← Morew.Elab.Expr.depends binding preorder then
-        throwErrorAt selector "the selected order instance depends on a decision variable"
+        throwErrorAt selector "the selected order instance depends on an optimization variable"
     withLocalDeclD binderName auxiliaryType fun auxiliary => do
       let (replaced, count) ← (replaceOccurrence body needle auxiliary row?.isSome).run 0
       if count == 0 then
@@ -281,8 +268,7 @@ private def materializeOccurrenceBound (state : ReformState)
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection)
     (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
   runTermElabM fun sectionVars => withoutErrToSorry do
-    -- Imported generic sources can leave assigned universe and instance
-    -- metavariables in section-local declaration types.
+    -- Instantiate assigned universe and instance metavariables in section-local types.
     let context ← instantiateLCtxMVars (← getLCtx)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionVars
@@ -292,10 +278,7 @@ private def materializeOccurrenceBound (state : ReformState)
       | throwError "missing occurrence bound name"
     let binderName ← withFreshMacroScope do MonadQuotation.addMacroScope binderName
     let selected ← selectOccurrence state typed.presentation selector row? binderName boundName direction
-    -- Keep dependent model definitions intact even when prior substitution
-    -- normalized the canonical problem using proved identities. Selection
-    -- and context extraction use the retained presentation; this checked
-    -- bridge connects it to the current semantic problem.
+    -- Select from retained definitions and prove agreement with the normalized current problem.
     let source ← if state.view.definitions.isEmpty then pure typed.canonical else do
       let sourceSyntax ← liftMacroM state.view.toTermSyntax
       elabTermEnsuringType sourceSyntax (← inferType typed.canonical)
@@ -362,9 +345,7 @@ private def materializeOccurrenceBound (state : ReformState)
     let primitive ← state.runner.liftEquivalence equivalence
     let primitive ← instantiateMVars primitive
     checkWithKernel primitive
-    -- Keep the checked certificate behind a constant so chained lifts do not
-    -- repeatedly elaborate its expanded proof. Section parameters are retained,
-    -- and the enclosing command transaction rolls it back if a later step fails.
+    -- Store the certificate as a constant to avoid repeated proof elaboration.
     let primitiveName ← mkAuxDeclName (kind := `_occurrenceCertificate)
     let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
       (compile := false)
@@ -383,16 +364,14 @@ private def materializeOccurrenceBound (state : ReformState)
       checkpoint? := some { semantic, semanticAnchor := semantic, view := selected.view }
     }
 
-/-- Plan a checked bound lift at one objective or constraint occurrence. -/
+/-- Plan a bound at one objective or constraint occurrence. -/
 def prepareOccurrenceBound (state : ReformState) (_step : Syntax)
     (binder : TSyntax `ident) (selector : TSyntax `boundOccurrence)
     (constraint? explicitLabel? : Option (TSyntax `ident))
     (provided? : Option (TSyntax `term)) (direction : Morew.BoundDirection) :
     CommandElabM SurfaceStepDraft := do
   let row? ← constraint?.mapM (Rows.findConstraint state)
-  -- The surrounding context, not the objective sense alone, determines which
-  -- bound direction is valid. Its checked certificate also handles antitone
-  -- contexts such as minimizing a negated reward or maximizing a negated loss.
+  -- Use the surrounding context's certificate to determine bound direction.
   let stem := if direction == .upper then "epigraph" else "hypograph"
   let defaultName := Name.mkSimple s!"{stem}_{binder.getId.eraseMacroScopes}"
   let boundName := explicitLabel?.map (·.getId.eraseMacroScopes) |>.getD defaultName

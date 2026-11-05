@@ -7,19 +7,18 @@ import Morew.Conic.PSD
 import Mathlib.Analysis.Matrix.Order
 
 /-!
-# An exact positive-definite domain lift
+# A semidefinite representation of positive definiteness
 
-A symmetric inverse witness turns positive definiteness into an existential
-PSD block with identity off-diagonal blocks. The reverse implication uses the
-kernel of a PSD quadratic form, so no strict spectral margin is introduced.
+Positive definiteness is equivalent to the existence of a positive-semidefinite
+block completion with identity off-diagonal blocks.
 -/
 
 namespace Morew.Conic
 
 open Matrix
 
-/-- A PSD block with identity off-diagonal blocks has a positive-definite
-upper-left corner. No symmetry premise on either input is needed. -/
+/-- A positive-semidefinite block with identity off-diagonal blocks has a
+positive-definite upper-left block. -/
 theorem posDef_of_fromBlocksFin_identity_posSemidef {n : Nat}
     (P W : Matrix (Fin n) (Fin n) ℝ)
     (h : (fromBlocksFin P 1 1 W).PosSemidef) : P.PosDef := by
@@ -43,8 +42,8 @@ theorem posDef_of_fromBlocksFin_identity_posSemidef {n : Nat}
   funext i
   simpa [Matrix.fromBlocks_mulVec] using congrFun hkernel (Sum.inr i)
 
-/-- Positive definiteness is exactly the existence of a symmetric inverse
-witness in an identity-coupled PSD block, including dimension zero. -/
+/-- Positive definiteness is equivalent to a semidefinite block completion
+with identity off-diagonal blocks. -/
 theorem posDef_iff_exists_identity_block {n : Nat}
     (P : Matrix (Fin n) (Fin n) ℝ) :
     P.PosDef ↔ ∃ W : SymmetricMatrix n, (fromBlocksFin P 1 1 W.toMatrix).PosSemidef := by

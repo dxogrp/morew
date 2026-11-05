@@ -6,6 +6,11 @@ LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest Examples
 
 .DEFAULT_GOAL := help
 
+.PHONY: cache
+cache: ## download precompiled Mathlib files for the current dependencies
+	@printf "$(BLUE)Downloading Mathlib build cache...$(RESET)\n"
+	@lake exe cache get
+
 .PHONY: update
 update: ## update Lean dependencies and the package manifest
 	@printf "$(BLUE)Updating Lean dependencies...$(RESET)\n"
@@ -44,6 +49,14 @@ check-kernel: build ## build and kernel-check the library, tests, and examples
 check: lint ## run the local Lean build, lint, and kernel checks
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
 	@$(LEANCHECK)
+
+.PHONY: docs
+docs: ## build the documentation guide, examples, and API reference
+	@./scripts/build_docs.sh
+
+.PHONY: preview
+preview: ## preview generated documentation at http://127.0.0.1:8000
+	@python3 -m http.server --bind 127.0.0.1 --directory build/docs 8000
 
 .PHONY: clean
 clean: ## remove only Morew build artifacts

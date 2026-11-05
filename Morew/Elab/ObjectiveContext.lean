@@ -8,14 +8,8 @@ import Morew.Elab.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-!
-# Checked context proofs for bound lifts
-
-This deliberately bounded recognizer transports an existing bound through
-native real arithmetic. It never unfolds user function heads, assumes a sign
-depending on a decision variable, or changes an operation's instance. Failure
-asks the caller for an explicit context certificate.
--/
+/-! Transport scalar bounds through standard real arithmetic using independent sign evidence.
+Unrecognized contexts require an explicit certificate. -/
 
 namespace Morew.Elab.ObjectiveContext
 
@@ -48,18 +42,14 @@ private def reject (left right : Expr) (reason : MessageData) : ContextM α := d
   throwThe MessageData (← addMessageContext
     m!"cannot certify bound context from {left} to {right}: {reason}; use `using` with an explicit context certificate")
 
-/-- Compare typed expressions structurally, ignoring metadata and respecting
-proof irrelevance. Computational function heads are never unfolded. By default
-local-definition free variables retain their identities. `reduceStructure`
-additionally reduces computational lets, projections, and tuple matchers, for
-use after an occurrence has already been selected. -/
+/-- Compare typed expressions structurally with proof irrelevance and fixed function heads.
+Preserve local-definition identities unless `reduceStructure` requests `let`, projection,
+and tuple-match reduction after occurrence selection. -/
 partial def sameExpression (left right : Expr) (reduceStructure : Bool := false) : MetaM Bool := do
   let left ← if reduceStructure then Expr.reduceStructure left else pure left.consumeMData
   let right ← if reduceStructure then Expr.reduceStructure right else pure right.consumeMData
   if left == right then return true
-  -- Lean may extract instance proof fields (notably OfNat's AtLeastTwo
-  -- evidence) into auxiliary theorems when a source declaration is compiled.
-  -- Respect proof irrelevance without unfolding computational function heads.
+  -- Respect proof irrelevance for extracted instance proof fields.
   if ← isProof left then
     return (← isProof right) && (← isDefEq left right)
   match left, right with
@@ -143,8 +133,7 @@ private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
 
 private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
   let mut expression := expression
-  -- A full whnf would also unfold LE.le to Real's private relation. Unfold one
-  -- wrapper at a time so operation/instance recognition remains meaningful.
+  -- Unfold one relation definition at a time to retain operation and instance identity.
   for _ in [:8] do
     if expression.isAppOf ``LE.le || expression.isAppOf ``GE.ge then
       return ← realRelation? expression
@@ -158,8 +147,7 @@ private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :
 private partial def inequality (point left right bound : Expr) : ContextM Expr := do
   let left ← Expr.reduceStructure left
   let right ← Expr.reduceStructure right
-  -- Only the supplied bound may justify a changed leaf. Unfold the proposition
-  -- wrapper (for example BoundDirection.Rel), not either endpoint.
+  -- Unfold the bound's definition while preserving its endpoints.
   if let some (lower, upper) ← boundRelation? (← inferType bound) then
     if (← same lower left) && (← same upper right) then return bound
   unless (← isDefEq (← inferType left) q(ℝ)) &&
@@ -233,18 +221,16 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
       checkWithKernel proof
       return .ok proof
 
-/-- Prove `lower ≤ upper` in the canonical real order by transporting the
-supplied bound through a bounded arithmetic context. Caller metavariables and
-failed attempts' environment changes are isolated. -/
+/-- Prove `lower ≤ upper` by transporting the supplied bound through standard arithmetic.
+Isolate caller metavariables and failed environment changes. -/
 def proveInequality (point lower upper boundProof : Expr) : MetaM (Except MessageData Expr) := do
   let lower : Q(ℝ) := lower
   let upper : Q(ℝ) := upper
   checked #[point, lower, upper, boundProof] q($lower ≤ $upper) <|
     inequality point lower upper boundProof
 
-/-- Recover `target` from `sourceProof : source` and a supplied scalar bound.
-Supports native non-strict real comparisons and conjunctions. For a constraint
-lift, `source` is the rewritten predicate and `target` the original predicate. -/
+/-- Prove `target` from `sourceProof : source` and a scalar bound through standard
+non-strict real comparisons and conjunctions. For constraints, `source` is the rewritten predicate. -/
 def provePredicate (point source target boundProof sourceProof : Expr) :
     MetaM (Except MessageData Expr) :=
   checked #[point, source, target, boundProof, sourceProof] target <|

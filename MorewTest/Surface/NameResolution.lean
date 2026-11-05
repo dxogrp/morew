@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Basic
 
 /-!
-# Surface name resolution
+# Name resolution in problem declarations
 
 Exercise namespaces, declaration capture, and source-name resolution.
 -/

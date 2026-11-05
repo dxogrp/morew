@@ -10,9 +10,8 @@ import Morew.Fn.Norm
 /-!
 # Exact second-order representations
 
-These proof-bearing records expose the native operation in their source type.
-Positive denominator domains are part of the input type; consumers must supply
-checked domain evidence before using a quadratic-over-linear representation.
+These records represent Euclidean norms, squared norms, and quadratic-over-linear
+expressions. Subtype inputs carry the positive denominator hypotheses.
 -/
 
 namespace Morew.Conic.SecondOrder

@@ -97,7 +97,7 @@ example (n : ℕ) (v : Fin n → ℝ) : ¬ ‖WithLp.toLp ∞ v‖ ≤ -1 := by
   rw [norm_toLp_top_le_iff]
   norm_num
 
-/-! The one-norm uses a vector witness, with the empty sum retaining its bound. -/
+/-! The `ℓ₁`-norm representation uses an auxiliary vector; the empty sum retains its bound. -/
 
 example (n : ℕ) (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 1 v‖ ≤ t ↔

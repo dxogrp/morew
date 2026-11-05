@@ -12,4 +12,4 @@ import Morew.Elab.Reformulation.Basic.Remove
 import Morew.Elab.Reformulation.Basic.ObjectiveBound
 import Morew.Elab.Reformulation.Basic.Occurrence
 
-/-! Generic problem and reformulation commands, with no backend installed. -/
+/-! Problem definitions, substitutions, constraint operations, and epigraph/hypograph commands. -/

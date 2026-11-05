@@ -9,7 +9,7 @@ import MorewTest.Reformulation.NLPCustom
 /-!
 # Scoped evidence across smooth-NLP commands
 
-Proof lets remain in semantic and replay expressions, including after importing
+Proof lets remain in semantic and reconstruction expressions, including after importing
 a targeted output. Their evidence stays under its original decision/index scope;
 displaying a model does not require printing unused proof terms.
 -/
@@ -67,7 +67,7 @@ info: problem (x y : ℝ)
 #guard_msgs in
 #printp directTarget
 
--- A `have` may depend on an earlier proof let; replay preserves both scopes.
+-- A `have` may depend on an earlier proof let; reconstruction preserves both scopes.
 def chained :=
   problem (x : ℝ)
     minimize (let hp := coefficient_pos c
@@ -101,8 +101,8 @@ reformulation groupedAgain : (groupedTarget c) := by
   nlp
 example : NLP.Form (groupedAgain c) := groupedAgain.nlpForm c
 
--- Structural projections retain the same proof scope as a head let, through
--- direct lowering, selected lowering, and replay of their generated predicates.
+-- Structural projections retain proof scope through direct and selected
+-- rewrites and reconstruction of generated predicates.
 def projected :=
   problem (x : ℝ)
     minimize x ^ 2
@@ -121,8 +121,8 @@ reformulation projectedSelectedAgain : (projectedSelected c) := by
   nlp
 example : NLP.Form (projectedSelectedAgain c) := projectedSelectedAgain.nlpForm c
 
--- Projected groups must expose their conjunction before deciding which leaves
--- need lowering; the later norm auxiliary also transports the accepted evidence.
+-- Projected groups expose their conjunction before leaf rewriting;
+-- subsequent norm auxiliaries preserve the accepted evidence.
 def projectedGroup :=
   problem (x : ℝ) (v : Fin 1 → ℝ) (t : ℝ)
     minimize x ^ 2
@@ -223,7 +223,7 @@ reformulation unrelatedIndexTarget : (unrelatedIndex c) := by
   nlp
 end IndexScope
 
--- The helper expands to x² + 1, whose positivity can be proved independently
+-- The helper expands to `x² + 1`, whose positivity can be proved independently
 -- of the decision-dependent proof let. Disabling expansion retains opacity.
 def helperSource :=
   problem (x : ℝ)

@@ -2,8 +2,7 @@
 
 **Morew** (pronounced “MOH-roo”) is a mathematical optimization rewriting system in Lean 4 for expressing optimization problems and certifying their reformulations.
 
-Morew is under *active development*.
-Features may be broken and/or missing, and the documentation is still incomplete.
+Morew is under active development.
 
 ## Quickstart
 
@@ -45,7 +44,16 @@ problem (x : Fin n → ℝ) (t : ℝ)
     residualCone : (t, A *ᵥ x - b) ∈ SOC m
 ```
 
-More examples can be found in the [Examples](Examples) directory.
+See [Examples](Examples) for more models and reformulations.
+
+## Documentation
+
+Build and preview the guide, examples, and API reference from the repository root:
+
+```sh
+make docs
+make preview
+```
 
 ## License
 

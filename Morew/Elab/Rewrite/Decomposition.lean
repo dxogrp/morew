@@ -5,13 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Expr
 
-/-!
-# Checked conjunction decomposition
-
-Flatten inspectable conjunctions while retaining their exact equivalence and
-the local evidence needed by each resulting predicate. Atomic predicates are
-left intact for the caller's recognizer.
--/
+/-! Flatten conjunctions with equivalence proofs and scoped local evidence. -/
 
 namespace Morew.Elab.Rewrite
 
@@ -25,8 +19,7 @@ def conjunction : List Expr → Expr
   | [p] => p
   | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
 
-/-- Assemble proofs in the ordered conjunction convention. Empty collections
-produce `True`; a single entry retains its own conjunction boundaries. -/
+/-- Assemble ordered conjunction proofs; empty input gives `True` and one entry retains its structure. -/
 def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
   if proofs.isEmpty then return mkConst ``True.intro
   let mut result := proofs.back!
@@ -66,7 +59,7 @@ partial def appendIff (left right : List Expr) : MetaM Expr := do
         conjunction (rest ++ right), ← appendIff rest right]
 
 /-- Split a proposition using only the supplied structural reduction. Local
-lets remain attached to every leaf and to the decomposition proof. -/
+lets remain attached to every conjunct and to the decomposition proof. -/
 partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (List Expr × Expr) := do
   let body ← reduce body
@@ -91,9 +84,8 @@ partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
 
 end Decomposition
 
-/-- Decompose a predicate into ordered atomic predicates and a checked proof
-of its equivalence with their conjunction. `True` contributes no leaves;
-unsupported atomic heads remain available for a more specific diagnostic. -/
+/-- Decompose into ordered atomic predicates with conjunction equivalence.
+`True` contributes no conjuncts; retain unsupported atomic predicates. -/
 def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type

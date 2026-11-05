@@ -10,41 +10,35 @@ import Mathlib.Algebra.BigOperators.Fin
 /-!
 # Smoothness evidence for generated constraint rows
 
-These certificates describe only the supplied predicates. They make no claim
-about an objective or any other constraints. Finite families stay grouped, and
-each closed scalar comparison records smoothness of its exact difference.
-
-`Block` additionally retains the concrete scalar rows in `Type`, so terminal
-validation can construct NLP data without extracting data from a proof. Finite
-families use the ordered finite-sum equivalence; symbolic dimensions and empty
-families need no enumeration during elaboration.
+`Block` represents a predicate by smooth scalar residuals with closed bounds.
+Finite families are ordered by coordinate.
 -/
 
 namespace Morew.NLP.Rows
 
-/-- The exact upper-bound normalization recorded by a scalar row certificate. -/
+/-- The bound `lhs ≤ rhs` is equivalent to `lhs - rhs ≤ 0`. -/
 theorem upper_residual_iff (lhs rhs : ℝ) :
     (Bounds.upperBound 0).Contains (lhs - rhs) ↔ lhs ≤ rhs := by
   rw [Bounds.contains_upperBound]
   exact sub_nonpos
 
-/-- The exact lower-bound normalization recorded by a scalar row certificate. -/
+/-- The bound `rhs ≤ lhs` is equivalent to `0 ≤ lhs - rhs`. -/
 theorem lower_residual_iff (lhs rhs : ℝ) :
     (Bounds.lowerBound 0).Contains (lhs - rhs) ↔ lhs ≥ rhs := by
   rw [Bounds.contains_lowerBound]
   exact sub_nonneg
 
-/-- The exact equality normalization recorded by a scalar row certificate. -/
+/-- The equality `lhs = rhs` is equivalent to `lhs - rhs = 0`. -/
 theorem fixed_residual_iff (lhs rhs : ℝ) :
     (Bounds.fixed 0).Contains (lhs - rhs) ↔ lhs = rhs := by
   rw [Bounds.contains_fixed]
   exact sub_eq_zero
 
-/-- Canonical vector upper bounds are coordinatewise scalar bounds. -/
+/-- Vector upper bounds are equivalent to componentwise scalar bounds. -/
 theorem vector_le_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
     lhs ≤ rhs ↔ ∀ i, lhs i ≤ rhs i := Iff.rfl
 
-/-- Canonical vector lower bounds are coordinatewise scalar bounds. -/
+/-- Vector lower bounds are equivalent to componentwise scalar bounds. -/
 theorem vector_ge_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
     lhs ≥ rhs ↔ ∀ i, lhs i ≥ rhs i := Iff.rfl
 
@@ -54,7 +48,7 @@ theorem vector_eq_iff {n : ℕ} (lhs rhs : Fin n → ℝ) :
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-/-- A predicate assembled from smooth closed scalar residuals on one domain. -/
+/-- A predicate assembled from smooth scalar residuals with closed bounds on one domain. -/
 inductive Certified (domain : Set X) : (X → Prop) → Prop where
   /-- The empty row imposes no condition. -/
   | truth : Certified domain (fun _ => True)
@@ -77,7 +71,7 @@ inductive Certified (domain : Set X) : (X → Prop) → Prop where
   | family {n : ℕ} (p : Fin n → X → Prop)
       (certified : ∀ i, Certified domain (p i)) :
       Certified domain (fun x => ∀ i, p i x)
-  /-- Checked logical transport preserves the original row predicate. -/
+  /-- A constraint equivalent to one represented by smooth residuals has the same representation. -/
   | of_iff (p q : X → Prop) (equivalent : ∀ x, p x ↔ q x)
       (certified : Certified domain q) : Certified domain p
 
@@ -93,7 +87,7 @@ theorem Certified.mono {s t : Set X} {p : X → Prop}
   | family p _ ih => exact .family p ih
   | of_iff p q equivalent _ ih => exact .of_iff p q equivalent ih
 
-/-- Rebase existing grammatical certificates along a globally smooth map. -/
+/-- Pull back row certificates along a globally smooth map. -/
 theorem Certified.pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     {domain : Set X} {p : X → Prop} (certified : Certified domain p)
     (f : Y → X) (smooth : ContDiff ℝ 2 f) :
@@ -114,40 +108,40 @@ theorem Certified.pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y
   | of_iff p q equivalent _ ih =>
     exact .of_iff (fun y => p (f y)) (fun y => q (f y)) (fun y => equivalent (f y)) ih
 
-/-- Smooth rebasing preserves openness of the evaluation domain. -/
+/-- The preimage of an open domain under a smooth map is open. -/
 theorem preimage_open {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (domain : Set X) (f : Y → X) (open_domain : IsOpen domain)
     (smooth : ContDiff ℝ 2 f) : IsOpen (f ⁻¹' domain) :=
   open_domain.preimage smooth.continuous
 
 omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-/-- Rebased feasibility supplies membership in the pulled-back domain. -/
+/-- Feasibility after composition implies membership in the preimage domain. -/
 theorem preimage_includes {Y : Type*} (domain : Set X) (p : X → Prop)
     (f : Y → X) (includes : ∀ x, p x → x ∈ domain) :
     ∀ y, p (f y) → y ∈ f ⁻¹' domain :=
   fun y hy => includes (f y) hy
 
-/-- Concrete smooth scalar rows representing exactly one predicate.
-The domain is evaluation evidence and is not included in `holds_iff`. -/
+/-- Smooth scalar constraints whose conjunction is equivalent to one predicate.
+The domain specifies where the residuals are smooth. -/
 structure Block (domain : Set X) (predicate : X → Prop) where
-  /-- The number of normalized scalar rows, possibly symbolic or zero. -/
+  /-- The number of scalar rows. -/
   rowCount : Nat
   /-- The actual residuals and bounds, with smoothness on the shared domain. -/
   rows : Fin rowCount → Row X domain
-  /-- Row-only satisfaction is equivalent to the original predicate. -/
+  /-- Satisfaction of all rows is equivalent to the original predicate. -/
   holds_iff : ∀ x, (∀ i, (rows i).Holds x) ↔ predicate x
 
 namespace Block
 
 variable {domain : Set X} {p q : X → Prop}
 
-/-- An exposed `True` predicate contributes no scalar rows. -/
+/-- The predicate `True` contributes no scalar constraints. -/
 def truth (domain : Set X) : Block domain (fun _ => True) where
   rowCount := 0
   rows := Fin.elim0
   holds_iff _ := ⟨fun _ => trivial, fun _ i => Fin.elim0 i⟩
 
-/-- Retain the exact difference with its closed upper bound at zero. -/
+/-- Bound `lhs - rhs` above by zero. -/
 def le (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x ≤ rhs x) where
@@ -156,7 +150,7 @@ def le (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (upper_residual_iff _ _).mp (h 0),
     fun h _ => (upper_residual_iff _ _).mpr h⟩
 
-/-- Retain the exact difference with its closed lower bound at zero. -/
+/-- Bound `lhs - rhs` below by zero. -/
 def ge (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x ≥ rhs x) where
@@ -165,7 +159,7 @@ def ge (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (lower_residual_iff _ _).mp (h 0),
     fun h _ => (lower_residual_iff _ _).mpr h⟩
 
-/-- Retain the exact difference fixed at zero. -/
+/-- Set `lhs - rhs` equal to zero. -/
 def eq (domain : Set X) (lhs rhs : X → ℝ)
     (smooth : ContDiffOn ℝ 2 (fun x => lhs x - rhs x) domain) :
     Block domain (fun x => lhs x = rhs x) where
@@ -174,7 +168,7 @@ def eq (domain : Set X) (lhs rhs : X → ℝ)
   holds_iff _ := ⟨fun h => (fixed_residual_iff _ _).mp (h 0),
     fun h _ => (fixed_residual_iff _ _).mpr h⟩
 
-/-- Append conjunction rows in left-to-right order, without merging bounds. -/
+/-- Concatenate the rows of a conjunction in left-to-right order. -/
 def and (left : Block domain p) (right : Block domain q) :
     Block domain (fun x => p x ∧ q x) where
   rowCount := left.rowCount + right.rowCount
@@ -235,21 +229,20 @@ theorem family_rows {n : Nat} (p : Fin n → X → Prop)
   exact congrArg (fun ij : (i : Fin n) × Fin (blocks i).rowCount => (blocks ij.1).rows ij.2)
     (finSigmaFinEquiv.symm_apply_apply ⟨i, j⟩)
 
-/-- Logical transport changes only the predicate represented by the row block. -/
+/-- Represent an equivalent predicate using the same residuals and bounds. -/
 def ofIff (p q : X → Prop) (equivalent : ∀ x, p x ↔ q x)
     (block : Block domain q) : Block domain p where
   rowCount := block.rowCount
   rows := block.rows
   holds_iff x := (block.holds_iff x).trans (equivalent x).symm
 
-/-- Restrict evaluation evidence without changing residuals, bounds, or order. -/
+/-- Restrict the evaluation domain, preserving residuals, bounds, and row order. -/
 def mono {s t : Set X} (block : Block s p) (subset : t ⊆ s) : Block t p where
   rowCount := block.rowCount
   rows i := { block.rows i with smooth := (block.rows i).smooth.mono subset }
   holds_iff := block.holds_iff
 
-/-- Rebase accepted rows along a smooth map, in particular an auxiliary-variable
-projection, without discovering their expressions or evidence again. -/
+/-- Pull back rows along a smooth map, including a projection from auxiliary variables. -/
 def pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (block : Block domain p) (f : Y → X) (smooth : ContDiff ℝ 2 f) :
     Block (f ⁻¹' domain) (fun y => p (f y)) where
@@ -260,8 +253,8 @@ def pullback {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     smooth := (block.rows i).smooth.comp smooth.contDiffOn (fun _ h => h) }
   holds_iff y := block.holds_iff (f y)
 
-/-- Assemble an exact form from complete row data and objective/domain proofs.
-The separately supplied sense does not follow from representation equality. -/
+/-- Assemble an exact form from row data, an objective, smoothness and domain
+proofs, and the separately supplied objective sense. -/
 def toForm [FiniteDimensional ℝ X] (problem : Problem X ℝ)
     (block : Block domain problem.feasible) (sense : ObjectiveSense)
     (domain_isOpen : IsOpen domain)

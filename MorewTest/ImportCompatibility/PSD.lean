@@ -7,7 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PSD
 
 /-!
-# Imported PSD proof replay and continued reformulations
+# Imported PSD proof reconstruction and continued reformulations
 -/
 
 namespace MorewTest.ImportCompatibility.PositiveSemidefinite
@@ -64,7 +64,7 @@ namespace DimensionInstances
 section CustomNumeral
 local instance : OfNat Nat 2 := ⟨3⟩
 
--- This source really has dimension three, although its local spelling is `2`.
+-- The source dimension is three, with local notation `2`.
 def source :=
   problem (M : SymmetricMatrix 2)
     minimize (0 : ℝ)

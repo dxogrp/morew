@@ -6,14 +6,22 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 
 /-!
-# Certified log-determinant optimization
+# Log-determinant optimization
 
-`Fn.logDet X` means the total real function `Real.log X.det`.
-Its exact conic rewrite requires a positive-definite matrix.
-The lift uses existing PSD and exponential cones.
+We maximize the log-determinant over symmetric 2 × 2 matrices `X`:
+
+```math
+\begin{array}{ll}
+\text{maximize} & \log\det X \\
+\text{subject to} & \operatorname{tr}X=2, \\
+ & X \succ 0.
+\end{array}
+```
+
+The reformulation uses positive semidefinite and exponential cones.
 -/
 
-namespace Morew.Examples.LogDet
+namespace Examples.Models.LogDet
 
 open Morew Morew.Conic
 
@@ -36,9 +44,7 @@ example : GlobalEquivalence maximum maximumConic := maximumConic.equivalence
 example : IsConic maximumConic := maximumConic.isConic
 example : maximumConic.conicForm.data.rowCount = 5 := rfl
 
--- Lowering the log-det bound first makes the original domain row redundant:
--- the PSD and EXP rows already imply positive definiteness. Removing that row
--- avoids the additional PSD block and auxiliary used by its separate lift.
+-- The conic log-determinant constraints imply `X ≻ 0`, so the domain row is redundant.
 reformulation maximumWithoutDomainConic : maximum := by
   hypograph t as logDet_bound
   conic at logDet_bound
@@ -65,12 +71,7 @@ def nativeMaximum :=
       domain : X.toMatrix.PosDef
       normalization : X.toMatrix.trace = 2
 
-/-
-This example lowers the domain first to demonstrate that either rewrite order
-is supported. The explicit early `conic at domain` step is optional: the log-det
-rule can use the original `PosDef` constraint directly, or recover positive
-definiteness from its retained PSD witness after domain lowering.
--/
+-- The log-determinant rule also accepts the semidefinite representation of `X ≻ 0`.
 reformulation domainFirstConic : nativeMaximum := by
   hypograph t as logDet_bound
   conic at domain
@@ -83,4 +84,4 @@ example : GlobalEquivalence nativeMaximum domainFirstConic := domainFirstConic.e
 example : IsConic domainFirstConic := domainFirstConic.isConic
 
 end
-end Morew.Examples.LogDet
+end Examples.Models.LogDet

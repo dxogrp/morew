@@ -288,7 +288,7 @@ example (u : ℝ) : target.objective u = u := rfl
 
 end ScopedBinderInference
 
-/-! A checked manual witness keeps its original global resolution even when
+/-! An explicit substitution certificate keeps its original global resolution even when
 the new target is declared under the same short name. -/
 
 namespace CertificateNameCapture

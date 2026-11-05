@@ -132,14 +132,14 @@ variable (cap : ℝ) (hcap : 1 ≤ cap)
 
 -- A derived operand can introduce a parameter absent from the original source.
 -- Later explicit binders must still respect source-parameter name reservations.
-#guard_error_fragments ["decision variable `cap` conflicts with a source parameter"] in
+#guard_error_fragments ["optimization variable `cap` conflicts with a source parameter"] in
 assert_derive_atomic% derivedParameterEpigraph derivedParameterEpigraphAlias in
 reformulation derivedParameterEpigraph : bounded
     certificate derivedParameterEpigraphAlias := by
   derive relaxed : x ≤ cap using (fun _ hp => hp.2.trans hcap)
   epigraph cap
 
-#guard_error_fragments ["decision variable `cap` conflicts with a source parameter"] in
+#guard_error_fragments ["optimization variable `cap` conflicts with a source parameter"] in
 assert_derive_atomic% derivedParameterSubstitution derivedParameterSubstitutionAlias in
 reformulation derivedParameterSubstitution : bounded
     certificate derivedParameterSubstitutionAlias := by
@@ -216,10 +216,8 @@ end MorewTest.Reformulation.DeriveFailures
 /-!
 # Incomplete derived-constraint expressions
 
-The command elaborates each step through `runTermElabM`, which starts a fresh
-metavariable context rather than accepting caller metavariables. These tests
-exercise unresolved expressions inside that boundary and check that rejecting
-them also rolls back the command's declarations and presentation metadata.
+`runTermElabM` gives each step a fresh metavariable context. Rejecting unresolved
+expressions also removes generated declarations and presentation metadata.
 -/
 
 namespace MorewTest.Reformulation.DeriveIsolation
@@ -301,7 +299,7 @@ reformulation latePlaceholder : source := by
   derive first : True using derive_completed%
   derive second : x = x using derive_synthetic_sorry%
 
--- Reuse a rejected name to check recovery, and retain an explicit True row.
+-- Reuse a rejected name to check recovery, and retain an explicit `True` row.
 reformulation latePlaceholder : source := by
   derive first : True using derive_completed%
 

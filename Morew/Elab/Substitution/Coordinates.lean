@@ -6,13 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Transform.Parameterization
 import Lean.Meta
 
-/-!
-# Checked coordinate decompositions
-
-Substitution separates one selected coordinate from the retained coordinates
-without changing their order. The presentation uses left-associated products;
-the absence of retained coordinates is represented by `Unit`.
--/
+/-! Separate a selected coordinate from retained coordinates in original order.
+Use left-associated products, with `Unit` for no retained coordinates. -/
 
 namespace Morew.Elab.Substitution.Coordinates
 
@@ -44,9 +39,8 @@ partial def project (point : Expr) (index count : Nat) : MetaM Expr := do
   if index + 1 == count then return ← mkAppM ``Prod.snd #[point]
   project (← mkAppM ``Prod.fst #[point]) index (count - 1)
 
-/-- Construct a kernel-checked equivalence separating a selected coordinate
-from the remaining coordinates in their original order. The supplied domain
-may be an alias of the presentation's tuple type. -/
+/-- Construct a checked coordinate-separation equivalence for the presented tuple domain,
+including type aliases. -/
 def split (domain : Expr) (binderTypes : Array Expr) (selected : Nat) : MetaM Expr := do
   if selected >= binderTypes.size then
     throwError "invalid substitution coordinate {selected} in a tuple of size {binderTypes.size}"

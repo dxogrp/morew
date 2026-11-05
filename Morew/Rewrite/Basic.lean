@@ -8,21 +8,15 @@ import Mathlib.Logic.Basic
 /-!
 # Exact constraint representations
 
-These records describe predicate replacements using checked existential
-equivalences. They are independent of optimization targets and the modeling
-language; both conic and smooth-NLP rewriting use the same adapters.
+Predicate, graph, epigraph, and hypograph representations by existential
+equivalences, shared by conic and smooth NLP reformulations.
 -/
 
 namespace Morew
 
 universe u v w z
 
-/-- An exact replacement of a predicate by a predicate over auxiliary
-variables.
-
-The existential equivalence is the soundness boundary: a one-way implication
-would describe a relaxation rather than an equivalent transformation.  No
-uniqueness or constructive choice of the auxiliary value is required. -/
+/-- Represent `source x` by an existential predicate `∃ a, target x a`. -/
 structure ExactConstraintLift {X : Type u} (source : X → Prop) where
   /-- The type of auxiliary values introduced by the replacement. -/
   Auxiliary : Type v
@@ -35,9 +29,8 @@ structure ExactConstraintLift {X : Type u} (source : X → Prop) where
 
 namespace ExactConstraintLift
 
-/-- Regard a pointwise propositional equivalence as an exact lift with no
-semantic auxiliary data.  `Unit` represents the absence of auxiliary
-variables. -/
+/-- Construct a representation from a pointwise equivalence, using `Unit`
+for the auxiliary type. -/
 def ofIff {X : Type u} {source : X → Prop} (replacement : X → Prop)
     (h : ∀ x, source x ↔ replacement x) :
     ExactConstraintLift source where
@@ -52,11 +45,7 @@ def ofIff {X : Type u} {source : X → Prop} (replacement : X → Prop)
 
 end ExactConstraintLift
 
-/-- An exact auxiliary-variable representation of the graph equation
-`y = f x`.
-
-The existential equivalence, rather than either implication alone, ensures
-that using the representation preserves feasibility. -/
+/-- Represent the graph equation `y = f x` by `∃ a, target x y a`. -/
 structure GraphRepresentation {X : Type u} {Y : Type v} (f : X → Y) where
   /-- The type of auxiliary values used by the representation. -/
   Auxiliary : Type w
@@ -68,7 +57,7 @@ structure GraphRepresentation {X : Type u} {Y : Type v} (f : X → Y) where
 
 namespace GraphRepresentation
 
-/-- Instantiate a graph representation inside an arbitrary decision domain. -/
+/-- Apply a graph representation to expressions on a decision space. -/
 def toExactConstraintLift {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
     (representation : GraphRepresentation.{u, v, w} f)
     (input : Z → X) (output : Z → Y) :
@@ -78,8 +67,7 @@ def toExactConstraintLift {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
   source_iff_exists point :=
     representation.source_iff_exists (input point) (output point)
 
-/-- Instantiate a graph representation for the symmetric equation
-`f x = y` inside an arbitrary decision domain. -/
+/-- Apply a graph representation to the equation `f x = y` on a decision space. -/
 def toExactConstraintLiftSymm
     {X : Type u} {Y : Type v} {Z : Type z} {f : X → Y}
     (representation : GraphRepresentation.{u, v, w} f)
@@ -96,11 +84,7 @@ def toExactConstraintLiftSymm
 
 end GraphRepresentation
 
-/-- An exact auxiliary-variable representation of an epigraph predicate
-`f x ≤ t`.
-
-Only an `LE` relation is needed: exactness is supplied explicitly by the
-existential equivalence. -/
+/-- Represent the epigraph predicate `f x ≤ t` by `∃ a, target x t a`. -/
 structure EpigraphRepresentation {X : Type u} {Y : Type v} [LE Y]
     (f : X → Y) where
   /-- The type of auxiliary values used by the representation. -/
@@ -113,8 +97,7 @@ structure EpigraphRepresentation {X : Type u} {Y : Type v} [LE Y]
 
 namespace EpigraphRepresentation
 
-/-- Instantiate an epigraph representation inside an arbitrary decision
-domain. -/
+/-- Apply an epigraph representation to expressions on a decision space. -/
 def toExactConstraintLift
     {X : Type u} {Y : Type v} {Z : Type z} [LE Y] {f : X → Y}
     (representation : EpigraphRepresentation.{u, v, w} f)
@@ -127,11 +110,7 @@ def toExactConstraintLift
 
 end EpigraphRepresentation
 
-/-- An exact auxiliary-variable representation of a hypograph predicate
-`t ≤ f x`.
-
-Only an `LE` relation is needed: exactness is supplied explicitly by the
-existential equivalence. -/
+/-- Represent the hypograph predicate `t ≤ f x` by `∃ a, target x t a`. -/
 structure HypographRepresentation {X : Type u} {Y : Type v} [LE Y]
     (f : X → Y) where
   /-- The type of auxiliary values used by the representation. -/
@@ -144,8 +123,7 @@ structure HypographRepresentation {X : Type u} {Y : Type v} [LE Y]
 
 namespace HypographRepresentation
 
-/-- Instantiate a hypograph representation inside an arbitrary decision
-domain. -/
+/-- Apply a hypograph representation to expressions on a decision space. -/
 def toExactConstraintLift
     {X : Type u} {Y : Type v} {Z : Type z} [LE Y] {f : X → Y}
     (representation : HypographRepresentation.{u, v, w} f)

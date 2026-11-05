@@ -10,12 +10,9 @@ import Morew.Rewrite.Basic
 /-!
 # Finite geometric-mean and inverse-product representations
 
-A deterministic left-to-right chain bounds each auxiliary by the corresponding
-prefix mean. The forward witnesses attain those bounds. The first auxiliary
-equals the first input; each remaining coordinate is connected by a power cone. This uniform
-layout works for symbolic nonempty dimensions without conditional coordinates.
-Hypographs retain negative lower bounds, and all geometric-mean zero boundaries
-are included. Inverse products require strictly positive input coordinates.
+A chain of power cones bounds auxiliary variables by successive prefix means.
+Geometric means require nonnegative inputs and a nonempty dimension;
+inverse products require positive inputs.
 -/
 
 namespace Morew.Conic.Power
@@ -118,9 +115,8 @@ private theorem prefixMean_mem {n : Nat} (xs : Fin n → ℝ) (hx : ∀ i, 0 ≤
   refine ⟨prefixMean_nonneg xs hx _, hx _, ?_⟩
   rw [abs_of_nonneg (prefixMean_nonneg xs hx _), prefixMean_step xs hx j]
 
-/-- A finite geometric-mean hypograph has an exact prefix-chain lift. The
-nonnegative final auxiliary, rather than the possibly negative bound, is the
-last power-cone coordinate. -/
+/-- A geometric-mean hypograph represented by a chain of prefix means.
+The final auxiliary bounds the hypograph variable from above. -/
 theorem le_geoMean_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     (hx : ∀ i, 0 ≤ xs i) :
     t ≤ Fn.geoMean xs ↔ ∃ u : Fin n → ℝ,
@@ -153,8 +149,8 @@ theorem invProdExponent_range (n : Nat) (hn : 0 < n) :
   apply inverse_exponent_range
   exact_mod_cast Nat.lt_add_one_iff.mpr hn
 
-/-- An inverse-product epigraph is the prefix-mean chain followed by one
-negative-power cone. Strictly positive input coordinates are essential. -/
+/-- An inverse-product epigraph on strictly positive coordinates is represented
+by a chain of prefix means followed by one negative-power cone. -/
 theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     (hx : ∀ i, 0 < xs i) :
     Fn.invProd xs ≤ t ↔ ∃ u : Fin n → ℝ,
@@ -191,8 +187,8 @@ theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
     exact (Real.rpow_le_rpow_of_nonpos hu (chain_bound xs u hn hx₀ hfirst hchain)
       hnegative.le).trans hpow
 
-/-- The unweighted finite geometric mean on nonnegative coordinates. The forward
-witness sets auxiliary `i` to the mean of the first `i + 1` coordinates. -/
+/-- The geometric-mean hypograph on nonnegative coordinates. Auxiliary values
+equal to successive prefix means attain the bound. -/
 noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
     HypographRepresentation (fun xs : {xs : Fin n → ℝ // ∀ i, 0 ≤ xs i} =>
       Fn.geoMean xs.1) where
@@ -206,8 +202,8 @@ noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
     0 ≤ u ⟨n - 1, by omega⟩ ∧ t ≤ u ⟨n - 1, by omega⟩
   source_iff_exists xs t := le_geoMean_iff xs.1 t hn xs.2
 
-/-- The finite inverse product on strictly positive coordinates, using the
-same prefix-mean layout and one final negative-power cone. -/
+/-- The inverse-product epigraph on positive coordinates, using a prefix-mean
+chain and one final negative-power cone. -/
 noncomputable def invProdEpigraph {n : Nat} (hn : 0 < n) :
     EpigraphRepresentation (fun xs : {xs : Fin n → ℝ // ∀ i, 0 < xs i} =>
       Fn.invProd xs.1) where
