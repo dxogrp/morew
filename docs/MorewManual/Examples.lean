@@ -61,6 +61,13 @@ tag := "examples-models"
 {includeExample Examples.Models.Spectral "Spectral"}
 {includeExample Examples.Models.LogDet "LogDet"}
 
+# Applications
+%%%
+tag := "examples-applications"
+%%%
+
+{includeExample Examples.Applications.RidgeReg "Least squares"}
+
 # Advanced
 %%%
 tag := "examples-advanced"
