@@ -9,8 +9,8 @@ import Morew.Reformulation.Conic
 # Multiplicative calibration
 
 Given positive measurements `zᵢ`, fit the model `zᵢ ≈ x ^ aᵢ * y ^ bᵢ`
-with `x, y > 0`. Set `cᵢ = log zᵢ` and minimize the squared errors in the
-logarithms:
+with parameters `x, y > 0`. Set `cᵢ = log zᵢ` and minimize the squared
+errors in the logarithms:
 
 ```math
 \begin{array}{ll}
