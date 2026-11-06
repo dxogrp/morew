@@ -444,6 +444,12 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     if i == binderIndex then replacement else ⟨mkIdent binder.name⟩
   let mapResult ← liftMacroM <| mkProduct mapComponents
   let mapTerm ← liftMacroM `(fun ($domainPattern : $domainType) => $mapResult)
+  -- Resolve the pattern lambda before certificate comparisons can unfold the objective.
+  let mapTerm ← runTermElabM fun _ => do
+    let domain ← elabType domainType
+    let map ← elabTermEnsuringType mapTerm (← mkArrow domain domain)
+    synthesizeSyntheticMVarsNoPostponing
+    exactExpressionSyntax (← instantiateMVars map)
 
   let stepCertificate ← match providedCertificate? with
     | some proofTerm =>

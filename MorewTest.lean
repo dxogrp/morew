@@ -258,6 +258,7 @@ import MorewTest.Reformulation.SubstitutionContext
 import MorewTest.Reformulation.SubstitutionContextConic
 import MorewTest.Reformulation.SubstitutionFailures
 import MorewTest.Reformulation.SubstitutionGeneratedNames
+import MorewTest.Reformulation.SubstitutionObjective
 import MorewTest.Reformulation.SubstitutionRuleFailures
 import MorewTest.Reformulation.SubstitutionRules
 import MorewTest.Reformulation.SubstitutionRulesBackends

@@ -47,11 +47,11 @@ def calibration (a b c : Fin m → ℝ) :=
 
 variable (a b c : Fin m → ℝ)
 
--- Bound the objective by t and change variables.
+-- Change variables, then bound the objective by t.
 reformulation logEpigraphCalibration : (calibration a b c) := by
-  epigraph t as residualBound
   substitute x := Real.exp u
   substitute y := Real.exp v
+  epigraph t as residualBound
 
 #printp calibration
 #printp logEpigraphCalibration
