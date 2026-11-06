@@ -261,7 +261,7 @@ $`B-A\in\mathbf{S}_+^n`.
   * {functionSymbol notMonotone}[]
 *
   * [`Fn.matFrac x P`](api/Morew/Fn/Matrix.html#Morew.Fn.matFrac)
-  * $`x^{\mathsf T}P^{-1}x`
+  * $`x^T P^{-1}x`
   * $`x\in\mathbf{R}^n`, $`P\in\mathbf{S}_{++}^n`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[] in $`P` under $`\preceq`; {functionSymbol notMonotone}[] in $`x`
