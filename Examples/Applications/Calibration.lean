@@ -33,7 +33,7 @@ Morew writes this quadratic inequality as a rotated second-order cone constraint
 The original variables are recovered as `x = exp u` and `y = exp v`.
 -/
 
-namespace Examples.Applications.MultiplicativeCalibration
+namespace Examples.Applications.Calibration
 
 open Morew
 noncomputable section
@@ -90,4 +90,4 @@ example {z : FeasiblePoint (conicCalibration a b c)}
   (calibrationEquivConic a b c).map_isGlobalOptimum_backward hz
 
 end
-end Examples.Applications.MultiplicativeCalibration
+end Examples.Applications.Calibration

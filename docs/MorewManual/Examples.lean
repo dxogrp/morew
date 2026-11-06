@@ -65,7 +65,7 @@ tag := "examples-models"
 tag := "examples-applications"
 %%%
 
-{includeExample Examples.Applications.MultiplicativeCalibration "Multiplicative calibration"}
+{includeExample Examples.Applications.Calibration "Multiplicative calibration"}
 
 # Advanced
 %%%

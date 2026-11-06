@@ -1,7 +1,7 @@
 import Examples.Advanced.CustomRules
 import Examples.Advanced.Restrict
 import Examples.Advanced.Schur
-import Examples.Applications.MultiplicativeCalibration
+import Examples.Applications.Calibration
 import Examples.GettingStarted.Basic
 import Examples.GettingStarted.Conic
 import Examples.GettingStarted.GraphImpl
