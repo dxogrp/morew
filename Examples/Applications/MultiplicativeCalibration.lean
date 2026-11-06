@@ -8,9 +8,9 @@ import Morew.Reformulation.Conic
 /-!
 # Multiplicative calibration
 
-Estimate two positive quantities `x` and `y` from positive multiplicative measurements
-`zᵢ ≈ x ^ aᵢ * y ^ bᵢ`. Write `cᵢ = log zᵢ` for the observed log measurements
-and fit their squared residuals:
+Given positive measurements `zᵢ`, fit the model `zᵢ ≈ x ^ aᵢ * y ^ bᵢ`
+with `x, y > 0`. Set `cᵢ = log zᵢ` and minimize the squared errors in the
+logarithms:
 
 ```math
 \begin{array}{ll}
@@ -19,24 +19,18 @@ and fit their squared residuals:
 \end{array}
 ```
 
-This models errors in the log measurements; it is not a reformulation of
-least squares on the original measurements. For example, measurements of
-`x`, `y`, and `x * y` use `a = (1, 0, 1)` and `b = (0, 1, 1)`.
-
-The substitutions `x = exp u` and `y = exp v` reveal an unconstrained linear
-least-squares problem in `u` and `v`. Positivity ensures that every original
-feasible point has these logarithmic coordinates. Combining this substitution
-with an epigraph lift gives one rotated second-order cone constraint:
+Set `x = exp u` and `y = exp v`. The error becomes `aᵢ u + bᵢ v - cᵢ`,
+which is linear in `u` and `v`. Let `t` bound the sum of squares:
 
 ```math
 \begin{array}{ll}
 \text{minimize} & t \\
-\text{subject to} & (t, 1/2, (a_i u + b_i v - c_i)_i) \in \mathrm{RSOC}.
+\text{subject to} & \sum_i (a_i u + b_i v - c_i)^2 \leq t.
 \end{array}
 ```
 
-The certificates apply to every choice of measurement coefficients and log
-observations. No rank assumption is needed for the reformulations.
+Morew writes this quadratic inequality as a rotated second-order cone constraint.
+The original variables are recovered as `x = exp u` and `y = exp v`.
 -/
 
 namespace Examples.Applications.MultiplicativeCalibration
@@ -53,8 +47,7 @@ def calibration (a b c : Fin m → ℝ) :=
 
 variable (a b c : Fin m → ℝ)
 
--- Introduce the epigraph first, keeping a linear objective throughout the substitutions.
--- Each positivity constraint supplies the coverage proof for its substitution.
+-- Bound the objective by t and change variables.
 reformulation logEpigraphCalibration : (calibration a b c) := by
   epigraph t as residualBound
   substitute x := Real.exp u
@@ -66,7 +59,7 @@ reformulation logEpigraphCalibration : (calibration a b c) := by
 example : GlobalEquiv (calibration a b c) (logEpigraphCalibration a b c) :=
   logEpigraphCalibration.equiv a b c
 
--- Lift the entire sum of squares into a single rotated second-order cone.
+-- Write the quadratic bound as a cone constraint.
 reformulation conicCalibration : (logEpigraphCalibration a b c) := by
   conic at residualBound
   rename residualBound_conic_1 to residualCone
@@ -81,7 +74,7 @@ example : IsConic (conicCalibration a b c) := conicCalibration.isConic a b c
 example : (conicCalibration.conicForm a b c).data.toProblem = conicCalibration a b c :=
   (conicCalibration.conicForm a b c).represents
 
--- Recover positive quantities from the logarithmic coordinates.
+-- Recover x = exp u and y = exp v.
 example (u v : ℝ) : (calibration a b c).feasible (Real.exp u, Real.exp v) :=
   ⟨Real.exp_pos u, Real.exp_pos v⟩
 
@@ -90,7 +83,7 @@ example (u v : ℝ) :
       ∑ i, (a i * u + b i * v - c i) ^ 2 := by
   simp [calibration]
 
--- A proof of target optimality transfers through the composed certificate.
+-- An optimal point of the conic problem gives an optimal point of the original problem.
 example {z : FeasiblePoint (conicCalibration a b c)}
     (hz : (conicCalibration a b c).IsGlobalOptimum z) :
     (calibration a b c).IsGlobalOptimum ((calibrationEquivConic a b c).backward.map z) :=
