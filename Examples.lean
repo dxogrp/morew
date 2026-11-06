@@ -1,6 +1,7 @@
 import Examples.Advanced.CustomRules
 import Examples.Advanced.Restrict
 import Examples.Advanced.Schur
+import Examples.Applications.RidgeReg
 import Examples.GettingStarted.Basic
 import Examples.GettingStarted.Conic
 import Examples.GettingStarted.GraphImpl
