@@ -7,7 +7,7 @@ private def config : RenderConfig := {
   emitTeX := false
   emitHtmlSingle := .no
   emitHtmlMulti := .immediately
-  htmlDepth := 2
+  htmlDepth := 3
   extraCss := { .mk "
     .content-wrapper pre,
     .content-wrapper code.hl.lean.block {
