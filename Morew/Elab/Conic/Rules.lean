@@ -39,6 +39,7 @@ attribute [morew_conic]
   Morew.Conic.SecondOrder.normEpigraph
   Morew.Conic.SecondOrder.fnNorm2Epigraph
   Morew.Conic.SecondOrder.normSquareEpigraph
+  Morew.Conic.SecondOrder.fnNorm2SquareEpigraph
   Morew.Conic.SecondOrder.sumSquaresEpigraph
   Morew.Conic.SecondOrder.squareEpigraph
   Morew.Conic.SecondOrder.normSquareDivEpigraph
