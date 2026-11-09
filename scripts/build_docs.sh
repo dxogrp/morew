@@ -22,7 +22,9 @@ else
   # Source URLs in the documentation database are not tracked by Lake.
   rm -rf -- .lake/build/doc .lake/build/doc-data
   rm -f -- .lake/build/api-docs.db .lake/build/api-docs.db-shm .lake/build/api-docs.db-wal
-  LAKE_ARTIFACT_CACHE=false DOCGEN_SRC=github lake build apiDocs
+  # Use 64 MiB worker stacks by default during API generation.
+  LEAN_STACK_SIZE_KB="${LEAN_STACK_SIZE_KB:-65536}" \
+    LAKE_ARTIFACT_CACHE=false DOCGEN_SRC=github lake build Morew:docs
   api_dir="$repo_root/docs/.lake/build/doc"
 fi
 
