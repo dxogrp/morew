@@ -7,6 +7,8 @@ import Mathlib.Analysis.Calculus.ContDiff.Operations
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
+import Mathlib.Data.Matrix.Mul
+import Morew.Fn.Norm
 
 /-!
 # Smooth expression closure rules
@@ -15,6 +17,8 @@ Closure rules for $C^2$ functions on domains in real normed spaces.
 -/
 
 namespace Morew.NLP.Smooth
+
+open scoped Matrix
 
 universe u v w z
 
@@ -102,6 +106,24 @@ theorem pi {ι : Type z} [Fintype ι] {F : ι → Type v}
     (f : X → ∀ i, F i) (hf : ∀ i, ContDiffOn ℝ 2 (fun x => f x i) domain) :
     ContDiffOn ℝ 2 f domain :=
   contDiffOn_pi' hf
+
+/-- The squared Euclidean norm of a smooth vector is smooth, including at zero. -/
+theorem norm2_sq {n : Nat} (f : X → Fin n → ℝ)
+    (hf : ContDiffOn ℝ 2 f domain) :
+    ContDiffOn ℝ 2 (fun x => Fn.norm2 (f x) ^ 2) domain := by
+  simp_rw [Fn.norm2_sq_eq_sum]
+  exact ContDiffOn.sum fun i _ => (contDiffOn_pi.mp hf i).pow 2
+
+/-- Multiply a smooth real matrix by a smooth vector on the same domain. -/
+theorem mulVec {m n : Nat} (A : X → Fin m → Fin n → ℝ)
+    (f : X → Fin n → ℝ) (hA : ContDiffOn ℝ 2 A domain)
+    (hf : ContDiffOn ℝ 2 f domain) :
+    ContDiffOn ℝ 2 (fun x => A x *ᵥ f x) domain := by
+  apply contDiffOn_pi'
+  intro i
+  simp only [Matrix.mulVec, dotProduct]
+  exact ContDiffOn.sum fun j _ =>
+    (contDiffOn_pi.mp (contDiffOn_pi.mp hA i) j).mul (contDiffOn_pi.mp hf j)
 
 /-- Project a fixed component of a smooth finite dependent function. -/
 theorem component {ι : Type z} [Fintype ι] {F : ι → Type v}

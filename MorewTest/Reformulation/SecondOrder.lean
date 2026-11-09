@@ -154,6 +154,47 @@ example (x : Fin Parameter.columns → ℝ) (t : ℝ) : target.feasible (x, t) �
 
 end Matrix
 
+namespace SquaredVectorNorm
+
+open scoped _root_.Matrix
+
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+  (C : Matrix (Fin k) (Fin n) ℝ) (d : Fin k → ℝ)
+
+def source :=
+  problem (x : Fin n → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      residual : Fn.norm2 (A *ᵥ x - b) ^ 2 ≤ t
+      balance : C *ᵥ x = d
+
+reformulation automatic : (source A b C d) := by
+  conic
+
+reformulation explicit : (source A b C d) := by
+  conic at residual using Conic.SecondOrder.fnNorm2SquareEpigraph
+  conic
+
+example : GlobalEquiv (source A b C d) (automatic A b C d) := automatic.equiv A b C d
+example : GlobalEquiv (source A b C d) (explicit A b C d) := explicit.equiv A b C d
+example : automatic A b C d = explicit A b C d := rfl
+
+example (x : Fin n → ℝ) (t : ℝ) : (automatic A b C d).objective (x, t) = t := rfl
+
+example (x : Fin n → ℝ) (t : ℝ) : (automatic A b C d).feasible (x, t) ↔
+    (t, 1 / 2, A *ᵥ x - b) ∈ (Cone.rotatedSecondOrder m).carrier ∧ C *ᵥ x = d := by
+  simp only [automatic, Set.mem_singleton_iff, sub_eq_zero]
+
+example : (automatic.conicForm A b C d).data.toProblem = automatic A b C d :=
+  (automatic.conicForm A b C d).represents
+
+example (v : Fin 0 → ℝ) (t : ℝ) :
+    (∃ u, Conic.SecondOrder.fnNorm2SquareEpigraph.target v t u) ↔ 0 ≤ t := by
+  rw [← Conic.SecondOrder.fnNorm2SquareEpigraph.source_iff_exists]
+  simp
+
+end SquaredVectorNorm
+
 namespace Margins
 
 def source :=

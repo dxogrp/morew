@@ -38,6 +38,14 @@ noncomputable def normSquareEpigraph {n : Nat} :
   target z t _ := (t, 1 / 2, WithLp.ofLp z) ∈ (Cone.rotatedSecondOrder n).carrier
   source_iff_exists z t := by simpa only [exists_const] using norm_sq_le_iff z t
 
+/-- The squared named Euclidean norm uses one rotated cone row. -/
+noncomputable def fnNorm2SquareEpigraph {n : Nat} :
+    EpigraphRepr (fun v : Fin n → ℝ => Fn.norm2 v ^ 2) where
+  Auxiliary := (normSquareEpigraph (n := n)).Auxiliary
+  target v t u := normSquareEpigraph.target (WithLp.toLp 2 v) t u
+  source_iff_exists v t :=
+    normSquareEpigraph.source_iff_exists (WithLp.toLp 2 v) t
+
 /-- A full finite sum of coordinate squares represented by a rotated cone. -/
 noncomputable def sumSquaresEpigraph {n : Nat} :
     EpigraphRepr (fun v : Fin n → ℝ => ∑ i, v i ^ 2) where

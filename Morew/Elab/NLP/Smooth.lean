@@ -609,6 +609,20 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
           (intermediateSpaces := #[← inferType args[2]!]) }
   if name == some ``Function.comp && args.size == 6 then
     return ← certifyBody point (mkApp args[3]! (mkApp args[4]! args[5]!))
+  if name == some ``Matrix.mulVec && args.size == 7 then
+    let matrix := args[5]!
+    let vector := args[6]!
+    if (← isDefEq args[2]! q(ℝ)) &&
+        (← supportedSpace (← inferType matrix)) &&
+        (← supportedSpace (← inferType vector)) then
+      let left ← certifyBody point matrix
+      let right ← after left <| certifyBody point vector
+      let (info, proofs) ← combine point #[left, right]
+      return { info with
+        smooth := ← construct point expression ``Morew.NLP.Smooth.mulVec
+          #[← operandFunction point matrix proofs[0]!, ← operandFunction point vector proofs[1]!,
+            proofs[0]!, proofs[1]!] (some 2)
+          (intermediateSpaces := #[← inferType matrix, ← inferType vector]) }
   if (name == some ``HAdd.hAdd || name == some ``HSub.hSub ||
       name == some ``HMul.hMul || name == some ``Prod.mk) &&
       (args.size == 6 || (name == some ``Prod.mk && args.size == 4)) then
@@ -639,6 +653,13 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
       discard <| fixedArgument point args[5]! "the exponent"
     if ← isDefEq (← inferType args[5]!) (mkConst ``Nat) then
       let exponent ← fixedArgument point args[5]! "the exponent"
+      if args[4]!.isAppOfArity ``Morew.Fn.norm2 2 && (← isDefEq exponent (mkNatLit 2)) then
+        let vector := args[4]!.getAppArgs[1]!
+        let child ← certifyBody point vector
+        return { child with
+          smooth := ← construct point expression ``Morew.NLP.Smooth.norm2_sq
+            #[← operandFunction point vector child.smooth, child.smooth] (some 2)
+            (intermediateSpaces := #[← inferType vector]) }
       let child ← certifyBody point args[4]!
       if independent && !(← whnf type).isConstOf ``Real then
         checkPointwisePrefix expression type true

@@ -60,16 +60,30 @@ private def omitLicenseHeader (hl : SubVerso.Highlighting.Highlighted) :
     return hl
   | _ => return hl
 
--- Verso 4.33.0 drops Markdown line breaks; each example already supplies its title.
+-- Reuse Verso's Markdown parser one heading at a time to avoid its nesting bug.
+private def markdownHeading (title : Array MD4Lean.Text) :
+    Verso.Doc.Part Literate :=
+  letI : LoadLiterate Literate := {
+    inline := fun go container content => .other container (content.map go)
+    block := fun _ go container content => .other container (content.map go)
+    docstring := fun _ _ content => .concat content
+    docstringPart := fun _ title content => .concat (#[.para title] ++ content) }
+  let source : LitMod := { name := .anonymous, contents := #[{
+    range := none, kind := .anonymous, defines := #[],
+    code := #[.markdownModDoc { blocks := #[.header 1 title] }] }] }
+  (modToPage! (g := Literate) source #[] "" none).toPart.subParts[0]!
+
+-- Preserve Markdown spacing and heading nesting; each example supplies its title.
 private def normalizeModule (source : LitMod) : LitMod := Id.run do
   let mut firstModuleDoc := true
+  let mut headingLevels : Array Nat := #[]
   let mut contents := #[]
   for item in source.contents do
     let mut code := #[]
     for part in item.code do
-      let normalized ← match part with
+      match part with
         | .highlighted hl =>
-          pure (.highlighted (if item.kind == ``Lean.Parser.Module.header then
+          code := code.push (.highlighted (if item.kind == ``Lean.Parser.Module.header then
             omitLicenseHeader hl else hl))
         | .markdownModDoc doc => do
           let mut blocks := doc.blocks.map normalizeBlock
@@ -77,11 +91,18 @@ private def normalizeModule (source : LitMod) : LitMod := Id.run do
             if let some (.header 1 _) := blocks[0]? then
               blocks := blocks.extract 1
           firstModuleDoc := false
-          pure (.markdownModDoc { blocks })
+          for block in blocks do
+            match block with
+            | .header level title =>
+              while headingLevels.back?.any (level ≤ ·) do
+                headingLevels := headingLevels.pop
+              code := code.push (.modDoc {
+                sections := #[(headingLevels.size, markdownHeading title)] })
+              headingLevels := headingLevels.push level
+            | other => code := code.push (.markdownModDoc { blocks := #[other] })
         | .markdown indent name doc =>
-          pure (.markdown indent name { blocks := doc.blocks.map normalizeBlock })
-        | other => pure other
-      code := code.push normalized
+          code := code.push (.markdown indent name { blocks := doc.blocks.map normalizeBlock })
+        | other => code := code.push other
     contents := contents.push { item with code }
   return { source with contents }
 
