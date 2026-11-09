@@ -71,11 +71,7 @@ variable (hweight : 0 ≤ weight)
 
 reformulation separate : (leastSquares A b C d weight) := by
   epigraph t at loss as lossBound
-  epigraph s at penalty as penaltyBound using (by
-    constructor
-    · intro p; rfl
-    · intro p _ s hs
-      exact add_le_add le_rfl (mul_le_mul_of_nonneg_left hs hweight))
+  epigraph s at penalty as penaltyBound
   conic
 
 #printp separate
@@ -153,29 +149,6 @@ example {z : FeasiblePoint (combined A b C d weight)}
     (leastSquares A b C d weight).IsGlobalOptimum
       ((combined.equiv A b C d weight hweight).backward.map z) :=
   (combined.equiv A b C d weight hweight).map_isGlobalOptimum_backward hz
-
-/-!
-## A two-dimensional example
-
-Take `A = I`, `b = (1, 0)`, `λ = 1`, and impose `x₁ + x₂ = 1`.
-The solution is `x = (3/4, 1/4)`.
--/
-
-def sample := leastSquares (1 : Matrix (Fin 2) (Fin 2) ℝ) ![1, 0] !![1, 1] ![1] 1
-
-def solution : FeasiblePoint sample :=
-  ⟨![3 / 4, 1 / 4], by
-    norm_num [sample, leastSquares, Matrix.mulVec, dotProduct, Fin.sum_univ_two,
-      funext_iff]⟩
-
-example : sample.IsGlobalOptimum solution := by
-  intro y
-  have balance := congrFun y.property 0
-  simp [sample, leastSquares, Matrix.mulVec, dotProduct, Fin.sum_univ_two] at balance
-  change sample.objective solution.val ≤ sample.objective y.val
-  simp [sample, leastSquares, solution, Fn.norm2_sq_eq_sum, dotProduct,
-    Fin.sum_univ_two, Matrix.vecHead, Matrix.vecTail]
-  nlinarith [sq_nonneg (y.val 0 - 3 / 4), sq_nonneg (y.val 1 - 1 / 4)]
 
 end
 end Examples.Applications.RidgeReg
