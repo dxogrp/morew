@@ -612,14 +612,17 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   if name == some ``Matrix.mulVec && args.size == 7 then
     let matrix := args[5]!
     let vector := args[6]!
-    let left ← certifyBody point matrix
-    let right ← after left <| certifyBody point vector
-    let (info, proofs) ← combine point #[left, right]
-    return { info with
-      smooth := ← construct point expression ``Morew.NLP.Smooth.mulVec
-        #[← operandFunction point matrix proofs[0]!, ← operandFunction point vector proofs[1]!,
-          proofs[0]!, proofs[1]!] (some 2)
-        (intermediateSpaces := #[← inferType matrix, ← inferType vector]) }
+    if (← isDefEq args[2]! q(ℝ)) &&
+        (← supportedSpace (← inferType matrix)) &&
+        (← supportedSpace (← inferType vector)) then
+      let left ← certifyBody point matrix
+      let right ← after left <| certifyBody point vector
+      let (info, proofs) ← combine point #[left, right]
+      return { info with
+        smooth := ← construct point expression ``Morew.NLP.Smooth.mulVec
+          #[← operandFunction point matrix proofs[0]!, ← operandFunction point vector proofs[1]!,
+            proofs[0]!, proofs[1]!] (some 2)
+          (intermediateSpaces := #[← inferType matrix, ← inferType vector]) }
   if (name == some ``HAdd.hAdd || name == some ``HSub.hSub ||
       name == some ``HMul.hMul || name == some ``Prod.mk) &&
       (args.size == 6 || (name == some ``Prod.mk && args.size == 4)) then

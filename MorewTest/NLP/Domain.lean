@@ -57,6 +57,11 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => Fn.norm2
       ((fun (_i : Fin 3) (_j : Fin 2) => Real.log c) *ᵥ
         (fun _j : Fin 2 => Real.log x)) ^ 2]))) 2
+  assertDomain (← `(fun (A : Matrix (Fin 1) Bool ℝ) (b : Bool → ℝ) =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => x + (A *ᵥ b) 0]))) 2
+  assertDomain (← `(fun (A : Matrix (Fin 1) (Fin 1) (ℝ × ℝ))
+      (b : Fin 1 → (ℝ × ℝ)) =>
+    ((fun _x : ℝ => True), #[fun x : ℝ => x + ((A *ᵥ b) 0).1]))) 2
 
 /-! Multiple supplied functions share one open domain in their original order. -/
 

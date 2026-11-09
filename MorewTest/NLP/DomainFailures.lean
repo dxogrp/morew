@@ -53,6 +53,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       ((fun (_i : Fin 3) (_j : Fin 2) => (0 : ℝ)) *ᵥ
         (fun _j : Fin 2 => Real.log x)) ^ 2])))
     .feasibleInclusion 0 (some 0) none (some ``Real.log)
+  assertDomainRejected (← `(fun c : ℝ => ((fun _x : ℝ => True),
+    #[fun x : ℝ => x + (((fun (_i _j : Fin 1) => ((1 : ℝ), Real.log c)) *ᵥ
+      (fun _j : Fin 1 => ((1 : ℝ), (1 : ℝ)))) 0).1])))
+    .feasibleInclusion 1 (some 0) none (some ``Real.log)
 
 -- A missing positivity obligation identifies exactly the logarithm's argument.
 run_cmd Lean.Elab.Command.liftTermElabM do
