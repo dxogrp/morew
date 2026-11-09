@@ -1,8 +1,28 @@
 # Morew
 
+[![CI](https://github.com/dxogrp/morew/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/dxogrp/morew/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/dxogrp/morew.svg)](https://github.com/dxogrp/morew/releases/latest) [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://dxogrp.github.io/morew/) [![License](https://img.shields.io/github/license/dxogrp/morew.svg)](https://github.com/dxogrp/morew/blob/main/LICENSE)
+
 **Morew** (pronounced “MOH-roo”) is a mathematical optimization rewriting system in Lean 4 for expressing optimization problems and certifying their reformulations.
 
 Morew is under active development.
+We try our best to keep the API stable, but breaking changes might still occur without notice.
+
+## Installation
+
+Install [Lean through elan](https://lean-lang.org/install/).
+Choose a tag from [Releases](https://github.com/dxogrp/morew/releases)
+and copy the `lean-toolchain` file from that tag into your project.
+
+Add Morew to your `lakefile.toml`, replacing `<release-tag>` with the chosen tag:
+
+```toml
+[[require]]
+name = "morew"
+git = "https://github.com/dxogrp/morew.git"
+rev = "<release-tag>"
+```
+
+Then run `lake update`.
 
 ## Quickstart
 
