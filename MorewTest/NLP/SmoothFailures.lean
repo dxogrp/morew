@@ -18,6 +18,7 @@ namespace MorewTest.NLP.Smooth
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Smooth
+open scoped Matrix
 
 private noncomputable def hiddenSquare (x : ℝ) : ℝ := x * x
 private noncomputable abbrev inlineSquare (x : ℝ) : ℝ := x * x
@@ -146,6 +147,20 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     .invalidInstance 1
   assertSmooth (← `(fun x : ℝ =>
     @HAdd.hAdd ℝ ℝ ℝ ⟨fun a _ => |a|⟩ 2 3 + x))
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun x : Fin 2 → ℝ => Morew.Fn.norm2 x))
+    .unknownHead 0 (some ``Morew.Fn.norm2)
+  assertRejected (← `(fun x : Fin 2 → ℝ => Morew.Fn.norm2 x ^ (3 : Nat)))
+    .unknownHead 0 (some ``Morew.Fn.norm2)
+  assertRejected (← `(fun [HPow ℝ Nat ℝ] => fun x : Fin 2 → ℝ =>
+    Morew.Fn.norm2 x ^ (2 : Nat))) .invalidInstance 1
+  assertRejected (← `(fun x : Fin 2 → ℝ =>
+    @HPow.hPow ℝ Nat ℝ ⟨fun a _ => a * a⟩ (Morew.Fn.norm2 x) 2)) .invalidInstance
+  assertRejected (← `(fun [NonUnitalNonAssocSemiring ℝ] =>
+    fun A : Matrix (Fin 3) (Fin 2) ℝ => fun x : Fin 2 → ℝ =>
+      Morew.Fn.norm2 (A *ᵥ x) ^ 2)) .invalidInstance 2
 
 /-! Decision-space recognition supports a fixed subset of finite-dimensional
 normed spaces. -/

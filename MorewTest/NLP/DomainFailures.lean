@@ -15,6 +15,7 @@ source, its position, the local obstruction, and any missing domain condition.
 namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
+open scoped Matrix
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun x : ℝ => 0 ≤ x), #[fun x : ℝ => Real.log x])))
@@ -40,6 +41,18 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomainRejected (← `(((fun _x : ℝ => True),
     #[fun x : ℝ => Real.exp x, fun x : ℝ => Real.log x])))
     .feasibleInclusion 0 (some 1) none (some ``Real.log)
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertDomainRejected (← `(fun c : ℝ => ((fun _x : Fin 2 → ℝ => True),
+    #[fun x : Fin 2 → ℝ => Morew.Fn.norm2
+      ((fun (_i : Fin 3) (_j : Fin 2) => Real.log c) *ᵥ x) ^ 2])))
+    .feasibleInclusion 1 (some 0) none (some ``Real.log)
+  assertDomainRejected (← `(((fun _x : ℝ => True),
+    #[fun x : ℝ => Morew.Fn.norm2
+      ((fun (_i : Fin 3) (_j : Fin 2) => (0 : ℝ)) *ᵥ
+        (fun _j : Fin 2 => Real.log x)) ^ 2])))
+    .feasibleInclusion 0 (some 0) none (some ``Real.log)
 
 -- A missing positivity obligation identifies exactly the logarithm's argument.
 run_cmd Lean.Elab.Command.liftTermElabM do

@@ -19,6 +19,7 @@ namespace MorewTest.NLP.Smooth
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.NLP
+open scoped Matrix
 
 universe u
 
@@ -60,6 +61,22 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertSmooth (← `(fun s : Finset ℕ => fun a : ℕ → ℝ => fun x : ℝ =>
     ∑ i ∈ s, a i * x ^ i)) 2
   assertSmooth (← `(fun x : ℝ => ∑ _i ∈ (∅ : Finset ℕ), x))
+
+/-! Matrix products and squared Euclidean norms have direct smoothness rules. -/
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertSmooth (← `(fun m n : Nat => fun A : Matrix (Fin m) (Fin n) ℝ =>
+    fun b : Fin m → ℝ => fun x : Fin n → ℝ => Fn.norm2 (A *ᵥ x - b) ^ 2)) 4
+  assertSmooth (← `(fun x : Fin 2 → ℝ => Fn.norm2 (x - x) ^ 2))
+  assertSmooth (← `(fun x : Fin 0 → ℝ => Fn.norm2 x ^ 2))
+  assertSmooth (← `(fun A : Matrix (Fin 0) (Fin 2) ℝ =>
+    fun x : Fin 2 → ℝ => Fn.norm2 (A *ᵥ x) ^ 2)) 1
+  assertSmooth (← `(fun A : Matrix (Fin 2) (Fin 0) ℝ =>
+    fun x : Fin 0 → ℝ => Fn.norm2 (A *ᵥ x) ^ 2)) 1
+  assertSmooth (← `(fun m n : Nat => fun x : ℝ =>
+    Fn.norm2 ((fun (_i : Fin m) (_j : Fin n) => x ^ 2) *ᵥ
+      (fun _j : Fin n => Real.exp x)) ^ 2)) 2
 
 /-! Definitionally constant finite-vector fibers normalize before dependency checks. -/
 

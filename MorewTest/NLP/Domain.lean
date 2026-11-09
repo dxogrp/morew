@@ -20,6 +20,7 @@ namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.NLP
+open scoped Matrix
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertDomain (← `(((fun _x : ℝ => True), (#[] : Array (ℝ → ℝ)))))
@@ -42,6 +43,20 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     #[fun x : ℝ => x ^ r, fun x : ℝ => Real.rpow x r]))) 1
   assertDomain (← `(fun c : ℝ => fun _hc : 0 < c => ((fun x : ℝ => 1 ≤ x),
     #[fun x : ℝ => x ^ Real.log c]))) 2
+
+/-! Matrix and vector operands retain their domain requirements. -/
+
+set_option morew.smooth.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertDomain (← `(fun m n : Nat =>
+    ((fun p : ℝ × ℝ => 1 ≤ p.1 ∧ 1 ≤ p.2),
+      #[fun p : ℝ × ℝ => Fn.norm2
+        ((fun (_i : Fin m) (_j : Fin n) => Real.log p.1) *ᵥ
+          (fun _j : Fin n => Real.sqrt p.2)) ^ 2]))) 2
+  assertDomain (← `(fun c : ℝ => fun _hc : 0 < c =>
+    ((fun x : ℝ => 1 ≤ x), #[fun x : ℝ => Fn.norm2
+      ((fun (_i : Fin 3) (_j : Fin 2) => Real.log c) *ᵥ
+        (fun _j : Fin 2 => Real.log x)) ^ 2]))) 2
 
 /-! Multiple supplied functions share one open domain in their original order. -/
 

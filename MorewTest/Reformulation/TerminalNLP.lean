@@ -212,5 +212,33 @@ example (x : ℝ) : (reversedTarget.nlpForm.data.rows ⟨0, by decide⟩).residu
 example : (reversedTarget.nlpForm.data.rows ⟨0, by decide⟩).bounds =
     NLP.Bounds.lowerBound 0 := rfl
 
+namespace VectorQuadratic
+
+open scoped Matrix
+
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+  (C : Matrix (Fin k) (Fin n) ℝ) (d : Fin k → ℝ) (weight : ℝ)
+
+def source :=
+  problem (x : Fin n → ℝ)
+    minimize Fn.norm2 (A *ᵥ x - b) ^ 2 + weight * Fn.norm2 x ^ 2
+    subject to balance : C *ᵥ x = d
+
+reformulation target : (source A b C d weight) := by
+  nlp
+
+example : GlobalEquiv (source A b C d weight) (target A b C d weight) :=
+  target.equiv A b C d weight
+example : (target.nlpForm A b C d weight).data.toProblem = target A b C d weight :=
+  (target.nlpForm A b C d weight).represents
+example : (target.nlpForm A b C d weight).data.rowCount = k := by
+  change (∑ _ : Fin k, (1 : ℕ)) + 0 = k
+  simp
+example (x : Fin n → ℝ) : (target A b C d weight).objective x =
+    Fn.norm2 (A *ᵥ x - b) ^ 2 + weight * Fn.norm2 x ^ 2 := rfl
+example (x : Fin n → ℝ) : (target A b C d weight).feasible x ↔ C *ᵥ x = d := Iff.rfl
+
+end VectorQuadratic
+
 end
 end MorewTest.Reformulation.TerminalNLP
