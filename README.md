@@ -5,6 +5,23 @@
 Morew is under active development.
 We try our best to keep the API stable, but breaking changes might still occur without notice.
 
+## Installation
+
+Install [Lean through elan](https://lean-lang.org/install/).
+Choose a tag from [Releases](https://github.com/dxogrp/morew/releases)
+and copy the `lean-toolchain` file from that tag into your project.
+
+Add Morew to your `lakefile.toml`, replacing `<release-tag>` with the chosen tag:
+
+```toml
+[[require]]
+name = "morew"
+git = "https://github.com/dxogrp/morew.git"
+rev = "<release-tag>"
+```
+
+Then run `lake update`.
+
 ## Quickstart
 
 Reformulate nonnegative least squares as a second-order cone program:

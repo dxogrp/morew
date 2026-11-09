@@ -10,17 +10,19 @@ htmlSplit := .never
 %%%
 
 Install [Lean through elan](https://lean-lang.org/install/).
-Morew's Lean version is specified in `lean-toolchain`.
 
 # Use Morew in a project
 
-Use the same toolchain and add this dependency to your `lakefile.toml`:
+Choose a tag from [Releases](https://github.com/dxogrp/morew/releases)
+and copy the `lean-toolchain` file from that tag into your project.
+
+Add Morew to your `lakefile.toml`, replacing `<release-tag>` with the chosen tag:
 
 ```
 [[require]]
 name = "morew"
 git = "https://github.com/dxogrp/morew.git"
-rev = "main"
+rev = "<release-tag>"
 ```
 
 Then run `lake update`.
