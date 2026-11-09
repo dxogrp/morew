@@ -3,6 +3,7 @@
 **Morew** (pronounced “MOH-roo”) is a mathematical optimization rewriting system in Lean 4 for expressing optimization problems and certifying their reformulations.
 
 Morew is under active development.
+We try our best to keep the API stable, but breaking changes might still occur without notice.
 
 ## Quickstart
 
