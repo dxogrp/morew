@@ -7,7 +7,7 @@ import Morew.QuadConic.Objective
 import Morew.Elab.Affine
 import Morew.Elab.Evidence
 import Morew.Elab.QuadConic.Expansion
-import Morew.Elab.Reformulation.State
+import Morew.Elab.Reformulation.Presentation
 import Lean.Meta.Check
 
 /-! Construct a quadratic part and an affine part whose sum equals the source objective.

@@ -7,6 +7,10 @@ import Morew.Elab.QuadConic.Objective
 import MorewTest.ElabSupport
 import Mathlib.Analysis.SpecialFunctions.Exp
 
+assert_not_imported Morew.Elab.Reformulation.State
+assert_not_imported Morew.Elab.Reformulation.Runner
+assert_not_imported Morew.Syntax
+
 /-! Exact objective recognition, independent curvature evidence, and failures. -/
 
 namespace MorewTest.QuadConic.Objective
@@ -30,6 +34,13 @@ private def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
       | .maximize => ``Morew.ObjectiveSense.maximize
     let .forallE _ domain _ _ ← whnf (← inferType source)
       | throwError "quadratic test objective is not a function"
+    let expectedEquality ← withLocalDeclD `x domain fun x => do
+      let quadratic ← mkAppM ``DFunLike.coe #[result.quadratic, x]
+      let affine ← mkAppM ``DFunLike.coe #[result.affine, x]
+      mkForallFVars #[x] (← mkEq (← mkAppM ``HAdd.hAdd #[quadratic, affine])
+        (source.beta #[x]))
+    unless ← isDefEq (← inferType result.pointwiseEquality) expectedEquality do
+      throwError "quadratic certificate proves the wrong objective equality"
     let expected ← Morew.Elab.Affine.Space.withCanonicalSpaces #[domain] do
       mkAppM ``Morew.QuadConic.Curvature #[sense, result.quadratic]
     unless ← isDefEq (← inferType result.curvature) expected do
