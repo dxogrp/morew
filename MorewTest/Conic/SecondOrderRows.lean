@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Constraint
 
 assert_not_exists Morew.Conic.Spectral.lambdaMax_le_iff
   Morew.Conic.Spectral.spectralNorm_le_iff Morew.Conic.Spectral.normNuc_le_iff

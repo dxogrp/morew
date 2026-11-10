@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Affine.Support
-import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Constraint
 
 /-! Shared exact row-certificate assertions. -/
 

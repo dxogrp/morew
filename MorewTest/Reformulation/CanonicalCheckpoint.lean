@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.View
 import Morew.Syntax
-import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Constraint
 
 /-!
 # Canonicalization checkpoints and ordered row replacements

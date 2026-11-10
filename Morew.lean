@@ -34,14 +34,14 @@ import Morew.Elab.Affine
 import Morew.Elab.Affine.Expansion
 import Morew.Elab.Affine.Space
 import Morew.Elab.Atom
+import Morew.Elab.Cone.Constraint
 import Morew.Elab.Cone.Finite
 import Morew.Elab.Cone.MatrixDomain
 import Morew.Elab.Cone.Nonnegative
 import Morew.Elab.Cone.Normalize
 import Morew.Elab.Cone.Plan
 import Morew.Elab.Cone.Rewrite
-import Morew.Elab.Cone.Row
-import Morew.Elab.Cone.RowAssembly
+import Morew.Elab.Cone.Rows
 import Morew.Elab.Cone.Rules
 import Morew.Elab.Cone.Space
 import Morew.Elab.Cone.Symmetry

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence.Sign
-import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Constraint
 
 /-!
 # Native affine cone memberships

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence
-import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Constraint
 import Morew.Elab.Cone.Symmetry
 import Morew.Conic.PSD.PosDef
 
