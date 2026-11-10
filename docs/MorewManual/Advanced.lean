@@ -98,9 +98,3 @@ reformulation to change the affine expansion depth. Use
 `morew.smooth.maxExpansionDepth` for smoothness certification.
 The other options have the same scope. Setting any limit to zero disables
 helper expansion while retaining direct recognition of supported expressions.
-
-Quadratic certification tries direct recognition, then bounded helper expansion,
-keeping vector and matrix expressions structured. General polynomial normalization,
-completion of squares, and recognition of matrix quadratic forms from positive
-semidefiniteness proofs are unsupported. Errors report unsupported
-structure, missing evidence, or expansion limits.
