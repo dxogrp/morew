@@ -242,8 +242,9 @@ def withCanonicalConeSpaces (domain target : Expr)
     ← mkAppM ``Structure.finite #[targetData]]
   installInstances instances.toList action
 
-/-- Build a form using the affine maps' canonical finite-dimensional structures. -/
-def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
+/-- Build data and its proof using canonical finite-dimensional decision structures. -/
+def withCanonicalDomainPair (domain : Expr)
+    (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   let data ← buildDomain domain
   let algebra ← mkAppM ``Domain.algebra #[data]
   let instances := #[
@@ -251,7 +252,11 @@ def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
     ← mkAppM ``Affine.Space.Structure.group #[algebra],
     ← mkAppM ``Affine.Space.Structure.module #[algebra],
     ← mkAppM ``Domain.finite #[data]]
-  let (result, _) ← installInstances instances.toList do
+  installInstances instances.toList action
+
+/-- Build a form using the affine maps' canonical finite-dimensional structures. -/
+def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
+  let (result, _) ← withCanonicalDomainPair domain do
     let result ← action
     return (result, result)
   return result

@@ -21,13 +21,38 @@ open Morew.Elab.Rewrite
 open Morew.Elab.Reformulation
 open Morew.Elab.Reformulation.Replace
 
+/-- Objective certification and form construction for a shared cone-constraint pipeline. -/
+structure Backend where
+  /-- Terminal command spelling used in diagnostic suggestions. -/
+  command : String
+  /-- Check the objective before rewriting constraints. -/
+  checkObjective : PresentationState → Affine.EvidenceProvider →
+    MetaM (Except Expr.Error Unit)
+  /-- Certify the final objective and the already checked final cone rows. -/
+  buildForm : PresentationState → Affine.EvidenceProvider →
+    Array (Option (Array RowResult)) → MetaM (Except Expr.Error Expr)
+
+/-- The affine objective backend used by `conic`. -/
+def affineBackend : Backend where
+  command := "conic"
+  checkObjective presentation provider := do
+    match ← reifyObjective presentation provider with
+    | .error error =>
+      let bound := match presentation.sense with
+        | .minimize => "epigraph t"
+        | .maximize => "hypograph t"
+      return .error { error with
+        reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
+    | .ok _ => return .ok ()
+  buildForm presentation provider rows := Morew.Elab.Conic.buildForm presentation provider rows
+
 /-- A complete checked terminal transformation, before visible-name allocation. -/
 structure Result where
   /-- Final typed presentation, with temporary names for generated entries. -/
   presentation : PresentationState
   /-- Exact equivalence from the incoming canonical problem to the final one. -/
   equiv : Expr
-  /-- A checked `Conic.Form` of the final canonical problem. -/
+  /-- A checked form of the final canonical problem, supplied by the backend. -/
   form : Expr
   /-- Original presentation-entry index for every final constraint entry. -/
   rowOrigins : Array Nat
@@ -198,14 +223,14 @@ private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Result) :
   applyReplacement work index prepared.rowPredicates
     (prepared.certifiedRows.map fun row => some #[row]) prepared.nextDomain prepared.auxiliary? rewrite
 
-private def originalError (original : PresentationState) (origin : Nat)
+private def originalError (command : String) (original : PresentationState) (origin : Nat)
     (error : Expr.Error) : MetaM Expr.Error := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   let reason ← addMessageContext
-    m!"constraint `{label}`: {error.reason}\nunsupported expression: {error.expression}\nuse `conic at {label} using rule` with an exact representation before `conic`"
+    m!"constraint `{label}`: {error.reason}\nunsupported expression: {error.expression}\nuse `conic at {label} using rule` with an exact representation before `{command}`"
   return { error with reason }
 
-private partial def lower (original : PresentationState) (work : Work)
+private partial def lower (command : String) (original : PresentationState) (work : Work)
     (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Work) := do
   let mut work := work
   let mut firstError? := none
@@ -221,7 +246,7 @@ private partial def lower (original : PresentationState) (work : Work)
     | .ok prepared =>
       let next ← applyPrepared work index prepared
       -- Each successful plan removes one unresolved row and introduces only certified rows.
-      return ← lower original next provider
+      return ← lower command original next provider
     | .error error =>
       if firstError?.isNone then
         let error ← match direct with
@@ -239,7 +264,7 @@ private partial def lower (original : PresentationState) (work : Work)
               pure directError
             else pure error
           | .ok _ => pure error
-        firstError? := some (← originalError original work.rowOrigins[index]! error)
+        firstError? := some (← originalError command original work.rowOrigins[index]! error)
   match firstError? with
   | some error => return .error error
   | none => return .ok work
@@ -320,24 +345,20 @@ private def normalizeFinal (work : Work) : MetaM Work := do
 /-- Plan a terminal step before name allocation and declaration emission.
 Restore state on failure. Report the first unresolved row after later rows
 have supplied any newly exposed margins. -/
-def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
+def planWith (backend : Backend) (presentation : PresentationState)
+    (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
     try
       for expression in #[presentation.domainType, presentation.valueType,
           presentation.objective] ++ presentation.constraints.map (·.predicate) do
         if ← Morew.Elab.Rewrite.Plan.unresolved expression then
-          throwError "terminal conic planning requires fully elaborated expressions"
+          throwError "terminal {backend.command} planning requires fully elaborated expressions"
       Plan.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
-        match ← reifyObjective presentation provider with
-        | .error error =>
-          let bound := match presentation.sense with
-            | .minimize => "epigraph t"
-            | .maximize => "hypograph t"
-          return .error { error with
-            reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
-        | .ok _ => pure ()
+        match ← backend.checkObjective presentation provider with
+        | .error error => return .error error
+        | .ok () => pure ()
         let canonical ← presentation.canonicalProblem
         let equiv ← instantiateMVars (← mkAppM ``Morew.GlobalEquiv.refl #[canonical])
         let work : Work := {
@@ -347,11 +368,11 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
           certifiedRows := presentation.constraints.map fun _ => none
         }
         let work ← splitNonconicGroups work provider
-        let work ← match ← lower presentation work provider with
+        let work ← match ← lower backend.command presentation work provider with
           | .ok work => pure work
           | .error error => return .error error
         let work ← normalizeFinal work
-        let form ← match ← buildForm work.presentation provider work.certifiedRows with
+        let form ← match ← backend.buildForm work.presentation provider work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
         checkWithKernel work.equiv
@@ -370,5 +391,10 @@ def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider 
         expression := presentation.objective
         reason := ← addMessageContext error.toMessageData
       }
+
+/-- Plan an affine conic terminal step using the shared cone-constraint pipeline. -/
+def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
+    MetaM (Except Expr.Error Result) :=
+  planWith affineBackend presentation provider
 
 end Morew.Elab.Conic.Terminal

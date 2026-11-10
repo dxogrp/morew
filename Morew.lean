@@ -41,6 +41,7 @@ import Morew.Elab.Conic.Nonnegative
 import Morew.Elab.Conic.Normalize
 import Morew.Elab.Conic.Plan
 import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Conic.Rows
 import Morew.Elab.Conic.Rules
 import Morew.Elab.Conic.Space
 import Morew.Elab.Conic.Symmetry
@@ -70,6 +71,7 @@ import Morew.Elab.Reformulation.Command
 import Morew.Elab.Reformulation.Conic.PowerChain
 import Morew.Elab.Reformulation.Conic.Rewrite
 import Morew.Elab.Reformulation.Conic.Terminal
+import Morew.Elab.Reformulation.Conic.TerminalCommon
 import Morew.Elab.Reformulation.Conic.View
 import Morew.Elab.Reformulation.NLP.Rewrite
 import Morew.Elab.Reformulation.NLP.Terminal
