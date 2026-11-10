@@ -94,6 +94,9 @@ reformulation missingNLP : source := by nlp
 /-- error: reformulation step is unavailable; import Morew.Reformulation.NLP -/
 #guard_msgs in
 reformulation missingNLPAt : source := by nlp at tag
-assert_not_exists missingConic missingConicAt missingNLP missingNLPAt
+/-- error: reformulation step is unavailable; import Morew.Reformulation.Conic -/
+#guard_msgs in
+reformulation missingQuadratic : source := by qconic
+assert_not_exists missingConic missingConicAt missingNLP missingNLPAt missingQuadratic
 end
 end MorewTest.Imports.Basic

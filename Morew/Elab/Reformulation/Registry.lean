@@ -30,10 +30,9 @@ def prepareStep (state : ReformState) (step : Syntax) : CommandElabM SurfaceStep
   match stepAttribute.getEntries (← getEnv) step.getKind with
   | [entry] => withRef step <| entry.value state step
   | [] =>
-    let required := if step.isOfKind ``Morew.conicStep || step.isOfKind ``Morew.conicAtStep then
+    let required := if step.isOfKind ``Morew.conicStep || step.isOfKind ``Morew.conicAtStep ||
+        step.isOfKind ``Morew.quadConicStep then
         "Morew.Reformulation.Conic"
-      else if step.isOfKind ``Morew.quadConicStep then
-        "Morew.Reformulation.QuadConic"
       else if step.isOfKind ``Morew.nlpStep || step.isOfKind ``Morew.nlpAtStep then
         "Morew.Reformulation.NLP"
       else "Morew.Reformulation.Basic"

@@ -10,7 +10,6 @@ assert_not_imported Morew.Elab.NLP.Terminal
 assert_not_imported Morew.Elab.NLP.Rules
 assert_not_imported Morew.Elab.Reformulation.NLP.Rewrite
 assert_not_imported Morew.Elab.Reformulation.NLP.Terminal
-assert_not_imported Morew.Elab.Reformulation.QuadConic.Terminal
 
 run_cmd do
   unless (Morew.Elab.Reformulation.viewAttribute.getValues (← Lean.getEnv)
@@ -30,7 +29,7 @@ example : terminal.conicForm.data.toProblem = terminal := terminal.conicForm.rep
 
 run_cmd do
   let rules ← Lean.Elab.Command.liftCoreM <| Elab.Rewrite.Registry.entries .conic
-  unless rules.any (·.declaration == ``Rewrite.absEpigraph) do
+  unless (rules.filter (·.declaration == ``Rewrite.absEpigraph)).size == 1 do
     Lean.throwError "the selective entry point did not install its default exact rules"
   unless (← Lean.Elab.Command.liftCoreM <| Elab.Rewrite.Registry.entries .nlp).isEmpty do
     Lean.throwError "the selective entry point installed the other backend's rules"
@@ -43,9 +42,12 @@ reformulation missingTerminal : source := by nlp
 reformulation missingTargeted : source := by nlp at bound
 assert_not_exists missingTerminal missingTargeted
 
-/-- error: reformulation step is unavailable; import Morew.Reformulation.QuadConic -/
-#guard_msgs in
-reformulation missingQuadratic : source := by qconic
-assert_not_exists missingQuadratic
+def quadraticSource := problem (x : ℝ) minimize (x - 1) ^ 2 subject to bound : |x| ≤ 2
+reformulation quadraticTargeted : quadraticSource := by conic at bound
+reformulation quadratic : quadraticTargeted := by qconic
+example : IsQuadConic quadratic := quadratic.isQuadConic
+example : GlobalEquiv quadraticSource quadratic := quadraticTargeted.equiv.trans quadratic.equiv
+example : quadratic.quadConicForm.data.toProblem = quadratic := quadratic.quadConicForm.represents
+example : quadratic.quadConicForm.data.sense = .minimize := rfl
 end
 end MorewTest.Imports.Conic

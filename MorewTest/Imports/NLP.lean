@@ -52,6 +52,9 @@ reformulation missingTerminal : source := by conic
 /-- error: reformulation step is unavailable; import Morew.Reformulation.Conic -/
 #guard_msgs in
 reformulation missingTargeted : source := by conic at bound
-assert_not_exists missingTerminal missingTargeted
+/-- error: reformulation step is unavailable; import Morew.Reformulation.Conic -/
+#guard_msgs in
+reformulation missingQuadratic : source := by qconic
+assert_not_exists missingTerminal missingTargeted missingQuadratic
 end
 end MorewTest.Imports.NLP

@@ -124,7 +124,6 @@ import Morew.Reformulation
 import Morew.Reformulation.Basic
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
-import Morew.Reformulation.QuadConic
 import Morew.Rewrite
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean

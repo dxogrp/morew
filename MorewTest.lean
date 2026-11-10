@@ -112,11 +112,8 @@ import MorewTest.Imports.ConicSuites
 import MorewTest.Imports.Library
 import MorewTest.Imports.NLP
 import MorewTest.Imports.NLPConic
-import MorewTest.Imports.NLPQuadConic
 import MorewTest.Imports.NLPSuites
-import MorewTest.Imports.QuadConic
 import MorewTest.Imports.QuadConicBackend
-import MorewTest.Imports.QuadConicNLP
 import MorewTest.Imports.Reformulation
 import MorewTest.Imports.Repr
 import MorewTest.Imports.Semantic
