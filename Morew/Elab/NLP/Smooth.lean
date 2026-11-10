@@ -288,7 +288,7 @@ private structure PointwiseArithmetic (X : Type*) where
   mul : Mul X
   pow : Pow X ℕ
 
-private noncomputable abbrev PointwiseArithmetic.real : PointwiseArithmetic ℝ :=
+private abbrev PointwiseArithmetic.real : PointwiseArithmetic ℝ :=
   ⟨inferInstance, inferInstance⟩
 
 private abbrev PointwiseArithmetic.prod {X Y : Type*}

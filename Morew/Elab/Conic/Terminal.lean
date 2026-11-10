@@ -82,7 +82,7 @@ private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvi
     MetaM (Option (Array RowResult)) := do
   return (← certifyPredicateDetailed predicate provider).toOption
 
-private noncomputable def pullbackConstraint {X A : Type*}
+private def pullbackConstraint {X A : Type*}
     [AddCommGroup X] [Module ℝ X]
     [AddCommGroup A] [Module ℝ A]
     (row : Morew.Conic.Constraint X) : Morew.Conic.Constraint (X × A) :=

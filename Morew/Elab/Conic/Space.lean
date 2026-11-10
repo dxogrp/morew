@@ -25,18 +25,18 @@ structure Domain (X : Type*) where
 namespace Domain
 
 /-- Standard real algebra and its finite dimension. -/
-noncomputable abbrev real : Domain ℝ := ⟨Affine.Space.Structure.real, inferInstance⟩
+abbrev real : Domain ℝ := ⟨Affine.Space.Structure.real, inferInstance⟩
 
 /-- Standard finite Euclidean algebra. -/
-noncomputable abbrev euclidean (n : ℕ) : Domain (EuclideanSpace ℝ (Fin n)) :=
+abbrev euclidean (n : ℕ) : Domain (EuclideanSpace ℝ (Fin n)) :=
   ⟨Affine.Space.Structure.euclidean n, inferInstance⟩
 
 /-- Algebra on the named symmetric-matrix submodule. -/
-noncomputable abbrev symmetricMatrix (n : ℕ) : Domain (Morew.Conic.SymmetricMatrix n) :=
+abbrev symmetricMatrix (n : ℕ) : Domain (Morew.Conic.SymmetricMatrix n) :=
   ⟨Affine.Space.Structure.symmetricMatrix n, inferInstance⟩
 
 /-- Product algebra with finiteness proved for the supplied component structures. -/
-noncomputable abbrev prod {X Y : Type*} (a : Domain X) (b : Domain Y) :
+abbrev prod {X Y : Type*} (a : Domain X) (b : Domain Y) :
     Domain (X × Y) where
   algebra := Affine.Space.Structure.prod a.algebra b.algebra
   finite := by
@@ -49,7 +49,7 @@ noncomputable abbrev prod {X Y : Type*} (a : Domain X) (b : Domain Y) :
     exact inferInstance
 
 /-- Finite function-space algebra requires no enumeration or ambient norm. -/
-noncomputable abbrev pi (ι : Type*) [Finite ι] {Y : Type*} (a : Domain Y) :
+abbrev pi (ι : Type*) [Finite ι] {Y : Type*} (a : Domain Y) :
     Domain (ι → Y) where
   algebra := Affine.Space.Structure.pi ι a.algebra
   finite := by
