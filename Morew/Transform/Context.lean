@@ -200,21 +200,28 @@ theorem constraintBoundAt_feasible {X : Type u} {A : Type v} {V : Type w} [LE A]
 
 end Problem
 
-/-- Introducing a bound in a constraint preserves global optimization in either sense. -/
-noncomputable def constraintBoundAtEquiv
+/-- Introducing a bound in a constraint preserves global optimization in either sense.
+The forward map sends `x` to `(x, f x)`; the backward map projects to `x`.
+Both maps preserve the objective exactly. -/
+def constraintBoundAtEquiv
     {X : Type u} {A : Type v} {V : Type w} [Preorder A] [Preorder V]
     {source : X → Prop} (p : Problem X V)
     (decomposition : ConstraintDecomposition p source)
     (f : X → A) (C : X → A → Prop) (direction : BoundDirection)
     (context : ConstraintBoundContext decomposition.remainder source f C direction) :
-    GlobalEquiv p (p.constraintBoundAt decomposition f C direction) := by
-  let full : ConstraintDecomposition p (fun x => decomposition.remainder x ∧ source x) := {
-    remainder := fun _ => True
-    feasible_iff := fun x => by simpa only [true_and] using decomposition.feasible_iff x }
-  let repr := context.toConstraintRepr
-  exact (replaceConstraintEquiv p repr full).trans
-    (pointwiseEquiv (p.replaceConstraint repr full)
-      (p.constraintBoundAt (A := A) decomposition f C direction)
-      (fun _ => rfl) (fun _ => ⟨fun h => h.2, fun h => ⟨trivial, h⟩⟩))
+    GlobalEquiv p (p.constraintBoundAt decomposition f C direction) where
+  forward := {
+    map := fun x => by
+      have hparts := (decomposition.feasible_iff x.1).mp x.2
+      exact ⟨(x.1, f x.1), hparts.1, (context.atValue x.1).mp hparts.2,
+        direction.rel_refl (f x.1)⟩
+    objective_le := fun _ => le_rfl }
+  backward := {
+    map := fun point => by
+      have hsource := context.backward point.1.1 point.2.1 point.1.2
+        point.2.2.2 point.2.2.1
+      exact ⟨point.1.1,
+        (decomposition.feasible_iff point.1.1).mpr ⟨point.2.1, hsource⟩⟩
+    objective_le := fun _ => le_rfl }
 
 end Morew
