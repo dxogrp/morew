@@ -135,6 +135,7 @@ import MorewTest.NLP.Terminal
 import MorewTest.ObjectiveContext
 import MorewTest.ObjectiveContextAutomation
 import MorewTest.QuadConic.Basic
+import MorewTest.QuadConic.Objective
 import MorewTest.Reformulation.AffineHelperSource
 import MorewTest.Reformulation.AffineHelpers
 import MorewTest.Reformulation.CanonicalCheckpoint

@@ -199,15 +199,19 @@ private partial def visit (source : Expr) (reduce : Expr → Bool → MetaM Expr
       return rebuilt
   return expression
 
-/-- Expand helpers with one shared budget and the supplied structural reducer.
+/-- Expand helpers with supplied resource bounds and structural reduction.
 Retain proof and instance lets. A zero limit disables expansion. -/
-def prepare (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Result := do
-  let bounds ← config
+def prepareWithConfig (source : Expr) (reduce : Expr → Bool → MetaM Expr)
+    (bounds : Morew.Elab.Expansion.Config) : MetaM Result := do
   if !Morew.Elab.Expansion.enabled bounds then
     return { expression := source, expansions := 0 }
   match ← Morew.Elab.Expansion.run (visit source reduce bounds 0) with
   | .ok (expression, state) => return { expression, expansions := state.steps }
   | .error error => throwError error.toMessageData bounds.label
+
+/-- Expand affine helpers with one shared budget and the supplied structural reducer. -/
+def prepare (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Result := do
+  prepareWithConfig source reduce (← config)
 
 /-- Expand eligible helper heads for proof construction. -/
 def expand (source : Expr) (reduce : Expr → Bool → MetaM Expr) : MetaM Expr := do

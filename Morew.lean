@@ -60,6 +60,8 @@ import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
 import Morew.Elab.NLP.Terminal
 import Morew.Elab.ObjectiveContext
+import Morew.Elab.QuadConic
+import Morew.Elab.QuadConic.Expansion
 import Morew.Elab.Reformulation.Basic.Derive
 import Morew.Elab.Reformulation.Basic.ObjectiveBound
 import Morew.Elab.Reformulation.Basic.Occurrence
