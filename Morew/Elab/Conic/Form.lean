@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Conic.Objective
-import Morew.Elab.Cone.Rows
+import Morew.Elab.Cone.RowAssembly
 import Morew.Elab.Cone.Finite
 import Morew.Elab.Expr
 import Morew.Elab.State

@@ -41,7 +41,7 @@ import Morew.Elab.Cone.Normalize
 import Morew.Elab.Cone.Plan
 import Morew.Elab.Cone.Rewrite
 import Morew.Elab.Cone.Row
-import Morew.Elab.Cone.Rows
+import Morew.Elab.Cone.RowAssembly
 import Morew.Elab.Cone.Rules
 import Morew.Elab.Cone.Space
 import Morew.Elab.Cone.Symmetry

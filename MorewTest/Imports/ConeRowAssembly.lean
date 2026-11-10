@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Cone.Rows
+import Morew.Elab.Cone.RowAssembly
 import MorewTest.ElabSupport
 
 assert_not_imported Morew.Elab.Cone.Plan
@@ -19,7 +19,7 @@ assert_not_imported Morew.Elab.QuadConic.Terminal
 assert_not_imported Morew.Elab.Reformulation.Cone.Terminal
 assert_not_imported Morew.QuadConic.Basic
 
-namespace MorewTest.Imports.ConeRows
+namespace MorewTest.Imports.ConeRowAssembly
 
 open Lean Lean.Meta Lean.Elab.Command
 
@@ -41,4 +41,4 @@ run_cmd liftTermElabM do
   checkWithKernel rows.constraints
   checkWithKernel rows.feasibleIff
 
-end MorewTest.Imports.ConeRows
+end MorewTest.Imports.ConeRowAssembly
