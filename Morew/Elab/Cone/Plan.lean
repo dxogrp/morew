@@ -36,7 +36,6 @@ def withPredicateEvidence (point body : Expr)
     (action : MetaM Result) : MetaM Result :=
   withScopedEvidence Result.replaceFVars point body action
 
--- Expose representation target fields; leave predicate helpers and operands closed.
 /-- Reduce checked representation target fields without unfolding predicate helpers. -/
 partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Expr.reduceStructure body (preserveLets := true)

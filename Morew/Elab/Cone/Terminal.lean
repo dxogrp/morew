@@ -10,8 +10,9 @@ import Morew.Elab.Reformulation.Replace
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Plan all conic row replacements before allocating names. Split unsupported groups
-so affine siblings can supply retained domain evidence. -/
+/-! Plan exact cone constraint replacements and retain their equivalence proofs.
+The selected backend checks the objective before rewriting and constructs a form on
+the final domain. Split unsupported conjunctions so affine rows can supply domain evidence. -/
 
 namespace Morew.Elab.Cone.Terminal
 
@@ -20,14 +21,14 @@ open Morew.Elab.Rewrite
 open Morew.Elab.Reformulation
 open Morew.Elab.Reformulation.Replace
 
-/-- Objective certification and form construction for a shared cone-constraint pipeline. -/
+/-- Objective checking and form construction supplied to the shared cone planner. -/
 structure Backend where
   /-- Terminal command spelling used in diagnostic suggestions. -/
   command : String
   /-- Check the objective before rewriting constraints. -/
   checkObjective : PresentationState → Affine.EvidenceProvider →
     MetaM (Except Expr.Error Unit)
-  /-- Certify the final objective and the already checked final cone rows. -/
+  /-- Construct the final form, checking the objective on the final domain and validating cached rows. -/
   buildForm : PresentationState → Affine.EvidenceProvider →
     Array (Option (Array RowResult)) → MetaM (Except Expr.Error Expr)
 

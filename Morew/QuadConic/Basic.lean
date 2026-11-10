@@ -11,12 +11,14 @@ import Mathlib.LinearAlgebra.QuadraticForm.Basic
 # Certified quadratic cone programs
 
 The objective is a homogeneous quadratic form plus an affine map. Its quadratic
-part is nonnegative for minimization and nonpositive for maximization. Rows use
-the existing affine cone constraints.
+part is globally nonnegative for minimization and globally nonpositive for
+maximization. Constants belong to the affine part. Rows use the existing affine
+cone constraints.
 
-Objective sense is stored separately because `OrderDual ℝ` is definitionally
-equal to `ℝ`. `Form` certifies the represented objective and feasible set; the
-terminal command also checks the stored sense against the problem declaration.
+Objective sense is stored in `form.data.sense` because `OrderDual ℝ` is
+definitionally equal to `ℝ`. `Form.represents` certifies equality of the objective
+and feasible set on the same decision space. The terminal command also checks
+the stored sense against the problem declaration.
 -/
 
 namespace Morew
@@ -27,7 +29,7 @@ namespace QuadConic
 
 variable {X : Type u} [AddCommGroup X] [Module ℝ X]
 
-/-- The sign of a homogeneous quadratic form required by an objective sense. -/
+/-- The global sign of a homogeneous quadratic form required by an objective sense. -/
 def Curvature (sense : ObjectiveSense) (quadratic : QuadraticForm ℝ X) : Prop :=
   match sense with
   | .minimize => ∀ x, 0 ≤ quadratic x
@@ -73,7 +75,8 @@ theorem concaveOn_quadratic (quadratic : QuadraticForm ℝ X)
 /-- Finite-dimensional quadratic cone-program data.
 
 The objective is `quadratic x + affine x`, without an implicit factor of one
-half. The original objective, including its constant term, is retained. -/
+half. The affine part includes the constant term. The decision space requires
+no choice of coordinates or inner product. -/
 structure Data (X : Type u) [AddCommGroup X] [Module ℝ X]
     [FiniteDimensional ℝ X] where
   /-- The optimization direction. -/
@@ -161,8 +164,9 @@ theorem ofConic_sense (data : Conic.Data X) :
 
 end Data
 
-/-- A quadratic conic representation with the same objective and feasible set.
-Its optimization direction is stored in `data.sense`. -/
+/-- A quadratic conic representation with the same decision space, objective, and
+feasible set as `p`. Its optimization direction is stored in `data.sense`;
+the equality `represents` does not determine that direction. -/
 structure Form (p : Problem X ℝ) where
   /-- The quadratic cone-program data, including curvature evidence. -/
   data : Data X

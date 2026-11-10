@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Form
 import Morew.Elab.Cone.Terminal
 
-/-! Certify an affine objective while using the shared cone-constraint pipeline. -/
+/-! Combine affine objective certification with shared cone constraint planning. -/
 
 namespace Morew.Elab.Conic.Terminal
 
@@ -28,7 +28,7 @@ def affineBackend : Backend where
     | .ok _ => return .ok ()
   buildForm presentation provider rows := Morew.Elab.Conic.buildForm presentation provider rows
 
-/-- Plan an affine conic terminal step using the shared cone-constraint pipeline. -/
+/-- Plan exact cone constraint rewrites and certify the final affine objective. -/
 def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   planWith affineBackend presentation provider

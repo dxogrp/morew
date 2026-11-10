@@ -12,8 +12,10 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 # Certified quadratic objectives
 
 These constructions retain a homogeneous quadratic form, an affine remainder,
-and pointwise equality with the original objective. Curvature evidence concerns
-the homogeneous part; affine terms impose no sign condition.
+and pointwise equality with the original objective, including its constant term.
+`Certified` records this decomposition without a curvature assumption. Separate
+lemmas prove the global sign of the quadratic part; affine terms impose no sign
+condition.
 -/
 
 namespace Morew.QuadConic
@@ -113,7 +115,8 @@ def sum {ι : Type*} {f : ι → X → ℝ} (s : Finset ι)
         rw [← (a i).correct x, ← ih]
         ring
 
-/-- The square of an affine scalar expression, including its affine offset. -/
+/-- Split `(L x + b)²` into the quadratic part `(L x)²` and the affine remainder
+`2 * b * L x + b²`. -/
 def square (a : Affine.Certified f) : Certified (fun x => f x ^ (2 : ℕ)) where
   quadratic := (QuadraticMap.sq (R := ℝ)).comp a.map.linear
   affine := (2 * a.map 0) • a.map.linear.toAffineMap +
@@ -125,7 +128,8 @@ def square (a : Affine.Certified f) : Certified (fun x => f x ^ (2 : ℕ)) where
       (2 * a.map 0 * a.map.linear x + a.map 0 ^ (2 : ℕ)) = _
     ring
 
-/-- The squared norm of an affine map into a real inner-product space. -/
+/-- Split `‖L x + b‖²` into the quadratic part `‖L x‖²` and the affine remainder
+`2 * ⟪b, L x⟫ + ‖b‖²` in a real inner product space. -/
 noncomputable def normSq {Y : Type*} [NormedAddCommGroup Y] [InnerProductSpace ℝ Y]
     {f : X → Y} (a : Affine.Certified f) : Certified (fun x => ‖f x‖ ^ (2 : ℕ)) where
   quadratic := (LinearMap.BilinMap.toQuadraticMap (innerₗ Y)).comp a.map.linear
@@ -160,7 +164,8 @@ theorem ofAffine_nonpositive (a : Affine.Certified f) : (ofAffine a).Nonpositive
 theorem square_nonnegative (a : Affine.Certified f) : (square a).Nonnegative :=
   fun x => mul_self_nonneg (a.map.linear x)
 
-/-- A squared affine Euclidean norm has nonnegative quadratic curvature. -/
+/-- The squared norm of an affine map into a real inner product space has
+nonnegative quadratic curvature. -/
 theorem normSq_nonnegative {Y : Type*} [NormedAddCommGroup Y] [InnerProductSpace ℝ Y]
     {f : X → Y} (a : Affine.Certified f) : (normSq a).Nonnegative :=
   fun _ => real_inner_self_nonneg
@@ -169,7 +174,8 @@ theorem normSq_nonnegative {Y : Type*} [NormedAddCommGroup Y] [InnerProductSpace
 theorem fnNorm2Sq_nonnegative {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Certified f) :
     (fnNorm2Sq a).Nonnegative := normSq_nonnegative a.toEuclidean
 
-/-- A squared norm with no coordinates has zero curvature in the maximizing direction too. -/
+/-- In dimension zero, the squared norm has zero quadratic part and hence
+nonpositive curvature. -/
 theorem fnNorm2Sq_empty_nonpositive {f : X → Fin 0 → ℝ} (a : Affine.Certified f) :
     (fnNorm2Sq a).Nonpositive := by
   intro x

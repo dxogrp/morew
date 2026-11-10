@@ -8,8 +8,9 @@ import Morew.Elab.State
 import Morew.Elab.Cone.Space
 import Morew.Elab.Expr
 
-/-! Convert affine comparisons to cone membership using supplied affine certificates.
-Preserve conjunctions, local lets, and operands; simplify literal zero and negation. -/
+/-! Prove equivalence between scalar or finite-vector comparisons and cone membership.
+Preserve conjunctions, local lets, and operands; simplify literal zero and negation.
+The row certifier checks affinity of the coordinates separately. -/
 
 namespace Morew.Elab.Cone
 

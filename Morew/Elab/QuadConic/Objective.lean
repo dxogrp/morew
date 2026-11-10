@@ -10,8 +10,9 @@ import Morew.Elab.QuadConic.Expansion
 import Morew.Elab.Reformulation.State
 import Lean.Meta.Check
 
-/-! Recognize quadratic objectives and certify their curvature without changing
-their source expressions. Transparent helpers unfold within a shared budget. -/
+/-! Construct a quadratic part and an affine part whose sum equals the source objective.
+Prove the required global curvature using evidence independent of decision variables.
+Transparent helpers unfold within a shared budget. -/
 
 namespace Morew.Elab.QuadConic
 
@@ -25,7 +26,8 @@ structure ObjectiveResult where
   affine : Expr
   /-- Exact agreement with the original objective at every decision point. -/
   pointwiseEquality : Expr
-  /-- Nonnegative curvature for minimization, nonpositive curvature for maximization. -/
+  /-- Proof that the quadratic part is nonnegative for minimization or nonpositive for
+  maximization at every decision point. -/
   curvature : Expr
 
 private structure CertifiedResult where
@@ -513,8 +515,8 @@ private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
       checkWithKernel expression
     return { quadratic, affine, pointwiseEquality, curvature }
 
-/-- Certify a real objective and the quadratic sign required by its explicit sense.
-Try direct recognition before bounded transparent-helper expansion. -/
+/-- Prove an exact quadratic decomposition and the global sign required by the declared sense.
+Try direct recognition before bounded unfolding of transparent helpers. -/
 def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
@@ -531,7 +533,7 @@ def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
         expression := source
         reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
 
-/-- Certify the objective retained by a typed problem presentation. -/
+/-- Certify the typed presentation's objective using its declared optimization sense. -/
 def reifyObjective (presentation : Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do

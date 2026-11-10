@@ -15,7 +15,8 @@ namespace Morew.Elab.Cone.Finite
 open Lean Lean.Meta
 open Morew.Elab.Rewrite.Plan
 
-/-- Retry with finite evidence exposed by helpers; restore state before retrying original predicates. -/
+/-- Try the action directly, then retry with finite-index evidence exposed by helpers.
+Restore failed attempts before retrying on the original expressions. -/
 def withHelperFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (sources : Array Expr)
@@ -40,8 +41,8 @@ def withHelperFiniteInstances {α : Type}
     withScopedFiniteInstances replaceResult additional.toList action
   catch error => failure error
 
-/-- Collect finite-index evidence from the presentation and substitute temporary bindings
-into the completed certificate. -/
+/-- Collect finite-index evidence from the objective and constraints.
+Replace temporary instance bindings with their evidence in successful results. -/
 def withPresentationFiniteInstances {α : Type}
     (replace : α → Array Expr → Array Expr → α)
     (presentation : Reformulation.PresentationState)

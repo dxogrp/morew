@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.QuadConic.Form
 import Morew.Elab.Cone.Terminal
 
-/-! Certify a quadratic objective while using the shared cone-constraint pipeline. -/
+/-! Combine quadratic objective certification with shared cone constraint planning. -/
 
 namespace Morew.Elab.QuadConic.Terminal
 

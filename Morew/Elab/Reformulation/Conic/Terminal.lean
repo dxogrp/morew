@@ -6,15 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Conic.Terminal
 import Morew.Elab.Reformulation.Cone.Terminal
 
-/-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
-Preserve named affine groups and local definitions. Allocate generated names together and
-emit a structural form beside the target. -/
+/-! Register `conic` with the affine objective backend and shared cone planner.
+Validate and retarget `Conic.Form` evidence, checking the stored optimization sense. -/
 
 namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- Store section-dependent expressions with the certificate.
+-- Check the represented problem and stored optimization sense independently.
 private def validateTerminalConic (form expected : Expr)
     (sense : Morew.ObjectiveSense) : TermElabM Expr := do
   let type ← whnf (← inferType form)

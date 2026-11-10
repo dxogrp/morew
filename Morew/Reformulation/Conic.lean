@@ -10,5 +10,5 @@ import Morew.Elab.Cone.Rules
 import Morew.Elab.Reformulation.Conic.Terminal
 import Morew.Elab.Reformulation.QuadConic.Terminal
 
-/-! Basic modeling commands, `conic` and `qconic` certification, shared `conic at`
-constraint rewrites, default cone rules, and conic presentation. -/
+/-! Commands for affine and quadratic conic reformulations: `conic`, `qconic`, and
+`conic at`. Includes basic modeling commands, default cone rules, and conic notation. -/

@@ -9,8 +9,8 @@ import Morew.Elab.Cone.Finite
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Construct quadratic cone data proving the current objective and feasible set.
-Abstract function indices require `Finite` evidence. -/
+/-! Construct `QuadConic.Form` with exact objective equality and feasibility equivalence.
+Function spaces with abstract indices require `Finite` evidence for the index type. -/
 
 namespace Morew.Elab.QuadConic
 
@@ -66,7 +66,8 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
 
 /-- Certify `presentation.canonicalProblem`, retaining objective sense and row order.
 `True` contributes no rows. A nonempty cache has one slot per presentation entry:
-`some` supplies rows in decomposed order; `none` normalizes the entry. Validate cached proofs. -/
+`some` supplies rows in decomposed order; `none` normalizes the entry.
+Cached proofs are checked against the current predicates. -/
 def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Expr.Error Expr) :=

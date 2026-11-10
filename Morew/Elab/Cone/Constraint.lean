@@ -18,7 +18,7 @@ import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 
-/-! Certify affine scalar/vector comparisons and standard cone memberships, including
+/-! Certify affine scalar and vector comparisons and standard cone memberships, including
 PSD predicates with global symmetry. Finite exponential and power families use
 product cones. Return a cone row and pointwise equivalence. -/
 

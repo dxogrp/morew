@@ -151,7 +151,8 @@ def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Array Term)
         return { row with proposition := ← delabPresentationTerm normalized.body names }
       return { template with constraints }
 
-/-- Reduce explicit class constructors only after direct conic certification. -/
+/-- Accept an objective reduction after checking it with the selected backend.
+Accept each constraint reduction after certifying its cone rows. -/
 def normalizeDirectPresentation (backend : Morew.Elab.Cone.Terminal.Backend)
     (presentation : PresentationState) : MetaM PresentationState := do
   let result ← Morew.Elab.Cone.Finite.withPresentationFiniteInstances

@@ -9,8 +9,10 @@ import Morew.QuadConic.Objective
 /-!
 # Quadratic conic forms
 
-Quadratic objectives with affine cone constraints, exact objective
-representations, curvature certificates, and a stored objective sense.
+Represent objectives as a quadratic form plus an affine map, with affine cone
+constraints and curvature evidence for the stored optimization direction.
+`QuadConic.Form p` certifies equality with `p` on the same decision space;
+a reformulation's `GlobalEquiv` certificate relates its source and target problems.
 
 Import `Morew.Reformulation.Conic` for the `conic` and `qconic` commands.
 -/
