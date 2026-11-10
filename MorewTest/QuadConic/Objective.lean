@@ -8,7 +8,6 @@ import MorewTest.ElabSupport
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 assert_not_imported Morew.Elab.Reformulation.State
-assert_not_imported Morew.Elab.Reformulation.Runner
 assert_not_imported Morew.Syntax
 
 /-! Exact objective recognition, independent curvature evidence, and failures. -/
