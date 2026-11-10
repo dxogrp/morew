@@ -100,6 +100,33 @@ noncomputable def weightedConstraintEquiv :=
   constraintBoundAtEquiv weightedConstraintSource weightedDecomposition Prod.snd
     (fun point a => point.1 * a ≤ 10) .upper weightedConstraintContext
 
+example (point : FeasiblePoint weightedConstraintSource) :
+    (weightedConstraintEquiv.forward.map point).1 = (point.1, point.1.2) := rfl
+
+example (point : FeasiblePoint
+    (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
+      (fun point a => point.1 * a ≤ 10) .upper)) :
+    (weightedConstraintEquiv.backward.map point).1 = point.1.1 := rfl
+
+example (point : FeasiblePoint weightedConstraintSource) :
+    weightedConstraintEquiv.backward.map (weightedConstraintEquiv.forward.map point) =
+      point := by
+  apply Subtype.ext
+  rfl
+
+example (point : FeasiblePoint weightedConstraintSource) :
+    (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
+      (fun point a => point.1 * a ≤ 10) .upper).objective
+        (weightedConstraintEquiv.forward.map point).1 =
+          weightedConstraintSource.objective point.1 := rfl
+
+example (point : FeasiblePoint
+    (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
+      (fun point a => point.1 * a ≤ 10) .upper)) :
+    weightedConstraintSource.objective (weightedConstraintEquiv.backward.map point).1 =
+      (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
+        (fun point a => point.1 * a ≤ 10) .upper).objective point.1 := rfl
+
 example (point : ℝ × ℝ) :
     weightedConstraintSource.feasible point ↔
       ∃ a : ℝ, (weightedConstraintSource.constraintBoundAt weightedDecomposition Prod.snd
