@@ -60,13 +60,19 @@ For conic commands and default rules, including basic modeling commands:
 import Morew.Reformulation.Conic
 ```
 
+For quadratic conic objectives, including conic commands and default rules:
+
+```imports
+import Morew.Reformulation.QuadConic
+```
+
 For NLP commands and default rules, including basic modeling commands:
 
 ```imports
 import Morew.Reformulation.NLP
 ```
 
-Import both modules to use conic and NLP commands.
+Import the appropriate conic module together with the NLP module to use both.
 
 For predefined atomic functions:
 
@@ -80,6 +86,7 @@ For mathematical definitions and proofs:
 import Morew.Core
 import Morew.Transform
 import Morew.Conic
+import Morew.QuadConic
 import Morew.NLP
 ```
 

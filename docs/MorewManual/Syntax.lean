@@ -147,9 +147,12 @@ Without either clause, Morew selects a registered rule automatically.
   * Add a condition and prove that every feasible point has a representative satisfying it with an objective at least as good.
 :::
 
-## Conic and smooth NLP forms
+## Conic, quadratic conic, and smooth NLP forms
 
 A conic formulation has an affine objective and affine maps into cones.
+A quadratic conic formulation has a quadratic plus affine objective and the
+same kind of cone constraints. Its quadratic part is nonnegative for minimization
+and nonpositive for maximization.
 A smooth nonlinear formulation has an objective and scalar residuals that are
 twice continuously differentiable on an open domain containing the feasible set.
 
@@ -157,10 +160,29 @@ twice continuously differentiable on an open domain containing the feasible set.
 representation. Append `using rule` to choose its representation explicitly.
 These steps may introduce variables and multiple constraints.
 
-A final `conic` or `nlp` command rewrites the remaining constraints, certifies
+A final `conic`, `qconic`, or `nlp` command rewrites the remaining constraints, certifies
 the target problem, and ends the script. For a reformulation named `q`, it
-supplies `q.isConic` or `q.isSmoothNLP`, respectively. These terminal commands
+supplies `q.isConic`, `q.isQuadConic`, or `q.isSmoothNLP`, respectively. These terminal commands
 are optional; every reformulation supplies an equivalence certificate.
+
+The `qconic` command preserves the quadratic objective, including constants.
+It uses the same constraint conversions as `conic`; those conversions may add
+auxiliary variables. Use `conic at label using rule` before `qconic` to select a
+constraint representation explicitly.
+
+Supported quadratic objectives include affine terms, squares of affine scalar
+expressions, squared Euclidean norms of affine vectors, and finite sums with
+suitable coefficient signs. For example, `Fn.norm2 (A *ᵥ x - b) ^ 2` is supported,
+as is its sum with `weight * Fn.norm2 x ^ 2` when `0 ≤ weight` is available.
+Use `Fn.norm2` for the Euclidean norm of a value of type `Fin n → ℝ`; the ordinary
+norm on that function type is the infinity norm. Division by a fixed parameter
+requires evidence that it is nonzero, and scaling quadratic terms also needs
+appropriate coefficient-sign evidence. Curvature evidence must be independent
+of decision variables.
+
+A subsequent reformulation can apply `epigraph t` and `conic` to a minimizing
+quadratic conic problem, or `hypograph t` and `conic` to a maximizing one, when
+the resulting bound has a supported conic representation.
 
 # Certificates
 %%%
@@ -177,19 +199,27 @@ tag := "certificates"
   * `q.equiv`
   * The global equivalence between the source and `q`.
 *
-  * `q.conicForm` or `q.nlpForm`
-  * A conic or smooth NLP representation of `q`, with its proof.
+  * `q.conicForm`, `q.quadConicForm`, or `q.nlpForm`
+  * A conic, quadratic conic, or smooth NLP representation of `q`, with its proof.
 *
-  * `q.conicForm.represents` or `q.nlpForm.represents`
+  * `q.conicForm.represents`, `q.quadConicForm.represents`, or `q.nlpForm.represents`
   * Equality of the represented problem with `q`, including its objective and feasibility conditions.
 *
-  * `q.isConic` or `q.isSmoothNLP`
+  * `q.isConic`, `q.isQuadConic`, or `q.isSmoothNLP`
   * A proof that the problem has the corresponding form.
 :::
 
 For problem families, apply the generated declaration to the parameters first,
 as in `(q.conicForm A b).represents`.
-The target data also records whether the objective is minimized or maximized.
+The target data also records whether the objective is minimized or maximized,
+accessible as `form.data.sense`. A theorem about a particular direction can
+require a hypothesis such as `form.data.sense = .minimize`.
+
+`QuadConic.Form q` contains the data and its exact representation proof;
+`IsQuadConic q` means that such a form exists. The latter proposition alone
+does not specify a direction. The `qconic` command checks that the stored
+direction agrees with the problem declaration. Its representation certificate
+describes the final problem; `q.equiv` relates that problem to its source.
 
 ## Global equivalence
 

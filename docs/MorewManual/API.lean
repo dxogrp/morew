@@ -19,6 +19,7 @@ search, and links to source files in the Morew repository.
 - [Substitution](api/Morew/Substitution.html): coordinate parameterizations and their range conditions.
 - [Representations](api/Morew/Rewrite/Basic.html): graph, epigraph, hypograph, and constraint equivalences.
 - [Conic programs](api/Morew/Conic/Basic.html): cone constraints, target data, and `IsConic`.
+- [Quadratic conic programs](api/Morew/QuadConic/Basic.html): quadratic objectives, curvature evidence, and `IsQuadConic`.
 - [Smooth nonlinear programs](api/Morew/NLP/Basic.html): residuals, domains, target data, and `IsSmoothNLP`.
 - [Commands](api/Morew/Elab/Reformulation/Syntax.html): reformulation syntax and selectors.
 
@@ -28,5 +29,6 @@ points for studying parsing, elaboration, and certificate generation.
 
 The command entry points are
 [Basic](api/Morew/Reformulation/Basic.html),
-[Conic](api/Morew/Reformulation/Conic.html), and
+[Conic](api/Morew/Reformulation/Conic.html),
+[QuadConic](api/Morew/Reformulation/QuadConic.html), and
 [NLP](api/Morew/Reformulation/NLP.html).
