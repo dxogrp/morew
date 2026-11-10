@@ -23,7 +23,7 @@ noncomputable def norm2 {n : Nat} (x : Fin n → ℝ) : ℝ :=
   ‖WithLp.toLp 2 x‖
 
 /-- The maximum absolute coordinate, with value zero on an empty vector. -/
-noncomputable def normInf {n : Nat} (x : Fin n → ℝ) : ℝ :=
+def normInf {n : Nat} (x : Fin n → ℝ) : ℝ :=
   ‖x‖
 
 theorem norm1_nonneg {n : Nat} (x : Fin n → ℝ) : 0 ≤ norm1 x :=
