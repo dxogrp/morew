@@ -69,9 +69,9 @@ The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
 tag := "options"
 %%%
 
-Transparent helper functions are expanded during affine, quadratic, and smoothness
-certification. The `morew.affine`, `morew.quadConic`, and `morew.smooth` options control these
-operations separately, with the same limits for each source expression:
+The `morew.affine`, `morew.quadConic`, and `morew.smooth` options control expansion
+of eligible transparent helpers during affine, quadratic, and smoothness
+certification, respectively. Each uses the following limits per source expression:
 
 :::table +header
 *
@@ -99,7 +99,14 @@ reformulation to change the affine expansion depth. Use
 The other options have the same scope. Setting any limit to zero disables
 helper expansion while retaining direct recognition of supported expressions.
 
-Quadratic certification preserves squared Euclidean norms and matrix operations.
-Helper expansion exposes supported expressions; it does not perform general
-polynomial normalization or complete squares. A failed curvature check means
-that the required sign could not be proved from the available parameter evidence.
+Quadratic certification tries direct recognition before bounded helper expansion.
+It keeps vector and matrix expressions structured and proves that its decomposition
+equals the source objective. Helper expansion exposes
+supported expressions; it does not perform general polynomial normalization,
+complete squares, or recognize matrix quadratic forms from positive semidefiniteness
+proofs.
+
+Certification failures distinguish unsupported expressions, missing sign or domain
+evidence, and exhausted expansion limits. A failed curvature check means that the
+required sign could not be proved from the available parameter evidence. Failure
+to certify an expression does not prove that it is nonquadratic.

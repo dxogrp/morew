@@ -44,8 +44,8 @@ variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 /-!
 ## Smooth formulation
 
-The quadratic objective and linear equations are smooth. This path keeps
-the original variable and objective.
+The quadratic objective and linear equations are smooth for every real weight.
+The `nlp` command keeps the original variable and objective.
 -/
 
 reformulation smooth : (leastSquares A b C d weight) := by
@@ -62,16 +62,18 @@ example : (smooth.nlpForm A b C d weight).data.toProblem = smooth A b C d weight
 /-!
 ## Quadratic conic formulation
 
-The `qconic` command keeps the quadratic objective and represents `Cx=d` by a
-zero-cone constraint. The decomposition is
+The `qconic` command keeps the decision variable `x` and represents `Cx=d` by a
+zero-cone constraint. It decomposes the objective as `f(x) = Q(x) + a(x)`, where
 
 ```math
 Q(x)=\lVert Ax\rVert_2^2+\lambda\lVert x\rVert_2^2,
 \qquad a(x)=-2\langle Ax,b\rangle+\lVert b\rVert_2^2.
 ```
 
-The assumption `λ ≥ 0` proves that `Q` is nonnegative, including at `λ = 0`.
-No Gram matrix is formed. In the coordinate convention
+The assumption `λ ≥ 0` proves `Q(x) ≥ 0` for every `x`, including when `λ = 0`.
+Only the quadratic certificate requires this assumption; the reformulated problem
+and its equivalence certificate retain their original parameters.
+In the coordinate convention
 `(1/2)xᵀPx + qᵀx + r`, these data correspond to
 `P = 2(AᵀA + λI)`, `q = -2Aᵀb`, and `r = bᵀb`.
 -/
@@ -96,7 +98,7 @@ example (x : Fin n → ℝ) : (direct A b C d weight).feasible x ↔ C *ᵥ x = 
   change C *ᵥ x - d = 0 ↔ C *ᵥ x = d
   exact sub_eq_zero
 
-/-- The constant term and affine cross term are retained exactly. -/
+/-- Decompose the ridge objective into its quadratic, linear, and constant terms. -/
 theorem objectiveDecomposition (x : Fin n → ℝ) :
     (leastSquares A b C d weight).objective x =
       (Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2) +
@@ -133,7 +135,7 @@ theorem directAffine (x : Fin n → ℝ) :
   linarith [objectiveDecomposition A b C d weight x]
 
 include hweight in
-/-- Nonnegative ridge weights give nonnegative homogeneous quadratic curvature. -/
+/-- The homogeneous quadratic part is nonnegative when the weight is nonnegative. -/
 theorem quadraticNonnegative (x : Fin n → ℝ) :
     0 ≤ Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2 :=
   add_nonneg (sq_nonneg _) (mul_nonneg hweight (sq_nonneg _))
@@ -228,8 +230,6 @@ example : (combined.conicForm A b C d weight).data.toProblem = combined A b C d 
 All four formulations retain `x` and the equations `Cx=d`. The affine conic
 forms add bound variables. Their equivalence certificates recover `x` and transfer
 global optimality to the original problem.
-The conic alternatives remain useful when a later matrix-based representation
-of the quadratic objective would lose sparsity by forming `AᵀA`.
 -/
 
 example {z : FeasiblePoint (combined A b C d weight)}

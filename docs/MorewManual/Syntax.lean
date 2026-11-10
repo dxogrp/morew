@@ -150,9 +150,11 @@ Without either clause, Morew selects a registered rule automatically.
 ## Conic, quadratic conic, and smooth NLP forms
 
 A conic formulation has an affine objective and affine maps into cones.
-A quadratic conic formulation has a quadratic plus affine objective and the
-same kind of cone constraints. Its quadratic part is nonnegative for minimization
-and nonpositive for maximization.
+A quadratic conic formulation has objective $`Q(x)+a(x)`, where $`Q` is a
+homogeneous quadratic form and $`a` is affine, with the same kind of cone
+constraints. The affine part includes the constant term; there is no implicit
+factor of $`1/2`. The quadratic part is nonnegative for minimization and nonpositive
+for maximization on the entire decision space.
 A smooth nonlinear formulation has an objective and scalar residuals that are
 twice continuously differentiable on an open domain containing the feasible set.
 
@@ -160,10 +162,10 @@ twice continuously differentiable on an open domain containing the feasible set.
 representation. Append `using rule` to choose its representation explicitly.
 These steps may introduce variables and multiple constraints.
 
-A final `conic`, `qconic`, or `nlp` command rewrites the remaining constraints, certifies
-the target problem, and ends the script. For a reformulation named `q`, it
-supplies `q.isConic`, `q.isQuadConic`, or `q.isSmoothNLP`, respectively. These terminal commands
-are optional; every reformulation supplies an equivalence certificate.
+A final `conic`, `qconic`, or `nlp` command rewrites the remaining constraints,
+certifies the target problem, and ends the script. For a reformulation named `q`,
+it supplies `q.isConic`, `q.isQuadConic`, or `q.isSmoothNLP`, respectively. These
+terminal commands are optional; every reformulation supplies an equivalence certificate.
 
 The `qconic` command preserves the quadratic objective, including constants.
 It uses the same constraint conversions as `conic`; those conversions may add
@@ -171,14 +173,20 @@ auxiliary variables. Use `conic at label using rule` before `qconic` to select a
 constraint representation explicitly.
 
 Supported quadratic objectives include affine terms, squares of affine scalar
-expressions, squared Euclidean norms of affine vectors, and finite sums with
-suitable coefficient signs. For example, `Fn.norm2 (A *ᵥ x - b) ^ 2` is supported,
-as is its sum with `weight * Fn.norm2 x ^ 2` when `0 ≤ weight` is available.
+expressions, and squared Euclidean norms of affine vectors. These may be combined
+by addition, subtraction, negation, finite sums, and multiplication or division by
+real coefficients independent of the decision variables, provided the required
+curvature and domain conditions can be proved. Affine terms require no sign
+conditions on their coefficients. Division of a term that depends on decision
+variables requires evidence that the divisor is nonzero.
+
+For minimization, `Fn.norm2 (A *ᵥ x - b) ^ 2` is supported, as is its sum with
+`weight * Fn.norm2 x ^ 2` under the assumption `0 ≤ weight`, including zero weight.
 Use `Fn.norm2` for the Euclidean norm of a value of type `Fin n → ℝ`; the ordinary
-norm on that function type is the infinity norm. Division by a fixed parameter
-requires evidence that it is nonzero, and scaling quadratic terms also needs
-appropriate coefficient-sign evidence. Curvature evidence must be independent
-of decision variables.
+norm on that function type is the infinity norm. Curvature evidence must be
+independent of the decision variables; assumptions that hold only at feasible
+points cannot establish it. See {ref "options"}[Options] for helper expansion and
+its limits.
 
 A subsequent reformulation can apply `epigraph t` and `conic` to a minimizing
 quadratic conic problem, or `hypograph t` and `conic` to a maximizing one, when
@@ -215,11 +223,13 @@ The target data also records whether the objective is minimized or maximized,
 accessible as `form.data.sense`. A theorem about a particular direction can
 require a hypothesis such as `form.data.sense = .minimize`.
 
-`QuadConic.Form q` contains the data and its exact representation proof;
+`QuadConic.Form q` has fields `data` and `represents : data.toProblem = q`;
 `IsQuadConic q` means that such a form exists. The latter proposition alone
 does not specify a direction. The `qconic` command checks that the stored
 direction agrees with the problem declaration. Its representation certificate
-describes the final problem; `q.equiv` relates that problem to its source.
+identifies the final objective and feasible set with those of the stored data.
+The separate certificate `q.equiv` relates the final problem to its source, whose
+decision variables and constraints may differ.
 
 ## Global equivalence
 
