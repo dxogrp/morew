@@ -67,7 +67,7 @@ zero-cone constraint. It decomposes the objective as `f(x) = Q(x) + a(x)`, where
 
 ```math
 Q(x)=\lVert Ax\rVert_2^2+\lambda\lVert x\rVert_2^2,
-\qquad a(x)=-2\langle Ax,b\rangle+\lVert b\rVert_2^2.
+\qquad a(x)=-2b^T Ax+\lVert b\rVert_2^2.
 ```
 
 The assumption `λ ≥ 0` certifies `Q(x) ≥ 0`, including at zero weight.
@@ -75,7 +75,6 @@ The assumption `λ ≥ 0` certifies `Q(x) ≥ 0`, including at zero weight.
 
 variable (hweight : 0 ≤ weight)
 
-include hweight in
 reformulation direct : (leastSquares A b C d weight) := by
   qconic
 
