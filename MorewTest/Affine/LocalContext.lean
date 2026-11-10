@@ -177,7 +177,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       mkLambdaFVars #[x] relation
     unless !predicate.hasMVar do
       throwError "test did not hide the metavariable in the local context"
-    let .error error ← Morew.Elab.Conic.normalizeRow predicate
+    let .error error ← Morew.Elab.Cone.normalizeRow predicate
       | throwError "a predicate with a hidden metavariable was accepted"
     unless (← error.reason.toString).contains "unresolved metavariables" do
       throwError "missing hidden-metavariable diagnostic"

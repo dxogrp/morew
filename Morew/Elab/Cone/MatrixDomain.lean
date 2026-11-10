@@ -4,15 +4,15 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence
-import Morew.Elab.Conic
-import Morew.Elab.Conic.Symmetry
+import Morew.Elab.Cone.Row
+import Morew.Elab.Cone.Symmetry
 import Morew.Conic.PSD.PosDef
 
 /-! Prove positive definiteness from independent hypotheses, retained positive
 definiteness, positive scalar margins, or identity-block PSD witnesses.
 Exclude the selected row and its replacement. Certify global symmetry separately. -/
 
-namespace Morew.Elab.Conic.MatrixDomain
+namespace Morew.Elab.Cone.MatrixDomain
 
 open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
@@ -211,4 +211,4 @@ def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
     return .ok proof
   return result.toOption
 
-end Morew.Elab.Conic.MatrixDomain
+end Morew.Elab.Cone.MatrixDomain

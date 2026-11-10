@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.Conic.Form.Support
 import MorewTest.Conic.Form.Defined
+import Morew.Elab.Cone.Plan
 
 /-!
 # Whole-problem conic forms
@@ -229,7 +230,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let initial ← presentationFor source
     let predicate := initial.constraints[0]!.predicate
-    let .ok row ← Elab.Conic.normalizeRow predicate
+    let .ok row ← Elab.Cone.normalizeRow predicate
       | throwError "source-local nonzero evidence did not certify the original row"
     let bare ← withLocalDeclD `point initial.domainType fun point => do
       mkLambdaFVars #[point] (← Morew.Elab.Expr.reduceStructure (mkApp predicate point))
@@ -257,9 +258,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ⟨fun x => x, fun x => x ≤ 1⟩))
   let presentation ← presentationFor source
   let predicate := presentation.constraints[0]!.predicate
-  let rows ← Elab.Conic.Plan.certifyRows #[predicate]
+  let rows ← Elab.Cone.Plan.certifyRows #[predicate]
   let wrong ← MorewTest.Affine.elaborate (← `(fun x : ℝ => 0 ≤ x))
-  let wrongRows ← Elab.Conic.Plan.certifyRows #[wrong]
+  let wrongRows ← Elab.Cone.Plan.certifyRows #[wrong]
   rejectCachedForm presentation #[some wrongRows] "does not match its decomposed predicate"
   rejectCachedForm presentation #[some rows, none] "entry count"
   rejectCachedForm presentation #[some #[]] "decomposed predicate count"

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import Morew.Elab.Expr
 import Mathlib.Analysis.SpecialFunctions.Exp
@@ -20,7 +20,7 @@ namespace MorewTest.Conic.SecondOrderElab
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
-open Morew.Elab.Conic
+open Morew.Elab.Cone
 open scoped ENNReal
 
 private noncomputable abbrev nativeLE : LE ℝ := inferInstance

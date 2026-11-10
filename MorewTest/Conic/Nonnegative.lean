@@ -14,8 +14,8 @@ Sign evidence checks exact cone coordinates and instances without importing the
 affine row certifier. Both successful and failed attempts preserve caller state.
 -/
 
-assert_not_exists Morew.Elab.Conic.normalizeRow Morew.Elab.Conic.Plan.Result
-  Morew.Elab.Conic.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
+assert_not_exists Morew.Elab.Cone.normalizeRow Morew.Elab.Cone.Plan.Result
+  Morew.Elab.Cone.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
   Morew.Conic.LogDet.hypograph_iff
 
 namespace MorewTest.Conic.Nonnegative
@@ -30,7 +30,7 @@ private def check (term : TSyntax `term) (accepted : Bool) (parameters : Nat := 
       unless points.size == 1 do throwError "expected one decision point"
       let before ← getMCtx
       let environment ← getEnv
-      let result ← Elab.Conic.nonnegativeValue? points[0]! body
+      let result ← Elab.Cone.nonnegativeValue? points[0]! body
       unless result.isSome == accepted do throwError "unexpected recognition result for {body}"
       if let some coordinate := result then
         unless ← isDefEq coordinate body.getAppArgs[4]! do
@@ -74,7 +74,7 @@ run_cmd liftTermElabM do
         let before ← getMCtx
         let environment ← getEnv
         let predicate := mkAppN body.getAppFn (args.set! position binding)
-        unless (← Elab.Conic.nonnegativeValue? points[0]! predicate).isNone do
+        unless (← Elab.Cone.nonnegativeValue? points[0]! predicate).isNone do
           throwError "unresolved nonnegative membership was accepted"
         if ← hole.mvarId!.isAssigned then throwError "recognition assigned a caller metavariable"
         unless before.mvarCounter == (← getMCtx).mvarCounter &&

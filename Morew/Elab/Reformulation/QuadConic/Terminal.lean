@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.QuadConic.Terminal
-import Morew.Elab.Reformulation.Conic.TerminalCommon
+import Morew.Elab.Reformulation.Cone.Terminal
 
 /-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
 Preserve named affine groups and local definitions. Allocate generated names together and
@@ -57,7 +57,7 @@ private def terminalQuadConicAdapter : TerminalAdapter := {
 /-- Plan a quadratic conic terminal step and request all generated local names. -/
 def prepareTerminalQuadConic (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft :=
-  prepareTerminalConeForm Morew.Elab.QuadConic.Terminal.backend
+  Cone.prepareTerminalConeForm Morew.Elab.QuadConic.Terminal.backend
     terminalQuadConicAdapter `_terminalQuadConic state step
 
 @[morew_reformulation_step Morew.quadConicStep]

@@ -30,7 +30,7 @@ def presentationFor (source : Expr) (sense : ObjectiveSense := .minimize)
   }
 
 def requireForm (presentation : Elab.Reformulation.PresentationState)
-    (certifiedRows : Array (Option (Array Elab.Conic.RowResult)) := #[]) : MetaM Expr := do
+    (certifiedRows : Array (Option (Array Elab.Cone.RowResult)) := #[]) : MetaM Expr := do
   match ← Elab.Conic.buildForm presentation {} certifiedRows with
   | .error error => throwError "expected conic form: {error.reason}"
   | .ok form =>
@@ -72,7 +72,7 @@ def assertForm (termSyntax : TSyntax `term) (count : Nat)
     checkWithKernel closed
 
 def rejectCachedForm (presentation : Elab.Reformulation.PresentationState)
-    (certifiedRows : Array (Option (Array Elab.Conic.RowResult)))
+    (certifiedRows : Array (Option (Array Elab.Cone.RowResult)))
     (fragment : String) : MetaM Unit := do
   let .error error ← Elab.Conic.buildForm presentation {} certifiedRows
     | throwError "invalid row cache received a conic form"

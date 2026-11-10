@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import Morew.Elab.Expr
 
@@ -19,7 +19,7 @@ namespace MorewTest.Conic.ExponentialElab
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
-open Morew.Elab.Conic
+open Morew.Elab.Cone
 
 private def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True

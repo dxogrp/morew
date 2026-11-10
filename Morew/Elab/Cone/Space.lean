@@ -11,7 +11,7 @@ import Qq
 
 /-! Canonical algebra for decision spaces and normed structures for cone coordinates. -/
 
-namespace Morew.Elab.Conic.Space
+namespace Morew.Elab.Cone.Space
 
 open Lean Lean.Meta Qq
 
@@ -261,4 +261,4 @@ def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
     return (result, result)
   return result
 
-end Morew.Elab.Conic.Space
+end Morew.Elab.Cone.Space

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.Affine.RowSupport
 import MorewTest.Environment
 
@@ -24,8 +24,8 @@ private def reject (source : Expr) (retained : Array Expr := #[])
   let before ← getMCtx
   let environment ← getEnv
   let result ← match name? with
-    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
-    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+    | none => Morew.Elab.Cone.Rewrite.planUnique source retained
+    | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
   let .error error := result | throwError "unsupported power bound was accepted: {source}"
   let diagnostic ← error.reason.toString
   if diagnostic.isEmpty || (!fragment.isEmpty && !diagnostic.contains fragment) then
@@ -39,8 +39,8 @@ private def reject (source : Expr) (retained : Array Expr := #[])
 private def check (source : Expr) (retained : Array Expr := #[])
     (name? : Option Name := none) : MetaM Unit := do
   let result ← match name? with
-    | none => Morew.Elab.Conic.Rewrite.planUnique source retained
-    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
+    | none => Morew.Elab.Cone.Rewrite.planUnique source retained
+    | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
   let .ok result := result
     | match result with
       | .error error => throwError "power control was rejected: {error.reason}"
@@ -118,7 +118,7 @@ run_cmd liftTermElabM do
 private def rejectRow (source : Expr) (fragment : String := "") : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
-  let .error error ← Morew.Elab.Conic.normalizeRow source (label? := some `power_row)
+  let .error error ← Morew.Elab.Cone.normalizeRow source (label? := some `power_row)
     | throwError "unsupported power membership was accepted: {source}"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "power_row" &&

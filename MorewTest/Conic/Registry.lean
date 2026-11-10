@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Rewrite.Registry.Source
 import MorewTest.Environment
@@ -19,7 +19,7 @@ policy as native logarithm and quotient rules.
 namespace MorewTest.Conic.Registry
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
-open Morew Morew.Elab.Conic MorewTest.Affine
+open Morew Morew.Elab.Cone MorewTest.Affine
 
 private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := #[])
     (name? : Option Name := none) (expected : Array (TSyntax `term) := #[])
@@ -28,10 +28,10 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
   let source ← elaborate term
   let before ← getMCtx
   let result ← match rule? with
-    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule retained
+    | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule retained
     | none => match name? with
-      | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
-      | none => Morew.Elab.Conic.Rewrite.planUnique source retained
+      | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
+      | none => Morew.Elab.Cone.Rewrite.planUnique source retained
   let .ok result := result
     | match result with
       | .error error => throwError "registered conic rule failed: {error.reason}"
@@ -62,10 +62,10 @@ private def reject (term : TSyntax `term) (fragment : String)
   let before ← getMCtx
   let environment ← getEnv
   let result ← match rule? with
-    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule retained
+    | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule retained
     | none => match name? with
-      | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name retained
-      | none => Morew.Elab.Conic.Rewrite.planUnique source retained
+      | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
+      | none => Morew.Elab.Cone.Rewrite.planUnique source retained
   let .error error := result | throwError "unsupported registered conic rule was accepted"
   unless (← error.reason.toString).contains fragment do
     throwError "unexpected registered conic failure: {error.reason}"
@@ -282,7 +282,7 @@ run_cmd liftTermElabM do
       let before ← getMCtx
       let environment ← getEnv
       let retained := #[mkApp row parameters[0]!]
-      let .error error ← Morew.Elab.Conic.Rewrite.planDeclaration source
+      let .error error ← Morew.Elab.Cone.Rewrite.planDeclaration source
           ``positiveLogWithAuxiliary retained
         | throwError "parameter-only retained rows bypassed the checked margin policy"
       unless (← error.reason.toString).contains "positive constant margin" do
@@ -294,7 +294,7 @@ run_cmd liftTermElabM do
   let term ← elaborate (← `(fun (c : ℝ) (_h : 0 < c) =>
     fun x : ℝ => x ≤ positiveLog c))
   lambdaBoundedTelescope term 2 fun _ source => do
-    let .ok result ← Morew.Elab.Conic.Rewrite.planDeclaration source
+    let .ok result ← Morew.Elab.Cone.Rewrite.planDeclaration source
         ``positiveLogWithAuxiliary
       | throwError "an independent parameter hypothesis was rejected"
     let .exact _ := result.certificate
@@ -313,7 +313,7 @@ noncomputable def quotientWithProofLet (c : ℝ) (h : c = 1) :
 run_cmd liftTermElabM do
   let term ← elaborate (← `(fun (c : ℝ) (_ : c = 1) => fun x : ℝ => x / c ≤ 1))
   lambdaBoundedTelescope term 2 fun _ source => do
-    match ← Morew.Elab.Conic.Rewrite.planDeclaration source ``quotientWithProofLet with
+    match ← Morew.Elab.Cone.Rewrite.planDeclaration source ``quotientWithProofLet with
     | .error error => throwError "target-local nonzero evidence was lost: {error.reason}"
     | .ok result =>
       let .exact repr := result.certificate

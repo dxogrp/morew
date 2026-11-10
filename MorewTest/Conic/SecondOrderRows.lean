@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Row
 
 assert_not_exists Morew.Conic.Spectral.lambdaMax_le_iff
   Morew.Conic.Spectral.spectralNorm_le_iff Morew.Conic.Spectral.normNuc_le_iff
@@ -33,7 +33,7 @@ elab "certified_soc_row% " source:term : term => do
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  match ← Morew.Elab.Conic.normalizeRow predicate with
+  match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected a cone row: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
 
@@ -99,7 +99,7 @@ private def expectRejected (source : TSyntax `term) (fragment : String) : TermEl
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  let .error error ← Morew.Elab.Conic.normalizeRow predicate (label? := some `bad_soc)
+  let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `bad_soc)
     | throwError "unsupported cone row was accepted"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "bad_soc" && diagnostic.contains fragment do
@@ -143,7 +143,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let hole ← mkFreshExprMVar type
     withLetDecl `hiddenMembership type hole fun binding => do
       let source ← mkLambdaFVars points (mkAppN body.getAppFn (args.set! 2 binding))
-      let .error error ← Morew.Elab.Conic.normalizeRow source (label? := some `hidden_soc)
+      let .error error ← Morew.Elab.Cone.normalizeRow source (label? := some `hidden_soc)
         | throwError "unresolved membership instance was accepted"
       let diagnostic ← error.reason.toString
       unless diagnostic.contains "hidden_soc" && diagnostic.contains "unresolved metavariables" do

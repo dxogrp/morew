@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Conic.TerminalCommon
+import Morew.Elab.Conic.Terminal
+import Morew.Elab.Reformulation.Cone.Terminal
 
 /-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
 Preserve named affine groups and local definitions. Allocate generated names together and
@@ -56,7 +57,7 @@ private def terminalConicAdapter : TerminalAdapter := {
 /-- Plan an affine conic terminal step and request all generated local names. -/
 def prepareTerminalConic (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft :=
-  prepareTerminalConeForm Morew.Elab.Conic.Terminal.affineBackend
+  Cone.prepareTerminalConeForm Morew.Elab.Conic.Terminal.affineBackend
     terminalConicAdapter `_terminalConic state step
 
 @[morew_reformulation_step Morew.conicStep]

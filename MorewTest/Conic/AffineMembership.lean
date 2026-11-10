@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence.Sign
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Row
 
 /-!
 # Native affine cone memberships
@@ -29,7 +29,7 @@ elab "certified_membership% " source:term : term => do
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  match ← Morew.Elab.Conic.normalizeRow predicate with
+  match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an affine membership: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
 
@@ -89,7 +89,7 @@ private def expectRejected (source : TSyntax `term) (fragment : String) : TermEl
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  let .error error ← Morew.Elab.Conic.normalizeRow predicate (label? := some `affine_member)
+  let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `affine_member)
     | throwError "unsupported affine membership was accepted"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "affine_member" && diagnostic.contains fragment do
@@ -136,7 +136,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let hole ← mkFreshExprMVar type
     withLetDecl `hiddenMembership type hole fun binding => do
       let source ← mkLambdaFVars points (mkAppN body.getAppFn (args.set! 2 binding))
-      let .error error ← Morew.Elab.Conic.normalizeRow source
+      let .error error ← Morew.Elab.Cone.normalizeRow source
         | throwError "unresolved singleton membership was accepted"
       unless (← error.reason.toString).contains "unresolved metavariables" do
         throwError "missing unresolved singleton diagnostic"

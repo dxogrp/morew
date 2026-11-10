@@ -103,7 +103,10 @@ import MorewTest.ImportCompatibility.TerminalQuadConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
 import MorewTest.Imports.Basic
 import MorewTest.Imports.BasicSuites
+import MorewTest.Imports.ConeRows
+import MorewTest.Imports.ConeTerminal
 import MorewTest.Imports.Conic
+import MorewTest.Imports.ConicBackend
 import MorewTest.Imports.ConicNLP
 import MorewTest.Imports.ConicSuites
 import MorewTest.Imports.Library
@@ -112,6 +115,7 @@ import MorewTest.Imports.NLPConic
 import MorewTest.Imports.NLPQuadConic
 import MorewTest.Imports.NLPSuites
 import MorewTest.Imports.QuadConic
+import MorewTest.Imports.QuadConicBackend
 import MorewTest.Imports.QuadConicNLP
 import MorewTest.Imports.Reformulation
 import MorewTest.Imports.Repr

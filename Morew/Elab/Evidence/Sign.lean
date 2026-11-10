@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence
-import Morew.Elab.Conic.Nonnegative
+import Morew.Elab.Cone.Nonnegative
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Expr
 
@@ -65,7 +65,7 @@ private def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := 
 private def signInMembership? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) :
     MetaM (Option Expr) := do
-  let some coordinate ← Conic.nonnegativeValue? point body | return none
+  let some coordinate ← Cone.nonnegativeValue? point body | return none
   let coordinate ← Expr.reduceStructure coordinate
   unless ← isDefEq (← inferType coordinate) q(ℝ) do
     let some index := index? | return none

@@ -334,7 +334,7 @@ run_cmd liftTermElabM do
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let environment ← getEnv
-  let .error _ ← Morew.Elab.Conic.Rewrite.planUnique source
+  let .error _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "log-det planning accepted a matrix without a domain"
   let after ← getMCtx
   unless before.mvarCounter == after.mvarCounter &&

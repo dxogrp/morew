@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Plan
+import Morew.Elab.Cone.Plan
 import MorewTest.Environment
 
 /-!
@@ -57,7 +57,7 @@ private def elaborate (source : TSyntax `term) : TermElabM Expr := do
 
 elab "certified_power_family% " source:term : term => do
   let predicate ← elaborate source
-  let .ok result ← Morew.Elab.Conic.normalizeRow predicate
+  let .ok result ← Morew.Elab.Cone.normalizeRow predicate
     | throwError "expected a checked finite power family"
   for expression in #[result.constraint, result.pointwiseIff] do
     if expression.hasMVar || expression.hasSorry then
@@ -147,7 +147,7 @@ def localRange (n : Nat) (q : Fin n → ℝ) (hq : ∀ i, 1 < q i) :
 private def reject (predicate : Expr) (fragment : String) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
-  let .error error ← Morew.Elab.Conic.normalizeRow predicate (label? := some `power_family)
+  let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `power_family)
     | throwError "unsupported power family was accepted: {predicate}"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "power_family" && diagnostic.contains fragment do
@@ -252,7 +252,7 @@ def rationalFamilyRepr : ConstraintRepr (fun x : ℝ =>
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (3 / 2 : ℝ))))
-  let .ok result ← Morew.Elab.Conic.Plan.plan source (mkConst ``rationalFamilyRepr)
+  let .ok result ← Morew.Elab.Cone.Plan.plan source (mkConst ``rationalFamilyRepr)
     | throwError "exact grouped power representation was rejected"
   result.toResult.check source #[]
   unless result.rowPredicates.size == 1 && result.certifiedRows.size == 1 &&
@@ -279,7 +279,7 @@ private def checkExtendedPlan (parameter evidence expected : TSyntax `term)
   let source ← elaborate (← `(fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / ($parameter : ℝ≥0∞).toReal)))
   let rule ← elaborate (← `(extendedFamilyRepr $parameter $evidence))
-  let .ok result ← Morew.Elab.Conic.Plan.plan source rule
+  let .ok result ← Morew.Elab.Cone.Plan.plan source rule
     | throwError "extended-real parameter family was rejected"
   result.toResult.check source #[]
   lambdaTelescope result.rowPredicates[0]! fun _ body =>
@@ -318,7 +318,7 @@ run_cmd liftTermElabM do
     let source ← elaborate (← `(fun x : ℝ =>
       ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / (($dimension : ℕ) + 1 : ℝ))))
     let rule ← elaborate (← `(castFamilyRepr $dimension (by decide)))
-    let .ok result ← Morew.Elab.Conic.Plan.plan source rule
+    let .ok result ← Morew.Elab.Cone.Plan.plan source rule
       | throwError "cast-parameter family was rejected"
     result.toResult.check source #[]
     lambdaTelescope result.rowPredicates[0]! fun _ body =>

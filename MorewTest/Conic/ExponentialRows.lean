@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Row
 
 /-!
 # Checked exponential rows and finite families
@@ -29,7 +29,7 @@ elab "certified_exp_row% " source:term : term => do
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  match ← Morew.Elab.Conic.normalizeRow predicate with
+  match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an exponential row: {error.reason}"
   | .ok result =>
       for expression in #[result.constraint, result.pointwiseIff] do
@@ -116,7 +116,7 @@ private def expectRejected (source : TSyntax `term) (fragment : String) : TermEl
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  let .error error ← Morew.Elab.Conic.normalizeRow predicate (label? := some `bad_exp)
+  let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `bad_exp)
     | throwError "unsupported exponential row was accepted"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "bad_exp" && diagnostic.contains fragment do
@@ -194,7 +194,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       withLetDecl `hiddenMembership type hole fun binding => do
         let body ← mkForallFVars indices (mkAppN membership.getAppFn (args.set! 2 binding))
         let source ← mkLambdaFVars points body
-        let .error error ← Morew.Elab.Conic.normalizeRow source
+        let .error error ← Morew.Elab.Cone.normalizeRow source
           | throwError "unresolved membership instance was accepted"
         unless (← error.reason.toString).contains "unresolved metavariables" do
           throwError "missing hidden-instance diagnostic: {error.reason}"

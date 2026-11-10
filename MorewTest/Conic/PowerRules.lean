@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 
 /-!
@@ -27,8 +27,8 @@ private def check (term : TSyntax `term) (rows : Nat) (parameters : Nat := 0)
     let retained ← Morew.Elab.Expr.reduceStructure (mkProj ``Prod 1 pair)
     let before ← getMCtx
     let result ← match name? with
-      | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name #[retained]
-      | none => Morew.Elab.Conic.Rewrite.planUnique source #[retained]
+      | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name #[retained]
+      | none => Morew.Elab.Cone.Rewrite.planUnique source #[retained]
     let .ok result := result
       | match result with
         | .error error => throwError "power rule failed: {error.reason}"
@@ -117,7 +117,7 @@ private def checkMissingRange (term : TSyntax `term) (rule : Name) (required : S
     TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression 1 fun _ source => do
-    let .error error ← Morew.Elab.Conic.Rewrite.planDeclaration source rule
+    let .error error ← Morew.Elab.Cone.Rewrite.planDeclaration source rule
       | throwError "a power range without evidence was accepted"
     let text := (← error.reason.toString).replace "\n" " " |>.replace "✝" ""
     let text := String.intercalate " " (text.splitOn " " |>.filter (!·.isEmpty))

@@ -3,8 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.QuadConic
-import Morew.Elab.Conic.Rows
+import Morew.Elab.QuadConic.Objective
+import Morew.Elab.Cone.Rows
+import Morew.Elab.Cone.Finite
 import Morew.Elab.Expr
 import Morew.Elab.State
 
@@ -16,7 +17,7 @@ namespace Morew.Elab.QuadConic
 open Lean Lean.Meta
 open Morew.Elab.Rewrite
 open Reformulation
-open Morew.Elab.Conic (RowResult)
+open Morew.Elab.Cone (RowResult)
 
 private def buildFormCore (presentation : PresentationState) (provider : Affine.EvidenceProvider)
     (certifiedRows : Array (Option (Array RowResult))) :
@@ -34,10 +35,10 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
   let objective ← match ← reifyObjective presentation provider with
     | .error error => return .error error
     | .ok result => pure result
-  let rows ← match ← Morew.Elab.Conic.buildRows presentation provider certifiedRows with
+  let rows ← match ← Morew.Elab.Cone.buildRows presentation provider certifiedRows with
     | .error error => return .error error
     | .ok result => pure result
-  let form ← Morew.Elab.Conic.Space.withCanonicalDomain presentation.domainType do
+  let form ← Morew.Elab.Cone.Space.withCanonicalDomain presentation.domainType do
     let sense := mkConst <| match presentation.sense with
       | .minimize => ``Morew.ObjectiveSense.minimize
       | .maximize => ``Morew.ObjectiveSense.maximize
@@ -45,7 +46,7 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
       #[sense, objective.quadratic, objective.affine, objective.curvature,
         mkNatLit rows.count, rows.constraints]
     let represented ← mkAppM ``Morew.QuadConic.Data.toProblem #[data]
-    let equality ← mkAppM ``Morew.Elab.Conic.problemEq
+    let equality ← mkAppM ``Morew.Elab.Cone.problemEq
       #[represented, canonical, objective.pointwiseEquality, rows.feasibleIff]
     let form ← instantiateMVars (← mkAppM ``Morew.QuadConic.Form.mk #[data, equality])
     let expected ← mkAppM ``Morew.QuadConic.Form #[canonical]
@@ -56,8 +57,8 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
     checkWithKernel form
     return form
   -- Expose domain aliases in canonical instance types so persisted forms support field notation.
-  let domain ← Morew.Elab.Conic.Space.structuralDomain presentation.domainType
-  let publicType ← Morew.Elab.Conic.Space.withCanonicalDomain domain do
+  let domain ← Morew.Elab.Cone.Space.structuralDomain presentation.domainType
+  let publicType ← Morew.Elab.Cone.Space.withCanonicalDomain domain do
     mkAppOptM ``Morew.QuadConic.Form #[some domain, none, none, none, some canonical]
   let form ← mkAppOptM ``id #[some publicType, some form]
   checkWithKernel form
@@ -71,7 +72,7 @@ def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProv
     MetaM (Except Expr.Error Expr) :=
   State.withIsolatedMVars do
     try
-      Morew.Elab.Conic.Plan.withPresentationFiniteInstances
+      Morew.Elab.Cone.Finite.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars)
         presentation (buildFormCore presentation provider certifiedRows)
     catch error =>

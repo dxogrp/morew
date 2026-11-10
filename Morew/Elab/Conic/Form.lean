@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rows
+import Morew.Elab.Conic.Objective
+import Morew.Elab.Cone.Rows
+import Morew.Elab.Cone.Finite
 import Morew.Elab.Expr
 import Morew.Elab.State
 
@@ -14,6 +16,7 @@ namespace Morew.Elab.Conic
 
 open Lean Lean.Meta
 open Morew.Elab.Rewrite
+open Morew.Elab.Cone
 open Reformulation
 
 private def buildFormCore (presentation : PresentationState) (provider : Affine.EvidenceProvider)
@@ -68,7 +71,7 @@ def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProv
     MetaM (Except Expr.Error Expr) :=
   State.withIsolatedMVars do
     try
-      Plan.withPresentationFiniteInstances
+      Cone.Finite.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars)
         presentation (buildFormCore presentation provider certifiedRows)
     catch error =>

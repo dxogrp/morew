@@ -12,7 +12,7 @@ The shared planner adapts the four semantic record types and validates the exact
 ordered target without importing conic recognition or smooth certification.
 -/
 
-assert_not_exists Morew.Conic.Constraint Morew.Elab.Conic.RowResult Morew.Elab.NLP.Rows.Result
+assert_not_exists Morew.Conic.Constraint Morew.Elab.Cone.RowResult Morew.Elab.NLP.Rows.Result
 
 namespace MorewTest.Rewrite.Plan
 

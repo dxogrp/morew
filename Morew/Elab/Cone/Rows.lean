@@ -3,13 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Plan
+import Morew.Elab.Cone.Row
+import Morew.Elab.Rewrite.Plan
 import Morew.Elab.Expr
 import Morew.Elab.State
 
 /-! Assemble checked affine cone rows and their exact feasibility certificate. -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Cone
 
 open Lean Lean.Meta
 open Morew.Elab.Rewrite
@@ -163,4 +164,4 @@ def buildRows (presentation : PresentationState) (provider : Affine.EvidenceProv
     return (constraints, feasibleIff)
   return .ok { count := rows.size, constraints, feasibleIff }
 
-end Morew.Elab.Conic
+end Morew.Elab.Cone

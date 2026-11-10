@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.QuadConic.Form
-import Morew.Elab.Conic.Terminal
+import Morew.Elab.Cone.Terminal
 
 /-! Certify a quadratic objective while using the shared cone-constraint pipeline. -/
 
@@ -13,7 +13,7 @@ namespace Morew.Elab.QuadConic.Terminal
 open Lean Lean.Meta
 
 /-- Quadratic objective recognition and final form construction for `qconic`. -/
-def backend : Morew.Elab.Conic.Terminal.Backend where
+def backend : Morew.Elab.Cone.Terminal.Backend where
   command := "qconic"
   checkObjective presentation provider := do
     return (← reifyObjective presentation provider).map fun _ => ()
@@ -22,7 +22,7 @@ def backend : Morew.Elab.Conic.Terminal.Backend where
 /-- Plan conic constraint rewrites and certify the final quadratic objective. -/
 def plan (presentation : Morew.Elab.Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) :
-    MetaM (Except Expr.Error Morew.Elab.Conic.Terminal.Result) :=
-  Morew.Elab.Conic.Terminal.planWith backend presentation provider
+    MetaM (Except Expr.Error Morew.Elab.Cone.Terminal.Result) :=
+  Morew.Elab.Cone.Terminal.planWith backend presentation provider
 
 end Morew.Elab.QuadConic.Terminal

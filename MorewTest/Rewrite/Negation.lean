@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Rewrite.Match
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import Morew.Elab.NLP.Rewrite
 import MorewTest.Affine.Support
 import MorewTest.Environment
@@ -92,7 +92,7 @@ noncomputable def parameterAbsEpigraph (parameters : Parameters) :
 private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
     TermElabM Unit := do
   let source ← elaborate term
-  let conic ← Morew.Elab.Conic.Rewrite.planExplicit source (← elaborate conicRule)
+  let conic ← Morew.Elab.Cone.Rewrite.planExplicit source (← elaborate conicRule)
   let .ok conic := conic
     | match conic with
       | .error error => throwError "fixed conic parameter failed: {error.reason}"
@@ -138,7 +138,7 @@ run_cmd liftTermElabM do
     let sentinel ← mkFreshExprMVar (mkConst ``Nat)
     let before ← getMCtx
     let environment ← getEnv
-    if let .ok _ ← Morew.Elab.Conic.Rewrite.planExplicit source rule then
+    if let .ok _ ← Morew.Elab.Cone.Rewrite.planExplicit source rule then
       throwError "symbolic conic parameter changed its value"
     if let .ok _ ← Morew.Elab.NLP.Rewrite.plan source #[] (some rule) then
       throwError "symbolic NLP parameter changed its value"
@@ -159,7 +159,7 @@ run_cmd liftTermElabM do
       (← `(fun p : ℝ × ℝ =>
         @HPow.hPow ℝ Nat ℝ ⟨fun x _ => x ^ 2⟩ p.1 (1 + 1) ≤ p.2))] do
     let source ← elaborate term
-    if let .ok _ ← Morew.Elab.Conic.Rewrite.planExplicit source
+    if let .ok _ ← Morew.Elab.Cone.Rewrite.planExplicit source
         (← elaborate (← `(Conic.SecondOrder.squareEpigraph))) then
       throwError "fixed parameter comparison accepted an altered conic power"
     if let .ok _ ← Morew.Elab.NLP.Rewrite.plan source #[]

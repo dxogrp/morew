@@ -81,7 +81,7 @@ structure ConstraintSplice where
   /-- Number of generated replacement rows, possibly zero. -/
   count : Nat
 
-/-- Operations for the selected conic or NLP representation.
+/-- Operations for the selected terminal representation.
 Section-dependent expressions are stored in `CheckedTerminalArtifact`. -/
 structure TerminalAdapter where
   /-- User-facing representation name. -/
@@ -100,7 +100,7 @@ structure TerminalAdapter where
 
 /-- Terminal evidence in the containing state's section-variable context. -/
 structure CheckedTerminalArtifact where
-  /-- Operations for the selected conic or NLP representation. -/
+  /-- Operations for the selected terminal representation. -/
   adapter : TerminalAdapter
   /-- A kernel-checked form of the final canonical problem. -/
   form : Expr

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Affine.Support
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Row
 
 /-! Shared exact row-certificate assertions. -/
 
@@ -15,7 +15,7 @@ open Lean Lean.Meta Lean.Elab.Term
 def assertRow (term : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
-    let result ← match ← Morew.Elab.Conic.normalizeRow source with
+    let result ← match ← Morew.Elab.Cone.normalizeRow source with
       | .ok result => pure result
       | .error error => throwError "expected affine row {source}\n{error.reason}"
     for expression in #[result.constraint, result.pointwiseIff] do
@@ -41,7 +41,7 @@ def assertRowUnsupported (term : TSyntax `term) (parameterCount : Nat := 0) :
     TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
-    match ← Morew.Elab.Conic.normalizeRow source with
+    match ← Morew.Elab.Cone.normalizeRow source with
     | .ok _ => throwError "unsupported row was accepted"
     | .error error =>
       if (← error.reason.toString).isEmpty then

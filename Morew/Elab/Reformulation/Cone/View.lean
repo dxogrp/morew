@@ -4,14 +4,14 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Reformulation.View
-import Morew.Elab.Reformulation.Conic.PowerChain
+import Morew.Elab.Reformulation.Cone.PowerChain
 import Morew.Conic.SecondOrder
 import Morew.Conic.Exponential.Cone
 import Morew.Conic.PSD
 
 /-! Conic notation and syntax for reconstructing and displaying constraints. -/
 
-namespace Morew.Elab.Reformulation.Conic
+namespace Morew.Elab.Reformulation.Cone
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 
@@ -224,4 +224,4 @@ def viewHooks : Morew.Elab.Reformulation.ViewHooks where
     return none
   mathematicalRows := powerChainPrintRows
 
-end Morew.Elab.Reformulation.Conic
+end Morew.Elab.Reformulation.Cone

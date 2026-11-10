@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Affine.RowSupport
-import Morew.Elab.Conic.Space
+import Morew.Elab.Cone.Space
 
 /-!
 # Affine coordinates of Euclidean decision spaces
@@ -82,7 +82,7 @@ including all nested target components, and leaves no temporary free variables. 
 run_cmd liftTermElabM do
   let domain ← elaborate (← `(Vector 2))
   let target ← elaborate (← `(ℝ × ℝ × (Fin 2 → ℝ)))
-  let (finite, reflexive) ← Morew.Elab.Conic.Space.withCanonicalConeSpaces domain target do
+  let (finite, reflexive) ← Morew.Elab.Cone.Space.withCanonicalConeSpaces domain target do
     let obligation ← mkAppOptM ``FiniteDimensional
       #[some (mkConst ``Real), some target, none, none, none]
     return (← synthInstance obligation, ← mkEqRefl target)

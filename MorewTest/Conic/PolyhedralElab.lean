@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import Morew.Conic.Polyhedral
 import Mathlib.Analysis.SpecialFunctions.Exp
 
@@ -35,8 +35,8 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
   lambdaBoundedTelescope expression parameterCount fun _ source => do
     let rule? ← rule?.mapM elaborate
     let outcome ← match rule? with
-      | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule
-      | none => Morew.Elab.Conic.Rewrite.planUnique source
+      | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule
+      | none => Morew.Elab.Cone.Rewrite.planUnique source
     let result ← match outcome with
       | .ok result => pure result
       | .error error => throwError "expected a polyhedral plan for {source}: {error.reason}"
@@ -58,8 +58,8 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
   let source ← elaborate stx
   let rule? ← rule?.mapM elaborate
   let outcome ← match rule? with
-    | some rule => Morew.Elab.Conic.Rewrite.planExplicit source rule
-    | none => Morew.Elab.Conic.Rewrite.planUnique source
+    | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule
+    | none => Morew.Elab.Cone.Rewrite.planUnique source
   let .error error := outcome
     | throwError "unsupported polyhedral predicate was accepted"
   let message ← error.reason.toString
@@ -68,7 +68,7 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
 
 elab "polyhedral_repr% " source:term : term => do
   let source ← elaborate source
-  match ← Morew.Elab.Conic.Rewrite.planUnique source with
+  match ← Morew.Elab.Cone.Rewrite.planUnique source with
   | .ok result =>
     let .exact repr := result.certificate
       | throwError "an unconditional replacement acquired retained assumptions"
@@ -219,7 +219,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
   let missing ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder missing)
+  let .error error ← Morew.Elab.Cone.Rewrite.planUnique (mkApp builder missing)
     | throwError "an unresolved bound was accepted"
   unless (← error.reason.toString).contains "unresolved metavariables" do
     throwError "wrong unresolved-bound diagnostic: {error.reason}"
@@ -227,13 +227,13 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "failed planning leaked scratch metavariables"
   withLetDecl `hiddenBound (mkConst ``Real) missing fun hidden => do
-    let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder hidden)
+    let .error error ← Morew.Elab.Cone.Rewrite.planUnique (mkApp builder hidden)
       | throwError "an unresolved bound hidden in a let was accepted"
     unless (← error.reason.toString).contains "unresolved metavariables" do
       throwError "wrong hidden-bound diagnostic: {error.reason}"
   let coefficientBuilder ← elaborate (← `(fun (a x : ℝ) => |a * x| ≤ 1))
   withLetDecl `coefficient (mkConst ``Real) missing fun coefficient => do
-    let .error error ← Morew.Elab.Conic.Rewrite.planUnique (mkApp coefficientBuilder coefficient)
+    let .error error ← Morew.Elab.Cone.Rewrite.planUnique (mkApp coefficientBuilder coefficient)
       | throwError "planner specialized an unresolved coefficient hidden in a local declaration"
     unless (← error.reason.toString).contains "unresolved" do
       throwError "missing unresolved-coefficient diagnostic"
@@ -241,7 +241,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "failed planning assigned a caller metavariable"
   let source ← elaborate (← `(fun x : ℝ => |x| ≤ 2))
   let before ← getMCtx
-  let .ok _ ← Morew.Elab.Conic.Rewrite.planUnique source
+  let .ok _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "the state-isolation success case failed"
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do

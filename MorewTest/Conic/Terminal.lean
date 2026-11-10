@@ -18,7 +18,7 @@ namespace MorewTest.Conic.Terminal
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.Reformulation
-open Morew.Elab.Conic
+open Morew.Elab.Cone
 open MorewTest.Affine
 
 private def makePresentation (objectiveSyntax : TSyntax `term)
@@ -39,7 +39,7 @@ private def makePresentation (objectiveSyntax : TSyntax `term)
   }
 
 private def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
-  let result ← match ← Terminal.plan source with
+  let result ← match ← Morew.Elab.Conic.Terminal.plan source with
     | .ok result => pure result
     | .error error => throwError "expected successful terminal conic plan: {error.reason}"
   let before ← source.canonicalProblem
@@ -151,7 +151,7 @@ run_cmd liftTermElabM do
     let losses ← mkAppM ``Prod.snd #[rest]
     let firstLoss ← mkAppM ``Prod.fst #[losses]
     let secondLoss ← mkAppM ``Prod.snd #[losses]
-    let .ok direct ← Morew.Elab.Conic.Rewrite.planUnique absolute
+    let .ok direct ← Morew.Elab.Cone.Rewrite.planUnique absolute
       | throwError "source-local evidence did not certify the exact rule"
     let .exact _ := direct.certificate
       | throwError "source-local evidence acquired retained assumptions"
@@ -239,7 +239,7 @@ run_cmd liftTermElabM do
     (`laterBad, ← `(fun p : ℝ × ℝ => p.1 < p.2))
   ]
   let before ← getEnv
-  let .error error ← Terminal.plan source
+  let .error error ← Morew.Elab.Conic.Terminal.plan source
     | throwError "unsupported terminal problem was accepted"
   let message ← error.reason.toString
   unless message.contains "firstBad" && message.contains "conic at firstBad using rule" do
@@ -251,13 +251,13 @@ run_cmd liftTermElabM do
   let source ← makePresentation (← `(fun x : ℝ => x ^ 2)) #[
     (`unsupported, ← `(fun x : ℝ => x < 0))
   ]
-  let .error error ← Terminal.plan source
+  let .error error ← Morew.Elab.Conic.Terminal.plan source
     | throwError "nonaffine terminal objective was accepted"
   let message ← error.reason.toString
   unless message.contains "objective" && message.contains "epigraph" do
     throwError "terminal objective failure was not actionable: {message}"
   let maximum := { source with sense := .maximize }
-  let .error error ← Terminal.plan maximum
+  let .error error ← Morew.Elab.Conic.Terminal.plan maximum
     | throwError "nonaffine maximization objective was accepted"
   let message ← error.reason.toString
   unless message.contains "hypograph t" && !message.contains "epigraph t" do
@@ -277,7 +277,7 @@ run_cmd liftTermElabM do
     binders := #[{ name := `point, type := domain }]
     objective
   }
-  let .error _ ← Terminal.plan source
+  let .error _ ← Morew.Elab.Conic.Terminal.plan source
     | throwError "terminal planning specialized an unresolved decision dimension"
   if ← dimension.mvarId!.isAssigned then
     throwError "terminal planning assigned a caller metavariable"

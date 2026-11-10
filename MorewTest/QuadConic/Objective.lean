@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.QuadConic
+import Morew.Elab.QuadConic.Objective
 import MorewTest.ElabSupport
 import Mathlib.Analysis.SpecialFunctions.Exp
 

@@ -3,25 +3,17 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Conic.Terminal
-import Morew.Elab.Reformulation.Rows
+import Morew.Elab.Reformulation.View
+import Morew.Elab.Cone.Terminal
 import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Reduction
 
-/-! Convert nonlinear rows exactly and normalize affine comparisons to cone membership.
-Preserve named affine groups and local definitions. Allocate generated names together and
-emit the selected structural form beside the target. -/
+/-! Normalize retained and direct cone presentations while preserving model-local bindings
+and the evidence checked by the shared terminal planner. -/
 
-namespace Morew.Elab.Reformulation
+namespace Morew.Elab.Reformulation.Cone.Presentation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
-
-private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
-  let name := state.view.constraints[origin]!.name.eraseMacroScopes
-  let .str _ stem := name
-    | throwError "cannot derive a generated-name family from constraint `{name}`"
-  return stem
 
 private def psdMembership {n : ℕ}
     (matrix : Matrix (Fin n) (Fin n) ℝ) (symmetric : matrix.IsSymm) : Prop :=
@@ -35,7 +27,7 @@ private theorem retainedMatrixIsSymm {n : ℕ}
 
 -- Recover semantic symmetry evidence and transport it along checked matrix equalities.
 private def normalizeRetainedPSD (normalizationProof : Term)
-    (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
+    (original target : Expr) : TermElabM Morew.Elab.Cone.BodyNormalization := do
   unless original.isAppOf ``Matrix.PosSemidef &&
       target.isAppOfArity ``Membership.mem 5 do
     throwError "retained PSD predicate does not match the checked membership target"
@@ -65,7 +57,7 @@ private def normalizeRetainedPSD (normalizationProof : Term)
 
 -- Follow accepted structural reductions while preserving operands and model-local bindings.
 private partial def normalizeRetainedBody (normalizationProof : Term)
-    (original target : Expr) : TermElabM Morew.Elab.Conic.BodyNormalization := do
+    (original target : Expr) : TermElabM Morew.Elab.Cone.BodyNormalization := do
   let body ← Morew.Elab.Expr.reduceStructure original (preserveLets := true)
   let target ← Morew.Elab.Expr.reduceStructure target
   if let .letE name type value rest _ := body then
@@ -95,8 +87,8 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
     return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
   if body.isAppOf ``Matrix.PosSemidef then
     return ← normalizeRetainedPSD normalizationProof body target
-  let normalized : Except Exception Morew.Elab.Conic.BodyNormalization ← try
-      pure (.ok (← Morew.Elab.Conic.normalizeBody original))
+  let normalized : Except Exception Morew.Elab.Cone.BodyNormalization ← try
+      pure (.ok (← Morew.Elab.Cone.normalizeBody original))
     catch error => pure (.error error)
   if let .ok result := normalized then
     if result.changed then return result
@@ -129,10 +121,10 @@ private partial def normalizeRetainedBody (normalizationProof : Term)
     throwError "retained membership normalization does not match the source proposition"
   return result
 
--- Normalize retained entries in their original binding scope; use planner expressions
--- for generated entries. Check the complete view against the canonical problem.
-private def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Array Term)
-    (prepared : Morew.Elab.Conic.Terminal.Result)
+/-- Normalize retained entries in their original binding scope and use planner expressions
+for generated entries, checking the complete view against the canonical problem. -/
+def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Array Term)
+    (prepared : Morew.Elab.Cone.Terminal.Result)
     (template rendered : Morew.Syntax.ProblemView) : TermElabM Morew.Syntax.ProblemView := do
   let simpLemmas ← liftMacroM <| normalizationSimpLemmas sourceName normalizationLemmas
   let normalizationProof ← liftMacroM `(by simp only [$[$simpLemmas],*] <;> rfl)
@@ -159,73 +151,10 @@ private def normalizeRetainedView (sourceName : Name) (normalizationLemmas : Arr
         return { row with proposition := ← delabPresentationTerm normalized.body names }
       return { template with constraints }
 
-private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactStem : Name)
-    (state : ReformState)
-    (prepared : Morew.Elab.Conic.Terminal.Result) (preparedVars : Array Expr)
-    (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
-  runTermElabM fun sectionFVars => do
-    let context ← instantiateLCtxMVars (← getLCtx)
-    withLCtx' context do
-    let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
-    let prepared := prepared.replaceFVars preparedVars sectionFVars
-    let targetProblem ← prepared.presentation.canonicalProblem
-    let exact ← mkAppM ``Morew.GlobalEquiv.trans
-      #[typed.normalization.equiv, prepared.equiv]
-    let primitive ← state.runner.liftEquiv exact
-    let candidates := (typed.presentation.constraints ++ prepared.presentation.constraints).toList
-      |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
-    let primitive ← Rows.storeCertificate (artifactStem.appendAfter "Certificate") primitive
-      (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
-    let mut binders := state.view.binders
-    for i in [:prepared.auxiliaries.size] do
-      let some name := allocation.findName? i
-        | throwError "internal error: missing terminal auxiliary allocation"
-      let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
-      binders := binders.push {
-        name
-        typeSyntax := ← presentationTypeSyntax prepared.auxiliaries[i]!.2
-      }
-    let mut rows := #[]
-    for i in [:prepared.rowOrigins.size] do
-      let origin := prepared.rowOrigins[i]!
-      if prepared.replacedIndices.contains origin then
-        let some name := allocation.findName? (prepared.auxiliaries.size + i)
-          | throwError "internal error: missing terminal row allocation"
-        rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-      else
-        rows := rows.push state.view.constraints[origin]!
-    let template := { state.view with binders, constraints := rows }
-    let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
-    -- Prove agreement with reduced zero/negation definitions while retaining their display names.
-    let normalizationLemmas := state.normalizationLemmas ++
-      #[⟨mkCIdent ``sub_zero⟩, ⟨mkCIdent ``zero_sub⟩,
-        ⟨mkCIdent ``sub_neg_eq_add⟩, ⟨mkCIdent ``zero_add⟩, ⟨mkCIdent ``neg_neg⟩]
-    let view ← normalizeRetainedView state.sourceName normalizationLemmas prepared template rendered
-    let semantic ← exactExpressionSyntax targetProblem
-    let formName ← mkAuxDeclName (kind := artifactStem.appendAfter "Form")
-    let form ← mkAuxDefinitionFor formName prepared.form (zetaDelta := true) (compile := false)
-    modifyEnv (addNoncomputable · formName)
-    return {
-      view
-      semantic
-      semanticDomainType := ← exactExpressionSyntax prepared.presentation.domainType
-      primitiveCertificate := ← exactExpressionSyntax primitive
-      simplifyExpLogTerms := state.simplifyExpLogTerms
-      hasSubstitution := state.hasSubstitution
-      liveCheckpointRows := Array.range view.constraints.size
-      removedCheckpointRows := {}
-      normalizationLemmas
-      checkpoint? := some { semantic, semanticAnchor := semantic, view }
-      constraintSplices := prepared.replacedIndices.map fun index =>
-        { index, count := (prepared.rowOrigins.filter (· == index)).size }
-      terminalForm? := some (adapter, ← exactExpressionSyntax form)
-      status := .terminal
-    }
-
--- Reduce explicit class constructors only after direct conic certification.
-private def normalizeDirectPresentation (backend : Morew.Elab.Conic.Terminal.Backend)
+/-- Reduce explicit class constructors only after direct conic certification. -/
+def normalizeDirectPresentation (backend : Morew.Elab.Cone.Terminal.Backend)
     (presentation : PresentationState) : MetaM PresentationState := do
-  let result ← Morew.Elab.Conic.Plan.withPresentationFiniteInstances
+  let result ← Morew.Elab.Cone.Finite.withPresentationFiniteInstances
       (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
     let reduce := fun expression => dsimpPreservingProofLets expression (preserveOperations := false)
     let objective ← Morew.Elab.Rewrite.Reduction.normalize presentation.objective reduce fun candidate => do
@@ -234,41 +163,10 @@ private def normalizeDirectPresentation (backend : Morew.Elab.Conic.Terminal.Bac
       let predicate ← Morew.Elab.Rewrite.Reduction.normalizePredicate row.predicate reduce fun candidate => do
         let (leaves, _) ← Morew.Elab.Rewrite.decomposePredicate candidate
         for leaf in leaves do
-          if let .error _ ← Morew.Elab.Conic.normalizeRow leaf then return false
+          if let .error _ ← Morew.Elab.Cone.normalizeRow leaf then return false
         return true
       return { row with predicate }
     return .ok { presentation with objective, constraints }
   return result.toOption.getD presentation
 
-/-- Plan the complete exact conversion and request all generated local names. -/
-def prepareTerminalConeForm (backend : Morew.Elab.Conic.Terminal.Backend)
-    (adapter : TerminalAdapter) (artifactStem : Name) (state : ReformState) (step : Syntax) :
-    CommandElabM SurfaceStepDraft := withRef step do
-  let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
-    let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
-    let presentation ← normalizeDirectPresentation backend presentation
-    match ← Morew.Elab.Conic.Terminal.planWith backend presentation with
-    | .error error => throwError "terminal {adapter.description} validation is uncertified: {error.reason}"
-    | .ok result => pure (result, sectionFVars)
-  let mut nameRequests := #[]
-  for i in [:prepared.auxiliaries.size] do
-    let stem ← terminalStem state prepared.auxiliaries[i]!.1
-    nameRequests := nameRequests.push {
-      id := i, kind := .generatedBinderFamily
-      requested := Name.mkSimple (stem ++ "_aux"), ref := step }
-  let mut counts := Array.replicate state.view.constraints.size 0
-  for i in [:prepared.rowOrigins.size] do
-    let origin := prepared.rowOrigins[i]!
-    if prepared.replacedIndices.contains origin then
-      let count := counts[origin]! + 1
-      counts := counts.set! origin count
-      let stem ← terminalStem state origin
-      nameRequests := nameRequests.push {
-        id := prepared.auxiliaries.size + i, kind := .generatedRowFamily
-        requested := Name.mkSimple s!"{stem}_conic_{count}", ref := step }
-  return {
-    nameRequests
-    materialize := materializeTerminalConeForm adapter artifactStem state prepared preparedVars
-  }
-
-end Morew.Elab.Reformulation
+end Morew.Elab.Reformulation.Cone.Presentation

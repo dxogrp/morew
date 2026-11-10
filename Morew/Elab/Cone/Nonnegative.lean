@@ -9,7 +9,7 @@ import Morew.Elab.State
 
 /-! Recognize scalar and finite-vector nonnegative-cone coordinates for sign evidence. -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Cone
 
 open Lean Lean.Meta
 
@@ -41,4 +41,4 @@ def nonnegativeValue? (point body : Expr) : MetaM (Option Expr) := do
     return .ok value
   return result.toOption
 
-end Morew.Elab.Conic
+end Morew.Elab.Cone

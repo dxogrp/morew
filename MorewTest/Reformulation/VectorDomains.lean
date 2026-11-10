@@ -195,7 +195,7 @@ private def checkPlan (source : Expr) (retained : Array Expr) (accepted : Bool)
   assigned.mvarId!.assign (mkNatLit 7)
   let before ← getMCtx
   let environment ← getEnv
-  let result ← Morew.Elab.Conic.Rewrite.planDeclaration source
+  let result ← Morew.Elab.Cone.Rewrite.planDeclaration source
     ``positiveSumEpigraph retained provider
   let after ← getMCtx
   unless before.mvarCounter == after.mvarCounter &&

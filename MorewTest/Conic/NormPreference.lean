@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import Lean.Meta.Tactic.AuxLemma
@@ -40,8 +40,8 @@ private def check (term : TSyntax `term) (expected : Array (TSyntax `term))
   let before ← getMCtx
   let environment ← getEnv
   let result ← match rule? with
-    | some rule => Morew.Elab.Conic.Rewrite.planDeclaration source rule
-    | none => Morew.Elab.Conic.Rewrite.planUnique source
+    | some rule => Morew.Elab.Cone.Rewrite.planDeclaration source rule
+    | none => Morew.Elab.Cone.Rewrite.planUnique source
   checkState before environment sentinel
   let .ok result := result
     | match result with
@@ -73,8 +73,8 @@ private def reject (term : TSyntax `term) (message : String)
   let before ← getMCtx
   let environment ← getEnv
   let result ← match rule? with
-    | some rule => Morew.Elab.Conic.Rewrite.planDeclaration source rule
-    | none => Morew.Elab.Conic.Rewrite.planUnique source
+    | some rule => Morew.Elab.Cone.Rewrite.planDeclaration source rule
+    | none => Morew.Elab.Cone.Rewrite.planUnique source
   checkState before environment sentinel
   let .error error := result | throwError "expected norm selection to fail"
   let actual ← error.reason.toString
@@ -118,7 +118,7 @@ private def checkCandidateEvidence (ambiguous : Bool := false)
         sentinel.mvarId!.assign (mkNatLit 19)
         return some (mkAppN (mkConst name) parameters)
     }
-    let outcome ← Morew.Elab.Conic.Rewrite.planUnique source #[] provider
+    let outcome ← Morew.Elab.Cone.Rewrite.planUnique source #[] provider
     let after ← getMCtx
     unless before.mvarCounter == after.mvarCounter &&
         before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
