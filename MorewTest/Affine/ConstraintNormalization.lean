@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
 import Mathlib.Tactic.NormNum
 
 /-!
@@ -33,7 +33,7 @@ elab "certified_row% " source:term : term => do
   let predicate ← elabTerm source none
   synthesizeSyntheticMVarsNoPostponing
   let predicate ← instantiateMVars predicate
-  match ← Morew.Elab.Conic.normalizeRow predicate with
+  match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an affine row: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
 
@@ -112,7 +112,7 @@ private def expectRejected (source : TSyntax `term) (fragment : String) :
     name := `bad_row
     predicate
   }
-  let .error error ← Morew.Elab.Conic.normalizeConstraint entry
+  let .error error ← Morew.Elab.Cone.normalizeConstraint entry
     | throwError "unsupported constraint was accepted"
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "bad_row" && diagnostic.contains fragment do

@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
+import Morew.Elab.Conic.Objective
 import Morew.Elab.Reformulation.Presentation
 
 /-!
@@ -46,7 +47,7 @@ private def checkPresentation (sense : ObjectiveSense) : TermElabM Unit := do
   | .error error => throwError "typed presentation objective was not recognized: {error.reason}"
   | .ok objectiveResult => check objectiveResult.pointwiseEquality
   let entry := presentation.constraints[0]!
-  let .ok row ← Morew.Elab.Conic.normalizeConstraint entry
+  let .ok row ← Morew.Elab.Cone.normalizeConstraint entry
     | throwError "typed presentation row was not recognized"
   check row.pointwiseIff
   unless presentation.sense == sense do

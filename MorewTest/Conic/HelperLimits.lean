@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.RowSupport
 import Lean.Meta.Tactic.AuxLemma
@@ -57,7 +57,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
     for _ in [:2] do
       let before ← getMCtx
       -- Exceptions differ from the public API's explicit error result.
-      let .error error ← Conic.Rewrite.planUnique source #[] provider
+      let .error error ← Cone.Rewrite.planUnique source #[] provider
         | throwError "conic rewriting exceeded the helper-depth limit"
       unless (← error.reason.toString).contains "maxExpansionDepth" do
         throwError "conic rewriting lost the budget diagnostic: {error.reason}"
@@ -75,7 +75,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
 
 private def checkSuccess (term : TSyntax `term) : TermElabM Unit := do
   let source ← elaborate term
-  match ← Conic.Rewrite.planUnique source with
+  match ← Cone.Rewrite.planUnique source with
   | .ok _ => pure ()
   | .error error => throwError "conic rewriting failed after an independent limit failure: {error.reason}"
 

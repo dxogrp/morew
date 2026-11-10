@@ -11,7 +11,7 @@ import Lean.Elab.Term
 /-! Construct mathematical notation for complete chains of power cone constraints.
 Incomplete or ambiguous chains use ordinary presentation. -/
 
-namespace Morew.Elab.Reformulation.Conic
+namespace Morew.Elab.Reformulation.Cone
 
 open Lean Lean.Meta Lean.Elab.Term Qq
 open Morew.Conic
@@ -367,4 +367,4 @@ def powerChainPrintRows (rows : Array Expr) (renderLeaf : Expr → TermElabM Syn
     for (i, row) in candidate.rows do result := result.set! i (some row)
   return result
 
-end Morew.Elab.Reformulation.Conic
+end Morew.Elab.Reformulation.Cone

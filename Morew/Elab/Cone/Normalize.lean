@@ -5,13 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.State
-import Morew.Elab.Conic.Space
+import Morew.Elab.Cone.Space
 import Morew.Elab.Expr
 
-/-! Convert affine comparisons to cone membership using supplied affine certificates.
-Preserve conjunctions, local lets, and operands; simplify literal zero and negation. -/
+/-! Prove equivalence between scalar or finite-vector comparisons and cone membership.
+Preserve conjunctions, local lets, and operands; simplify literal zero and negation.
+The row certifier checks affinity of the coordinates separately. -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Cone
 
 open Lean Lean.Meta
 open Morew.Elab.Rewrite
@@ -269,4 +270,4 @@ def normalizePredicate (predicate : Expr)
     checkWithKernel pointwiseIff
     return { predicate := normalized, pointwiseIff, changed := result.changed }
 
-end Morew.Elab.Conic
+end Morew.Elab.Cone

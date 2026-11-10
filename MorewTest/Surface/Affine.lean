@@ -4,7 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
+import Morew.Elab.Conic.Objective
 import MorewTest.Surface.Conic
 
 /-!
@@ -84,7 +85,7 @@ private def checkSource (name : Name) (sense : ObjectiveSense)
   unless presentation.constraints.size == view.constraints.size do
     throwError "typed presentation changed the row count"
   for entry in presentation.constraints do
-    match ← Morew.Elab.Conic.normalizeConstraint entry with
+    match ← Morew.Elab.Cone.normalizeConstraint entry with
     | .ok result => checkWithKernel result.pointwiseIff
     | .error error => throwError "typed constraint failed: {error.reason}"
 

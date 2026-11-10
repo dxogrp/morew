@@ -3,10 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rules
+import Morew.Elab.Cone.Rules
 import Morew.Elab.Evidence.Sign
-import Morew.Elab.Conic.Plan
-import Morew.Elab.Conic.MatrixDomain
+import Morew.Elab.Cone.Plan
+import Morew.Elab.Cone.MatrixDomain
 import Morew.Elab.Evidence
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Expr
@@ -17,7 +17,7 @@ Automatic selection requires a unique success after preferring the built-in SOC
 norm rule over the power-norm rule. Explicit selection bypasses that preference.
 Retained constraints supply rule premises. -/
 
-namespace Morew.Elab.Conic.Rewrite
+namespace Morew.Elab.Cone.Rewrite
 
 open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite
@@ -177,7 +177,7 @@ private def attempt (source : Expr) (retained : Array Expr)
 def planDeclaration (source : Expr) (name : Name) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
-    Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
+    Finite.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       attempt source retained
         (fun point body prove accept =>
           Match.declaration point body name accept prove) provider
@@ -187,7 +187,7 @@ Adapt whole-predicate certificates directly, retrying subtype conditions by type
 def planExplicit (source rule : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
-    Plan.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
+    Finite.withHelperFiniteInstances Plan.Result.replaceFVars (#[source] ++ retained) do
       if (← whnf (← inferType rule)).isAppOfArity ``Morew.ConstraintRepr 2 then
         let direct ← Plan.plan source rule provider
         if let .ok result := direct then return .ok result
@@ -242,4 +242,4 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
       expression := predicate
       reason := ← addMessageContext error.toMessageData }
 
-end Morew.Elab.Conic.Rewrite
+end Morew.Elab.Cone.Rewrite

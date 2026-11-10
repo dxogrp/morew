@@ -20,7 +20,7 @@ and a weight `λ ≥ 0`, choose `x ∈ ℝⁿ` to solve
 ```
 
 The first term fits the observations `b`; the second controls the size of `x`.
-The equations impose linear constraints. We obtain three equivalent formulations.
+The equations impose linear constraints. We obtain four equivalent formulations.
 -/
 
 namespace Examples.Applications.RidgeReg
@@ -60,14 +60,96 @@ example : (smooth.nlpForm A b C d weight).data.toProblem = smooth A b C d weight
   (smooth.nlpForm A b C d weight).represents
 
 /-!
+## Quadratic conic formulation
+
+The `qconic` command keeps the decision variable `x` and represents `Cx=d` by a
+zero-cone constraint. It decomposes the objective as `f(x) = Q(x) + a(x)`, where
+
+```math
+Q(x)=\lVert Ax\rVert_2^2+\lambda\lVert x\rVert_2^2,
+\qquad a(x)=-2b^T Ax+\lVert b\rVert_2^2.
+```
+
+The assumption `λ ≥ 0` certifies `Q(x) ≥ 0`, including at zero weight.
+-/
+
+variable (hweight : 0 ≤ weight)
+
+reformulation direct : (leastSquares A b C d weight) := by
+  qconic
+
+#printp direct
+
+example : GlobalEquiv (leastSquares A b C d weight) (direct A b C d weight) :=
+  direct.equiv A b C d weight
+example : IsQuadConic (direct A b C d weight) :=
+  direct.isQuadConic A b C d weight hweight
+example : (direct.quadConicForm A b C d weight hweight).data.toProblem =
+    direct A b C d weight := (direct.quadConicForm A b C d weight hweight).represents
+example (x : Fin n → ℝ) : (direct A b C d weight).objective x =
+    Fn.norm2 (A *ᵥ x - b) ^ 2 + weight * Fn.norm2 x ^ 2 := rfl
+example (x : Fin n → ℝ) : (direct A b C d weight).feasible x ↔ C *ᵥ x = d := by
+  change C *ᵥ x - d = 0 ↔ C *ᵥ x = d
+  exact sub_eq_zero
+
+/-- Decompose the ridge objective into its quadratic, linear, and constant terms. -/
+theorem objectiveDecomposition (x : Fin n → ℝ) :
+    (leastSquares A b C d weight).objective x =
+      (Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2) +
+        (-2 * (A *ᵥ x) ⬝ᵥ b + Fn.norm2 b ^ 2) := by
+  change Fn.norm2 (A *ᵥ x - b) ^ 2 + weight * Fn.norm2 x ^ 2 = _
+  simp only [Fn.norm2_sq_eq_sum, Pi.sub_apply, dotProduct]
+  have expansion : (∑ i, ((A *ᵥ x) i - b i) ^ 2) =
+      (∑ i, (A *ᵥ x) i ^ 2) - 2 * (∑ i, (A *ᵥ x) i * b i) + ∑ i, b i ^ 2 := by
+    simp only [Finset.mul_sum, ← Finset.sum_sub_distrib, ← Finset.sum_add_distrib]
+    apply Finset.sum_congr rfl
+    intro i _
+    ring
+  rw [expansion]
+  ring
+
+/-- The generated form stores the homogeneous part of the ridge objective. -/
+theorem directQuadratic (x : Fin n → ℝ) :
+    (direct.quadConicForm A b C d weight hweight).data.quadratic x =
+      Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2 := by
+  change inner (𝕜 := ℝ) (WithLp.toLp 2 (A *ᵥ x - 0)) (WithLp.toLp 2 (A *ᵥ x - 0)) +
+    weight * inner (𝕜 := ℝ) (WithLp.toLp 2 x) (WithLp.toLp 2 x) = _
+  simp only [sub_zero, real_inner_self_eq_norm_sq, Fn.norm2]
+
+/-- The generated affine part stores the cross term and the constant term. -/
+theorem directAffine (x : Fin n → ℝ) :
+    (direct.quadConicForm A b C d weight hweight).data.affine x =
+      -2 * (A *ᵥ x) ⬝ᵥ b + Fn.norm2 b ^ 2 := by
+  have represented := congrArg (fun p : Problem (Fin n → ℝ) ℝ => p.objective x)
+    (direct.quadConicForm A b C d weight hweight).represents
+  change (direct.quadConicForm A b C d weight hweight).data.quadratic x +
+    (direct.quadConicForm A b C d weight hweight).data.affine x =
+      (leastSquares A b C d weight).objective x at represented
+  rw [directQuadratic] at represented
+  linarith [objectiveDecomposition A b C d weight x]
+
+include hweight in
+/-- The homogeneous quadratic part is nonnegative when the weight is nonnegative. -/
+theorem quadraticNonnegative (x : Fin n → ℝ) :
+    0 ≤ Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2 :=
+  add_nonneg (sq_nonneg _) (mul_nonneg hweight (sq_nonneg _))
+
+example : IsQuadConic (direct A b C d 0) :=
+  direct.isQuadConic A b C d 0 (le_refl 0)
+
+example {z : FeasiblePoint (direct A b C d weight)}
+    (hz : (direct A b C d weight).IsGlobalOptimum z) :
+    (leastSquares A b C d weight).IsGlobalOptimum
+      ((direct.equiv A b C d weight).backward.map z) :=
+  (direct.equiv A b C d weight).map_isGlobalOptimum_backward hz
+
+/-!
 ## Two cone constraints
 
 Introduce bounds `‖Ax-b‖₂² ≤ t` and `‖x‖₂² ≤ s`, and minimize `t + λs`.
 Each bound becomes a rotated second-order cone constraint. The assumption
 `λ ≥ 0` ensures that increasing the penalty bound cannot decrease the objective.
 -/
-
-variable (hweight : 0 ≤ weight)
 
 reformulation separate : (leastSquares A b C d weight) := by
   epigraph t at loss as lossBound
@@ -139,8 +221,8 @@ example : (combined.conicForm A b C d weight).data.toProblem = combined A b C d 
   (combined.conicForm A b C d weight).represents
 
 /-!
-All three formulations retain `x` and the equations `Cx=d`. The conic forms
-add bound variables. Their equivalence certificates recover `x` and transfer
+All four formulations retain `x` and the equations `Cx=d`. The affine conic
+forms add bound variables. Their equivalence certificates recover `x` and transfer
 global optimality to the original problem.
 -/
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.Support
 import MorewTest.Reformulation.AffineHelperSource
@@ -157,7 +157,7 @@ namespace TypedPlans
 
 open Lean Lean.Meta
 
-private def checkExact (source : Expr) (result : Morew.Elab.Conic.Plan.Result) : MetaM Unit := do
+private def checkExact (source : Expr) (result : Morew.Elab.Cone.Plan.Result) : MetaM Unit := do
   let .exact repr := result.certificate
     | throwError "finite evidence made an unconditional representation contextual"
   discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
@@ -174,7 +174,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
     (a : ι → ℝ) => fun x : ι → ℝ => |finiteDot e a x| ≤ 1))
   lambdaBoundedTelescope expression 3 fun _ source => do
-    match ← Morew.Elab.Conic.Rewrite.planUnique source with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite polyhedral plan failed: {error.reason}"
 
@@ -182,7 +182,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let expression ← MorewTest.Affine.elaborate (← `(fun (ι : Type) (e : Fin 2 ≃ ι)
     (a : ι → ℝ) => fun x : ι → ℝ => ‖(![finiteDot e a x] : Fin 1 → ℝ)‖ ≤ 10))
   lambdaBoundedTelescope expression 3 fun _ source => do
-    match ← Morew.Elab.Conic.Rewrite.planUnique source with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite norm-coordinate plan failed: {error.reason}"
 
@@ -191,7 +191,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (a : ι → ℝ) => fun x : ι → ℝ => ({1, 3} : Finset ℕ).sup' (by decide)
       (fun i => (i : ℝ) * finiteDot e a x) ≤ 10))
   lambdaBoundedTelescope expression 3 fun _ source => do
-    match ← Morew.Elab.Conic.Rewrite.planUnique source with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite supremum-coordinate plan failed: {error.reason}"
 
@@ -200,7 +200,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (a : ι → ℝ) => fun x : ι → ℝ => -10 ≤ ({1, 3} : Finset ℕ).inf' (by decide)
       (fun i => (i : ℝ) * finiteDot e a x)))
   lambdaBoundedTelescope expression 3 fun _ source => do
-    match ← Morew.Elab.Conic.Rewrite.planUnique source with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite infimum-coordinate plan failed: {error.reason}"
 
@@ -219,7 +219,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let rule := pair.getAppArgs[3]!
-    match ← Morew.Elab.Conic.Rewrite.planExplicit source rule with
+    match ← Morew.Elab.Cone.Rewrite.planExplicit source rule with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite explicit-target plan failed: {error.reason}"
 
@@ -232,7 +232,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
-    match ← Morew.Elab.Conic.Rewrite.planUnique source retained with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source retained with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite second-order plan failed: {error.reason}"
 
@@ -245,7 +245,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let pair ← Morew.Elab.Expr.reduceStructure pair
     let source := pair.getAppArgs[2]!
     let retained := #[pair.getAppArgs[3]!]
-    match ← Morew.Elab.Conic.Rewrite.planUnique source retained with
+    match ← Morew.Elab.Cone.Rewrite.planUnique source retained with
     | .ok result => checkExact source result
     | .error error => throwError "hidden finite exponential plan failed: {error.reason}"
 

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
 import MorewTest.ElabSupport
 
 /-!
@@ -16,7 +16,7 @@ identities and native operations before problem printing is involved.
 namespace MorewTest.Conic.Normalize
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
-open Morew.Elab.Conic MorewTest.Affine
+open Morew.Elab.Cone MorewTest.Affine
 
 private def assertNormalization (sourceSyntax targetSyntax : TSyntax `term)
     (parameterCount : Nat := 0) (changed : Bool := true) : TermElabM Unit := do

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Affine.RowSupport
-import Morew.Elab.Conic.Symmetry
+import Morew.Elab.Cone.Symmetry
 
 /-!
 # Checked global symmetry and direct PSD rows
@@ -43,7 +43,7 @@ private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
       assigned.mvarId!.assign (mkNatLit 7)
       let before ← getMCtx
       let messagesBefore ← Core.getMessageLog
-      let proof ← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix
+      let proof ← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix
       checkUnchanged before
       unless (← Core.getMessageLog).toList.length == messagesBefore.toList.length do
         throwError "symmetry recognition leaked tactic diagnostics"
@@ -193,27 +193,27 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       let proposition ← mkAppM ``Matrix.IsSymm #[matrix]
       withLocalDeclD `feasibleSymmetry proposition fun _ => do
         let before ← getMCtx
-        if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
+        if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "feasibility-local symmetry was accepted globally"
         checkUnchanged before
       let conjoined ← mkAppM ``And #[mkConst ``True, proposition]
       withLocalDeclD `feasibleConjoinedSymmetry conjoined fun _ => do
         let before ← getMCtx
-        if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
+        if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "conjoined feasibility-local symmetry was accepted globally"
         checkUnchanged before
       let universal ← mkForallFVars points proposition
       let hole ← mkFreshExprMVar universal
       withLetDecl `unfinishedSymmetry universal hole fun _ => do
         let before ← getMCtx
-        if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
+        if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "unfinished symmetry proof was accepted"
         checkUnchanged before
       if ← hole.mvarId!.isAssigned then throwError "symmetry checker solved a caller proof hole"
       let placeholder ← mkSorry universal true
       withLetDecl `placeholderSymmetry universal placeholder fun _ => do
         let before ← getMCtx
-        if (← Morew.Elab.Conic.Symmetry.prove? points[0]! matrix).isSome then
+        if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "placeholder symmetry proof was accepted"
         checkUnchanged before
 
@@ -240,7 +240,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       withLetDecl `hiddenMembership type hole fun binding => do
         let predicate ← mkLambdaFVars points (mkAppN body.getAppFn (arguments.set! 2 binding))
         let before ← getMCtx
-        let .error error ← Morew.Elab.Conic.normalizeRow predicate (label? := some `unfinished_psd)
+        let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `unfinished_psd)
           | throwError "unfinished PSD membership instance was accepted"
         checkUnchanged before
         let diagnostic ← error.reason.toString

@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 
@@ -24,7 +24,7 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private abbrev Prepared := Morew.Elab.Conic.Plan.Result
+private abbrev Prepared := Morew.Elab.Cone.Plan.Result
 
 private def conicStyle : Rows.Style := {
   family := "conic", diagnostic := "conic", certificateKind := `_conicCertificate
@@ -39,7 +39,7 @@ private def materializeConic (state : ReformState) (index : Nat)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
     let prepared : Prepared :=
-      Morew.Elab.Conic.Plan.Result.replaceFVars prepared preparedVars sectionFVars
+      Morew.Elab.Cone.Plan.Result.replaceFVars prepared preparedVars sectionFVars
     let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
       typed.presentation index prepared.toResult
     Rows.finish conicStyle state typed index {
@@ -60,20 +60,20 @@ def prepareConic (state : ReformState) (step : Syntax)
     let (rule?, declaration?) ← Rows.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
     let result : Except Morew.Elab.Expr.Error Prepared ←
-      Morew.Elab.Conic.Plan.withPresentationFiniteInstances
-        Morew.Elab.Conic.Plan.Result.replaceFVars presentation do
+      Morew.Elab.Cone.Finite.withPresentationFiniteInstances
+        Morew.Elab.Cone.Plan.Result.replaceFVars presentation do
         if let some name := declaration? then do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
+          Morew.Elab.Cone.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
         else if let some rule := rule? then do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
+          Morew.Elab.Cone.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
         else do
           let retained := presentation.constraints.extract 0 index ++
             presentation.constraints.extract (index + 1) presentation.constraints.size
-          Morew.Elab.Conic.Rewrite.planUnique predicate (retained.map (·.predicate))
+          Morew.Elab.Cone.Rewrite.planUnique predicate (retained.map (·.predicate))
     match result with
     | .error error =>
       throwErrorAt selector "constraint `{selector.getId.eraseMacroScopes}`: {error.reason}"

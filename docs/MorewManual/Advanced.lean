@@ -52,6 +52,7 @@ constructs a representation directly.
 Register a definition with `@[morew_conic]`, `@[morew_nlp]`, or both.
 The corresponding commands select registered rules, infer their parameters
 from the selected constraint, and certify the replacement.
+The `qconic` command uses the same constraint rules as `conic`.
 
 Use `conic at label using rule` or `nlp at label using rule` to select a rule
 explicitly. The rule may be unregistered.
@@ -68,9 +69,9 @@ The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
 tag := "options"
 %%%
 
-Transparent helper functions are expanded during affine and smoothness
-certification. The `morew.affine` and `morew.smooth` options control these
-operations separately, with the same limits for each source expression:
+The `morew.affine`, `morew.quadConic`, and `morew.smooth` options control expansion
+of eligible transparent helpers during affine, quadratic, and smoothness
+certification, respectively. Each uses the following limits per source expression:
 
 :::table +header
 *
@@ -93,6 +94,7 @@ operations separately, with the same limits for each source expression:
 
 Place `set_option morew.affine.maxExpansionDepth 64 in` immediately before a
 reformulation to change the affine expansion depth. Use
+`morew.quadConic.maxExpansionDepth` for quadratic certification and
 `morew.smooth.maxExpansionDepth` for smoothness certification.
 The other options have the same scope. Setting any limit to zero disables
 helper expansion while retaining direct recognition of supported expressions.

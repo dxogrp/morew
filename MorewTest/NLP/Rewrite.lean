@@ -15,7 +15,7 @@ the exact proposed feasibility, including row insertion and auxiliary projection
 The tests distinguish candidate matching from complete domain certification.
 -/
 
-assert_not_exists Morew.Elab.Conic.Plan.Result Morew.Elab.Conic.RowResult
+assert_not_exists Morew.Elab.Cone.Plan.Result Morew.Elab.Cone.RowResult
 
 namespace MorewTest.NLP.Rewrite
 

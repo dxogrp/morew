@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import Lean.Meta.Tactic.AuxLemma
@@ -31,8 +31,8 @@ private def reject (term : TSyntax `term) (rule? : Option Name := none) :
   let before ← getMCtx
   let environment ← getEnv
   let outcome ← match rule? with
-    | some name => Morew.Elab.Conic.Rewrite.planDeclaration source name
-    | none => Morew.Elab.Conic.Rewrite.planUnique source
+    | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name
+    | none => Morew.Elab.Cone.Rewrite.planUnique source
   let .error _ := outcome | throwError "expected negated comparison rejection"
   let after ← getMCtx
   unless before.mvarCounter == after.mvarCounter &&

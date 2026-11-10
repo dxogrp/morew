@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Rewrite
+import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import Lean.Meta.Tactic.AuxLemma
 import MorewTest.Environment
@@ -19,7 +19,7 @@ rows before selecting nonlinear rules.
 namespace MorewTest.Conic.Rewrite
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
-open Morew.Elab.Conic MorewTest.Affine
+open Morew.Elab.Cone MorewTest.Affine
 
 private def checkPrepared (source : Expr) (result : Plan.Result)
     (retained : Array Expr := #[]) : MetaM Nat := do
@@ -38,7 +38,7 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
     (retained : Array Expr := #[]) : TermElabM Unit := do
   let source ← elaborate stx
   let before ← getMCtx
-  let result ← Morew.Elab.Conic.Rewrite.planUnique source retained
+  let result ← Morew.Elab.Cone.Rewrite.planUnique source retained
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "automatic selection leaked scratch metavariables"
@@ -57,7 +57,7 @@ private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
   let .ok _ ← normalizeRow source | throwError "ambiguity fixture is not already affine"
   let before ← getMCtx
   let environment ← getEnv
-  let .error error ← Morew.Elab.Conic.Rewrite.planUnique source
+  let .error error ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "multiple exact rules were accepted as a unique match"
   let message ← error.reason.toString
   unless message.contains "ambiguous exact conic rules" do
@@ -97,19 +97,19 @@ run_cmd liftTermElabM do
     let source ← elaborate term
     if !(← Morew.Elab.Rewrite.Registry.candidates .conic source).isEmpty then
       throwError "a smooth-only atom became an exponential cone candidate"
-    let .error _ ← Morew.Elab.Conic.Rewrite.planUnique source
+    let .error _ ← Morew.Elab.Cone.Rewrite.planUnique source
       | throwError "a smooth-only atom acquired an automatic conic rule"
 
 run_cmd liftTermElabM do
   let source ← elaborate (← `(fun p : ℝ × ℝ => p.2 ≤ Real.log p.1))
-  let .error error ← Morew.Elab.Conic.Rewrite.planUnique source
+  let .error error ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "logarithm without a retained margin was accepted"
   unless (← error.reason.toString).contains "positive constant margin" do
     throwError "automatic selection lost its domain diagnostic: {error.reason}"
   let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => Real.exp x ≤ c))
   let hole ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
-  let .error _ ← Morew.Elab.Conic.Rewrite.planUnique (mkApp builder hole)
+  let .error _ ← Morew.Elab.Cone.Rewrite.planUnique (mkApp builder hole)
     | throwError "automatic selection accepted unresolved input"
   unless before.mvarCounter == (← getMCtx).mvarCounter do
     throwError "failed selection leaked scratch metavariables"
@@ -130,7 +130,7 @@ private def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
         generated.modify (·.push name)
         return some (mkAppN (mkConst name) parameters)
     }
-    let result ← Morew.Elab.Conic.Rewrite.planUnique source #[] provider
+    let result ← Morew.Elab.Cone.Rewrite.planUnique source #[] provider
     match result with
     | .ok result =>
       unless success do throwError "nonlinear replacement was accepted"

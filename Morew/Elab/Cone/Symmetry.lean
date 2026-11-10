@@ -12,7 +12,7 @@ import Mathlib.Tactic.Ring
 /-! Prove global matrix symmetry from structural identities and independent hypotheses.
 Feasibility evidence involving the decision point is excluded. -/
 
-namespace Morew.Elab.Conic.Symmetry
+namespace Morew.Elab.Cone.Symmetry
 
 open Lean Lean.Meta
 
@@ -210,4 +210,4 @@ def prove? (point matrix : Expr) : MetaM (Option Expr) := do
     catch _ => return .error ()
   return result.toOption
 
-end Morew.Elab.Conic.Symmetry
+end Morew.Elab.Cone.Symmetry

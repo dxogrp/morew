@@ -8,8 +8,8 @@ import Morew.Substitution
 import MorewTest.ElabSupport
 import MorewTest.Environment
 
-assert_not_exists Morew.Elab.Conic.normalizeRow Morew.Elab.Conic.Plan.Result
-  Morew.Elab.Conic.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
+assert_not_exists Morew.Elab.Cone.normalizeRow Morew.Elab.Cone.Plan.Result
+  Morew.Elab.Cone.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
   Morew.Conic.LogDet.hypograph_iff
 
 /-! # Bounded range evidence and independent declaration premises -/

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Reformulation.View
 import Morew.Syntax
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
 
 /-!
 # Canonicalization checkpoints and ordered row replacements
@@ -140,7 +140,7 @@ run_cmd do
     unless ← isDefEq expected actual do
       throwError "stabilizing a constant real row changed its numeric type"
     let feasible ← mkAppM ``Morew.Problem.feasible #[actual]
-    let .ok row ← Morew.Elab.Conic.normalizeRow feasible
+    let .ok row ← Morew.Elab.Cone.normalizeRow feasible
       | throwError "the stabilized constant row is no longer a real affine inequality"
     checkWithKernel row.pointwiseIff
 

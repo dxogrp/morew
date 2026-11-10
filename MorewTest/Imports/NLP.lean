@@ -5,12 +5,21 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.NLP
 
-assert_not_imported Morew.Elab.Conic.Plan
+assert_not_imported Morew.Elab.Cone.Plan
+assert_not_imported Morew.Elab.Cone.Terminal
+assert_not_imported Morew.Elab.Conic.Objective
+assert_not_imported Morew.Elab.Conic.Form
 assert_not_imported Morew.Elab.Conic.Terminal
-assert_not_imported Morew.Elab.Conic.Rules
-assert_not_imported Morew.Elab.Reformulation.Conic.Rewrite
+assert_not_imported Morew.Elab.QuadConic.Objective
+assert_not_imported Morew.Elab.QuadConic.Form
+assert_not_imported Morew.Elab.QuadConic.Terminal
+assert_not_imported Morew.Elab.Cone.Rules
+assert_not_imported Morew.Elab.Reformulation.Cone.Rewrite
+assert_not_imported Morew.Elab.Reformulation.Cone.Terminal
 assert_not_imported Morew.Elab.Reformulation.Conic.Terminal
-assert_not_imported Morew.Elab.Reformulation.Conic.View
+assert_not_imported Morew.Elab.Reformulation.QuadConic.Terminal
+assert_not_imported Morew.Elab.Reformulation.Cone.View
+assert_not_imported Morew.QuadConic.Basic
 assert_not_imported Morew.Conic.PSD.NuclearNorm
 assert_not_imported Morew.Conic.PSD.LogDet
 
@@ -43,6 +52,9 @@ reformulation missingTerminal : source := by conic
 /-- error: reformulation step is unavailable; import Morew.Reformulation.Conic -/
 #guard_msgs in
 reformulation missingTargeted : source := by conic at bound
-assert_not_exists missingTerminal missingTargeted
+/-- error: reformulation step is unavailable; import Morew.Reformulation.Conic -/
+#guard_msgs in
+reformulation missingQuadratic : source := by qconic
+assert_not_exists missingTerminal missingTargeted missingQuadratic
 end
 end MorewTest.Imports.NLP

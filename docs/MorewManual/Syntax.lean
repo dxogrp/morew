@@ -147,20 +147,48 @@ Without either clause, Morew selects a registered rule automatically.
   * Add a condition and prove that every feasible point has a representative satisfying it with an objective at least as good.
 :::
 
-## Conic and smooth NLP forms
-
-A conic formulation has an affine objective and affine maps into cones.
-A smooth nonlinear formulation has an objective and scalar residuals that are
-twice continuously differentiable on an open domain containing the feasible set.
+## Conic, quadratic conic, and smooth NLP forms
 
 `conic at label` and `nlp at label` replace one constraint by an equivalent
-representation. Append `using rule` to choose its representation explicitly.
-These steps may introduce variables and multiple constraints.
+representation, which may introduce auxiliary variables and several constraints.
+Append `using rule` to select a representation explicitly.
 
-A final `conic` or `nlp` command rewrites the remaining constraints, certifies
-the target problem, and ends the script. For a reformulation named `q`, it
-supplies `q.isConic` or `q.isSmoothNLP`, respectively. These terminal commands
-are optional; every reformulation supplies an equivalence certificate.
+The following commands convert the remaining constraints, certify the resulting
+problem, and end the script:
+
+:::table +header
+*
+  * Command
+  * Form
+*
+  * `conic`
+  * Affine objective and affine cone constraints.
+*
+  * `qconic`
+  * Quadratic objective and affine cone constraints.
+*
+  * `nlp`
+  * Twice continuously differentiable objective and scalar residuals on an open domain containing the feasible set.
+:::
+
+These terminal commands generate the representations described under
+{ref "certificates"}[Certificates]. They are optional: every reformulation `q`
+generates an equivalence certificate `q.equiv`.
+
+`conic` requires an affine objective. For a nonlinear objective, first apply
+`epigraph t` for minimization or `hypograph t` for maximization.
+`qconic` preserves a compatible quadratic objective in the form $`Q(x)+a(x)`,
+where $`Q` is a homogeneous quadratic form and $`a` is affine.
+It proves that $`Q` is nonnegative for minimization or nonpositive for maximization
+on the entire decision space, using parameter hypotheses.
+
+`qconic` uses the same constraint conversions as `conic`. To select a rule,
+use `conic at label using rule` before the final `qconic` command.
+
+To apply further transformations, start a new reformulation with the certified
+problem as its source. For a quadratic conic problem, for instance, use `epigraph t`
+followed by `conic` for minimization, or `hypograph t` followed by `conic` for
+maximization, when the resulting bound has a supported conic representation.
 
 # Certificates
 %%%
@@ -177,13 +205,13 @@ tag := "certificates"
   * `q.equiv`
   * The global equivalence between the source and `q`.
 *
-  * `q.conicForm` or `q.nlpForm`
-  * A conic or smooth NLP representation of `q`, with its proof.
+  * `q.conicForm`, `q.quadConicForm`, or `q.nlpForm`
+  * A conic, quadratic conic, or smooth NLP representation of `q`, with its proof.
 *
-  * `q.conicForm.represents` or `q.nlpForm.represents`
+  * `q.conicForm.represents`, `q.quadConicForm.represents`, or `q.nlpForm.represents`
   * Equality of the represented problem with `q`, including its objective and feasibility conditions.
 *
-  * `q.isConic` or `q.isSmoothNLP`
+  * `q.isConic`, `q.isQuadConic`, or `q.isSmoothNLP`
   * A proof that the problem has the corresponding form.
 :::
 

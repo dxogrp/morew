@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.MatrixDomain
+import Morew.Elab.Cone.MatrixDomain
 import MorewTest.ElabSupport
 
 /-!
@@ -44,7 +44,7 @@ private def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Exp
   assigned.mvarId!.assign (mkNatLit 7)
   let before ← getMCtx
   let messagesBefore ← Core.getMessageLog
-  let result ← Morew.Elab.Conic.MatrixDomain.prove? point goal retained proof
+  let result ← Morew.Elab.Cone.MatrixDomain.prove? point goal retained proof
   checkUnchanged before
   unless (← Core.getMessageLog).toList.length == messagesBefore.toList.length do
     throwError "matrix domain recognition leaked diagnostics"

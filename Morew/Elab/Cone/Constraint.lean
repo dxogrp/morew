@@ -9,20 +9,20 @@ import Morew.Conic.Exponential.Cone
 import Morew.Conic.PSD
 import Morew.Elab.Affine
 import Morew.Elab.State
-import Morew.Elab.Conic.Space
+import Morew.Elab.Cone.Space
 import Morew.Elab.Evidence
-import Morew.Elab.Conic.Nonnegative
-import Morew.Elab.Conic.Normalize
-import Morew.Elab.Conic.Symmetry
+import Morew.Elab.Cone.Nonnegative
+import Morew.Elab.Cone.Normalize
+import Morew.Elab.Cone.Symmetry
 import Morew.Conic.Power.Cone
 import Morew.Elab.Reformulation.Presentation
 import Morew.Elab.Expr
 
-/-! Certify affine scalar/vector comparisons and standard cone memberships, including
+/-! Certify affine scalar and vector comparisons and standard cone memberships, including
 PSD predicates with global symmetry. Finite exponential and power families use
 product cones. Return a cone row and pointwise equivalence. -/
 
-namespace Morew.Elab.Conic
+namespace Morew.Elab.Cone
 
 open Lean Lean.Meta
 
@@ -683,37 +683,9 @@ def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
     catch error =>
       return .error (← rowError predicate error.toMessageData label?)
 
-/-- Recognize the real objective retained by a typed presentation. The explicit
-optimization sense and order-dual annotation remain in the presentation. -/
-def reifyObjective (presentation : Reformulation.PresentationState)
-    (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Affine.AffineResult) :=
-  State.withIsolatedMVars do
-    let fail (expression : Expr) (reason : MessageData) :
-        MetaM (Except Expr.Error Affine.AffineResult) := do
-      return .error {
-        expression
-        reason := ← addMessageContext m!"objective: {reason}"
-      }
-    try
-      if (← hasUnresolved presentation.valueType) ||
-          (← hasUnresolved presentation.domainType) ||
-          (← hasUnresolved presentation.objective) then
-        return ← fail presentation.objective "unresolved metavariables in typed objective"
-      unless (← whnf presentation.valueType).isConstOf ``Real do
-        return ← fail presentation.objective "expected a real-valued objective"
-      let expected ← mkArrow presentation.domainType presentation.valueType
-      unless ← isDefEq (← inferType presentation.objective) expected do
-        return ← fail presentation.objective
-          "objective function does not match its presentation domain and value type"
-      match ← Affine.reifyAffine presentation.objective provider with
-      | .ok result => return .ok result
-      | .error error => fail error.expression error.reason
-    catch error =>
-      fail presentation.objective error.toMessageData
-
 /-- Normalize a typed named constraint, retaining its label in diagnostics. -/
 def normalizeConstraint (entry : Reformulation.ConstraintEntry)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error RowResult) :=
   normalizeRow entry.predicate provider (some entry.name)
 
-end Morew.Elab.Conic
+end Morew.Elab.Cone

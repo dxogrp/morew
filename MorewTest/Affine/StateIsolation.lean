@@ -3,7 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic
+import Morew.Elab.Cone.Constraint
+import Morew.Elab.Conic.Objective
 import Morew.Elab.Expr
 import Lean.Meta.Tactic.AuxLemma
 
@@ -35,7 +36,7 @@ private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.Ev
     return (← Affine.reifyAffine source provider).map fun result =>
       #[result.map, result.pointwiseEquality]
   | .row =>
-    return (← Conic.normalizeRow source provider).map fun result =>
+    return (← Cone.normalizeRow source provider).map fun result =>
       #[result.constraint, result.pointwiseIff]
   | .objective =>
     let real := Lean.mkConst ``Real
