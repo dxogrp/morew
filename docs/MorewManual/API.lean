@@ -29,6 +29,5 @@ points for studying parsing, elaboration, and certificate generation.
 
 The command entry points are
 [Basic](api/Morew/Reformulation/Basic.html),
-[Conic](api/Morew/Reformulation/Conic.html),
-[QuadConic](api/Morew/Reformulation/QuadConic.html), and
+[Conic](api/Morew/Reformulation/Conic.html) (including `qconic`), and
 [NLP](api/Morew/Reformulation/NLP.html).

@@ -12,5 +12,5 @@ import Morew.QuadConic.Objective
 Quadratic objectives with affine cone constraints, exact objective
 representations, curvature certificates, and a stored objective sense.
 
-Import `Morew.Reformulation.QuadConic` for the `qconic` command.
+Import `Morew.Reformulation.Conic` for the `conic` and `qconic` commands.
 -/
