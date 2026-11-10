@@ -10,15 +10,9 @@ import Mathlib.LinearAlgebra.QuadraticForm.Basic
 /-!
 # Certified quadratic cone programs
 
-The objective is a homogeneous quadratic form plus an affine map. Its quadratic
-part is globally nonnegative for minimization and globally nonpositive for
-maximization. Constants belong to the affine part. Rows use the existing affine
-cone constraints.
-
-Objective sense is stored in `form.data.sense` because `OrderDual ℝ` is
-definitionally equal to `ℝ`. `Form.represents` certifies equality of the objective
-and feasible set on the same decision space. The terminal command also checks
-the stored sense against the problem declaration.
+The objective is a homogeneous quadratic form plus an affine map, `Q x + a x`.
+The optimization direction is stored explicitly in `data.sense` because
+`OrderDual ℝ` is definitionally equal to `ℝ`.
 -/
 
 namespace Morew
@@ -205,8 +199,7 @@ end QuadConic
 
 variable {X : Type u} [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
 
-/-- Existence of a quadratic conic representation with a stored objective sense.
-`QuadConic.Form` carries the data and its curvature certificate. -/
+/-- Existence of a quadratic conic representation. -/
 def IsQuadConic (p : Problem X ℝ) : Prop :=
   Nonempty (QuadConic.Form p)
 

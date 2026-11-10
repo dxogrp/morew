@@ -11,8 +11,7 @@ import Morew.Elab.Expr
 import Morew.Elab.State
 
 /-! Plan exact cone constraint replacements and retain their equivalence proofs.
-The selected backend checks the objective before rewriting and constructs a form on
-the final domain. Split unsupported conjunctions so affine rows can supply domain evidence. -/
+Split unsupported conjunctions so affine rows can supply domain evidence. -/
 
 namespace Morew.Elab.Cone.Terminal
 

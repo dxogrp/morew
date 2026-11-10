@@ -44,8 +44,8 @@ variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 /-!
 ## Smooth formulation
 
-The quadratic objective and linear equations are smooth for every real weight.
-The `nlp` command keeps the original variable and objective.
+The quadratic objective and linear equations are smooth. This path keeps
+the original variable and objective.
 -/
 
 reformulation smooth : (leastSquares A b C d weight) := by
@@ -70,12 +70,7 @@ Q(x)=\lVert Ax\rVert_2^2+\lambda\lVert x\rVert_2^2,
 \qquad a(x)=-2\langle Ax,b\rangle+\lVert b\rVert_2^2.
 ```
 
-The assumption `λ ≥ 0` proves `Q(x) ≥ 0` for every `x`, including when `λ = 0`.
-Only the quadratic certificate requires this assumption; the reformulated problem
-and its equivalence certificate retain their original parameters.
-In the coordinate convention
-`(1/2)xᵀPx + qᵀx + r`, these data correspond to
-`P = 2(AᵀA + λI)`, `q = -2Aᵀb`, and `r = bᵀb`.
+The assumption `λ ≥ 0` certifies `Q(x) ≥ 0`, including at zero weight.
 -/
 
 variable (hweight : 0 ≤ weight)

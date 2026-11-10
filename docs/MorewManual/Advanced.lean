@@ -99,14 +99,8 @@ reformulation to change the affine expansion depth. Use
 The other options have the same scope. Setting any limit to zero disables
 helper expansion while retaining direct recognition of supported expressions.
 
-Quadratic certification tries direct recognition before bounded helper expansion.
-It keeps vector and matrix expressions structured and proves that its decomposition
-equals the source objective. Helper expansion exposes
-supported expressions; it does not perform general polynomial normalization,
-complete squares, or recognize matrix quadratic forms from positive semidefiniteness
-proofs.
-
-Certification failures distinguish unsupported expressions, missing sign or domain
-evidence, and exhausted expansion limits. A failed curvature check means that the
-required sign could not be proved from the available parameter evidence. Failure
-to certify an expression does not prove that it is nonquadratic.
+Quadratic certification tries direct recognition, then bounded helper expansion,
+keeping vector and matrix expressions structured. General polynomial normalization,
+completion of squares, and recognition of matrix quadratic forms from positive
+semidefiniteness proofs are unsupported. Errors report unsupported
+structure, missing evidence, or expansion limits.

@@ -11,11 +11,8 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 /-!
 # Certified quadratic objectives
 
-These constructions retain a homogeneous quadratic form, an affine remainder,
-and pointwise equality with the original objective, including its constant term.
-`Certified` records this decomposition without a curvature assumption. Separate
-lemmas prove the global sign of the quadratic part; affine terms impose no sign
-condition.
+`Certified` records a homogeneous quadratic part, an affine remainder, and equality
+with the source objective. Curvature is proved separately from this decomposition.
 -/
 
 namespace Morew.QuadConic

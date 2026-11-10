@@ -14,8 +14,7 @@ namespace Morew.Elab.Conic
 
 open Lean Lean.Meta
 
-/-- Construct an affine map equal to the typed presentation's real objective.
-The declared sense and order-dual annotation remain in the presentation. -/
+/-- Construct an affine map equal to the typed presentation's real objective. -/
 def reifyObjective (presentation : Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Affine.AffineResult) :=
   State.withIsolatedMVars do

@@ -7,8 +7,7 @@ import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Cone.Presentation
 import Morew.Elab.Reformulation.Rows
 
-/-! Allocate names and materialize a terminal cone form through the selected adapter.
-Shared presentation handling preserves the certified objective, rows, and equivalence. -/
+/-! Allocate names and materialize a terminal cone form through the selected adapter. -/
 
 namespace Morew.Elab.Reformulation.Cone
 

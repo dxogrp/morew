@@ -172,21 +172,18 @@ It uses the same constraint conversions as `conic`; those conversions may add
 auxiliary variables. Use `conic at label using rule` before `qconic` to select a
 constraint representation explicitly.
 
-Supported quadratic objectives include affine terms, squares of affine scalar
-expressions, and squared Euclidean norms of affine vectors. These may be combined
-by addition, subtraction, negation, finite sums, and multiplication or division by
-real coefficients independent of the decision variables, provided the required
-curvature and domain conditions can be proved. Affine terms require no sign
-conditions on their coefficients. Division of a term that depends on decision
-variables requires evidence that the divisor is nonzero.
+Supported quadratic objectives combine affine terms, squares of affine scalar
+expressions, and squared Euclidean norms of affine vectors using addition,
+subtraction, negation, finite sums, and multiplication or division by real coefficients
+independent of the decision variables. Curvature is proved globally from parameter
+hypotheses; affine coefficients need no sign conditions. Division of a term that
+depends on decision variables requires evidence that the divisor is nonzero.
 
 For minimization, `Fn.norm2 (A *ᵥ x - b) ^ 2` is supported, as is its sum with
 `weight * Fn.norm2 x ^ 2` under the assumption `0 ≤ weight`, including zero weight.
 Use `Fn.norm2` for the Euclidean norm of a value of type `Fin n → ℝ`; the ordinary
-norm on that function type is the infinity norm. Curvature evidence must be
-independent of the decision variables; assumptions that hold only at feasible
-points cannot establish it. See {ref "options"}[Options] for helper expansion and
-its limits.
+norm on that function type is the infinity norm. See {ref "options"}[Options] for
+helper expansion and its limits.
 
 A subsequent reformulation can apply `epigraph t` and `conic` to a minimizing
 quadratic conic problem, or `hypograph t` and `conic` to a maximizing one, when
@@ -224,12 +221,10 @@ accessible as `form.data.sense`. A theorem about a particular direction can
 require a hypothesis such as `form.data.sense = .minimize`.
 
 `QuadConic.Form q` has fields `data` and `represents : data.toProblem = q`;
-`IsQuadConic q` means that such a form exists. The latter proposition alone
-does not specify a direction. The `qconic` command checks that the stored
-direction agrees with the problem declaration. Its representation certificate
-identifies the final objective and feasible set with those of the stored data.
-The separate certificate `q.equiv` relates the final problem to its source, whose
-decision variables and constraints may differ.
+`IsQuadConic q` means that such a form exists. The `qconic` command checks the
+stored direction against the problem declaration. The form represents the final
+problem on its decision space; `q.equiv` relates it to the source, whose variables
+and constraints may differ.
 
 ## Global equivalence
 
