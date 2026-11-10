@@ -106,6 +106,9 @@ import Morew.NLP.Basic
 import Morew.NLP.Domain
 import Morew.NLP.Rows
 import Morew.NLP.Smooth
+import Morew.QuadConic
+import Morew.QuadConic.Basic
+import Morew.QuadConic.Objective
 import Morew.Reformulation
 import Morew.Reformulation.Basic
 import Morew.Reformulation.Conic
