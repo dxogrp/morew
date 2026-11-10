@@ -98,6 +98,8 @@ import MorewTest.ImportCompatibility.Spectral
 import MorewTest.ImportCompatibility.Substitution
 import MorewTest.ImportCompatibility.TerminalConic
 import MorewTest.ImportCompatibility.TerminalConic.Defined
+import MorewTest.ImportCompatibility.TerminalQuadConic
+import MorewTest.ImportCompatibility.TerminalQuadConic.Defined
 import MorewTest.ImportCompatibility.TypedPresentation
 import MorewTest.Imports.Basic
 import MorewTest.Imports.BasicSuites
@@ -107,7 +109,10 @@ import MorewTest.Imports.ConicSuites
 import MorewTest.Imports.Library
 import MorewTest.Imports.NLP
 import MorewTest.Imports.NLPConic
+import MorewTest.Imports.NLPQuadConic
 import MorewTest.Imports.NLPSuites
+import MorewTest.Imports.QuadConic
+import MorewTest.Imports.QuadConicNLP
 import MorewTest.Imports.Reformulation
 import MorewTest.Imports.Repr
 import MorewTest.Imports.Semantic
@@ -275,6 +280,8 @@ import MorewTest.Reformulation.TerminalNLPFailures
 import MorewTest.Reformulation.TerminalNLPFailuresBackends
 import MorewTest.Reformulation.TerminalNLPFamilies
 import MorewTest.Reformulation.TerminalNLPSection
+import MorewTest.Reformulation.TerminalQuadConic
+import MorewTest.Reformulation.TerminalQuadConicFailures
 import MorewTest.Reformulation.VectorDomains
 import MorewTest.RemovedConstraint
 import MorewTest.Restriction

@@ -62,6 +62,8 @@ import Morew.Elab.NLP.Terminal
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.QuadConic
 import Morew.Elab.QuadConic.Expansion
+import Morew.Elab.QuadConic.Form
+import Morew.Elab.QuadConic.Terminal
 import Morew.Elab.Reformulation.Basic.Derive
 import Morew.Elab.Reformulation.Basic.ObjectiveBound
 import Morew.Elab.Reformulation.Basic.Occurrence
@@ -79,6 +81,7 @@ import Morew.Elab.Reformulation.NLP.Rewrite
 import Morew.Elab.Reformulation.NLP.Terminal
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Reformulation.QuadConic.Terminal
 import Morew.Elab.Reformulation.Registry
 import Morew.Elab.Reformulation.Remove
 import Morew.Elab.Reformulation.Replace
@@ -117,6 +120,7 @@ import Morew.Reformulation
 import Morew.Reformulation.Basic
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
+import Morew.Reformulation.QuadConic
 import Morew.Rewrite
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean

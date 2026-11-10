@@ -10,6 +10,7 @@ assert_not_imported Morew.Elab.NLP.Terminal
 assert_not_imported Morew.Elab.NLP.Rules
 assert_not_imported Morew.Elab.Reformulation.NLP.Rewrite
 assert_not_imported Morew.Elab.Reformulation.NLP.Terminal
+assert_not_imported Morew.Elab.Reformulation.QuadConic.Terminal
 
 run_cmd do
   unless (Morew.Elab.Reformulation.viewAttribute.getValues (← Lean.getEnv)
@@ -41,5 +42,10 @@ reformulation missingTerminal : source := by nlp
 #guard_msgs in
 reformulation missingTargeted : source := by nlp at bound
 assert_not_exists missingTerminal missingTargeted
+
+/-- error: reformulation step is unavailable; import Morew.Reformulation.QuadConic -/
+#guard_msgs in
+reformulation missingQuadratic : source := by qconic
+assert_not_exists missingQuadratic
 end
 end MorewTest.Imports.Conic

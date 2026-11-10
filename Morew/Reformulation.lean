@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
+import Morew.Reformulation.QuadConic
 
 /-!
 # Reformulation command
 
-Conic and smooth NLP reformulation commands with their default rules.
+Conic, quadratic conic, and smooth NLP reformulation commands with their default rules.
 -/

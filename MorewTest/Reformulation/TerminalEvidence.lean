@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Conic
+import Morew.Reformulation.QuadConic
 import Morew.Reformulation.NLP
 import MorewTest.DiagnosticsSupport
 import MorewTest.Environment
@@ -25,6 +26,8 @@ reformulation goodConic : source := by conic
 reformulation goodNLP : source := by nlp
 reformulation alienConic : alien := by conic
 reformulation alienNLP : alien := by nlp
+reformulation goodQuadConic : source := by qconic
+reformulation alienQuadConic : alien := by qconic
 
 -- Test-only syntax alters a proposed reformulation while retaining its checked primitive
 -- certificate, names, and presentation.
@@ -34,6 +37,10 @@ syntax (name := nonterminalConic) "test_conic_nonterminal" : reformulationStep
 syntax (name := nonterminalNLP) "test_nlp_nonterminal" : reformulationStep
 syntax (name := faultyRetarget) "test_conic_retarget" : reformulationStep
 syntax (name := faultyProperty) "test_nlp_property" : reformulationStep
+syntax (name := faultyQuadConic) "test_quadConic_form " term : reformulationStep
+syntax (name := nonterminalQuadConic) "test_quadConic_nonterminal" : reformulationStep
+syntax (name := faultyQuadConicRetarget) "test_quadConic_retarget" : reformulationStep
+syntax (name := faultyQuadConicRetargetSense) "test_quadConic_retarget_sense" : reformulationStep
 
 private def withForm (draft : SurfaceStepDraft) (form : TSyntax `term) : SurfaceStepDraft :=
   { draft with materialize := fun allocation => do
@@ -51,6 +58,39 @@ private def conicForm : StepHandler := fun state step => do
 private def nlpForm : StepHandler := fun state step => do
   let `(reformulationStep| test_nlp_form $form:term) := step | throwUnsupportedSyntax
   return withForm (← prepareTerminalNLP state step) form
+
+@[morew_reformulation_step faultyQuadConic]
+private def quadConicForm : StepHandler := fun state step => do
+  let `(reformulationStep| test_quadConic_form $form:term) := step | throwUnsupportedSyntax
+  return withForm (← prepareTerminalQuadConic state step) form
+
+@[morew_reformulation_step nonterminalQuadConic]
+private def continuingQuadConicForm : StepHandler := fun state step => do
+  let draft ← prepareTerminalQuadConic state step
+  return { draft with materialize := fun allocation => do
+    return { (← draft.materialize allocation) with status := .continue } }
+
+@[morew_reformulation_step faultyQuadConicRetarget]
+private def retargetedQuadConicForm : StepHandler := fun state step => do
+  let draft ← prepareTerminalQuadConic state step
+  return { draft with materialize := fun allocation => do
+    let result ← draft.materialize allocation
+    let some (adapter, form) := result.terminalForm?
+      | throwError "expected a quadratic terminal form"
+    let adapter := { adapter with
+      retarget := fun _ _ _ => pure (mkConst ``alienQuadConic.quadConicForm) }
+    return { result with terminalForm? := some (adapter, form) } }
+
+@[morew_reformulation_step faultyQuadConicRetargetSense]
+private def retargetedQuadConicSense : StepHandler := fun state step => do
+  let draft ← prepareTerminalQuadConic state step
+  return { draft with materialize := fun allocation => do
+    let result ← draft.materialize allocation
+    let some (adapter, form) := result.terminalForm?
+      | throwError "expected a quadratic terminal form"
+    let adapter := { adapter with
+      retarget := fun _ _ _ => pure (mkConst ``goodQuadConic.quadConicForm) }
+    return { result with terminalForm? := some (adapter, form) } }
 
 @[morew_reformulation_step nonterminalConic]
 private def continuingForm : StepHandler := fun state step => do
@@ -96,7 +136,8 @@ elab "assert_evidence_atomic% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "malformed terminal evidence leaked declarations"
-  for suffix in #[Name.anonymous, `equiv, `conicForm, `isConic, `nlpForm, `isSmoothNLP] do
+  for suffix in #[Name.anonymous, `equiv, `conicForm, `isConic, `quadConicForm, `isQuadConic,
+      `nlpForm, `isSmoothNLP] do
     let name := targetName ++ suffix
     if after.contains name then throwError "malformed terminal evidence emitted {name}"
     if (Syntax.getProblemView? after name).isSome ||
@@ -143,6 +184,32 @@ reformulation retargeted : source := by test_conic_retarget
 #guard_error_fragments ["injected terminal adapter property failure"] in
 assert_evidence_atomic% lateProperty in
 reformulation lateProperty : source := by test_nlp_property
+
+#guard_error_fragments ["terminal evidence is not a QuadConic.Form"] in
+assert_evidence_atomic% wrongQuadConicType in
+reformulation wrongQuadConicType : source := by test_quadConic_form True.intro
+
+#guard_error_fragments ["terminal quadratic conic form does not represent the final canonical problem"] in
+assert_evidence_atomic% wrongQuadConicProblem in
+reformulation wrongQuadConicProblem : source := by
+  test_quadConic_form alienQuadConic.quadConicForm
+
+#guard_error_fragments ["terminal quadratic conic form has the wrong objective sense"] in
+assert_evidence_atomic% wrongQuadConicSense in
+reformulation wrongQuadConicSense : maximum := by
+  test_quadConic_form goodQuadConic.quadConicForm
+
+#guard_error_fragments ["a quadratic conic form requires a terminal result"] in
+assert_evidence_atomic% continuingQuadConic in
+reformulation continuingQuadConic : source := by test_quadConic_nonterminal
+
+#guard_error_fragments ["terminal quadratic conic form does not represent the final canonical problem"] in
+assert_evidence_atomic% retargetedQuadConic in
+reformulation retargetedQuadConic : source := by test_quadConic_retarget
+
+#guard_error_fragments ["terminal quadratic conic form has the wrong objective sense"] in
+assert_evidence_atomic% retargetedQuadConicWrongSense in
+reformulation retargetedQuadConicWrongSense : maximum := by test_quadConic_retarget_sense
 
 -- Every rejection preserves the ability to reuse the output and companion names.
 reformulation lateProperty : source := by nlp

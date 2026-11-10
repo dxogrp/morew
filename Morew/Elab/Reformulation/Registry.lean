@@ -32,6 +32,8 @@ def prepareStep (state : ReformState) (step : Syntax) : CommandElabM SurfaceStep
   | [] =>
     let required := if step.isOfKind ``Morew.conicStep || step.isOfKind ``Morew.conicAtStep then
         "Morew.Reformulation.Conic"
+      else if step.isOfKind ``Morew.quadConicStep then
+        "Morew.Reformulation.QuadConic"
       else if step.isOfKind ``Morew.nlpStep || step.isOfKind ``Morew.nlpAtStep then
         "Morew.Reformulation.NLP"
       else "Morew.Reformulation.Basic"
