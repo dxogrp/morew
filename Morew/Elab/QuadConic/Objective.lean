@@ -97,19 +97,24 @@ private theorem nonpositiveEmptySum {ι : Type*} (s : Finset ι)
 end Curvature
 
 -- Specialize universal parameter assumptions at the current finite-sum indices.
-private partial def parameterProjection? (proof goal : Expr) (indices : List Expr) :
-    MetaM (Option Expr) := do
+private partial def parameterProjection? (proof goal : Expr) (indices : List Expr)
+    (reuseIndices : Bool) : StateT Nat MetaM (Option Expr) := do
+  if reuseIndices then
+    let remaining ← get
+    if remaining == 0 then return none
+    set (remaining - 1)
   let type ← Expr.reduceStructure (← inferType proof)
   if ← isDefEq type goal then return some proof
   if type.isAppOfArity ``And 2 then
-    if let some found ← parameterProjection? (← mkAppM ``And.left #[proof]) goal indices then
+    if let some found ← parameterProjection? (← mkAppM ``And.left #[proof]) goal indices
+        reuseIndices then
       return some found
-    return ← parameterProjection? (← mkAppM ``And.right #[proof]) goal indices
+    return ← parameterProjection? (← mkAppM ``And.right #[proof]) goal indices reuseIndices
   if let .forallE _ domain _ _ := type then
     for index in indices do
       if ← isDefEq domain (← inferType index) then
-        let remaining := indices.filter (· != index)
-        if let some found ← parameterProjection? (mkApp proof index) goal remaining then
+        let remaining := if reuseIndices then indices else indices.filter (· != index)
+        if let some found ← parameterProjection? (mkApp proof index) goal remaining reuseIndices then
           return some found
   return none
 
@@ -123,7 +128,11 @@ private def parameterProof? (point goal : Expr) (indices : Array Expr) :
     let proof := declaration.toExpr
     if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
         (← Evidence.hasPlaceholders proof) then continue
-    if let some found ← parameterProjection? proof goal indices.toList then
+    -- Preserve the search that consumes indices, then bound the fallback that reuses them.
+    let found? ← match ← (parameterProjection? proof goal indices.toList false).run' 0 with
+      | some found => pure (some found)
+      | none => (parameterProjection? proof goal indices.toList true).run' 1024
+    if let some found := found? then
       checkWithKernel found
       return some found
   return none

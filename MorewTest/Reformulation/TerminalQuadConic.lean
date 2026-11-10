@@ -124,6 +124,26 @@ example : (weightedSumTarget indices weight).objective 0 =
 
 end FiniteSums
 
+section DiagonalWeights
+
+variable (weight : Fin n → Fin n → ℝ) (hweight : ∀ i j, 0 ≤ weight i j)
+
+def diagonalSum (weight : Fin n → Fin n → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ∑ i, weight i i * (x i)^2
+
+include hweight in
+reformulation diagonalSumTarget : (diagonalSum weight) := by qconic
+
+example : GlobalEquiv (diagonalSum weight) (diagonalSumTarget weight) :=
+  diagonalSumTarget.equiv weight
+example : IsQuadConic (diagonalSumTarget weight) :=
+  diagonalSumTarget.isQuadConic weight hweight
+example (x : Fin n → ℝ) : (diagonalSumTarget weight).objective x =
+    ∑ i, weight i i * (x i)^2 := rfl
+
+end DiagonalWeights
+
 def empty := problem (x : Fin 0 → ℝ) minimize Fn.norm2 x ^ 2 + 5
 reformulation emptyTarget : empty := by qconic
 example : emptyTarget.quadConicForm.data.rowCount = 0 := rfl

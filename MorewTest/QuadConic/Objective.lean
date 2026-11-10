@@ -90,6 +90,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     fun x : ℝ => ∑ i ∈ s, w i * (x + i)^2)) 3 .maximize
   assertQuadratic (← `(fun (w : Fin 2 → Fin 3 → ℝ) (_ : ∀ i j, 0 ≤ w i j) =>
     fun x : Fin 2 → Fin 3 → ℝ => ∑ i, ∑ j, w i j * (x i j)^2)) 2
+  assertQuadratic (← `(fun (w : Fin 2 → Fin 2 → Fin 2 → Fin 2 → Fin 2 → ℝ)
+    (_ : ∀ i j k l m, 0 ≤ w i j k l m) =>
+    fun x : ℝ => ∑ i, ∑ j, ∑ k, ∑ l, ∑ m, w m l k j i * x^2)) 2
   assertQuadratic (← `(fun (w : ℕ → ℝ) =>
     fun x : ℝ => ∑ i ∈ (∅ : Finset ℕ), w i * x^2)) 1
   assertQuadratic (← `(fun (w : Fin 0 → ℝ) =>
@@ -100,6 +103,14 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertQuadratic (← `(fun (s : Finset ℕ) (w : ℕ → ℝ) (_ : ∀ i ∈ s, 0 ≤ w i) =>
     fun x : ℝ => ∑ i ∈ s, w i * (x + i)^2)) 3
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertQuadratic (← `(fun (s : Finset ℕ) (w : ℕ → ℕ → ℝ)
+    (_ : ∀ i ∈ s, ∀ j ∈ s, 0 ≤ w i j) =>
+    fun x : ℝ => ∑ i ∈ s, w i i * (x + i)^2)) 3
+  assertRejected (← `(fun (s t : Finset ℕ) (w : ℕ → ℕ → ℝ)
+    (_ : ∀ i ∈ s, ∀ j ∈ t, 0 ≤ w i j) =>
+    fun x : ℝ => ∑ i ∈ s, w i i * (x + i)^2)) 4
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertQuadratic (← `(fun (s : Finset ℕ) (t : ℕ → Finset ℕ) (w : ℕ → ℕ → ℝ)
