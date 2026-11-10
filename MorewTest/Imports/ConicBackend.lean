@@ -14,4 +14,4 @@ assert_not_imported Morew.QuadConic.Basic
 
 assert_not_exists Morew.Elab.QuadConic.reifyObjective Morew.Elab.QuadConic.buildForm
 
-example : Morew.Elab.Conic.Terminal.affineBackend.command = "conic" := rfl
+example : Morew.Elab.Conic.Terminal.backend.command = "conic" := rfl

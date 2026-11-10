@@ -15,7 +15,7 @@ open Morew.Elab.Reformulation
 open Morew.Elab.Cone.Terminal
 
 /-- The affine objective backend used by `conic`. -/
-def affineBackend : Backend where
+def backend : Backend where
   command := "conic"
   checkObjective presentation provider := do
     match ← reifyObjective presentation provider with
@@ -31,6 +31,6 @@ def affineBackend : Backend where
 /-- Plan exact cone constraint rewrites and certify the final affine objective. -/
 def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
-  planWith affineBackend presentation provider
+  planWith backend presentation provider
 
 end Morew.Elab.Conic.Terminal

@@ -56,7 +56,7 @@ private def terminalConicAdapter : TerminalAdapter := {
 /-- Plan an affine conic terminal step and request all generated local names. -/
 def prepareTerminalConic (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft :=
-  Cone.prepareTerminalConeForm Morew.Elab.Conic.Terminal.affineBackend
+  Cone.prepareTerminalConeForm Morew.Elab.Conic.Terminal.backend
     terminalConicAdapter `_terminalConic state step
 
 @[morew_reformulation_step Morew.conicStep]
