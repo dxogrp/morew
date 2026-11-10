@@ -15,7 +15,7 @@ open Morew.Conic
 variable {X : Type*} [AddCommGroup X] [Module ℝ X] {n : Nat}
 
 /-- Restrict an affine matrix map using a symmetry proof valid at every point. -/
-noncomputable def restrictSymmetricMatrix
+def restrictSymmetricMatrix
     (f : X →ᵃ[ℝ] Matrix (Fin n) (Fin n) ℝ) (h : ∀ x, (f x).IsSymm) :
     X →ᵃ[ℝ] SymmetricMatrix n where
   toFun x := SymmetricMatrix.ofMatrix (f x) (h x)
@@ -38,20 +38,20 @@ theorem toMatrix_restrictSymmetricMatrix
 namespace Certified
 
 /-- Convert a certified matrix-valued function whose values are symmetric. -/
-noncomputable def toSymmetricMatrix {f : X → Matrix (Fin n) (Fin n) ℝ}
+def toSymmetricMatrix {f : X → Matrix (Fin n) (Fin n) ℝ}
     (a : Certified f) (h : ∀ x, (f x).IsSymm) :
     Certified (fun x => SymmetricMatrix.ofMatrix (f x) (h x)) where
   map := restrictSymmetricMatrix a.map fun x => (a.correct x).symm ▸ h x
   correct x := SymmetricMatrix.toMatrix_injective (a.correct x)
 
 /-- Extract the underlying matrix from a certified symmetric-matrix function. -/
-noncomputable def fromSymmetricMatrix {f : X → SymmetricMatrix n} (a : Certified f) :
+def fromSymmetricMatrix {f : X → SymmetricMatrix n} (a : Certified f) :
     Certified (fun x => (f x).toMatrix) where
   map := (SymmetricMatrix.toMatrixLinearMap n).toAffineMap.comp a.map
   correct x := congrArg SymmetricMatrix.toMatrix (a.correct x)
 
 /-- Assemble affine matrix blocks indexed by `Fin`. -/
-noncomputable def fromBlocksFin {m n : Nat}
+def fromBlocksFin {m n : Nat}
     {f : X → Matrix (Fin m) (Fin m) ℝ} {g : X → Matrix (Fin m) (Fin n) ℝ}
     {h : X → Matrix (Fin n) (Fin m) ℝ} {k : X → Matrix (Fin n) (Fin n) ℝ}
     (a : Certified f) (b : Certified g) (c : Certified h) (d : Certified k) :

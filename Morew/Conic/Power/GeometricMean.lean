@@ -189,7 +189,7 @@ theorem invProd_le_iff {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n)
 
 /-- The geometric-mean hypograph on nonnegative coordinates. Auxiliary values
 equal to successive prefix means attain the bound. -/
-noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
+def geoMeanHypograph {n : Nat} (hn : 0 < n) :
     HypographRepr (fun xs : {xs : Fin n → ℝ // ∀ i, 0 ≤ xs i} =>
       Fn.geoMean xs.1) where
   Auxiliary := Fin n → ℝ
@@ -204,7 +204,7 @@ noncomputable def geoMeanHypograph {n : Nat} (hn : 0 < n) :
 
 /-- The inverse-product epigraph on positive coordinates, using a prefix-mean
 chain and one final negative-power cone. -/
-noncomputable def invProdEpigraph {n : Nat} (hn : 0 < n) :
+def invProdEpigraph {n : Nat} (hn : 0 < n) :
     EpigraphRepr (fun xs : {xs : Fin n → ℝ // ∀ i, 0 < xs i} =>
       Fn.invProd xs.1) where
   Auxiliary := Fin n → ℝ

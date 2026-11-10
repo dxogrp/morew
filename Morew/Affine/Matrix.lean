@@ -16,38 +16,38 @@ variable {X : Type*} [AddCommGroup X] [Module ℝ X]
 variable {l m n o : Type*}
 
 /-- Apply `Matrix.of` to an affine family of entries. -/
-noncomputable def matrixOf {f : X → m → n → ℝ} (a : Certified f) :
+def matrixOf {f : X → m → n → ℝ} (a : Certified f) :
     Certified (fun x => Matrix.of (f x)) where
   map := (Matrix.ofLinearEquiv ℝ : (m → n → ℝ) ≃ₗ[ℝ] Matrix m n ℝ).toAffineEquiv.toAffineMap.comp a.map
   correct x := congrArg Matrix.of (a.correct x)
 
 /-- Transpose an affine matrix. -/
-noncomputable def transpose {f : X → Matrix m n ℝ} (a : Certified f) :
+def transpose {f : X → Matrix m n ℝ} (a : Certified f) :
     Certified (fun x => (f x).transpose) where
   map := (Matrix.transposeLinearEquiv m n ℝ ℝ).toAffineEquiv.toAffineMap.comp a.map
   correct x := congrArg Matrix.transpose (a.correct x)
 
 /-- Put an affine vector on the diagonal. -/
-noncomputable def diagonal [DecidableEq n] {f : X → n → ℝ} (a : Certified f) :
+def diagonal [DecidableEq n] {f : X → n → ℝ} (a : Certified f) :
     Certified (fun x => Matrix.diagonal (f x)) where
   map := (Matrix.diagonalLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.diagonal (a.correct x)
 
 /-- The trace of an affine square matrix is affine. -/
-noncomputable def trace [Fintype n] {f : X → Matrix n n ℝ} (a : Certified f) :
+def trace [Fintype n] {f : X → Matrix n n ℝ} (a : Certified f) :
     Certified (fun x => Matrix.trace (f x)) where
   map := (Matrix.traceLinearMap n ℝ ℝ).toAffineMap.comp a.map
   correct x := congrArg Matrix.trace (a.correct x)
 
 /-- Embed affine coordinates in a lower-triangular matrix. -/
-noncomputable def lowerTriangularMatrix {n : Nat}
+def lowerTriangularMatrix {n : Nat}
     {f : X → Conic.LowerTriangularEntries n} (a : Certified f) :
     Certified (fun x => Conic.lowerTriangularMatrix (f x)) where
   map := (Conic.lowerTriangularMatrixLinearMap n).toAffineMap.comp a.map
   correct x := congrArg Conic.lowerTriangularMatrix (a.correct x)
 
 /-- Reindex an affine matrix by fixed row and column functions. -/
-noncomputable def submatrix {f : X → Matrix m n ℝ} (a : Certified f)
+def submatrix {f : X → Matrix m n ℝ} (a : Certified f)
     (rows : l → m) (cols : o → n) :
     Certified (fun x => (f x).submatrix rows cols) where
   map := (show Matrix m n ℝ →ₗ[ℝ] Matrix l o ℝ from
@@ -57,12 +57,12 @@ noncomputable def submatrix {f : X → Matrix m n ℝ} (a : Certified f)
   correct x := congrArg (fun M => M.submatrix rows cols) (a.correct x)
 
 /-- Reindex an affine matrix by fixed equivalences. -/
-noncomputable def reindex {f : X → Matrix m n ℝ} (rows : m ≃ l) (cols : n ≃ o)
+def reindex {f : X → Matrix m n ℝ} (rows : m ≃ l) (cols : n ≃ o)
     (a : Certified f) : Certified (fun x => Matrix.reindex rows cols (f x)) :=
   submatrix a rows.symm cols.symm
 
 /-- Assemble four affine matrix blocks. -/
-noncomputable def fromBlocks {f : X → Matrix n l ℝ} {g : X → Matrix n m ℝ}
+def fromBlocks {f : X → Matrix n l ℝ} {g : X → Matrix n m ℝ}
     {h : X → Matrix o l ℝ} {k : X → Matrix o m ℝ}
     (a : Certified f) (b : Certified g) (c : Certified h) (d : Certified k) :
     Certified (fun x => Matrix.fromBlocks (f x) (g x) (h x) (k x)) where
@@ -81,7 +81,7 @@ noncomputable def fromBlocks {f : X → Matrix n l ℝ} {g : X → Matrix n m �
     · exact congrFun (congrFun (d.correct x) _) _
 
 /-- Left multiplication by a fixed, possibly rectangular matrix. -/
-noncomputable def matrixMulConstLeft [Fintype m] {f : X → Matrix m n ℝ}
+def matrixMulConstLeft [Fintype m] {f : X → Matrix m n ℝ}
     (A : Matrix l m ℝ) (a : Certified f) : Certified (fun x => A * f x) where
   map := (show Matrix m n ℝ →ₗ[ℝ] Matrix l n ℝ from
     { toFun := (A * ·)
@@ -90,7 +90,7 @@ noncomputable def matrixMulConstLeft [Fintype m] {f : X → Matrix m n ℝ}
   correct x := congrArg (A * ·) (a.correct x)
 
 /-- Right multiplication by a fixed, possibly rectangular matrix. -/
-noncomputable def matrixMulConstRight [Fintype m] {f : X → Matrix l m ℝ}
+def matrixMulConstRight [Fintype m] {f : X → Matrix l m ℝ}
     (a : Certified f) (A : Matrix m n ℝ) : Certified (fun x => f x * A) where
   map := (show Matrix l m ℝ →ₗ[ℝ] Matrix l n ℝ from
     { toFun := (· * A)

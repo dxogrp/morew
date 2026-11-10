@@ -21,7 +21,7 @@ for every real `α`; the cone laws require the stated range.
 namespace Morew.Conic.Cone
 
 /-- The set defined by the power-cone inequalities. -/
-noncomputable def powerSet (α : ℝ) : Set (ℝ × ℝ × ℝ) :=
+def powerSet (α : ℝ) : Set (ℝ × ℝ × ℝ) :=
   {p | 0 ≤ p.1 ∧ 0 ≤ p.2.1 ∧ |p.2.2| ≤ p.1 ^ α * p.2.1 ^ (1 - α)}
 
 /-- Membership in `powerSet α` expressed in coordinates. -/

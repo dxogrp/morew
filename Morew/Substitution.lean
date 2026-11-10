@@ -27,7 +27,7 @@ def identity {R : Type u} {X : Type v} :
   rightInverse _ _ := rfl
 
 /-- Negation covers every real coordinate. -/
-noncomputable def neg {R : Type u} :
+def neg {R : Type u} :
     CoordinateParameterization (fun (_ : R) (a : ℝ) => -a) where
   range _ _ := True
   preimage _ a := -a.1
@@ -49,14 +49,14 @@ noncomputable def mulRight {R : Type u} (a : R → ℝ) :
   rightInverse _ x := div_mul_cancel₀ x.1 x.2
 
 /-- Add an offset on the right. -/
-noncomputable def addRight {R : Type u} (b : R → ℝ) :
+def addRight {R : Type u} (b : R → ℝ) :
     CoordinateParameterization (fun r u => u + b r) where
   range _ _ := True
   preimage r x := x.1 - b r
   rightInverse r x := sub_add_cancel x.1 (b r)
 
 /-- Add an offset on the left. -/
-noncomputable def addLeft {R : Type u} (b : R → ℝ) :
+def addLeft {R : Type u} (b : R → ℝ) :
     CoordinateParameterization (fun r u => b r + u) where
   range _ _ := True
   preimage r x := x.1 - b r
@@ -64,14 +64,14 @@ noncomputable def addLeft {R : Type u} (b : R → ℝ) :
     rw [add_comm, sub_add_cancel]
 
 /-- Subtract an offset from the new coordinate. -/
-noncomputable def subRight {R : Type u} (b : R → ℝ) :
+def subRight {R : Type u} (b : R → ℝ) :
     CoordinateParameterization (fun r u => u - b r) where
   range _ _ := True
   preimage r x := x.1 + b r
   rightInverse r x := add_sub_cancel_right x.1 (b r)
 
 /-- Subtract the new coordinate from an offset. -/
-noncomputable def subLeft {R : Type u} (b : R → ℝ) :
+def subLeft {R : Type u} (b : R → ℝ) :
     CoordinateParameterization (fun r u => b r - u) where
   range _ _ := True
   preimage r x := b r - x.1

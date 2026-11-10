@@ -28,29 +28,29 @@ namespace Structure
 -- Keep persisted instance structures reducible for instance search.
 
 /-- Standard real structures, resolved in this declaration's fixed context. -/
-noncomputable abbrev real : Structure ℝ where
+abbrev real : Structure ℝ where
   group := inferInstance
   module := inferInstance
 
 /-- Standard finite Euclidean structures, fixed independently of local instances. -/
-noncomputable abbrev euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) where
+abbrev euclidean (n : ℕ) : Structure (EuclideanSpace ℝ (Fin n)) where
   group := inferInstance
   module := inferInstance
 
 /-- Canonical structures on the named symmetric-matrix submodule. -/
-noncomputable abbrev symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) where
+abbrev symmetricMatrix (n : ℕ) : Structure (Morew.Conic.SymmetricMatrix n) where
   group := inferInstance
   module := inferInstance
 
 /-- The standard product structures on two explicitly supplied spaces. -/
-noncomputable abbrev prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
+abbrev prod {X Y : Type*} (a : Structure X) (b : Structure Y) :
     Structure (X × Y) where
   group := @Prod.instAddCommGroup X Y a.group b.group
   module := @Prod.instModule ℝ X Y inferInstance
     a.group.toAddCommMonoid b.group.toAddCommMonoid a.module b.module
 
 /-- The standard pointwise structures on a nondependent function space. -/
-noncomputable abbrev pi (ι : Type*) {Y : Type*} (a : Structure Y) :
+abbrev pi (ι : Type*) {Y : Type*} (a : Structure Y) :
     Structure (ι → Y) where
   group := @Pi.addCommGroup ι (fun _ => Y) (fun _ => a.group)
   module := @Pi.module ι (fun _ => Y) ℝ inferInstance
