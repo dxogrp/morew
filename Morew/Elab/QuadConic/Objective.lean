@@ -59,7 +59,7 @@ private theorem nonpositiveInverse {c : ℝ} (h : c ≤ 0) : c⁻¹ ≤ 0 := inv
 section Curvature
 
 variable {X : Type*} [AddCommGroup X] [Module ℝ X]
-variable {Q R : QuadraticForm ℝ X}
+variable {Q : QuadraticForm ℝ X}
 
 -- Membership evidence stays bound in the attached index of every summand.
 private def sumOnSupport {ι : Type*} (s : Finset ι) (f : ι → X → ℝ)
@@ -67,36 +67,6 @@ private def sumOnSupport {ι : Type*} (s : Finset ι) (f : ι → X → ℝ)
     Morew.QuadConic.Certified (fun x => ∑ i ∈ s, f i x) :=
   (Morew.QuadConic.Certified.sum s.attach a).transport fun x =>
     Finset.sum_attach s (fun i => f i x)
-
-private theorem nonnegativeAdd (hQ : ∀ x, 0 ≤ Q x) (hR : ∀ x, 0 ≤ R x) :
-    ∀ x, 0 ≤ (Q + R) x := fun x => add_nonneg (hQ x) (hR x)
-
-private theorem nonpositiveAdd (hQ : ∀ x, Q x ≤ 0) (hR : ∀ x, R x ≤ 0) :
-    ∀ x, (Q + R) x ≤ 0 := fun x => add_nonpos (hQ x) (hR x)
-
-private theorem nonnegativeNeg (hQ : ∀ x, Q x ≤ 0) :
-    ∀ x, 0 ≤ (-Q) x := fun x => neg_nonneg.mpr (hQ x)
-
-private theorem nonpositiveNeg (hQ : ∀ x, 0 ≤ Q x) :
-    ∀ x, (-Q) x ≤ 0 := fun x => neg_nonpos.mpr (hQ x)
-
-private theorem nonnegativeSub (hQ : ∀ x, 0 ≤ Q x) (hR : ∀ x, R x ≤ 0) :
-    ∀ x, 0 ≤ (Q - R) x := fun x => sub_nonneg.mpr ((hR x).trans (hQ x))
-
-private theorem nonpositiveSub (hQ : ∀ x, Q x ≤ 0) (hR : ∀ x, 0 ≤ R x) :
-    ∀ x, (Q - R) x ≤ 0 := fun x => sub_nonpos.mpr ((hQ x).trans (hR x))
-
-private theorem nonnegativeSMul {c : ℝ} (hc : 0 ≤ c) (hQ : ∀ x, 0 ≤ Q x) :
-    ∀ x, 0 ≤ (c • Q) x := fun x => mul_nonneg hc (hQ x)
-
-private theorem nonpositiveSMul {c : ℝ} (hc : 0 ≤ c) (hQ : ∀ x, Q x ≤ 0) :
-    ∀ x, (c • Q) x ≤ 0 := fun x => mul_nonpos_of_nonneg_of_nonpos hc (hQ x)
-
-private theorem nonnegativeSMulNonpos {c : ℝ} (hc : c ≤ 0) (hQ : ∀ x, Q x ≤ 0) :
-    ∀ x, 0 ≤ (c • Q) x := fun x => mul_nonneg_of_nonpos_of_nonpos hc (hQ x)
-
-private theorem nonpositiveSMulNonpos {c : ℝ} (hc : c ≤ 0) (hQ : ∀ x, 0 ≤ Q x) :
-    ∀ x, (c • Q) x ≤ 0 := fun x => mul_nonpos_of_nonpos_of_nonneg hc (hQ x)
 
 private theorem nonnegativeSMulZero (c : ℝ) (hQ : ∀ x, 0 ≤ Q x)
     (hQ' : ∀ x, Q x ≤ 0) : ∀ x, 0 ≤ (c • Q) x := by
@@ -115,18 +85,6 @@ private theorem nonnegativeZeroSMul (Q : QuadraticForm ℝ X) :
 
 private theorem nonpositiveZeroSMul (Q : QuadraticForm ℝ X) :
     ∀ x, ((0 : ℝ) • Q) x ≤ 0 := by simp
-
-private theorem nonnegativeSum {ι : Type*} (s : Finset ι)
-    (Q : ι → QuadraticForm ℝ X) (hQ : ∀ i x, 0 ≤ Q i x) :
-    ∀ x, 0 ≤ (∑ i ∈ s, Q i) x := by
-  intro x
-  simpa using Finset.sum_nonneg (fun i (_ : i ∈ s) => hQ i x)
-
-private theorem nonpositiveSum {ι : Type*} (s : Finset ι)
-    (Q : ι → QuadraticForm ℝ X) (hQ : ∀ i x, Q i x ≤ 0) :
-    ∀ x, (∑ i ∈ s, Q i) x ≤ 0 := by
-  intro x
-  simpa using Finset.sum_nonpos (fun i (_ : i ∈ s) => hQ i x)
 
 private theorem nonnegativeEmptySum {ι : Type*} (s : Finset ι)
     (Q : ι → QuadraticForm ℝ X) (h : s = ∅) : ∀ x, 0 ≤ (∑ i ∈ s, Q i) x := by
@@ -256,10 +214,10 @@ private def proofApp (point : Expr) (name : Name) (args : Array Expr) : MetaM Ex
   Affine.Space.withCanonicalSpaces #[← inferType point, mkConst ``Real] do
     mkAppM name args
 
-private def combineProof? (point : Expr) (name : Name)
+private def combineProof? (point : Expr) (name : Name) (args : Array Expr)
     (left right : Option Expr) : MetaM (Option Expr) := do
   match left, right with
-  | some left, some right => return some (← proofApp point name #[left, right])
+  | some left, some right => return some (← proofApp point name (args ++ #[left, right]))
   | _, _ => return none
 
 private def scaled (point coefficient certificate : Expr) (value : CertifiedResult)
@@ -278,12 +236,19 @@ private def scaled (point coefficient certificate : Expr) (value : CertifiedResu
         nonpositive? := some (← proofApp point ``nonpositiveSMulZero #[coefficient, positive, negative]) }
   let positive ← coefficientSign? point coefficient true indices
   let negative ← coefficientSign? point coefficient false indices
-  let nonnegative? ← match ← combineProof? point ``nonnegativeSMul positive value.nonnegative? with
+  let args := #[coefficient, value.certificate]
+  let nonnegative? ← match ← combineProof? point
+      ``Morew.QuadConic.Certified.smul_nonnegative_of_nonneg args positive value.nonnegative? with
     | some proof => pure (some proof)
-    | none => combineProof? point ``nonnegativeSMulNonpos negative value.nonpositive?
-  let nonpositive? ← match ← combineProof? point ``nonpositiveSMul positive value.nonpositive? with
+    | none =>
+      combineProof? point
+        ``Morew.QuadConic.Certified.smul_nonnegative_of_nonpos args negative value.nonpositive?
+  let nonpositive? ← match ← combineProof? point
+      ``Morew.QuadConic.Certified.smul_nonpositive_of_nonneg args positive value.nonpositive? with
     | some proof => pure (some proof)
-    | none => combineProof? point ``nonpositiveSMulNonpos negative value.nonnegative?
+    | none =>
+      combineProof? point
+        ``Morew.QuadConic.Certified.smul_nonpositive_of_nonpos args negative value.nonnegative?
   return {
     certificate
     nonnegative?
@@ -353,9 +318,15 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
     let certificate ← construct point expression
       (if add then ``Morew.QuadConic.Certified.add else ``Morew.QuadConic.Certified.sub)
       #[left.certificate, right.certificate] (some 2)
-    let nonnegative? ← combineProof? point (if add then ``nonnegativeAdd else ``nonnegativeSub)
+    let nonnegative? ← combineProof? point
+      (if add then ``Morew.QuadConic.Certified.add_nonnegative
+        else ``Morew.QuadConic.Certified.sub_nonnegative)
+      #[left.certificate, right.certificate]
       left.nonnegative? (if add then right.nonnegative? else right.nonpositive?)
-    let nonpositive? ← combineProof? point (if add then ``nonpositiveAdd else ``nonpositiveSub)
+    let nonpositive? ← combineProof? point
+      (if add then ``Morew.QuadConic.Certified.add_nonpositive
+        else ``Morew.QuadConic.Certified.sub_nonpositive)
+      #[left.certificate, right.certificate]
       left.nonpositive? (if add then right.nonpositive? else right.nonnegative?)
     return {
       certificate
@@ -368,8 +339,10 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
       #[value.certificate] (some 1)
     return {
       certificate
-      nonnegative? := ← value.nonpositive?.mapM (fun proof => proofApp point ``nonnegativeNeg #[proof])
-      nonpositive? := ← value.nonnegative?.mapM (fun proof => proofApp point ``nonpositiveNeg #[proof])
+      nonnegative? := ← value.nonpositive?.mapM (fun proof =>
+        proofApp point ``Morew.QuadConic.Certified.neg_nonnegative #[value.certificate, proof])
+      nonpositive? := ← value.nonnegative?.mapM (fun proof =>
+        proofApp point ``Morew.QuadConic.Certified.neg_nonpositive #[value.certificate, proof])
       missing? := value.missing? }
   if (head == some ``HMul.hMul || head == some ``HSMul.hSMul) && args.size == 6 then
     let left := args[4]!
@@ -401,25 +374,31 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
       reject divisor "invalid independent nonzero evidence"
     let certificate ← construct point expression ``Morew.QuadConic.Certified.divConst
       #[value.certificate, divisor, proof] (some 2)
-    -- Transport a coefficient's sign to its reciprocal before composing curvature.
     let inverse : Q(ℝ) := q($divisor⁻¹)
     let positive ← coefficientSign? point divisor true indices
     let negative ← coefficientSign? point divisor false indices
     let positive ← positive.mapM (fun proof => mkAppM ``nonnegativeInverse #[proof])
     let negative ← negative.mapM (fun proof => mkAppM ``nonpositiveInverse #[proof])
     let result ← scaled point inverse certificate value indices
+    let proofArgs := #[inverse, value.certificate]
     let nonnegative? ← match result.nonnegative? with
       | some proof => pure (some proof)
       | none =>
-        match ← combineProof? point ``nonnegativeSMul positive value.nonnegative? with
+        match ← combineProof? point ``Morew.QuadConic.Certified.smul_nonnegative_of_nonneg
+            proofArgs positive value.nonnegative? with
         | some proof => pure (some proof)
-        | none => combineProof? point ``nonnegativeSMulNonpos negative value.nonpositive?
+        | none =>
+          combineProof? point ``Morew.QuadConic.Certified.smul_nonnegative_of_nonpos
+            proofArgs negative value.nonpositive?
     let nonpositive? ← match result.nonpositive? with
       | some proof => pure (some proof)
       | none =>
-        match ← combineProof? point ``nonpositiveSMul positive value.nonpositive? with
+        match ← combineProof? point ``Morew.QuadConic.Certified.smul_nonpositive_of_nonneg
+            proofArgs positive value.nonpositive? with
         | some proof => pure (some proof)
-        | none => combineProof? point ``nonpositiveSMulNonpos negative value.nonnegative?
+        | none =>
+          combineProof? point ``Morew.QuadConic.Certified.smul_nonpositive_of_nonpos
+            proofArgs negative value.nonnegative?
     return { result with nonnegative?, nonpositive? }
   else if head == some ``Finset.sum && args.size == 5 then
     let set := args[3]!
@@ -451,10 +430,17 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
         certificate
         nonnegative? := some (← proofApp point ``nonnegativeEmptySum #[support, forms, equality])
         nonpositive? := some (← proofApp point ``nonpositiveEmptySum #[support, forms, equality]) }
+    let sumCurvature? (name : Name) (evidence? : Option Expr) : MetaM (Option Expr) :=
+      evidence?.mapM fun proof => do
+        let bounded ← withLocalDeclD `i supportType fun i => do
+          let membership ← mkAppM ``Membership.mem #[support, i]
+          withLocalDeclD `hi membership fun hi =>
+            mkLambdaFVars #[i, hi] (mkApp proof i)
+        proofApp point name #[support, family.certificate, bounded]
     return {
       certificate
-      nonnegative? := ← family.nonnegative?.mapM (fun proof => proofApp point ``nonnegativeSum #[support, forms, proof])
-      nonpositive? := ← family.nonpositive?.mapM (fun proof => proofApp point ``nonpositiveSum #[support, forms, proof]) }
+      nonnegative? := ← sumCurvature? ``Morew.QuadConic.Certified.sum_nonnegative family.nonnegative?
+      nonpositive? := ← sumCurvature? ``Morew.QuadConic.Certified.sum_nonpositive family.nonpositive? }
   else reject expression "expected affine terms, squared affine expressions, or signed sums of squares"
 
 private def withFiniteInstances (instances : List Expr) (action : ReifyM ObjectiveResult) :
