@@ -11,7 +11,7 @@ import Morew.Elab.Affine
 import Morew.Elab.State
 import Morew.Elab.Cone.Space
 import Morew.Elab.Evidence
-import Morew.Elab.Cone.Nonnegative
+import Morew.Elab.Cone.Nonneg
 import Morew.Elab.Cone.Normalize
 import Morew.Elab.Cone.Symmetry
 import Morew.Conic.Power.Cone
@@ -79,9 +79,9 @@ private theorem normalizeLE
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
     [PosSMulMono ℝ Y] (f g : X →ᵃ[ℝ] Y) (lhs rhs : X → Y)
     (hf : ∀ x, f x = lhs x) (hg : ∀ x, g x = rhs x) :
-    ∀ x, (Morew.Conic.Constraint.nonnegative (g - f)).Holds x ↔ lhs x ≤ rhs x := by
+    ∀ x, (Morew.Conic.Constraint.nonneg (g - f)).Holds x ↔ lhs x ≤ rhs x := by
   intro x
-  rw [Morew.Conic.Constraint.holds_nonnegative]
+  rw [Morew.Conic.Constraint.holds_nonneg]
   change 0 ≤ g x - f x ↔ lhs x ≤ rhs x
   rw [hf, hg, sub_nonneg]
 
@@ -230,9 +230,9 @@ private def membershipData (point body : Expr) (label? : Option Name)
     let cone ← mkAppM ``Morew.Conic.Cone.power #[exponent, evidence]
     checkWithKernel cone
     return .ok (cone, value)
-  let carrier := if carrier.isConstOf ``Morew.Conic.Cone.nonnegativeScalarCarrier then
+  let carrier := if carrier.isConstOf ``Morew.Conic.Cone.nonnegScalarCarrier then
       mkApp (mkConst ``Morew.Conic.Cone.carrier)
-        (mkConst ``Morew.Conic.Cone.nonnegativeScalar)
+        (mkConst ``Morew.Conic.Cone.nonnegScalar)
     else carrier
   unless carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 do
     return .error (← rowError body "expected native supported cone membership" label?)
@@ -240,8 +240,8 @@ private def membershipData (point body : Expr) (label? : Option Name)
   unless cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
       cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
       cone.isAppOfArity ``Morew.Conic.Cone.zero 1 ||
-      cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
-      cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar ||
+      cone.isAppOfArity ``Morew.Conic.Cone.nonneg 1 ||
+      cone.isConstOf ``Morew.Conic.Cone.nonnegScalar ||
       cone.isConstOf ``Morew.Conic.Cone.exponential ||
       cone.isAppOfArity ``Morew.Conic.Cone.power 2 ||
       cone.isAppOfArity ``Morew.Conic.Cone.powerProduct 3 ||
@@ -624,7 +624,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
             mkAppM ``subtractMaps #[right.map, left.map]
         let constructor := if equality then
             ``Morew.Conic.Constraint.eqZero
-          else ``Morew.Conic.Constraint.nonnegative
+          else ``Morew.Conic.Constraint.nonneg
         let constraint ← instantiateMVars (← mkAppM constructor #[difference])
         let theoremName := if equality then ``normalizeEq else ``normalizeLE
         let proofArguments := if greaterEqual then

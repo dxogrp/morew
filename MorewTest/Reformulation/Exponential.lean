@@ -29,7 +29,7 @@ def source :=
       untouched : Real.exp (a ^ 2) ≤ 100
       positive : b ≥ 1 / 2
       logarithm : Real.log b ≥ t
-      nonnegative : 0 ≤ a
+      nonneg : 0 ≤ a
       last : Fn.relEntr a b ≤ t
 
 reformulation target : source := by
@@ -53,7 +53,7 @@ info: problem (a b t : ℝ)
     untouched : Real.exp (a ^ 2) ≤ 100
     positive : b ≥ 1 / 2
     logarithm_conic_1 : (t, 1, b) ∈ EXP
-    nonnegative : 0 ≤ a
+    nonneg : 0 ≤ a
     last_conic_1 : (-t, a, b) ∈ EXP
 -/
 #guard_msgs in
@@ -154,7 +154,7 @@ def symbolicSource :=
     minimize t
     subject to
       entropy : Fn.relEntr a b ≤ t
-      nonnegative : 0 ≤ a
+      nonneg : 0 ≤ a
       denominator : Parameter.epsilon ≤ b
 
 include hε in

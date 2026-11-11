@@ -26,7 +26,7 @@ def p :=
   problem (x y : ℝ)
     minimize x + 2 * y
     subject to
-      nonnegative : 0 ≤ x ∧ 0 ≤ y
+      nonneg : 0 ≤ x ∧ 0 ≤ y
       balance : x + y = 1
 
 reformulation conicProb : p := by
@@ -70,7 +70,7 @@ def p :=
     minimize |x - 2|
     subject to
       magnitude : |x| ≤ 5
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
 
 -- Rewrite the absolute-value bounds as linear inequalities.
 -- ANCHOR: linearBounds

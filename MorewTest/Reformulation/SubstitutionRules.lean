@@ -40,7 +40,7 @@ def natural := problem (x : ℕ) minimize x
 reformulation naturalRenamed : natural := by substitute x := u
 example : GlobalEquiv natural naturalRenamed := naturalRenamed.equiv
 
-def nonnegative :=
+def nonneg :=
   problem (x : ℝ)
     minimize x
     subject to
@@ -48,17 +48,17 @@ def nonnegative :=
       domain : 0 ≤ x
       upper : x ≤ 4
 
-reformulation squared : nonnegative := by substitute x := u ^ 2
-reformulation squaredNamed : nonnegative := by
+reformulation squared : nonneg := by substitute x := u ^ 2
+reformulation squaredNamed : nonneg := by
   substitute x := u ^ 2 via Morew.Substitution.square
-reformulation squaredApplied : nonnegative := by
+reformulation squaredApplied : nonneg := by
   substitute x := u ^ 2 via (Morew.Substitution.square (R := Unit))
 
 example (u : ℝ) : squared.objective u = u ^ 2 := rfl
 example (u : ℝ) : squared.feasible u ↔ True ∧ u ^ 2 ≤ 4 := Iff.rfl
-example : GlobalEquiv nonnegative squared := squared.equiv
-example : GlobalEquiv nonnegative squaredNamed := squaredNamed.equiv
-example : GlobalEquiv nonnegative squaredApplied := squaredApplied.equiv
+example : GlobalEquiv nonneg squared := squared.equiv
+example : GlobalEquiv nonneg squaredNamed := squaredNamed.equiv
+example : GlobalEquiv nonneg squaredApplied := squaredApplied.equiv
 
 /--
 info: problem (u : ℝ)
@@ -187,7 +187,7 @@ def restrictedIdentity {R : Type*} :
   preimage _ x := x.1
   rightInverse _ _ := rfl
 
-reformulation restrictedRenaming : nonnegative := by
+reformulation restrictedRenaming : nonneg := by
   substitute x := u via restrictedIdentity
 example (u : ℝ) : restrictedRenaming.feasible u ↔ True ∧ 0 ≤ u ∧ u ≤ 4 := Iff.rfl
 

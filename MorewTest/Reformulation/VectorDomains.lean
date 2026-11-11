@@ -21,16 +21,16 @@ namespace MorewTest.Reformulation.VectorDomains
 open Morew Morew.Conic
 noncomputable section
 
-def nonnegativeSum {n : ℕ} (x : Fin n → ℝ) : ℝ := ∑ i, x i
+def nonnegSum {n : ℕ} (x : Fin n → ℝ) : ℝ := ∑ i, x i
 def positiveSum {n : ℕ} (x : Fin n → ℝ) : ℝ := ∑ i, x i
 
 @[morew_conic]
-def nonnegativeSumEpigraph {n : ℕ} :
+def nonnegSumEpigraph {n : ℕ} :
     EpigraphRepr
-      (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} => nonnegativeSum x.1) where
+      (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} => nonnegSum x.1) where
   Auxiliary := Unit
   target x t _ := (∑ i, x.1 i) ≤ t
-  source_iff_exists _ _ := by simp only [nonnegativeSum, exists_const]
+  source_iff_exists _ _ := by simp only [nonnegSum, exists_const]
 
 @[morew_conic]
 def positiveSumEpigraph {n : ℕ} :
@@ -40,22 +40,22 @@ def positiveSumEpigraph {n : ℕ} :
   target x t _ := (∑ i, x.1 i) ≤ t
   source_iff_exists _ _ := by simp only [positiveSum, exists_const]
 
-def nonnegativeSource (n : ℕ) :=
+def nonnegSource (n : ℕ) :=
   problem (x : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       domain : 0 ≤ x
-      bound : nonnegativeSum x ≤ t
+      bound : nonnegSum x ≤ t
 
 section
 variable (n : ℕ)
 
-reformulation nonnegativeReady : (nonnegativeSource n) := by
+reformulation nonnegReady : (nonnegSource n) := by
   conic at bound
   conic
 
-example : GlobalEquiv (nonnegativeSource n) (nonnegativeReady n) :=
-  nonnegativeReady.equiv n
+example : GlobalEquiv (nonnegSource n) (nonnegReady n) :=
+  nonnegReady.equiv n
 
 end
 
@@ -99,7 +99,7 @@ def directConeSource (n : ℕ) :=
     minimize t
     subject to
       domain : x ∈ ℝ₊^n
-      bound : nonnegativeSum x ≤ t
+      bound : nonnegSum x ≤ t
 
 reformulation directConeReady : (directConeSource n) := by
   conic at bound

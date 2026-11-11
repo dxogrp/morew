@@ -51,6 +51,12 @@ def transport {f g : X → Y} (a : Certified f)
   map := a.map
   correct x := (a.correct x).trans (h x)
 
+/-- Precompose a certified function with an affine map. -/
+def comp {f : X → Y} (a : Certified f) (L : Z →ᵃ[ℝ] X) :
+    Certified (fun z => f (L z)) where
+  map := a.map.comp L
+  correct z := a.correct (L z)
+
 /-- Add two certified affine functions. -/
 def add {f g : X → Y} (a : Certified f) (b : Certified g) :
     Certified (fun x => f x + g x) where

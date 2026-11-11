@@ -34,11 +34,11 @@ def absoluteRepair : GlobalImprovement maximum
   -- `OrderDual` makes `objective_le` require `x ≤ |x|` for this maximization problem.
   objective_le point := le_abs_self point.1
 
-reformulation nonnegativeMaximum : maximum := by
-  restrict nonnegative : 0 ≤ x using absoluteRepair
+reformulation nonnegMaximum : maximum := by
+  restrict nonneg : 0 ≤ x using absoluteRepair
 
-#printp nonnegativeMaximum
-example : GlobalEquiv maximum nonnegativeMaximum := nonnegativeMaximum.equiv
+#printp nonnegMaximum
+example : GlobalEquiv maximum nonnegMaximum := nonnegMaximum.equiv
 
 -- Sorting interchangeable variables chooses an ordered representative.
 def symmetric :=
@@ -65,23 +65,23 @@ example : GlobalEquiv symmetric ordered := ordered.equiv
 
 -- After `x := u²`, choose `u ≥ 0` using the square-root preimage.
 -- This preserves `u²` and retains the optimum `u = 2` from `u = ±2`.
-def nonnegativeSource :=
+def nonnegSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2
-    subject to nonnegative : 0 ≤ x
+    subject to nonneg : 0 ≤ x
 
-def squareCoverage : FeasibleSurjection nonnegativeSource (fun u : ℝ => u ^ 2) where
+def squareCoverage : FeasibleSurjection nonnegSource (fun u : ℝ => u ^ 2) where
   preimage point := Real.sqrt point.1
   rightInverse point := Real.sq_sqrt point.2
 
-reformulation principalCoordinates : nonnegativeSource := by
+reformulation principalCoordinates : nonnegSource := by
   substitute x := u ^ 2
   restrict branch : 0 ≤ u using
     squareCoverage.restrictionImprovement (fun u => 0 ≤ u)
       (fun point => Real.sqrt_nonneg point.1)
 
 #printp principalCoordinates
-example : GlobalEquiv nonnegativeSource principalCoordinates := principalCoordinates.equiv
+example : GlobalEquiv nonnegSource principalCoordinates := principalCoordinates.equiv
 example (u : ℝ) (hu : principalCoordinates.feasible u) : Real.sqrt (u ^ 2) = u :=
   Real.sqrt_sq hu
 

@@ -236,7 +236,7 @@ def weighted :=
     let loss := x ^ 2
     minimize weight * loss
     subject to
-      nonnegative : 0 ≤ weight
+      nonneg : 0 ≤ weight
 
 theorem weightedContext : ObjectiveEpigraphContext weighted
     (fun p => p.2 ^ 2) (fun p t => p.1 * t) where
@@ -252,7 +252,7 @@ def weightedConstraint :=
   problem (weight x : ℝ)
     minimize x
     subject to
-      nonnegative : 0 ≤ weight
+      nonneg : 0 ≤ weight
       budget : weight * |x| ≤ 10
 
 theorem weightedConstraintContext : ConstraintBoundContext

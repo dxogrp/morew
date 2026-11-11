@@ -27,8 +27,9 @@ structure Backend where
   /-- Check the objective before rewriting constraints. -/
   checkObjective : PresentationState → Affine.EvidenceProvider →
     MetaM (Except Expr.Error Unit)
-  /-- Construct the final form, checking the objective on the final domain and validating cached rows. -/
-  buildForm : PresentationState → Affine.EvidenceProvider →
+  /-- Construct the final form using the linear projection to the incoming domain,
+  checking the objective on the final domain and validating cached rows. -/
+  buildForm : PresentationState → Expr → Affine.EvidenceProvider →
     Array (Option (Array RowResult)) → MetaM (Except Expr.Error Expr)
 
 /-- A complete checked terminal transformation, before visible-name allocation. -/
@@ -327,6 +328,23 @@ private def normalizeFinal (work : Work) : MetaM Work := do
     }
   return work
 
+-- Auxiliary domains are appended as left-associated products. Compose their first projections.
+private def objectiveProjection (domain : Expr) (auxiliaries : Array (Nat × Expr)) :
+    MetaM Expr := do
+  let real := mkConst ``Real
+  let mut domain := domain
+  let mut projection ← Affine.Space.withCanonicalSpaces #[domain] do
+    mkAppOptM ``LinearMap.id #[some real, some domain, none, none, none]
+  for (_, auxiliary) in auxiliaries do
+    let nextDomain ← mkAppM ``Prod #[domain, auxiliary]
+    projection ← Affine.Space.withCanonicalSpaces #[nextDomain] do
+      let first ← mkAppOptM ``LinearMap.fst
+        #[some real, some domain, some auxiliary, none, none, none, none, none]
+      mkAppM ``LinearMap.comp #[projection, first]
+    domain := nextDomain
+  checkWithKernel projection
+  return projection
+
 /-- Plan a terminal step before name allocation and declaration emission.
 Restore state on failure. Report the first unresolved row after later rows
 have supplied any newly exposed margins. -/
@@ -357,7 +375,8 @@ def planWith (backend : Backend) (presentation : PresentationState)
           | .ok work => pure work
           | .error error => return .error error
         let work ← normalizeFinal work
-        let form ← match ← backend.buildForm work.presentation provider work.certifiedRows with
+        let projection ← objectiveProjection presentation.domainType work.auxiliaries
+        let form ← match ← backend.buildForm work.presentation projection provider work.certifiedRows with
           | .ok form => pure form
           | .error error => return .error error
         checkWithKernel work.equiv

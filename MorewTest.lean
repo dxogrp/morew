@@ -29,7 +29,7 @@ import MorewTest.Conic.Form.Support
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.Negation
-import MorewTest.Conic.Nonnegative
+import MorewTest.Conic.Nonneg
 import MorewTest.Conic.NormPreference
 import MorewTest.Conic.Normalize
 import MorewTest.Conic.PSD
@@ -79,6 +79,7 @@ import MorewTest.ImportCompatibility.LogDet
 import MorewTest.ImportCompatibility.NegatedOccurrence
 import MorewTest.ImportCompatibility.Negation
 import MorewTest.ImportCompatibility.NegationNLP
+import MorewTest.ImportCompatibility.ObjectiveCertificates
 import MorewTest.ImportCompatibility.OccurrenceBounds
 import MorewTest.ImportCompatibility.PSD
 import MorewTest.ImportCompatibility.Polyhedral
@@ -203,6 +204,8 @@ import MorewTest.Reformulation.NegationNLPInstances
 import MorewTest.Reformulation.Norm
 import MorewTest.Reformulation.NormFailures
 import MorewTest.Reformulation.ObjectiveBoundLabels
+import MorewTest.Reformulation.ObjectiveCertificateFailures
+import MorewTest.Reformulation.ObjectiveCertificates
 import MorewTest.Reformulation.OccurrenceBounds
 import MorewTest.Reformulation.OccurrenceBoundsConic
 import MorewTest.Reformulation.OccurrenceFailures

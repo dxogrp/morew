@@ -26,7 +26,20 @@ def backend : Backend where
       return .error { error with
         reason := ← addMessageContext m!"{error.reason}; use `{bound}` before `conic`" }
     | .ok _ => return .ok ()
-  buildForm presentation provider rows := Morew.Elab.Conic.buildForm presentation provider rows
+  buildForm presentation _ provider rows := Morew.Elab.Conic.buildForm presentation provider rows
+
+/-- Use a supplied affine objective throughout normalization and constraint planning. -/
+def backendWithCertificate (certificate : Expr) : Backend where
+  command := "conic"
+  checkObjective presentation _ := do
+    return (← validateObjectiveCertificate presentation certificate).map fun _ => ()
+  buildForm presentation projection provider rows := do
+    let transported ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
+      let projection ← mkAppM ``LinearMap.toAffineMap #[projection]
+      mkAppM ``Morew.Affine.Certified.comp #[certificate, projection]
+    match ← validateObjectiveCertificate presentation transported with
+    | .error error => return .error error
+    | .ok objective => buildFormWithObjective presentation objective provider rows
 
 /-- Plan exact cone constraint rewrites and certify the final affine objective. -/
 def plan (presentation : PresentationState) (provider : Affine.EvidenceProvider := {}) :

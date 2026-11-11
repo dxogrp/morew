@@ -37,7 +37,7 @@ import Morew.Elab.Atom
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Cone.Finite
 import Morew.Elab.Cone.MatrixDomain
-import Morew.Elab.Cone.Nonnegative
+import Morew.Elab.Cone.Nonneg
 import Morew.Elab.Cone.Normalize
 import Morew.Elab.Cone.Plan
 import Morew.Elab.Cone.Rewrite

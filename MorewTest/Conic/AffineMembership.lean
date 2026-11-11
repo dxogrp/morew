@@ -78,7 +78,7 @@ example (n : Nat) : (vector n).row.cone.Space = (Fin n → ℝ) := rfl
 example (n : Nat) : (vectorZero n).row.cone.Space = (Fin n → ℝ) := rfl
 
 example (x : Fin 0 → ℝ) : (vector 0).row.Holds x := by
-  rw [(vector 0).equivalent, Morew.Conic.Cone.mem_nonnegative]
+  rw [(vector 0).equivalent, Morew.Conic.Cone.mem_nonneg]
   exact fun i => Fin.elim0 i
 
 example (x : Fin 0 → ℝ) : (vectorZero 0).row.Holds x := by

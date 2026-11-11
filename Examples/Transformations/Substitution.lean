@@ -19,7 +19,7 @@ namespace Examples.Transformations.Substitution
 open Morew
 noncomputable section
 
-def nonnegative :=
+def nonneg :=
   problem (x : ℝ)
     minimize x
     subject to
@@ -27,20 +27,20 @@ def nonnegative :=
       budget : x ≤ 4
 
 -- The nonnegativity row becomes a proved tautology after squaring.
-reformulation squared : nonnegative := by
+reformulation squared : nonneg := by
   substitute x := u ^ 2
   nlp
 
 #printp squared
-example : GlobalEquiv nonnegative squared := squared.equiv
+example : GlobalEquiv nonneg squared := squared.equiv
 example : IsSmoothNLP squared := squared.isSmoothNLP
 
 -- `via` selects a rule; automatic selection searches the registry.
 -- `using` supplies a problem-specific `FeasibleSurjection`.
-reformulation explicitlySquared : nonnegative := by
+reformulation explicitlySquared : nonneg := by
   substitute x := u ^ 2 via Morew.Substitution.square
 
-example : GlobalEquiv nonnegative explicitlySquared := explicitlySquared.equiv
+example : GlobalEquiv nonneg explicitlySquared := explicitlySquared.equiv
 
 def interval :=
   problem (x : ℝ)

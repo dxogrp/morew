@@ -25,7 +25,7 @@ inductive PowerChainRow where
   /-- The finite family joining consecutive prefix means. -/
   | step (auxiliary source : Syntax) (index : Name) (size : Syntax)
   /-- Nonnegativity of the last auxiliary. -/
-  | nonnegative (auxiliary last : Syntax) (membership : Bool)
+  | nonneg (auxiliary last : Syntax) (membership : Bool)
   /-- A lower bound on the last auxiliary. -/
   | bound (value auxiliary last : Syntax) (membership : Bool)
   /-- The final inverse-product power membership. -/
@@ -65,7 +65,7 @@ def PowerChainRow.format (row : PowerChainRow)
       let membership := powerMembership left input right f!"({index} + 1) / ({index} + 2)"
       return Format.group <| f!"∀ {index} : ℕ, {index} < {size} ⇒" ++
         Format.nest 2 (Format.line ++ membership)
-  | .nonnegative auxiliary last membership =>
+  | .nonneg auxiliary last membership =>
       let value ← coordinate render auxiliary (← render last)
       return if membership then f!"{value} ∈ ℝ₊" else f!"0 ≤ {value}"
   | .bound value auxiliary last membership =>

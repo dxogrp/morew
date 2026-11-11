@@ -311,13 +311,13 @@ namespace Guarded
 -- are scoped out so discovery must establish that premise.
 attribute [-morew_nlp] absoluteGraph
 
-def nonnegativeAbsoluteGraph :
+def nonnegAbsoluteGraph :
     GraphRepr (fun x : {x : ℝ // 0 ≤ x} => |x.1|) where
   Auxiliary := Unit
   target x y _ := y = x.1
   source_iff_exists x _ := by simp only [exists_const, abs_of_nonneg x.2]
 
-attribute [local morew_nlp] nonnegativeAbsoluteGraph
+attribute [local morew_nlp] nonnegAbsoluteGraph
 
 def domainSource :=
   problem (x y : ℝ)
@@ -328,7 +328,7 @@ def domainSource :=
 
 reformulation domainTarget : domainSource := by nlp at bound
 reformulation domainSelected : domainSource := by
-  nlp at bound using nonnegativeAbsoluteGraph
+  nlp at bound using nonnegAbsoluteGraph
 
 example (x y : ℝ) : domainTarget.feasible (x, y) ↔ 0 ≤ x ∧ -y = x := Iff.rfl
 example : domainSelected = domainTarget := rfl
@@ -342,7 +342,7 @@ def missingDomain :=
 reformulation missingAutomatic : missingDomain := by nlp at bound
 
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
-reformulation missingSelected : missingDomain := by nlp at bound using nonnegativeAbsoluteGraph
+reformulation missingSelected : missingDomain := by nlp at bound using nonnegAbsoluteGraph
 
 def selectedDomain :=
   problem (x : ℝ)
@@ -351,7 +351,7 @@ def selectedDomain :=
 
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
 reformulation missingSelectedDomain : selectedDomain := by
-  nlp at bound using nonnegativeAbsoluteGraph
+  nlp at bound using nonnegAbsoluteGraph
 
 assert_not_exists missingAutomatic missingSelected missingSelectedDomain
 

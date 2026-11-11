@@ -44,7 +44,7 @@ def eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
 
 /-- Constrain an affine map to be nonnegative. For finite vectors, the order is
 componentwise. -/
-def nonnegative {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+def nonneg {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
     [PosSMulMono ℝ Y] (f : X →ᵃ[ℝ] Y) : Constraint X where
   cone := { Space := Y, carrier := ConvexCone.positive ℝ Y }
@@ -59,10 +59,10 @@ theorem holds_eqZero {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
 
 /-- A nonnegative-cone row holds exactly when its affine image is nonnegative. -/
 @[simp]
-theorem holds_nonnegative {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+theorem holds_nonneg {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
     [PosSMulMono ℝ Y] (f : X →ᵃ[ℝ] Y) (x : X) :
-    (nonnegative f).Holds x ↔ 0 ≤ f x :=
+    (nonneg f).Holds x ↔ 0 ≤ f x :=
   Iff.rfl
 
 /-- The feasible set of an affine cone-membership row is convex. -/

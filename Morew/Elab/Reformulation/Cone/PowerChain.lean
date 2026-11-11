@@ -24,8 +24,8 @@ private def nativeBundledPowerMembership (α : ℝ) (hα : 0 < α ∧ α < 1)
 
 private def nativeZeroMembership (value : ℝ) : Prop := value ∈ ({0} : Set ℝ)
 
-private def nativeNonnegativeMembership (value : ℝ) : Prop :=
-  value ∈ Cone.nonnegativeScalar.carrier
+private def nativeNonnegMembership (value : ℝ) : Prop :=
+  value ∈ Cone.nonnegScalar.carrier
 
 -- Check operation instances independently of their operands.
 private def nativePrefix (value canonical : Expr) (operands : Nat) : MetaM Bool := do
@@ -167,9 +167,9 @@ private def nativeMembershipValue? (row : Expr) (template : Name) : MetaM (Optio
     unless ← nativePrefix carrier canonicalCarrier 1 do return none
     unless ← realLiteral carrier.getAppArgs.back! 0 do return none
   else
-    unless carrier.isConstOf ``Cone.nonnegativeScalarCarrier ||
+    unless carrier.isConstOf ``Cone.nonnegScalarCarrier ||
         (carrier.isAppOfArity ``Cone.carrier 1 &&
-          carrier.getAppArgs[0]!.isConstOf ``Cone.nonnegativeScalar) do return none
+          carrier.getAppArgs[0]!.isConstOf ``Cone.nonnegScalar) do return none
   unless (← nativePrefix row canonical 2) && (← isDefEq row canonical) do return none
   return some value
 
@@ -253,12 +253,12 @@ private def first? (chain : Chain) (row : Expr) : MetaM (Option Bool) := do
       (← naturalLiteral? right.index) == some 0 do return none
   return some membership
 
-private def nonnegative? (chain : Chain) (row : Expr) : MetaM (Option Bool) := do
+private def nonneg? (chain : Chain) (row : Expr) : MetaM (Option Bool) := do
   if let some (left, right) ← realComparison? row false then
     unless (← realLiteral left 0) &&
         (← isCoordinate right chain.auxiliary chain.dimension chain.size) do return none
     return some false
-  let some value ← nativeMembershipValue? row ``nativeNonnegativeMembership | return none
+  let some value ← nativeMembershipValue? row ``nativeNonnegMembership | return none
   unless ← isCoordinate value chain.auxiliary chain.dimension chain.size do return none
   return some true
 
@@ -266,7 +266,7 @@ private def bound? (chain : Chain) (row : Expr) : MetaM (Option (Expr × Bool)) 
   if let some (left, right) ← realComparison? row false then
     unless ← isCoordinate right chain.auxiliary chain.dimension chain.size do return none
     return some (left, false)
-  let some value ← nativeMembershipValue? row ``nativeNonnegativeMembership | return none
+  let some value ← nativeMembershipValue? row ``nativeNonnegMembership | return none
   let some (left, right) ← nativeRealBinary? value ``HSub.hSub | return none
   unless ← isCoordinate left chain.auxiliary chain.dimension chain.size do return none
   return some (right, true)
@@ -310,7 +310,7 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
     if i == step then continue
     if rows[i]!.hasMVar || rows[i]!.hasSorry then continue
     if let some membership ← first? chain rows[i]! then starts := starts.push (i, membership)
-    if let some membership ← nonnegative? chain rows[i]! then signs := signs.push (i, membership)
+    if let some membership ← nonneg? chain rows[i]! then signs := signs.push (i, membership)
     if let some bound ← bound? chain rows[i]! then bounds := bounds.push (i, bound)
     if let some inverse ← inverse? chain rows[i]! then inverses := inverses.push (i, inverse)
   let [(start, startMembership)] := starts.toList | return none
@@ -342,7 +342,7 @@ private def candidate? (rows : Array Expr) (step : Nat) (chain : Chain)
   -- `0 ≤ u[last]` is also a lower bound. It occupies only the sign role.
   let finalBounds := bounds.filter (·.1 != sign)
   let [(final, (value, membership))] := finalBounds.toList | return none
-  return some ⟨initial ++ #[(sign, .nonnegative auxiliary size signMembership),
+  return some ⟨initial ++ #[(sign, .nonneg auxiliary size signMembership),
     (final, .bound (← renderLeaf value) auxiliary size membership)]⟩
 
 /-- Construct mathematical notation for complete chains, retaining constraint positions.

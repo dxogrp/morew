@@ -84,7 +84,7 @@ def weightedSource :=
     let loss := x
     minimize x
     subject to
-      nonnegative : 0 ≤ weight
+      nonneg : 0 ≤ weight
       cap : weight * loss ≤ 10
 
 reformulation weightedTarget : weightedSource := by

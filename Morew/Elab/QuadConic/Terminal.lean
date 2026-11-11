@@ -17,7 +17,22 @@ def backend : Morew.Elab.Cone.Terminal.Backend where
   command := "qconic"
   checkObjective presentation provider := do
     return (← reifyObjective presentation provider).map fun _ => ()
-  buildForm presentation provider rows := Morew.Elab.QuadConic.buildForm presentation provider rows
+  buildForm presentation _ provider rows := Morew.Elab.QuadConic.buildForm presentation provider rows
+
+/-- Use a supplied quadratic objective throughout normalization and constraint planning. -/
+def backendWithCertificate (certificate : Expr) : Morew.Elab.Cone.Terminal.Backend where
+  command := "qconic"
+  checkObjective presentation _ := do
+    return (← validateObjectiveCertificate presentation certificate).map fun _ => ()
+  buildForm presentation projection provider rows := do
+    let transported ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
+      let comp := match presentation.sense with
+        | .minimize => ``Morew.QuadConic.CertifiedMin.comp
+        | .maximize => ``Morew.QuadConic.CertifiedMax.comp
+      mkAppM comp #[certificate, projection]
+    match ← validateObjectiveCertificate presentation transported with
+    | .error error => return .error error
+    | .ok objective => buildFormWithObjective presentation objective provider rows
 
 /-- Plan conic constraint rewrites and certify the final quadratic objective. -/
 def plan (presentation : Morew.Elab.Reformulation.PresentationState)

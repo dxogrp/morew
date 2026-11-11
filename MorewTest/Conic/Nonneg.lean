@@ -18,7 +18,7 @@ assert_not_exists Morew.Elab.Cone.normalizeRow Morew.Elab.Cone.Plan.Result
   Morew.Elab.Cone.Rewrite.planUnique Morew.Conic.Spectral.normNuc_le_iff
   Morew.Conic.LogDet.hypograph_iff
 
-namespace MorewTest.Conic.Nonnegative
+namespace MorewTest.Conic.Nonneg
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command Morew
 
@@ -30,7 +30,7 @@ private def check (term : TSyntax `term) (accepted : Bool) (parameters : Nat := 
       unless points.size == 1 do throwError "expected one decision point"
       let before ← getMCtx
       let environment ← getEnv
-      let result ← Elab.Cone.nonnegativeValue? points[0]! body
+      let result ← Elab.Cone.nonnegValue? points[0]! body
       unless result.isSome == accepted do throwError "unexpected recognition result for {body}"
       if let some coordinate := result then
         unless ← isDefEq coordinate body.getAppArgs[4]! do
@@ -46,7 +46,7 @@ private def hiddenMembership (x : ℝ) : Prop := x ∈ ℝ₊
 
 run_cmd liftTermElabM do
   check (← `(fun x : ℝ => x ∈ ℝ₊)) true
-  check (← `(fun x : Reals => x ∈ Morew.Conic.Cone.nonnegativeScalar.carrier)) true
+  check (← `(fun x : Reals => x ∈ Morew.Conic.Cone.nonnegScalar.carrier)) true
   check (← `(fun x : ℝ => x ^ 2 ∈ ℝ₊)) true
   check (← `(fun n : Nat => fun x : Fin n → ℝ => x ∈ ℝ₊^n)) true 1
   check (← `(fun x : Fin 0 → ℝ => x ∈ ℝ₊^0)) true
@@ -74,7 +74,7 @@ run_cmd liftTermElabM do
         let before ← getMCtx
         let environment ← getEnv
         let predicate := mkAppN body.getAppFn (args.set! position binding)
-        unless (← Elab.Cone.nonnegativeValue? points[0]! predicate).isNone do
+        unless (← Elab.Cone.nonnegValue? points[0]! predicate).isNone do
           throwError "unresolved nonnegative membership was accepted"
         if ← hole.mvarId!.isAssigned then throwError "recognition assigned a caller metavariable"
         unless before.mvarCounter == (← getMCtx).mvarCounter &&
@@ -83,4 +83,4 @@ run_cmd liftTermElabM do
         unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
           throwError "failed recognition changed declarations"
 
-end MorewTest.Conic.Nonnegative
+end MorewTest.Conic.Nonneg

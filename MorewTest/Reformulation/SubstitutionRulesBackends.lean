@@ -15,14 +15,14 @@ open Morew
 noncomputable section
 
 -- Continued conic and NLP certification use the resulting semantic problem.
-reformulation squaredConic : nonnegative := by
+reformulation squaredConic : nonneg := by
   substitute x := u ^ 2
   epigraph t
   conic
 example : IsConic squaredConic := squaredConic.isConic
-example : GlobalEquiv nonnegative squaredConic := squaredConic.equiv
+example : GlobalEquiv nonneg squaredConic := squaredConic.equiv
 
-reformulation squaredNLP : nonnegative := by
+reformulation squaredNLP : nonneg := by
   substitute x := u ^ 2
   nlp
 example : IsSmoothNLP squaredNLP := squaredNLP.isSmoothNLP

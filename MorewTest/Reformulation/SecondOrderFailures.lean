@@ -40,7 +40,7 @@ run_cmd do
     if env.contains full || (Syntax.getProblemView? env full).isSome then
       Lean.throwError "failed second-order rewrite emitted {full}"
 
-def nonnegative :=
+def nonneg :=
   problem (x y t : ℝ)
     minimize t
     subject to
@@ -50,7 +50,7 @@ def nonnegative :=
 #guard_error_fragments [
   "constraint `ratio`: no registered exact conic rule was fully certified:",
   "Morew.Conic.SecondOrder.squareDivEpigraph: registered conic rewrite was not certified: missing positive constant margin"] in
-reformulation zeroMargin : nonnegative := by
+reformulation zeroMargin : nonneg := by
   conic at ratio
 
 def strictlyPositive :=

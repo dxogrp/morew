@@ -130,7 +130,7 @@ theorem directAffine (x : Fin n → ℝ) :
 
 include hweight in
 /-- The homogeneous quadratic part is nonnegative when the weight is nonnegative. -/
-theorem quadraticNonnegative (x : Fin n → ℝ) :
+theorem quadraticNonneg (x : Fin n → ℝ) :
     0 ≤ Fn.norm2 (A *ᵥ x) ^ 2 + weight * Fn.norm2 x ^ 2 :=
   add_nonneg (sq_nonneg _) (mul_nonneg hweight (sq_nonneg _))
 

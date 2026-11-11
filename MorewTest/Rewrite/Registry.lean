@@ -156,18 +156,18 @@ run_elab do
   matched (← `(fun p : (ℝ × ℝ) × ℝ => pairAbs p.1 ≤ p.2)) ``pairAbsRule
   matched (← `(fun p : (ℝ × ℝ) × ℝ => nestedPairAbs p ≤ 3)) ``nestedPairAbsRule
 
-private def nonnegativeValue (x : {x : ℝ // 0 ≤ x}) : ℝ := x.val
+private def nonnegValue (x : {x : ℝ // 0 ≤ x}) : ℝ := x.val
 
-private def nonnegativeValueRule : Morew.EpigraphRepr nonnegativeValue where
+private def nonnegValueRule : Morew.EpigraphRepr nonnegValue where
   Auxiliary := Unit
   target x t _ := x.val ≤ t
-  source_iff_exists _ _ := by simp only [nonnegativeValue, exists_const]
+  source_iff_exists _ _ := by simp only [nonnegValue, exists_const]
 
 -- An intact subtype supplies its own property proof; no external evidence
 -- callback is needed when reconstructing the representation input.
 run_elab do
-  matched (← `(fun x : {x : ℝ // 0 ≤ x} => nonnegativeValue x ≤ 3))
-    ``nonnegativeValueRule
+  matched (← `(fun x : {x : ℝ // 0 ≤ x} => nonnegValue x ≤ 3))
+    ``nonnegValueRule
 
 -- Exact inputs: infer the operand even when its type is the decision type.
 private noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3

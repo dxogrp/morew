@@ -84,14 +84,14 @@ example : GlobalEquiv tautologies unconstrained := unconstrained.equiv
 #guard_msgs in
 #printp unconstrained
 
-def Nonnegative (x : ℝ) := 0 ≤ x
+def Nonneg (x : ℝ) := 0 ≤ x
 
 def aliases :=
   problem (x : ℝ)
     let unchanged := x
     minimize x
     subject to
-      first : Nonnegative unchanged
+      first : Nonneg unchanged
       second : 0 ≤ x
       grouped : 0 ≤ x ∧ x ≤ 1
       copy_grouped : 0 ≤ unchanged ∧ unchanged ≤ 1

@@ -24,7 +24,7 @@ def source {m n : Nat} (A : Fin m → Fin n → ℝ) (b : Fin m → ℝ) :=
   problem (x : Fin n → ℝ)
     minimize ∑ i, ((∑ j, A i j * x j) - b i) ^ 2
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
 
 section
 variable (rows columns : Nat) (design : Fin rows → Fin columns → ℝ)
@@ -64,7 +64,7 @@ end
 info: problem (x : Fin columns → ℝ) (t : ℝ)
   minimize t
   subject to
-    nonnegative : x ∈ ℝ₊^columns
+    nonneg : x ∈ ℝ₊^columns
     residual_conic_1 : (t, 1 / 2, fun i => ∑ j, design i j * x j - response i) ∈ RSOC rows
 -/
 #guard_msgs in
@@ -84,7 +84,7 @@ example : IsConic concrete := concrete.isConic
 info: problem (x : Fin 3 → ℝ) (t : ℝ)
   minimize t
   subject to
-    nonnegative : x ∈ ℝ₊^3
+    nonneg : x ∈ ℝ₊^3
     residual_conic_1 : (t, 1 / 2, fun i => ∑ j, ![![1, 2, 3], ![4, 5, 6]] i j * x j - ![7, 8] i) ∈ RSOC 2
 -/
 #guard_msgs in
