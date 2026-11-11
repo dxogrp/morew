@@ -14,7 +14,7 @@ representation that automatic recognition cannot establish. The certificate
 describes the current objective; the command still converts the constraints.
 -/
 
-namespace Examples.Advanced.ObjectiveCertificates
+namespace Examples.Advanced.ObjCertificate
 
 open Morew
 open scoped Matrix
@@ -113,4 +113,4 @@ the respective directions.
 -/
 
 end
-end Examples.Advanced.ObjectiveCertificates
+end Examples.Advanced.ObjCertificate
