@@ -70,8 +70,8 @@ The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
 tag := "objective-certificates"
 %%%
 
-When automatic objective recognition needs additional evidence, supply a
-certificate with `conic using cert` or `qconic using cert`:
+Supply an objective certificate when automatic recognition cannot establish
+its representation:
 
 :::table +header
 *
@@ -88,23 +88,14 @@ certificate with `conic using cert` or `qconic using cert`:
   * `QuadConic.CertifiedMax f`
 :::
 
-Here $`f` is the current objective, including its constant term. An affine
-certificate contains a map and a proof that it equals $`f`. A quadratic
-certificate contains a homogeneous quadratic form $`Q`, an affine function
-$`a`, a proof that $`Q+a=f`, and a proof that $`Q` is nonnegative for minimization
-or nonpositive for maximization on the entire decision space.
-Both quadratic certificate types allow $`Q=0`; supply the
-type matching the declared direction. The sign condition applies to $`Q`,
-not to the value of $`f`.
+Here $`f` is the current objective. An affine certificate represents $`f`
+by an affine map. A quadratic certificate proves $`f=Q+a`, where $`Q` is a
+homogeneous quadratic form and $`a` is affine, including the constant term.
+It also proves $`Q(x)\geq 0` for minimization or $`Q(x)\leq 0` for maximization
+throughout the decision space. Zero quadratic parts are allowed.
 
-`QuadConic.CertifiedExpr f` records the quadratic decomposition without a
-curvature requirement. Its constructions can be used to build a `CertifiedMin`
-or `CertifiedMax`. Automatic recognition also establishes the decomposition
-and curvature before the completed certificate is checked.
-
-The supplied certificate is checked against the current decision space and
-objective. Constraint conversion proceeds automatically and transports the
-certificate when it introduces auxiliary variables.
+`QuadConic.CertifiedExpr f` records the decomposition without a curvature proof.
+Constraints are converted automatically.
 
 # Options
 %%%

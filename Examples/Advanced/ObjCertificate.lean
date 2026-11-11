@@ -9,9 +9,8 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 /-!
 # Providing objective certificates
 
-Use `conic using cert` or `qconic using cert` when the objective has a known
-representation that automatic recognition cannot establish. The certificate
-describes the current objective; the command still converts the constraints.
+Use `conic using cert` or `qconic using cert` to supply a representation of
+the objective. Constraints are converted automatically.
 -/
 
 namespace Examples.Advanced.ObjCertificate
@@ -23,8 +22,7 @@ noncomputable section
 /-!
 ## An affine function
 
-Suppose `f(x) = ax + b`. The hypothesis gives an exact affine representation
-even when the definition of `f` is unavailable.
+Given `f(x) = ax + b`, construct an affine certificate from this equality.
 -/
 
 def affineCertificate (f : ℝ → ℝ) (a b : ℝ) (hf : ∀ x, f x = a * x + b) :
@@ -67,8 +65,7 @@ For a positive semidefinite matrix `P`, consider
 ```
 
 The homogeneous quadratic part is `Q(x) = x^T P x`; the affine remainder is
-`a(x) = c^T x + d`. Positive semidefiniteness gives `Q(x) ≥ 0` for every `x`,
-including when `P` is singular or zero.
+`a(x) = c^T x + d`. Positive semidefiniteness gives `Q(x) ≥ 0` for every `x`.
 -/
 
 def matrixProblem {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
@@ -106,10 +103,7 @@ example : (matrixConic.quadConicForm P c d hP).data.toProblem = matrixConic P c 
 end
 
 /-!
-For maximization, supply `QuadConic.CertifiedMax f` with a proof that its
-quadratic part is nonpositive. `CertifiedMin.ofAffine` and
-`CertifiedMax.ofAffine` certify affine objectives with zero quadratic part in
-the respective directions.
+For maximization, use `QuadConic.CertifiedMax f` and prove `Q(x) ≤ 0` for every `x`.
 -/
 
 end
