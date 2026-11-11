@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Affine
 import Morew.Elab.Expr
+import Morew.Elab.State
 import Lean.Meta.Basic
 import Lean.Meta.Transform
 import Qq
@@ -102,14 +103,6 @@ def canonicalSpace (type : Expr) : MetaM (Expr × Expr) := do
   pure (← mkAppM ``Structure.group #[result.data],
     ← mkAppM ``Structure.module #[result.data])
 
-/-- Install each canonical instance and substitute its value into the result. -/
-private def installInstances (remaining : List Expr) (action : MetaM Expr) : MetaM Expr := do
-  match remaining with
-  | [] => instantiateMVars (← action)
-  | inst :: rest =>
-      mapLetDeclZeta `_affineCanonical (← inferType inst) inst fun _ =>
-        installInstances rest action
-
 /-- Use canonical instances for the supplied spaces, their components, and `ℝ`.
 Keep other local instances available and substitute temporary bindings into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
@@ -119,6 +112,6 @@ def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr 
     for inst in result.instances do
       unless instances.contains inst do
         instances := instances.push inst
-  installInstances instances.toList action
+  State.withInstances `_affineCanonical instances.toList action
 
 end Morew.Elab.Affine.Space
