@@ -222,9 +222,6 @@ private def supportedSpace (type : Expr) : MetaM Bool :=
 private def helperArgumentSpace (type : Expr) : MetaM Bool :=
   supportedSpaceShape false type
 
-private def functionOf (point body : Expr) : MetaM Expr :=
-  mkLambdaFVars #[point] body
-
 private def certificateFunction (proof : Expr) : MetaM Expr := do
   let type ← instantiateMVars (← inferType proof)
   unless type.isAppOf ``ContDiffOn do
@@ -267,7 +264,7 @@ private def closePendingModels (name : Name) (type binding value : Expr) : Certi
 
 -- Reuse certified operand bodies for domain evidence and selective expansion.
 private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
-  if (← get).steps == 0 then return ← functionOf point operand
+  if (← get).steps == 0 then return ← mkLambdaFVars #[point] operand
   return ← certificateFunction proof
 
 -- Check operation instances independently of operands.
@@ -392,7 +389,7 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
   let function ← certificateFunction proof
   if let some count := operands? then
     checkPrefix expression (function.beta #[point]) count
-  unless ← isDefEq function (← functionOf point expression) do
+  unless ← isDefEq function (← mkLambdaFVars #[point] expression) do
     reject expression .invalidInstance "smoothness construction does not match this typed expression"
   return proof
 
@@ -454,7 +451,7 @@ private def constant (point expression : Expr) (info : DomainInfo) : CertifyM Ce
 private def restrictDomain (point expression value : Expr) (positive : Bool)
     (info : DomainInfo) (proofs : Array Expr) (valueProof : Expr) :
     CertifyM (DomainInfo × Array Expr × Expr) := do
-  let function ← functionOf point value
+  let function ← mkLambdaFVars #[point] value
   let base := if positive then `Morew.NLP.Domain.positive else `Morew.NLP.Domain.nonzero
   let domain ← mkAppM base #[info.domain, function]
   let isOpen ← try
@@ -583,7 +580,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         restrictProof point proof info.domain subset
         else pure proof
       mkLambdaFVars #[i] proof
-    let function ← if (← get).steps == 0 then functionOf point expression else
+    let function ← if (← get).steps == 0 then mkLambdaFVars #[point] expression else
       withLocalDecl name binderInfo index fun i => do
         let component ← certificateFunction (mkApp smooths i)
         mkLambdaFVars #[point, i] (component.beta #[point])

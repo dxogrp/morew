@@ -13,12 +13,6 @@ open Lean Lean.Meta
 
 namespace Decomposition
 
-/-- The conjunction convention shared by typed problem presentations. -/
-def conjunction : List Expr → Expr
-  | [] => mkConst ``True
-  | [p] => p
-  | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
-
 /-- Assemble ordered conjunction proofs; empty input gives `True` and one entry retains its structure. -/
 def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
   if proofs.isEmpty then return mkConst ``True.intro
@@ -51,12 +45,12 @@ private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
 /-- Join two normalized conjunctions without losing their equivalence. -/
 partial def appendIff (left right : List Expr) : MetaM Expr := do
   match left, right with
-  | [], _ => mkAppM ``emptyLeft #[conjunction right]
-  | _, [] => mkAppM ``emptyRight #[conjunction left]
-  | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (conjunction (left ++ right))
+  | [], _ => mkAppM ``emptyLeft #[mkAndN right]
+  | _, [] => mkAppM ``emptyRight #[mkAndN left]
+  | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (mkAndN (left ++ right))
   | p :: rest, _ =>
-      mkAppM ``appendHead #[p, conjunction rest, conjunction right,
-        conjunction (rest ++ right), ← appendIff rest right]
+      mkAppM ``appendHead #[p, mkAndN rest, mkAndN right,
+        mkAndN (rest ++ right), ← appendIff rest right]
 
 /-- Split a proposition using only the supplied structural reduction. Local
 lets remain attached to every conjunct and to the decomposition proof. -/
@@ -98,7 +92,7 @@ def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
     let predicates ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let proof ← instantiateMVars (← mkLambdaFVars #[point] proof)
     let expected ← mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
-      (mkApp predicate point) (Decomposition.conjunction bodies))
+      (mkApp predicate point) (mkAndN bodies))
     unless ← isDefEq (← inferType proof) expected do
       throwError "constraint decomposition does not match its source predicate"
     if proof.hasMVar then

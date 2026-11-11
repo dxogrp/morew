@@ -193,10 +193,6 @@ private def affine? (point expression : Expr) (provider : Affine.EvidenceProvide
     return .ok (← Affine.Space.withCanonicalSpaces #[← inferType point, ← inferType expression] do
       mkAppM ``Morew.Affine.Certified.mk #[result.map, result.pointwiseEquality])
 
-private def affineRequired (point expression : Expr) (provider : Affine.EvidenceProvider)
-    (indices : Array Expr) : ReifyM Expr :=
-  affine? point expression provider indices
-
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
@@ -300,7 +296,7 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
       reject expression "expected a square with natural exponent 2"
     let base ← Expr.reduceStructure args[4]!
     let (affine, constructor, proofName, emptyNorm) ← if base.isAppOfArity ``Morew.Fn.norm2 2 then do
-        let affine ← affineRequired point base.getAppArgs[1]! provider indices
+        let affine ← ExceptT.mk (affine? point base.getAppArgs[1]! provider indices)
         pure (affine, ``Morew.QuadConic.CertifiedExpr.fnNorm2Sq,
           ``Morew.QuadConic.CertifiedExpr.fnNorm2Sq_nonneg,
           ← isDefEq base.getAppArgs[0]! (mkNatLit 0))
@@ -310,13 +306,13 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
           | reject base "squared norms require a canonical Euclidean space or Fn.norm2"
         let expected := (mkAppN (← getConstInfo ``canonicalNorm).value! #[n, normArgs[2]!]).headBeta
         checkPrefix base expected 1
-        let affine ← affineRequired point normArgs[2]! provider indices
+        let affine ← ExceptT.mk (affine? point normArgs[2]! provider indices)
         let coordinates ← Affine.Space.withCanonicalSpaces #[← inferType point, normArgs[0]!] do
           mkAppM ``Morew.Affine.Certified.ofEuclidean #[affine]
         pure (coordinates, ``Morew.QuadConic.CertifiedExpr.fnNorm2Sq,
           ``Morew.QuadConic.CertifiedExpr.fnNorm2Sq_nonneg, ← isDefEq n (mkNatLit 0))
       else do
-        let affine ← affineRequired point base provider indices
+        let affine ← ExceptT.mk (affine? point base provider indices)
         pure (affine, ``Morew.QuadConic.CertifiedExpr.square,
           ``Morew.QuadConic.CertifiedExpr.square_nonneg, false)
     let certificate ← construct point expression constructor #[affine] (some 2)

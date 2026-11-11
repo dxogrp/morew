@@ -164,7 +164,7 @@ private def attempt (source : Expr) (retained : Array Expr)
         withLocalDeclD `point domain fun point =>
           Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Result.replaceFVars point (mkApp source point) do
             let bodies := retained.map (mkApp · point)
-            withLocalDecl `retained .default (Decomposition.conjunction bodies.toList)
+            withLocalDecl `retained .default (mkAndN bodies.toList)
                 (kind := .implDetail) fun evidence => do
               let body ← matchingBody (mkApp source point)
               matchRule point body (proveObligation point bodies evidence) fun matched =>

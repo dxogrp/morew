@@ -35,9 +35,6 @@ private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ t
     exact h
   · exact fun h => ⟨(), h⟩
 
-private def conjunction (propositions : Array Expr) : Expr :=
-  Rewrite.Decomposition.conjunction propositions.toList
-
 open Morew.Elab.Rewrite.Decomposition (conjunctionProof conjunctionParts)
 
 private def proveIff (lhs rhs : Expr)
@@ -56,7 +53,7 @@ private def applyRows (rows : Array Expr) (point : Expr) : Array Expr :=
 
 private def feasibleFunction (domain : Expr) (rows : Array Expr) : MetaM Expr :=
   withLocalDeclD `point domain fun point => do
-    mkLambdaFVars #[point] (conjunction (applyRows rows point))
+    mkLambdaFVars #[point] (mkAndN (applyRows rows point).toList)
 
 /-- Separate exactly one displayed row from the retained ordered conjunction.
 Conjunctions inside an individual row keep their original boundaries. -/
@@ -204,9 +201,9 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   let nextRows := splice oldRows index rows
   let domain := presentation.domainType
   let expected ← withLocalDeclD `point domain fun point => do
-    let hypothesis := conjunction (applyRows remainder point)
+    let hypothesis := mkAndN (applyRows remainder point).toList
     let conclusion := mkApp2 (mkConst ``Iff) (mkApp oldRows[index]! point)
-      (conjunction (applyRows rows point))
+      (mkAndN (applyRows rows point).toList)
     mkForallFVars #[point] (← mkArrow hypothesis conclusion)
   unless ← isDefEq (← inferType conditionalIff) expected do
     throwError "conditional conic certificate does not match the selected row and retained constraints"
@@ -214,8 +211,8 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   let feasible ← feasibleFunction domain nextRows
   let targetProblem ← mkAppM ``Morew.Problem.mk #[presentation.objective, feasible]
   let feasibleIff ← withLocalDeclD `point domain fun point => do
-    let proof ← proveIff (conjunction (applyRows oldRows point))
-      (conjunction (applyRows nextRows point)) (fun h => do
+    let proof ← proveIff (mkAndN (applyRows oldRows point).toList)
+      (mkAndN (applyRows nextRows point).toList) (fun h => do
         let parts ← conjunctionParts oldRows.size h
         let other := splice parts index #[]
         let block := mkApp2 conditionalIff point (← conjunctionProof other)

@@ -157,7 +157,7 @@ private def tryGroupCore (work : Work) (index : Nat) : MetaM (Option Work) := do
   if leaves.size == 1 && (← isDefEq leaves[0]! source) then return none
   let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
   let conditional ← withLocalDeclD `point work.presentation.domainType fun point => do
-    let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+    let remainder := mkAndN (retained.toList.map (mkApp · point))
     withLocalDeclD `retained remainder fun hypothesis =>
       mkLambdaFVars #[point, hypothesis] (mkApp decomposition point)
   let replacement ← Replace.rewriteConstraintContextual work.presentation index leaves conditional
@@ -184,7 +184,7 @@ private def tryGroup (work : Work) (index : Nat) : MetaM (Option Work) := do
   return result.toOption
 
 private def originalError (original : PresentationState) (origin : Nat)
-    (error : Domain.DomainError) (ruleError : Rewrite.Error) : MetaM Domain.DomainError := do
+    (error : Domain.DomainError) (ruleError : Expr.Error) : MetaM Domain.DomainError := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   return { error with
     rowIndex? := some origin

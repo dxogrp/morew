@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Basic
+import Morew.Elab.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.Rewrite.Decomposition
 
@@ -106,20 +107,6 @@ partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
         if ← unresolved value seen then return true
   return false
 
-private partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) :
-    MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasSorry then return true
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    unless seen.contains id do
-      seen := seen.insert id
-      let declaration ← id.getDecl
-      if ← hasPlaceholders declaration.type seen then return true
-      if let some value := declaration.value? (allowNondep := true) then
-        if ← hasPlaceholders value seen then return true
-  return false
-
 /-- Read the decision domain of a fully elaborated predicate. -/
 def predicateDomain (predicate : Expr) : MetaM Expr := do
   let type ← whnf (← inferType predicate)
@@ -149,7 +136,7 @@ def Certificate.check (certificate : Certificate) (source : Expr)
     | .exact repr => #[repr]
     | .contextual auxiliary target sourceIffExists => #[auxiliary, target, sourceIffExists]
   for expression in #[source] ++ retained ++ expressions do
-    if ← hasPlaceholders expression then
+    if ← Evidence.hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
   if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
   let domain ← predicateDomain source
@@ -168,7 +155,7 @@ def Certificate.check (certificate : Certificate) (source : Expr)
     unless ← isDefEq (← inferType target) targetType do
       throwError "conditional exact target does not have the original domain and uniform auxiliary type"
     let expected ← withLocalDeclD `point domain fun point => do
-      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let remainder := mkAndN (retained.toList.map (mkApp · point))
       let existence ← mkAppM ``Exists #[mkApp target point]
       let iff := mkApp2 (mkConst ``Iff) (mkApp source point) existence
       mkForallFVars #[point] (← mkArrow remainder iff)
@@ -184,7 +171,7 @@ def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
   for expression in #[source, auxiliary, target, sourceIff] do
     if ← unresolved expression then
       throwError "exact replacement contains unresolved metavariables"
-    if ← hasPlaceholders expression then
+    if ← Evidence.hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
   if ← Expr.depends point auxiliary then
     throwError "the auxiliary type depends on an optimization variable"
@@ -250,7 +237,7 @@ def Result.checkTargetIff (result : Result)
   for expression in #[auxiliary, targetFunction, result.nextDomain, result.targetIff] ++
       result.auxiliary?.toArray ++ result.rowPredicates do
     if ← unresolved expression then throwError "exact replacement contains unresolved metavariables"
-    if ← hasPlaceholders expression then
+    if ← Evidence.hasPlaceholders expression then
       throwError "the exact replacement contains unresolved placeholders"
   let targetType ← whnf (← inferType targetFunction)
   let .forallE _ domain _ _ := targetType
@@ -279,7 +266,7 @@ def Result.checkTargetIff (result : Result)
       | some _ => mkApp2 targetFunction (.proj ``Prod 0 point) (.proj ``Prod 1 point)
     let rows := result.rowPredicates.toList.map (mkApp · point)
     mkForallFVars #[point]
-      (mkApp2 (mkConst ``Iff) target (Decomposition.conjunction rows))
+      (mkApp2 (mkConst ``Iff) target (mkAndN rows))
   unless ← isDefEq (← inferType result.targetIff) expected do
     throwError mismatchMessage
   checkWithKernel result.targetIff

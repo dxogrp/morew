@@ -106,8 +106,7 @@ run_elab do
       let second ← mkEq point point
       return #[← mkLambdaFVars #[point] first, ← mkLambdaFVars #[point] second]
     let targetIff ← withLocalDeclD `point (mkConst ``Real) fun point => do
-      let body := Morew.Elab.Rewrite.Decomposition.conjunction
-        (rows.toList.map (mkApp · point))
+      let body := mkAndN (rows.toList.map (mkApp · point))
       mkLambdaFVars #[point] (mkApp (mkConst ``Iff.rfl) body)
     let result : Result := {
       certificate := .exact repr, auxiliary? := none, nextDomain := mkConst ``Real

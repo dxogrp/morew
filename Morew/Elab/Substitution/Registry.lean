@@ -27,9 +27,6 @@ structure Entry where
   key : Key
   deriving BEq, Inhabited
 
-/-- Reduce binding syntax while preserving named mathematical functions. -/
-abbrev structural := Morew.Elab.Rewrite.Registry.structural
-
 /-- Read the retained, new, and old types and complete coordinate map. -/
 def parameterization (type : Expr) : MetaM (Expr × Expr × Expr × Expr) := do
   let type ← whnf type
@@ -47,7 +44,7 @@ private def mapKey? (map : Expr) : MetaM (Option Key) := do
     let .forallE _ newType _ _ := type
       | throwError "expected a map from retained and new coordinates"
     withLocalDeclD `coordinate newType fun coordinate => do
-      let body ← structural (mkApp2 map retained coordinate)
+      let body ← Morew.Elab.Rewrite.Registry.structural (mkApp2 map retained coordinate)
       if body == coordinate then return some .identity
       return body.getAppFn.constName?.map Key.operation
 

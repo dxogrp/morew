@@ -70,7 +70,7 @@ private def assertDomain (stx : TSyntax `term) (parameters : Nat := 0)
       let goal := pair.getAppArgs[2]!
       let some rows ← getArrayLit? pair.getAppArgs[3]!
         | throwError "expected a literal array of retained propositions"
-      let conjunction := Morew.Elab.Rewrite.Decomposition.conjunction rows.toList
+      let conjunction := mkAndN rows.toList
       withLocalDeclD `remainder conjunction fun proof =>
         checkDomain points[0]! goal rows proof accepted
 

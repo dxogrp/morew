@@ -7,6 +7,7 @@ import Morew.Affine
 import Morew.Affine.Matrix
 import Morew.Affine.SymmetricMatrix
 import Morew.Elab.Expr
+import Morew.Elab.Evidence
 import Morew.Elab.Affine.Space
 import Morew.Elab.State
 import Morew.Elab.Affine.Expansion
@@ -72,23 +73,6 @@ private def withFiniteInstances (instances : List Expr) (action : ReifyM Expr) :
     mapLetDeclZeta `_sourceFinite (← inferType inst) inst fun _ =>
       withFiniteInstances rest action
 
-private def functionOf (point body : Expr) : MetaM Expr :=
-  mkLambdaFVars #[point] body
-
-private partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) :
-    MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasSorry then return true
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    unless seen.contains id do
-      seen := seen.insert id
-      let declaration ← id.getDecl
-      if ← hasPlaceholders declaration.type seen then return true
-      if let some value := declaration.value? (allowNondep := true) then
-        if ← hasPlaceholders value seen then return true
-  return false
-
 private def certifiedFunction (certificate : Expr) : MetaM Expr := do
   let type ← instantiateMVars (← inferType certificate)
   unless type.isAppOf ``Morew.Affine.Certified do
@@ -114,7 +98,7 @@ private def finish (point source certificate : Expr)
   let function ← certifiedFunction certificate
   if let some count := operandCount? then
     checkPrefix source (function.beta #[point]) count
-  unless ← isDefEq function (← functionOf point source) do
+  unless ← isDefEq function (← mkLambdaFVars #[point] source) do
     reject source "the supported affine construction does not match this typed expression"
   return certificate
 
@@ -241,7 +225,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``Morew.Conic.SymmetricMatrix.ofMatrix && args.size == 3 then
     let value ← reifyBody point args[1]! provider
     let proof ← mkLambdaFVars #[point] args[2]!
-    if (← Expr.hasUnresolved proof) || (← hasPlaceholders proof) then
+    if (← Expr.hasUnresolved proof) || (← Evidence.hasPlaceholders proof) then
       reject args[2]! "the symmetry proof contains unresolved metavariables or placeholders"
     return ← construct point expression ``Morew.Affine.Certified.toSymmetricMatrix #[value, proof]
   if name == some ``Morew.Conic.fromBlocksFin && args.size == 6 then
@@ -361,7 +345,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     let exponent ← Expr.reduceStructure args[1]!
     unless ← Expr.depends point exponent do
       if ← isDefEq exponent q((0 : ℝ)) then
-        let source ← functionOf point args[0]!
+        let source ← mkLambdaFVars #[point] args[0]!
         return ← construct point expression ``Morew.Affine.Certified.rpowZeroSource
           #[source] (some 2)
       if ← isDefEq exponent q((1 : ℝ)) then
@@ -373,7 +357,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
     if ← isDefEq (← inferType exponent) q(ℝ) then
       unless ← Expr.depends point exponent do
         if ← isDefEq exponent q((0 : ℝ)) then
-          let source ← functionOf point args[4]!
+          let source ← mkLambdaFVars #[point] args[4]!
           return ← construct point expression ``Morew.Affine.Certified.rpowNotationZeroSource
             #[source] (some 2)
         if ← isDefEq exponent q((1 : ℝ)) then
@@ -382,7 +366,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
       reject expression "a decision-dependent real power is supported only with exponent 0 or 1"
     if ← isDefEq (← inferType exponent) (mkConst ``Nat) then
       if (← getNatValue? exponent) == some 0 then
-        let source ← functionOf point args[4]!
+        let source ← mkLambdaFVars #[point] args[4]!
         return ← construct point expression ``Morew.Affine.Certified.powZeroSource
           #[source] (some 2)
       if (← getNatValue? exponent) == some 1 then
@@ -453,7 +437,7 @@ private def reifyCore (source : Expr) (provider : EvidenceProvider)
   let source ← instantiateMVars source
   if (← Expr.inspectLocals source none).2 then
     reject source "unresolved metavariables are not supported"
-  if ← hasPlaceholders source then
+  if ← Evidence.hasPlaceholders source then
     reject source "proof placeholders are not supported"
   let type ← whnf (← inferType source)
   let .forallE _ domain codomain _ := type
@@ -493,7 +477,7 @@ def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
     if let .ok result := direct then return .ok result
     unless ← Expansion.enabled do return direct
     -- Reject unresolved inputs before expansion can discard their arguments.
-    if (← Expr.inspectLocals source none).2 || (← hasPlaceholders source) then return direct
+    if (← Expr.inspectLocals source none).2 || (← Evidence.hasPlaceholders source) then return direct
     let prepared ← Expansion.prepare source
       (fun expression preserve => Expr.reduceStructure expression preserve)
     if prepared.expansions == 0 then return direct

@@ -42,7 +42,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
     let generated := result.rowPredicates.map (mkApp · point)
     let bodies := retained.extract 0 insertionIndex ++ generated ++
       retained.extract insertionIndex retained.size
-    let feasible := Morew.Elab.Rewrite.Decomposition.conjunction bodies.toList
+    let feasible := mkAndN bodies.toList
     let member ← mkAppM ``Membership.mem #[result.certified.domain, point]
     mkForallFVars #[point] (← mkArrow feasible member)
   unless ← isDefEq (← inferType result.certified.feasibleMemDomain) expectedInclusion do

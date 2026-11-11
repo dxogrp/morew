@@ -21,14 +21,12 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private abbrev NLPPrepared := Morew.Elab.NLP.Rewrite.Result
-
 private def nlpStyle : Rows.Style := {
   family := "nlp", diagnostic := "NLP", certificateKind := `_nlpCertificate
 }
 
 private def materializeNLP (state : ReformState) (index : Nat)
-    (prepared : NLPPrepared) (preparedVars : Array Expr)
+    (prepared : Morew.Elab.NLP.Rewrite.Result) (preparedVars : Array Expr)
     (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
   runTermElabM fun sectionFVars => do
     let context ← instantiateLCtxMVars (← getLCtx)
@@ -73,7 +71,8 @@ def prepareNLP (state : ReformState) (step : Syntax)
         unless instances.contains inst do instances := instances.push inst
     let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
       (fun result oldVars newVars => result.map
-        (fun (value : NLPPrepared) => value.replaceFVars oldVars newVars)) instances.toList do
+        (fun (value : Morew.Elab.NLP.Rewrite.Result) =>
+          value.replaceFVars oldVars newVars)) instances.toList do
       Morew.Elab.NLP.Rewrite.plan predicate (retained.map (·.predicate)) rule? index declaration?
     match result with
     | .error error =>

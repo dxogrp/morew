@@ -194,7 +194,7 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
     let presentation := work.presentation
     let retained := splice (presentation.constraints.map (·.predicate)) index #[]
     let conditional ← withLocalDeclD `point presentation.domainType fun point => do
-      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let remainder := mkAndN (retained.toList.map (mkApp · point))
       withLocalDeclD `retained remainder fun hypothesis =>
         mkLambdaFVars #[point, hypothesis] (mkApp decomposition point)
     let rewrite ← rewriteConstraintContextual presentation index leaves conditional
@@ -305,7 +305,7 @@ private def normalizeFinal (work : Work) : MetaM Work := do
     let presentation := work.presentation
     let retained := splice (presentation.constraints.map (·.predicate)) index #[]
     let conditional ← withLocalDeclD `point presentation.domainType fun point => do
-      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let remainder := mkAndN (retained.toList.map (mkApp · point))
       withLocalDeclD `retained remainder fun hypothesis =>
         mkLambdaFVars #[point, hypothesis] (mkApp normalized.pointwiseIff point)
     let rewrite ← rewriteConstraintContextual presentation index
