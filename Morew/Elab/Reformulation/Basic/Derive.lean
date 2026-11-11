@@ -32,16 +32,7 @@ private def materializeDerive (state : ReformState) (label : TSyntax `ident)
     let expected ← withLocalDeclD `point typed.semanticDomainType fun point => do
       let feasible ← mkAppM ``Morew.Problem.feasible #[typed.semantic, point]
       mkForallFVars #[point] (← mkArrow feasible (mkApp predicate point))
-    let implied ← withRef provided do
-      let proof ← elabTermEnsuringType provided expected
-      synthesizeSyntheticMVarsNoPostponing
-      if (← getThe Core.State).messages.hasErrors then throwAbortTerm
-      let proof ← instantiateMVars proof
-      if proof.hasMVar || proof.hasSorry then
-        throwError "derived constraint proof contains unresolved metavariables or placeholders"
-      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-        checkWithKernel proof
-      pure proof
+    let implied ← Rows.Append.elaborateProof provided expected "derived constraint proof"
     let addition ← mkAppM ``Morew.addConstraintEquiv
       #[typed.semantic, predicate, implied]
     Rows.Append.finish deriveStyle state typed name proposition predicate propositionSyntax addition

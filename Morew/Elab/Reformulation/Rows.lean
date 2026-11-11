@@ -195,6 +195,20 @@ private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
       let last ← mkAppM ``Prod.snd #[point]
       return (← pointComponents first (n + 1)).push last
 
+/-- Elaborate a supplied constraint certificate, reject incomplete terms, and kernel-check
+it after instantiating metavariables in the local context. -/
+def elaborateProof (provided : TSyntax `term) (expected : Expr) (description : String) :
+    TermElabM Expr := withRef provided do
+  let proof ← elabTermEnsuringType provided expected
+  synthesizeSyntheticMVarsNoPostponing
+  if (← getThe Core.State).messages.hasErrors then throwAbortTerm
+  let proof ← instantiateMVars proof
+  if proof.hasMVar || proof.hasSorry then
+    throwError "{description} contains unresolved metavariables or placeholders"
+  withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
+    checkWithKernel proof
+  pure proof
+
 /-- Close the proposed row over current model bindings before checking its semantic certificate. -/
 def elaboratePredicate (style : Style) (state : ReformState)
     (typed : Morew.Elab.Reformulation.RunnerState) (proposition : TSyntax `term) :
