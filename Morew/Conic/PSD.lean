@@ -85,10 +85,8 @@ theorem toMatrix_smul {n : Nat} (c : ℝ) (M : SymmetricMatrix n) :
 
 /-- Forgetting the symmetry proof is a real linear map. -/
 def toMatrixLinearMap (n : Nat) :
-    SymmetricMatrix n →ₗ[ℝ] Matrix (Fin n) (Fin n) ℝ where
-  toFun := toMatrix
-  map_add' := toMatrix_add
-  map_smul' := toMatrix_smul
+    SymmetricMatrix n →ₗ[ℝ] Matrix (Fin n) (Fin n) ℝ :=
+  (symmetricMatrixSubmodule n).subtype
 
 @[simp]
 theorem toMatrixLinearMap_apply {n : Nat} (M : SymmetricMatrix n) :
