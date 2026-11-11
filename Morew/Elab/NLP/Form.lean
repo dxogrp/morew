@@ -113,9 +113,9 @@ private def buildFormCore (presentation : PresentationState)
   let mut smooth := objective.smooth[0]!
   let mut blocks := #[]
   for certificate in certificates do
-    let next ← mkAppM ``Morew.NLP.Domain.inter #[domain, certificate.domain]
-    let left ← mkAppM ``Morew.NLP.Domain.inter_left #[domain, certificate.domain]
-    let right ← mkAppM ``Morew.NLP.Domain.inter_right #[domain, certificate.domain]
+    let next ← mkAppM ``Set.inter #[domain, certificate.domain]
+    let left ← mkAppOptM ``Set.inter_subset_left #[none, some domain, some certificate.domain]
+    let right ← mkAppOptM ``Set.inter_subset_right #[none, some domain, some certificate.domain]
     smooth ← Space.withCanonicalSpaces #[presentation.domainType] <|
       mkAppM ``ContDiffOn.mono #[smooth, left]
     blocks ← blocks.mapM fun block => Space.withCanonicalSpaces #[presentation.domainType] <|
@@ -123,10 +123,8 @@ private def buildFormCore (presentation : PresentationState)
     blocks := blocks.push (← Space.withCanonicalSpaces #[presentation.domainType] <|
       mkAppM ``Morew.NLP.Rows.Block.mono #[certificate.rowBlocks[0]!, right])
     opened ← Space.withCanonicalSpaces #[presentation.domainType] <|
-      mkAppM ``Morew.NLP.Domain.inter_open
-        #[domain, certificate.domain, opened, certificate.domainIsOpen]
-    included ← mkAppM ``Morew.NLP.Domain.inter_includes
-      #[feasible, domain, certificate.domain, included, certificate.feasibleMemDomain]
+      mkAppM ``IsOpen.inter #[opened, certificate.domainIsOpen]
+    included ← mkAppM ``Set.subset_inter #[included, certificate.feasibleMemDomain]
     domain := next
   let form ← Space.withCanonicalSpaces #[presentation.domainType] do
     let block ← if blocks.isEmpty then

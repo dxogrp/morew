@@ -407,8 +407,8 @@ private def univInfo (point : Expr) : CertifyM DomainInfo := do
   return {
     domain := ← mkAppOptM ``Set.univ #[some decision]
     isOpen := ← Space.withCanonicalSpaces #[decision] <|
-      mkAppOptM ``Morew.NLP.Domain.univ_open #[some decision, none]
-    included := ← mkAppM ``Morew.NLP.Domain.univ_includes #[(← read).feasible]
+      mkAppOptM ``isOpen_univ #[some decision, none]
+    included := ← mkAppM ``Set.subset_univ #[← mkAppM ``Set.ofPred #[(← read).feasible]]
   }
 
 private def restrictProof (point proof domain subset : Expr) : MetaM Expr := do
@@ -426,17 +426,15 @@ private def combine (point : Expr) (children : Array Certificate) :
     if info.domain == child.domain then
       proofs := proofs.push child.smooth
     else
-      let domain ← mkAppM ``Morew.NLP.Domain.inter #[info.domain, child.domain]
-      let left ← mkAppM ``Morew.NLP.Domain.inter_left #[info.domain, child.domain]
-      let right ← mkAppM ``Morew.NLP.Domain.inter_right #[info.domain, child.domain]
+      let domain ← mkAppM ``Set.inter #[info.domain, child.domain]
+      let left ← mkAppOptM ``Set.inter_subset_left #[none, some info.domain, some child.domain]
+      let right ← mkAppOptM ``Set.inter_subset_right #[none, some info.domain, some child.domain]
       proofs ← proofs.mapM fun proof => restrictProof point proof domain left
       proofs := proofs.push (← restrictProof point child.smooth domain right)
       info := {
         domain
-        isOpen := ← domainApp point ``Morew.NLP.Domain.inter_open
-          #[info.domain, child.domain, info.isOpen, child.isOpen]
-        included := ← mkAppM ``Morew.NLP.Domain.inter_includes
-          #[(← read).feasible, info.domain, child.domain, info.included, child.included]
+        isOpen := ← domainApp point ``IsOpen.inter #[info.isOpen, child.isOpen]
+        included := ← mkAppM ``Set.subset_inter #[info.included, child.included]
       }
   return (info, proofs)
 

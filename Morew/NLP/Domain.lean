@@ -22,37 +22,6 @@ universe u v w
 
 variable {X : Type u} {Y : Type v} {domain : Set X}
 
-/-- The common domain of two expressions. -/
-def inter (s t : Set X) : Set X := s ∩ t
-
-/-- Intersecting open evaluation domains preserves openness. -/
-theorem inter_open [TopologicalSpace X] (s t : Set X) (hs : IsOpen s) (ht : IsOpen t) :
-    IsOpen (inter s t) :=
-  hs.inter ht
-
-/-- A common domain is contained in its left operand. -/
-theorem inter_left (s t : Set X) : inter s t ⊆ s :=
-  Set.inter_subset_left
-
-/-- A common domain is contained in its right operand. -/
-theorem inter_right (s t : Set X) : inter s t ⊆ t :=
-  Set.inter_subset_right
-
-/-- Feasible points remain in the intersection of two containing domains. -/
-theorem inter_includes (feasible : X → Prop) (s t : Set X)
-    (hs : ∀ x, feasible x → x ∈ s) (ht : ∀ x, feasible x → x ∈ t) :
-    ∀ x, feasible x → x ∈ inter s t :=
-  fun x hx => ⟨hs x hx, ht x hx⟩
-
-/-- The unrestricted evaluation domain is open. -/
-theorem univ_open (X : Type u) [TopologicalSpace X] : IsOpen (Set.univ : Set X) :=
-  isOpen_univ
-
-/-- Every feasible point is in the unrestricted evaluation domain. -/
-theorem univ_includes (feasible : X → Prop) :
-    ∀ x, feasible x → x ∈ (Set.univ : Set X) :=
-  fun _ _ => Set.mem_univ _
-
 /-- Restrict smoothness to a smaller evaluation domain. -/
 theorem restrict [NormedAddCommGroup X] [NormedSpace ℝ X]
     [NormedAddCommGroup Y] [NormedSpace ℝ Y]

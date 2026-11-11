@@ -46,19 +46,19 @@ example (exponent : ℝ) (hf : ContDiffOn ℝ 2 f domain)
 
 example (s t : Set X) (hs : IsOpen s) (ht : IsOpen t)
     (hf : ContDiffOn ℝ 2 f s) (hg : ContDiffOn ℝ 2 g t) :
-    IsOpen (Domain.inter s t) ∧
-      ContDiffOn ℝ 2 (fun x => f x + g x) (Domain.inter s t) :=
-  ⟨Domain.inter_open s t hs ht,
+    IsOpen (s ∩ t) ∧
+      ContDiffOn ℝ 2 (fun x => f x + g x) (s ∩ t) :=
+  ⟨hs.inter ht,
     Smooth.add _ _
-      (Domain.restrict f s _ hf (Domain.inter_left s t))
-      (Domain.restrict g t _ hg (Domain.inter_right s t))⟩
+      (Domain.restrict f s _ hf Set.inter_subset_left)
+      (Domain.restrict g t _ hg Set.inter_subset_right)⟩
 
 example (feasible : X → Prop) (s t : Set X)
     (hs : ∀ x, feasible x → x ∈ s) (ht : ∀ x, feasible x → x ∈ t)
     (hpos : ∀ x, feasible x → 0 < f x) (hne : ∀ x, feasible x → g x ≠ 0) :
     ∀ x, feasible x →
-      x ∈ Domain.inter (Domain.positive s f) (Domain.nonzero t g) :=
-  Domain.inter_includes feasible _ _
+      x ∈ Domain.positive s f ∩ Domain.nonzero t g :=
+  Set.subset_inter
     (Domain.positive_includes feasible s f hs hpos)
     (Domain.nonzero_includes feasible t g ht hne)
 
@@ -74,7 +74,7 @@ end GeneralDomain
 private def logDomain : Set ℝ := Domain.positive Set.univ (fun x => x)
 
 private theorem logDomain_open : IsOpen logDomain :=
-  Domain.positive_open Set.univ (fun x => x) (Domain.univ_open ℝ)
+  Domain.positive_open Set.univ (fun x => x) isOpen_univ
     (Smooth.id Set.univ)
 
 private theorem log_smooth : ContDiffOn ℝ 2 Real.log logDomain :=
@@ -98,7 +98,7 @@ example (feasible : ℝ → Prop) (hx : ∀ x, feasible x → 0 < x)
     ∀ x, feasible x → x ∈ nestedLogDomain :=
   Domain.positive_includes feasible logDomain Real.log
     (Domain.positive_includes feasible Set.univ (fun x => x)
-      (Domain.univ_includes feasible) hx) hlog
+      (Set.subset_univ {x | feasible x}) hx) hlog
 
 -- The ambient index type can be infinite. Only selected summands and selected
 -- domains supply evidence, so no hypotheses about omitted indices are needed.
