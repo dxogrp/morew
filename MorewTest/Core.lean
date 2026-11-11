@@ -98,7 +98,7 @@ example : GlobalEquiv naturalMinimum doublyTaggedMinimum :=
   tagEquiv.trans doubleTagEquiv
 
 example : GlobalImprovement naturalMinimum taggedMinimum :=
-  tagEquiv.toGlobalImprovement
+  tagEquiv.forward
 
 /-! ## Preservation results -/
 

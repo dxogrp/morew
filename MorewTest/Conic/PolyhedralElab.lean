@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Cone.Rewrite
-import Morew.Conic.Polyhedral
+import Morew.Rewrite.Polyhedral.Lemmas
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
@@ -120,7 +120,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 def wholeConjunction : ConstraintRepr (fun p : ℝ × ℝ => |p.1| ≤ p.2 ∧ 0 ≤ p.2) :=
   ConstraintRepr.ofIff
     (fun p : ℝ × ℝ => True ∧ (p.1 ≤ p.2 ∧ -p.1 ≤ p.2) ∧ 0 ≤ p.2 ∧ True)
-    (fun _ => by simp only [true_and, and_true, Morew.Conic.Polyhedral.abs_le_iff])
+    (fun _ => by simp only [true_and, and_true, Morew.Rewrite.Polyhedral.abs_le_iff])
 
 def affineGraph : GraphRepr (fun x : ℝ => x + 1) where
   Auxiliary := Unit
@@ -130,12 +130,12 @@ def affineGraph : GraphRepr (fun x : ℝ => x + 1) where
 def absEpigraph : EpigraphRepr (fun x : ℝ => |x|) where
   Auxiliary := Unit
   target x t _ := x ≤ t ∧ -x ≤ t
-  source_iff_exists _ _ := by simp only [exists_const, Morew.Conic.Polyhedral.abs_le_iff]
+  source_iff_exists _ _ := by simp only [exists_const, Morew.Rewrite.Polyhedral.abs_le_iff]
 
 def minimumHypograph : HypographRepr (fun p : ℝ × ℝ => min p.1 p.2) where
   Auxiliary := Unit
   target p t _ := t ≤ p.1 ∧ t ≤ p.2
-  source_iff_exists _ _ := by simp only [exists_const, Morew.Conic.Polyhedral.le_min_iff]
+  source_iff_exists _ _ := by simp only [exists_const, Morew.Rewrite.Polyhedral.le_min_iff]
 
 def oneAuxiliary : ConstraintRepr (fun x : ℝ => 0 ≤ x) where
   Auxiliary := ℝ

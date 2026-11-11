@@ -40,7 +40,6 @@ import MorewTest.Conic.PSD.NuclearNorm
 import MorewTest.Conic.PSD.SpectralNorm
 import MorewTest.Conic.PSD.Triangular
 import MorewTest.Conic.PSDElab
-import MorewTest.Conic.Polyhedral
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power
 import MorewTest.Conic.PowerEvidence
@@ -292,6 +291,7 @@ import MorewTest.Restriction
 import MorewTest.Rewrite
 import MorewTest.Rewrite.Negation
 import MorewTest.Rewrite.Plan
+import MorewTest.Rewrite.Polyhedral
 import MorewTest.Rewrite.Registry
 import MorewTest.Rewrite.Registry.First
 import MorewTest.Rewrite.Registry.OrderAB

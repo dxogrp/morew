@@ -33,7 +33,7 @@ example (n : Nat) (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
     (SymmetricMatrix.ofMatrix M hM).toMatrix = M := rfl
 
 example (n : Nat) (M : SymmetricMatrix n) :
-    SymmetricMatrix.ofMatrix M.toMatrix M.isSymm = M := rfl
+    SymmetricMatrix.ofMatrix M.toMatrix M.toMatrix_isSymm = M := rfl
 
 example (n : Nat) (M N : SymmetricMatrix n)
     (h : ∀ i j, M.toMatrix i j = N.toMatrix i j) : M = N := by

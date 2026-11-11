@@ -43,10 +43,6 @@ def toMatrix {n : Nat} (M : SymmetricMatrix n) : Matrix (Fin n) (Fin n) ℝ := M
 theorem toMatrix_isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
   M.property
 
-/-- The underlying matrix is symmetric. -/
-theorem isSymm {n : Nat} (M : SymmetricMatrix n) : M.toMatrix.IsSymm :=
-  M.toMatrix_isSymm
-
 /-- Conversion to `SymmetricMatrix` preserves the underlying matrix. -/
 @[simp]
 theorem toMatrix_ofMatrix {n : Nat} (M : Matrix (Fin n) (Fin n) ℝ) (hM : M.IsSymm) :
