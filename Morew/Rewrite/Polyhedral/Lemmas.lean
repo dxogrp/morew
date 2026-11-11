@@ -18,21 +18,9 @@ namespace Morew.Rewrite.Polyhedral
 
 open scoped ENNReal
 
-/-- The epigraph of absolute value consists of two affine inequalities. -/
-theorem abs_le_iff (a t : ℝ) : |a| ≤ t ↔ a ≤ t ∧ -a ≤ t :=
-  abs_le'
-
 /-- Positive part retains the nonnegative bound as a separate inequality. -/
 theorem posPart_le_iff (a t : ℝ) : a⁺ ≤ t ↔ a ≤ t ∧ 0 ≤ t := by
   rw [posPart_def, sup_le_iff]
-
-/-- A binary maximum is bounded above precisely when both operands are. -/
-theorem max_le_iff (a b t : ℝ) : max a b ≤ t ↔ a ≤ t ∧ b ≤ t :=
-  _root_.max_le_iff
-
-/-- A binary minimum is bounded below precisely when both operands are. -/
-theorem le_min_iff (a b t : ℝ) : t ≤ min a b ↔ t ≤ a ∧ t ≤ b :=
-  _root_.le_min_iff
 
 /-- Reindex a maximum over a nonempty finite support as a coordinatewise inequality. -/
 theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)

@@ -141,7 +141,7 @@ noncomputable def shiftedRule (c : ℝ) : EpigraphRepr (shiftedAbs c) where
   Auxiliary := Unit
   target x t _ := x - c ≤ t ∧ -(x - c) ≤ t
   source_iff_exists x t := by
-    simpa only [shiftedAbs, exists_const] using Rewrite.Polyhedral.abs_le_iff (x - c) t
+    simpa only [shiftedAbs, exists_const] using abs_le' (a := x - c) (b := t)
 
 run_cmd liftTermElabM do
   check (← `(fun c : ℝ => input (fun x : ℝ => shiftedAbs c x ≤ 3) #[])) 2
@@ -176,7 +176,7 @@ noncomputable def pairAbs (p : ℝ × ℝ) : ℝ := |p.1 - p.2|
   Auxiliary := Unit
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
-    simpa only [pairAbs, exists_const] using Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+    simpa only [pairAbs, exists_const] using abs_le' (a := p.1 - p.2) (b := t)
 
 run_cmd liftTermElabM do
   exactRows (← `(input (fun p : ℝ × ℝ => pairAbs p ≤ 3)
@@ -196,7 +196,7 @@ noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
     simpa only [nestedPairAbs, exists_const] using
-      Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+      abs_le' (a := p.1.1 - p.1.2 + p.2) (b := t)
 
 run_cmd liftTermElabM do
   exactRows (← `(input (fun p : (ℝ × ℝ) × ℝ => nestedPairAbs p ≤ 3)
@@ -209,7 +209,7 @@ noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 @[morew_nlp] noncomputable def boundedRule : ConstraintRepr bounded :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+    (fun x => abs_le' (a := x) (b := 3))
 
 run_cmd liftTermElabM do
   exactRows (← `(input (fun x : ℝ => bounded x)
@@ -242,7 +242,7 @@ private noncomputable def quantifiedAbsRule :
     ConstraintRepr (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
     intro x
-    simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
+    simpa only [forall_const, and_true] using abs_le' (a := x) (b := 3))
 
 attribute [local morew_nlp] quantifiedAbsRule
 
@@ -283,7 +283,7 @@ noncomputable def userBound (c x : ℝ) : Prop := |x| ≤ c
 @[morew_nlp] noncomputable def completePredicateRule (c : ℝ) :
     ConstraintRepr (fun x : ℝ => userBound c x) :=
   .ofIff (fun x => x ≤ c ∧ -x ≤ c)
-    (fun x => Rewrite.Polyhedral.abs_le_iff x c)
+    (fun x => abs_le' (a := x) (b := c))
 
 run_cmd liftTermElabM do
   check (← `(fun c : ℝ => input (fun x : ℝ => userBound c x) #[])) 2 none 1

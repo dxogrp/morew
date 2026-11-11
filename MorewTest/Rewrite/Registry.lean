@@ -137,7 +137,7 @@ private noncomputable def pairAbsRule : Morew.EpigraphRepr pairAbs where
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
     simpa only [pairAbs, exists_const] using
-      Morew.Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+      abs_le' (a := p.1 - p.2) (b := t)
 
 private noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ :=
   |p.1.1 - p.1.2 + p.2|
@@ -148,7 +148,7 @@ private noncomputable def nestedPairAbsRule :
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
     simpa only [nestedPairAbs, exists_const] using
-      Morew.Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+      abs_le' (a := p.1.1 - p.1.2 + p.2) (b := t)
 
 run_elab do
   matched (← `(fun p : ℝ × ℝ => pairAbs p ≤ 3)) ``pairAbsRule
@@ -174,7 +174,7 @@ private noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 private noncomputable def boundedRule : Morew.ConstraintRepr bounded :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
+    (fun x => abs_le' (a := x) (b := 3))
 
 run_elab do
   matched (← `(fun x : ℝ => bounded x)) ``boundedRule

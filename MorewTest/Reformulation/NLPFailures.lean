@@ -98,7 +98,7 @@ reformulation wrongPredicate : source := by
 
 def guardedRule (_ : True) : ConstraintRepr (fun x : ℝ => |x| ≤ 3) :=
   ConstraintRepr.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+    (fun x => abs_le' (a := x) (b := 3))
 
 /-- error: constraint `bound`: failed to elaborate exact rule: exact rule contains unresolved metavariables -/
 #guard_msgs in

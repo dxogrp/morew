@@ -103,7 +103,7 @@ noncomputable def pairAbsRule : EpigraphRepr pairAbs where
   Auxiliary := Unit
   target p t _ := p.1 - p.2 ≤ t ∧ -(p.1 - p.2) ≤ t
   source_iff_exists p t := by
-    simpa only [pairAbs, exists_const] using Rewrite.Polyhedral.abs_le_iff (p.1 - p.2) t
+    simpa only [pairAbs, exists_const] using abs_le' (a := p.1 - p.2) (b := t)
 
 noncomputable def nestedPairAbs (p : (ℝ × ℝ) × ℝ) : ℝ := |p.1.1 - p.1.2 + p.2|
 
@@ -113,7 +113,7 @@ noncomputable def nestedPairAbsRule : EpigraphRepr nestedPairAbs where
   target p t _ := p.1.1 - p.1.2 + p.2 ≤ t ∧ -(p.1.1 - p.1.2 + p.2) ≤ t
   source_iff_exists p t := by
     simpa only [nestedPairAbs, exists_const] using
-      Rewrite.Polyhedral.abs_le_iff (p.1.1 - p.1.2 + p.2) t
+      abs_le' (a := p.1.1 - p.1.2 + p.2) (b := t)
 
 run_cmd liftTermElabM do
   let pairRows := #[← `(fun p : ℝ × ℝ => p.1 - p.2 ≤ 3),
@@ -133,7 +133,7 @@ noncomputable def bounded (x : ℝ) : Prop := |x| ≤ 3
 
 @[morew_conic]
 noncomputable def boundedRule : ConstraintRepr bounded :=
-  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+  .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (fun x => abs_le' (a := x) (b := 3))
 
 run_cmd liftTermElabM do
   check (← `(fun x : ℝ => bounded x)) 2
@@ -166,7 +166,7 @@ private noncomputable def quantifiedAbsRule :
     ConstraintRepr (fun x : ℝ => (∀ _ : Fin 1, |x| ≤ 3) ∧ True) :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3) (by
     intro x
-    simpa only [forall_const, and_true] using Rewrite.Polyhedral.abs_le_iff x 3)
+    simpa only [forall_const, and_true] using abs_le' (a := x) (b := 3))
 
 attribute [local morew_conic] quantifiedAbsRule
 

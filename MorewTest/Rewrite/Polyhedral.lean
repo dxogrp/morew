@@ -21,26 +21,26 @@ namespace MorewTest.Rewrite.Polyhedral
 open Morew.Rewrite.Polyhedral
 open scoped ENNReal
 
-example (a t : ℝ) : |a| ≤ t ↔ a ≤ t ∧ -a ≤ t := abs_le_iff a t
+example (a t : ℝ) : |a| ≤ t ↔ a ≤ t ∧ -a ≤ t := abs_le' (a := a) (b := t)
 
 example (a t : ℝ) : a⁺ ≤ t ↔ a ≤ t ∧ 0 ≤ t := posPart_le_iff a t
 
 example (a b t : ℝ) : max a b ≤ t ↔ a ≤ t ∧ b ≤ t :=
-  Morew.Rewrite.Polyhedral.max_le_iff a b t
+  max_le_iff
 
 example (a b t : ℝ) : t ≤ min a b ↔ t ≤ a ∧ t ≤ b :=
-  Morew.Rewrite.Polyhedral.le_min_iff a b t
+  le_min_iff
 
 example (a : ℝ) : ¬ a⁺ ≤ -1 := by
   rw [posPart_le_iff]
   norm_num
 
 example : max (-3 : ℝ) (-2) ≤ -1 := by
-  rw [Morew.Rewrite.Polyhedral.max_le_iff]
+  rw [max_le_iff]
   norm_num
 
 example : (-3 : ℝ) ≤ min (-2) (-1) := by
-  rw [Morew.Rewrite.Polyhedral.le_min_iff]
+  rw [le_min_iff]
   norm_num
 
 /-! Arbitrary nonempty finite sets do not require a finite ambient index type. -/
@@ -82,7 +82,7 @@ example (n : ℕ) (v : Fin n → ℝ) : ¬ ‖v‖ ≤ -1 := by
   norm_num
 
 example (a t : ℝ) : ‖fun _ : Fin 1 => a‖ ≤ t ↔ |a| ≤ t := by
-  rw [norm_le_iff, abs_le_iff]
+  rw [norm_le_iff, abs_le']
   simp only [Pi.le_def, Pi.neg_apply, Fin.forall_fin_one]
   constructor
   · exact fun h => h.2
