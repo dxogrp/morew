@@ -42,17 +42,11 @@ theorem le_inf'_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
 The explicit nonnegative bound makes the identity valid for `n = 0`. -/
 theorem norm_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
     ‖v‖ ≤ t ↔ 0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) := by
-  constructor
-  · intro h
-    have ht : 0 ≤ t := (norm_nonneg v).trans h
-    have hv (i : Fin n) : v i ≤ t ∧ -v i ≤ t := by
-      apply abs_le'.mp
-      simpa only [Real.norm_eq_abs] using (pi_norm_le_iff_of_nonneg ht).mp h i
-    exact ⟨ht, fun i => (hv i).1, fun i => (hv i).2⟩
-  · rintro ⟨ht, hp, hn⟩
-    apply (pi_norm_le_iff_of_nonneg ht).mpr
-    intro i
-    simpa only [Real.norm_eq_abs] using abs_le'.mpr ⟨hp i, hn i⟩
+  rw [← and_iff_right_of_imp (fun h : ‖v‖ ≤ t => (norm_nonneg v).trans h)]
+  apply and_congr_right
+  intro ht
+  simp only [pi_norm_le_iff_of_nonneg ht, Real.norm_eq_abs, abs_le',
+    forall_and, Pi.le_def, Pi.neg_apply]
 
 /-- The infinity-norm bound on `WithLp ∞` is equivalent to componentwise bounds. -/
 theorem norm_toLp_top_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
