@@ -70,8 +70,9 @@ The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
 tag := "objective-certificates"
 %%%
 
-Supply an objective certificate when automatic recognition cannot establish
-its representation:
+An objective certificate gives an exact affine or quadratic representation
+of the current objective $`f`. Define it with `def` and supply it when
+automatic recognition cannot establish this representation:
 
 :::table +header
 *
@@ -88,14 +89,19 @@ its representation:
   * `QuadConic.CertifiedMax f`
 :::
 
-Here $`f` is the current objective. An affine certificate represents $`f`
-by an affine map. A quadratic certificate proves $`f=Q+a`, where $`Q` is a
-homogeneous quadratic form and $`a` is affine, including the constant term.
-It also proves $`Q(x)\geq 0` for minimization or $`Q(x)\leq 0` for maximization
-throughout the decision space. Zero quadratic parts are allowed.
+For `Affine.Certified f`, supply `map`, an affine map, and `correct`, a proof
+that $`\mathrm{map}(x)=f(x)` for every $`x`.
 
-`QuadConic.CertifiedExpr f` records the decomposition without a curvature proof.
-Constraints are converted automatically.
+For a quadratic certificate, supply `quadratic`, a homogeneous quadratic form
+$`Q`; `affine`, an affine function $`a` including the constant term; and
+`correct`, a proof that $`Q(x)+a(x)=f(x)` for every $`x`.
+Also supply `curvature`, a proof that $`Q(x)\geq 0` for minimization or
+$`Q(x)\leq 0` for maximization throughout the decision space. Parameter
+hypotheses may be used to establish this sign condition. Zero quadratic
+parts are allowed.
+
+The [affine API](api/Morew/Affine.html) and
+[quadratic API](api/Morew/QuadConic/Objective.html) list the definitions.
 
 # Options
 %%%
