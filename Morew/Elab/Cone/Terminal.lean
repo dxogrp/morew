@@ -82,10 +82,6 @@ private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.Evide
     | .ok row => rows := rows.push row
   return .ok rows
 
-private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvider) :
-    MetaM (Option (Array RowResult)) := do
-  return (← certifyPredicateDetailed predicate provider).toOption
-
 private def pullbackConstraint {X A : Type*}
     [AddCommGroup X] [Module ℝ X]
     [AddCommGroup A] [Module ℝ A]
@@ -176,7 +172,7 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
   while index < work.presentation.constraints.size do
     let source := work.presentation.constraints[index]!.predicate
     let (leaves, decomposition) ← decomposePredicate source
-    if let some rows ← certifyPredicate source provider then
+    if let .ok rows ← certifyPredicateDetailed source provider then
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       index := index + 1
       continue
