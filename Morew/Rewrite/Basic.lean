@@ -36,12 +36,7 @@ def ofIff {X : Type u} {source : X → Prop} (replacement : X → Prop)
     ConstraintRepr source where
   Auxiliary := Unit
   target x _ := replacement x
-  source_iff_exists x := by
-    constructor
-    · intro hx
-      exact ⟨(), (h x).mp hx⟩
-    · rintro ⟨_, hx⟩
-      exact (h x).mpr hx
+  source_iff_exists x := (h x).trans (exists_const Unit).symm
 
 end ConstraintRepr
 
