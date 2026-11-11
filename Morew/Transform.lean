@@ -100,10 +100,8 @@ def replaceConstraint {X : Type u} {V : Type v} {source : X → Prop}
     (p : Problem X V)
     (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    Problem (X × repr.Auxiliary) V where
-  objective point := p.objective point.1
-  feasible point :=
-    decomposition.remainder point.1 ∧ repr.target point.1 point.2
+    Problem (X × repr.Auxiliary) V :=
+  p.replaceConstraintUnder decomposition repr.target
 
 @[simp]
 theorem replaceConstraint_objective
@@ -271,24 +269,8 @@ noncomputable def replaceConstraintEquiv
     (p : Problem X V)
     (repr : ConstraintRepr.{u, w} source)
     (decomposition : ConstraintDecomposition p source) :
-    GlobalEquiv p (p.replaceConstraint repr decomposition) where
-  forward := {
-    map := fun x => by
-      have hparts : decomposition.remainder x.1 ∧ source x.1 :=
-        (decomposition.feasible_iff x.1).mp x.2
-      have hexists : ∃ a, repr.target x.1 a :=
-        (repr.source_iff_exists x.1).mp hparts.2
-      exact ⟨(x.1, Classical.choose hexists), hparts.1,
-        Classical.choose_spec hexists⟩
-    objective_le := fun _ => le_rfl }
-  backward := {
-    map := fun point => by
-      have hsource : source point.1.1 :=
-        (repr.source_iff_exists point.1.1).mpr ⟨point.1.2, point.2.2⟩
-      exact ⟨point.1.1,
-        (decomposition.feasible_iff point.1.1).mpr
-          ⟨point.2.1, hsource⟩⟩
-    objective_le := fun _ => le_rfl }
+    GlobalEquiv p (p.replaceConstraint repr decomposition) :=
+  replaceConstraintUnderEquiv p decomposition repr.target (fun x _ => repr.source_iff_exists x)
 
 /-- Pullback along a feasibly surjective map is a global equivalence. -/
 def pullbackEquiv {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
