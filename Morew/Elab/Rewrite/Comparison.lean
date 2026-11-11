@@ -41,13 +41,11 @@ private theorem realLeCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
     (a ≤ b) ↔ (a' ≤ b') := by
   rw [ha, hb]
 
-private theorem realEqNegLeft (a b : ℝ) : (-a = b) ↔ (-b = a) := by
-  constructor <;> intro h <;>
-    simpa only [neg_neg] using (congrArg (fun x : ℝ => -x) h).symm
+private theorem realEqNegLeft (a b : ℝ) : (-a = b) ↔ (-b = a) :=
+  neg_eq_iff_eq_neg.trans eq_comm
 
-private theorem realEqNegRight (a b : ℝ) : (a = -b) ↔ (b = -a) := by
-  constructor <;> intro h <;>
-    simpa only [neg_neg] using (congrArg (fun x : ℝ => -x) h).symm
+private theorem realEqNegRight (a b : ℝ) : (a = -b) ↔ (b = -a) :=
+  eq_comm.trans neg_eq_iff_eq_neg
 
 private theorem realEqCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
     (a = b) ↔ (a' = b') := by
