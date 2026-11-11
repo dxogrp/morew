@@ -70,12 +70,8 @@ def toConstraintReprSymm
     ConstraintRepr (fun point => f (input point) = output point) where
   Auxiliary := repr.Auxiliary
   target point := repr.target (input point) (output point)
-  source_iff_exists point := by
-    constructor
-    · intro h
-      exact (repr.source_iff_exists _ _).mp h.symm
-    · intro h
-      exact ((repr.source_iff_exists _ _).mpr h).symm
+  source_iff_exists point :=
+    eq_comm.trans (repr.source_iff_exists (input point) (output point))
 
 end GraphRepr
 
