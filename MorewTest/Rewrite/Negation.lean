@@ -93,17 +93,15 @@ private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
     TermElabM Unit := do
   let source ← elaborate term
   let conic ← Morew.Elab.Cone.Rewrite.planExplicit source (← elaborate conicRule)
-  let .ok conic := conic
-    | match conic with
-      | .error error => throwError "fixed conic parameter failed: {error.reason}"
-      | .ok _ => throwError "unreachable"
+  let conic ← match conic with
+    | .ok conic => pure conic
+    | .error error => throwError "fixed conic parameter failed: {error.reason}"
   conic.toResult.check source #[]
   unless conic.rowPredicates.size == rows do throwError "wrong fixed conic row count"
   let nlp ← Morew.Elab.NLP.Rewrite.plan source #[] (some (← elaborate nlpRule))
-  let .ok nlp := nlp
-    | match nlp with
-      | .error error => throwError "fixed NLP parameter failed: {error.reason}"
-      | .ok _ => throwError "unreachable"
+  let nlp ← match nlp with
+    | .ok nlp => pure nlp
+    | .error error => throwError "fixed NLP parameter failed: {error.reason}"
   nlp.toResult.check source #[]
   unless nlp.rowPredicates.size == rows do throwError "wrong fixed NLP row count"
 

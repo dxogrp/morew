@@ -32,10 +32,9 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     | none => match name? with
       | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
       | none => Morew.Elab.Cone.Rewrite.planUnique source retained
-  let .ok result := result
-    | match result with
-      | .error error => throwError "registered conic rule failed: {error.reason}"
-      | .ok _ => throwError "unreachable"
+  let result ← match result with
+    | .ok result => pure result
+    | .error error => throwError "registered conic rule failed: {error.reason}"
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "registered conic planning leaked scratch metavariables"

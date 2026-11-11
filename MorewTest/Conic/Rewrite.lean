@@ -42,10 +42,9 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
   unless before.mvarCounter == (← getMCtx).mvarCounter &&
       before.lmvarCounter == (← getMCtx).lmvarCounter do
     throwError "automatic selection leaked scratch metavariables"
-  let .ok result := result
-    | match result with
-      | .error error => throwError "expected a unique exact rule: {error.reason}"
-      | .ok _ => throwError "unreachable selection result"
+  let result ← match result with
+    | .ok result => pure result
+    | .error error => throwError "expected a unique exact rule: {error.reason}"
   unless (← checkPrepared source result retained) == count do
     throwError "unexpected automatic row count"
 

@@ -93,12 +93,10 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     assigned.mvarId!.assign (mkNatLit 7)
     for _ in [:3] do
       let before ← getMCtx
-      let result ← recognize entry source provider
-      let .ok expressions := result
-        | match result with
-          | .error error => throwError
-              "callback-generated evidence was rejected by {repr entry}: {error.reason}"
-          | .ok _ => throwError "unreachable recognition result"
+      let expressions ← match ← recognize entry source provider with
+        | .ok expressions => pure expressions
+        | .error error => throwError
+            "callback-generated evidence was rejected by {repr entry}: {error.reason}"
       checkUnchanged before
       for expression in expressions do
         if expression.hasMVar || expression.hasSorry then

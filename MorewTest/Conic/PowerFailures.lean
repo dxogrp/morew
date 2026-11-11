@@ -41,10 +41,9 @@ private def check (source : Expr) (retained : Array Expr := #[])
   let result ← match name? with
     | none => Morew.Elab.Cone.Rewrite.planUnique source retained
     | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name retained
-  let .ok result := result
-    | match result with
-      | .error error => throwError "power control was rejected: {error.reason}"
-      | .ok _ => throwError "unreachable"
+  let result ← match result with
+    | .ok result => pure result
+    | .error error => throwError "power control was rejected: {error.reason}"
   result.toResult.check source retained
   checkWithKernel result.certificate.expression
   for row in result.certifiedRows do
