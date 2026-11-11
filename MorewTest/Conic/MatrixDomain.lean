@@ -70,7 +70,7 @@ private def assertDomain (stx : TSyntax `term) (parameters : Nat := 0)
       let goal := pair.getAppArgs[2]!
       let some rows ← getArrayLit? pair.getAppArgs[3]!
         | throwError "expected a literal array of retained propositions"
-      let conjunction := Morew.Elab.Rewrite.Decomposition.conjunction rows.toList
+      let conjunction := mkAndN rows.toList
       withLocalDeclD `remainder conjunction fun proof =>
         checkDomain points[0]! goal rows proof accepted
 
@@ -124,7 +124,7 @@ run_cmd liftTermElabM do
     (P.toMatrix.PosDef, #[(P.toMatrix - (1 / 2 : ℝ) • 1).PosSemidef]))) 1
   assertDomain (← `(fun n : Nat => fun P : SymmetricMatrix n =>
     (P.toMatrix.PosDef, #[SymmetricMatrix.ofMatrix (P.toMatrix - (2 : ℝ) • 1)
-      (P.isSymm.sub (Matrix.isSymm_one.smul 2)) ∈ PSD n]))) 1
+      (P.toMatrix_isSymm.sub (Matrix.isSymm_one.smul 2)) ∈ PSD n]))) 1
   assertDomain (← `(fun n : Nat => fun P : SymmetricMatrix n =>
     (P.toMatrix.PosDef, #[let epsilon : ℝ := 2;
       True ∧ (P - epsilon • SymmetricMatrix.ofMatrix 1 Matrix.isSymm_one) ∈ PSD n]))) 1

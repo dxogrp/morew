@@ -21,7 +21,7 @@ def elaborate (term : TSyntax `term) : TermElabM Expr := do
   synthesizeSyntheticMVarsNoPostponing
   let expression ← instantiateMVars expression
   if expression.hasSorry || expression.hasMVar then
-    throwError "affine test did not fully elaborate: {expression}"
+    throwError "test input did not fully elaborate: {expression}"
   return expression
 
 end MorewTest.Affine

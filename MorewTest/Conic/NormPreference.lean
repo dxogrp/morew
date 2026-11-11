@@ -43,10 +43,9 @@ private def check (term : TSyntax `term) (expected : Array (TSyntax `term))
     | some rule => Morew.Elab.Cone.Rewrite.planDeclaration source rule
     | none => Morew.Elab.Cone.Rewrite.planUnique source
   checkState before environment sentinel
-  let .ok result := result
-    | match result with
-      | .error error => throwError "expected a norm plan: {error.reason}"
-      | .ok _ => throwError "unreachable"
+  let result ← match result with
+    | .ok result => pure result
+    | .error error => throwError "expected a norm plan: {error.reason}"
   result.toResult.check source #[]
   unless result.auxiliary?.isSome == auxiliary do
     throwError "norm selection changed whether auxiliary decisions are introduced"

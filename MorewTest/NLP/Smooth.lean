@@ -19,6 +19,7 @@ namespace MorewTest.NLP.Smooth
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.NLP
+open MorewTest.Affine (elaborate)
 open scoped Matrix
 
 universe u

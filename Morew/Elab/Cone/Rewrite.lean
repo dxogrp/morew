@@ -22,12 +22,6 @@ namespace Morew.Elab.Cone.Rewrite
 open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite
 
-private theorem dimensionPositive (n : Nat) [Nonempty (Fin n)] : 0 < n :=
-  Fin.pos_iff_nonempty.mpr inferInstance
-
-private theorem dimensionPositiveOfNe (n : Nat) (h : n ≠ 0) : 0 < n :=
-  Nat.pos_of_ne_zero h
-
 private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := do
   if (← Expr.depends point dimension) || (← Morew.Elab.Rewrite.Plan.unresolved dimension) then return none
   let n : Q(Nat) := dimension
@@ -39,10 +33,10 @@ private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := 
     if (← Expr.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
     if ← isDefEq declaration.type goal then return some evidence
     if ← isDefEq declaration.type nonzero then
-      return some (← mkAppM ``dimensionPositiveOfNe #[dimension, evidence])
+      return some (← mkAppM ``Nat.pos_of_ne_zero #[evidence])
   let saved ← saveState
   try
-    let proof ← mkAppOptM ``dimensionPositive #[some dimension, none]
+    let proof ← mkAppOptM ``Fin.pos' #[some dimension, none]
     if ← Morew.Elab.Rewrite.Plan.unresolved proof then throwError "unresolved finite nonemptiness"
     unless ← isDefEq (← inferType proof) goal do throwError "invalid dimension evidence"
     checkWithKernel proof
@@ -164,7 +158,7 @@ private def attempt (source : Expr) (retained : Array Expr)
         withLocalDeclD `point domain fun point =>
           Morew.Elab.Rewrite.Plan.withScopedEvidence Plan.Result.replaceFVars point (mkApp source point) do
             let bodies := retained.map (mkApp · point)
-            withLocalDecl `retained .default (Decomposition.conjunction bodies.toList)
+            withLocalDecl `retained .default (mkAndN bodies.toList)
                 (kind := .implDetail) fun evidence => do
               let body ← matchingBody (mkApp source point)
               matchRule point body (proveObligation point bodies evidence) fun matched =>

@@ -74,9 +74,8 @@ theorem contains_upperBound (upper value : ℝ) :
 /-- Equal lower and upper bounds require equality with the fixed value. -/
 @[simp]
 theorem contains_fixed (fixedValue value : ℝ) :
-    (fixed fixedValue).Contains value ↔ value = fixedValue := by
-  change fixedValue ≤ value ∧ value ≤ fixedValue ↔ value = fixedValue
-  exact ⟨fun h => le_antisymm h.2 h.1, fun h => by simp [h]⟩
+    (fixed fixedValue).Contains value ↔ value = fixedValue :=
+  ge_antisymm_iff.symm
 
 /-- Two endpoints bound the residual from below and above. -/
 @[simp]

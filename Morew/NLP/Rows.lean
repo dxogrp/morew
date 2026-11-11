@@ -147,8 +147,7 @@ def le (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x ≤ rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .upperBound 0, smooth⟩
-  holds_iff _ := ⟨fun h => (upper_residual_iff _ _).mp (h 0),
-    fun h _ => (upper_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (upper_residual_iff _ _)
 
 /-- Bound `lhs - rhs` below by zero. -/
 def ge (domain : Set X) (lhs rhs : X → ℝ)
@@ -156,8 +155,7 @@ def ge (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x ≥ rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .lowerBound 0, smooth⟩
-  holds_iff _ := ⟨fun h => (lower_residual_iff _ _).mp (h 0),
-    fun h _ => (lower_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (lower_residual_iff _ _)
 
 /-- Set `lhs - rhs` equal to zero. -/
 def eq (domain : Set X) (lhs rhs : X → ℝ)
@@ -165,8 +163,7 @@ def eq (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x = rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .fixed 0, smooth⟩
-  holds_iff _ := ⟨fun h => (fixed_residual_iff _ _).mp (h 0),
-    fun h _ => (fixed_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (fixed_residual_iff _ _)
 
 /-- Concatenate the rows of a conjunction in left-to-right order. -/
 def and (left : Block domain p) (right : Block domain q) :
@@ -174,14 +171,8 @@ def and (left : Block domain p) (right : Block domain q) :
   rowCount := left.rowCount + right.rowCount
   rows := Fin.addCases left.rows right.rows
   holds_iff x := by
-    constructor
-    · intro h
-      exact ⟨(left.holds_iff x).mp (fun i => by simpa using h (Fin.castAdd _ i)),
-        (right.holds_iff x).mp (fun i => by simpa using h (Fin.natAdd _ i))⟩
-    · rintro ⟨hl, hr⟩ i
-      refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-      · simpa using (left.holds_iff x).mpr hl j
-      · simpa using (right.holds_iff x).mpr hr j
+    simp only [Fin.forall_fin_add, Fin.addCases_left, Fin.addCases_right,
+      left.holds_iff, right.holds_iff]
 
 /-- Left rows retain their indices when a conjunction is appended. -/
 @[simp]
@@ -207,18 +198,10 @@ def family {n : Nat} (p : Fin n → X → Prop)
     let ij := finSigmaFinEquiv.symm j
     (blocks ij.1).rows ij.2
   holds_iff x := by
-    constructor
-    · intro h i
-      apply ((blocks i).holds_iff x).mp
-      intro j
-      have hi := h (finSigmaFinEquiv ⟨i, j⟩)
-      dsimp only at hi
-      exact Eq.mp (congrArg
-        (fun ij : (i : Fin n) × Fin (blocks i).rowCount =>
-          ((blocks ij.1).rows ij.2).Holds x)
-        (finSigmaFinEquiv.symm_apply_apply ⟨i, j⟩)) hi
-    · intro h j
-      exact ((blocks _).holds_iff x).mpr (h _) _
+    rw [← finSigmaFinEquiv.forall_congr_left
+      (p := fun ij : (i : Fin n) × Fin (blocks i).rowCount =>
+        ((blocks ij.1).rows ij.2).Holds x)]
+    simp only [Sigma.forall, Block.holds_iff]
 
 /-- The ordered finite-sum index recovers the original coordinate row. -/
 @[simp]
@@ -269,13 +252,8 @@ def toForm [FiniteDimensional ℝ X] (problem : Problem X ℝ)
     rowCount := block.rowCount
     rows := block.rows
     feasible_mem_domain := fun x hx => feasible_mem_domain x ((block.holds_iff x).mp hx) }
-  represents := by
-    cases problem with
-    | mk objective feasible =>
-      change ({ objective := objective, feasible := _ } : Problem X ℝ) =
-        { objective := objective, feasible := feasible }
-      congr 1
-      exact funext fun x => propext (block.holds_iff x)
+  represents := congrArg (Problem.mk problem.objective)
+    (funext fun x => propext (block.holds_iff x))
 
 end Block
 

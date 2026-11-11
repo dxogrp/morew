@@ -59,12 +59,6 @@ private structure Work where
 private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
   entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
 
-private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) : Name × Nat :=
-  let name := Name.mkSimple s!"_terminalNLP_{index}"
-  if inventory.contains .decisionBinder name || inventory.contains .constraintLabel name then
-    freshPlaceholder inventory (index + 1)
-  else (name, index + 1)
-
 private def feasibility (presentation : PresentationState) : MetaM Expr := do
   mkAppM ``Morew.Problem.feasible #[← presentation.canonicalProblem]
 
@@ -102,7 +96,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
   let (objective, retained) ← match auxiliary? with
     | none => pure (old.objective, old.constraints)
     | some auxiliary => do
-      let (name, following) := freshPlaceholder old.nameInventory nextName
+      let (name, following) := old.nameInventory.freshPlaceholder "_terminalNLP_" nextName
       nextName := following
       binders := binders.push { name, type := auxiliary }
       auxiliaries := auxiliaries.push (origin, auxiliary)
@@ -114,7 +108,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
         pure (objective, retained)
   let mut entries : Array ConstraintEntry := #[]
   for row in rows do
-    let (name, following) := freshPlaceholder old.nameInventory nextName
+    let (name, following) := old.nameInventory.freshPlaceholder "_terminalNLP_" nextName
     nextName := following
     entries := entries.push { name, predicate := row, ref := old.constraints[index]!.ref }
   let presentation := {
@@ -157,7 +151,7 @@ private def tryGroupCore (work : Work) (index : Nat) : MetaM (Option Work) := do
   if leaves.size == 1 && (← isDefEq leaves[0]! source) then return none
   let retained := splice (work.presentation.constraints.map (·.predicate)) index #[]
   let conditional ← withLocalDeclD `point work.presentation.domainType fun point => do
-    let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+    let remainder := mkAndN (retained.toList.map (mkApp · point))
     withLocalDeclD `retained remainder fun hypothesis =>
       mkLambdaFVars #[point, hypothesis] (mkApp decomposition point)
   let replacement ← Replace.rewriteConstraintContextual work.presentation index leaves conditional
@@ -184,7 +178,7 @@ private def tryGroup (work : Work) (index : Nat) : MetaM (Option Work) := do
   return result.toOption
 
 private def originalError (original : PresentationState) (origin : Nat)
-    (error : Domain.DomainError) (ruleError : Rewrite.Error) : MetaM Domain.DomainError := do
+    (error : Domain.DomainError) (ruleError : Expr.Error) : MetaM Domain.DomainError := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   return { error with
     rowIndex? := some origin

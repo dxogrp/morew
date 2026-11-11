@@ -5,11 +5,22 @@ SPDX-License-Identifier: Apache-2.0
 
 import Lean.Meta.Basic
 
-/-! Isolate caller metavariables and retain successful certificates' auxiliary declarations. -/
+/-! Scope temporary instances and isolate caller metavariables while retaining
+successful certificates' auxiliary declarations. -/
 
 namespace Morew.Elab.State
 
 open Lean Lean.Meta
+
+/-- Install instances in order, then substitute their values into the result.
+Instantiate assigned metavariables before leaving the temporary local context. -/
+def withInstances (name : Name) (instances : List Expr) (action : MetaM Expr) :
+    MetaM Expr := do
+  match instances with
+  | [] => instantiateMVars (← action)
+  | inst :: rest =>
+      mapLetDeclZeta name (← inferType inst) inst fun _ =>
+        withInstances name rest action
 
 /-- Run recognition with fixed caller metavariables and retain declarations only on success.
 Keep name generators advanced to avoid collisions. Instantiate assigned metavariables

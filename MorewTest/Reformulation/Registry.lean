@@ -211,7 +211,7 @@ noncomputable def source :=
 
 noncomputable def modelRule : ConstraintRepr source.feasible :=
   .ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Rewrite.Polyhedral.abs_le_iff x 3)
+    (fun x => abs_le' (a := x) (b := 3))
 
 -- Concrete expressions keep the original checked predicate adapter, including
 -- representation sources exposed through a named model's feasibility field.

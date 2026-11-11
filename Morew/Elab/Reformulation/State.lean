@@ -98,6 +98,42 @@ structure TerminalAdapter where
   /-- Construct representability evidence from the emitted form. -/
   property : Expr → TermElabM Expr
 
+/-- Adapt a terminal form with five type arguments ending in its represented problem,
+fields `data` and `represents`, and an objective `sense` in its data. The constructor
+and representability theorem are `formName.mk` and `formName.propertySuffix`.
+Preserve the form's universe levels and stored instances when retargeting it. -/
+def TerminalAdapter.ofForm (formName : Name) (formDescription description : String)
+    (formSuffix propertySuffix : Name) : TerminalAdapter where
+  description := description
+  formSuffix := formSuffix
+  propertySuffix := propertySuffix
+  validate form expected sense := do
+    let type ← whnf (← inferType form)
+    unless type.isAppOfArity formName 5 do
+      throwError "terminal evidence is not a {formDescription}"
+    let represented := type.getAppArgs.back!
+    unless ← isDefEq represented expected do
+      throwError "terminal {description} form does not represent the final canonical problem"
+    let data ← mkProjection form `data
+    let actualSense ← mkProjection data `sense
+    let expectedSense := match sense with
+      | .minimize => mkConst ``Morew.ObjectiveSense.minimize
+      | .maximize => mkConst ``Morew.ObjectiveSense.maximize
+    unless ← isDefEq actualSense expectedSense do
+      throwError "terminal {description} form has the wrong objective sense"
+    pure represented
+  retarget form target equality := do
+    let type ← whnf (← inferType form)
+    let arguments := type.getAppArgs.set! (type.getAppNumArgs - 1) target
+    let represents ← mkAppM ``Eq.trans #[← mkProjection form `represents, equality]
+    let data ← mkProjection form `data
+    pure <| mkAppN (mkConst (formName ++ `mk) type.getAppFn.constLevels!)
+      (arguments ++ #[data, represents])
+  property form := do
+    let type ← whnf (← inferType form)
+    pure <| mkAppN (mkConst (formName ++ propertySuffix) type.getAppFn.constLevels!)
+      (type.getAppArgs ++ #[form])
+
 /-- Terminal evidence in the containing state's section-variable context. -/
 structure CheckedTerminalArtifact where
   /-- Operations for the selected terminal representation. -/

@@ -22,45 +22,10 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
--- Keep section expressions in artifacts; adapter functions carry no local context.
-private def validateTerminalNLP (form expected : Expr)
-    (sense : Morew.ObjectiveSense) : TermElabM Expr := do
-  let type ← whnf (← inferType form)
-  unless type.isAppOfArity ``Morew.NLP.Form 5 do
-    throwError "terminal evidence is not a NLP.Form"
-  let represented := type.getAppArgs.back!
-  unless ← isDefEq represented expected do
-    throwError "terminal smooth NLP form does not represent the final canonical problem"
-  let data ← mkProjection form `data
-  let actualSense ← mkProjection data `sense
-  let expectedSense := match sense with
-    | .minimize => mkConst ``Morew.ObjectiveSense.minimize
-    | .maximize => mkConst ``Morew.ObjectiveSense.maximize
-  unless ← isDefEq actualSense expectedSense do
-    throwError "terminal smooth NLP form has the wrong objective sense"
-  pure represented
-
-private def retargetTerminalNLP (form target equality : Expr) : TermElabM Expr := do
-  let type ← whnf (← inferType form)
-  let arguments := type.getAppArgs.set! (type.getAppNumArgs - 1) target
-  let represents ← mkAppM ``Eq.trans #[← mkProjection form `represents, equality]
-  let data ← mkProjection form `data
-  pure <| mkAppN (mkConst ``Morew.NLP.Form.mk type.getAppFn.constLevels!)
-    (arguments ++ #[data, represents])
-
-private def terminalNLPProperty (form : Expr) : TermElabM Expr := do
-  let type ← whnf (← inferType form)
-  pure <| mkAppN (mkConst ``Morew.NLP.Form.isSmoothNLP type.getAppFn.constLevels!)
-    (type.getAppArgs ++ #[form])
-
-private def terminalNLPAdapter : TerminalAdapter := {
-  description := "smooth NLP"
-  formSuffix := `nlpForm
-  propertySuffix := `isSmoothNLP
-  validate := validateTerminalNLP
-  retarget := retargetTerminalNLP
-  property := terminalNLPProperty
-}
+private def terminalNLPAdapter : TerminalAdapter :=
+  TerminalAdapter.ofForm ``Morew.NLP.Form
+    (formDescription := "NLP.Form") (description := "smooth NLP")
+    (formSuffix := `nlpForm) (propertySuffix := `isSmoothNLP)
 
 private def terminalNLPStem (state : ReformState) (origin : Nat) : CommandElabM String := do
   let name := state.view.constraints[origin]!.name.eraseMacroScopes

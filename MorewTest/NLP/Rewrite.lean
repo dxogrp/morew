@@ -21,6 +21,7 @@ namespace MorewTest.NLP.Rewrite
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.NLP
+open MorewTest.Affine (elaborate)
 open scoped ENNReal
 
 private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop)) :=
@@ -42,7 +43,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
     let generated := result.rowPredicates.map (mkApp · point)
     let bodies := retained.extract 0 insertionIndex ++ generated ++
       retained.extract insertionIndex retained.size
-    let feasible := Morew.Elab.Rewrite.Decomposition.conjunction bodies.toList
+    let feasible := mkAndN bodies.toList
     let member ← mkAppM ``Membership.mem #[result.certified.domain, point]
     mkForallFVars #[point] (← mkArrow feasible member)
   unless ← isDefEq (← inferType result.certified.feasibleMemDomain) expectedInclusion do
@@ -92,7 +93,7 @@ private def rejected (term : TSyntax `term) (message : String)
 private def expectUsing (term rule : TSyntax `term) (rowCount : Nat)
     (auxiliary : Bool := false) (parameters : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
-    let rule ← Domain.elaborate rule
+    let rule ← elaborate rule
     let result ← match ← Rewrite.plan source retained (some rule) with
       | .ok result => pure result
       | .error error => throwError "explicit exact NLP record {rule} failed for {source}: {error.reason}"
@@ -354,8 +355,8 @@ run_cmd liftTermElabM do
     (← `(nestedProofLetModelTargetRepr 1)) 1
   expectUsing (← `(input (fun x : ℝ => x * x ≤ 3) #[]))
     (← `(literalModelTargetRepr)) 1
-  let source ← Domain.elaborate (← `(fun x : ℝ => x * x ≤ 3))
-  let rule ← Domain.elaborate (← `(modelTargetRepr))
+  let source ← elaborate (← `(fun x : ℝ => x * x ≤ 3))
+  let rule ← elaborate (← `(modelTargetRepr))
   let .error error ← Rewrite.plan source #[] (some rule)
     | throwError "a decision-dependent named model target was unfolded"
   unless (← error.reason.toString).contains "generated row" do
@@ -385,24 +386,24 @@ run_cmd liftTermElabM do
 
 -- Explicit records cannot bypass exact-source, target-grammar or state checks.
 run_cmd liftTermElabM do
-  let source ← Domain.elaborate (← `(fun x : ℝ => |x| ≤ 3))
-  let wrong ← Domain.elaborate (← `(identityRepr))
+  let source ← elaborate (← `(fun x : ℝ => |x| ≤ 3))
+  let wrong ← elaborate (← `(identityRepr))
   let .error _ ← Rewrite.plan source #[] (some wrong)
     | throwError "mismatching explicit record was accepted"
-  let smoothSource ← Domain.elaborate (← `(fun x : ℝ => x ^ 2 ≤ 3))
-  let opaqueTarget ← Domain.elaborate (← `(opaqueTargetRepr))
+  let smoothSource ← elaborate (← `(fun x : ℝ => x ^ 2 ≤ 3))
+  let opaqueTarget ← elaborate (← `(opaqueTargetRepr))
   let .error error ← Rewrite.plan smoothSource #[] (some opaqueTarget)
     | throwError "a named target predicate was unfolded"
   unless (← error.reason.toString).contains "generated row" do
     throwError "named target did not fail at the target grammar boundary"
   for term in #[← `(strictRepr), ← `(disjunctiveRepr), ← `(booleanAuxiliary)] do
-    let rule ← Domain.elaborate term
+    let rule ← elaborate term
     let type ← whnf (← inferType rule)
     let .error _ ← Rewrite.plan type.getAppArgs[1]! #[] (some rule)
       | throwError "unsupported explicit target grammar or auxiliary space was accepted"
   let .error _ ← Rewrite.plan source #[] none 1
     | throwError "out-of-bounds insertion was accepted"
-  let builder ← Domain.elaborate (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
+  let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
   let hole ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let .error error ← Rewrite.plan (mkApp builder hole) #[]

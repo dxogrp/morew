@@ -72,13 +72,6 @@ private structure Work where
 private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
   entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
 
-private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) : Name × Nat :=
-  let name := Name.mkSimple s!"_terminalConic_{index}"
-  if inventory.contains .decisionBinder name || inventory.contains .constraintLabel name then
-    freshPlaceholder inventory (index + 1)
-  else
-    (name, index + 1)
-
 private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Expr.Error (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate
@@ -88,10 +81,6 @@ private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.Evide
     | .error error => return .error error
     | .ok row => rows := rows.push row
   return .ok rows
-
-private def certifyPredicate (predicate : Expr) (provider : Affine.EvidenceProvider) :
-    MetaM (Option (Array RowResult)) := do
-  return (← certifyPredicateDetailed predicate provider).toOption
 
 private def pullbackConstraint {X A : Type*}
     [AddCommGroup X] [Module ℝ X]
@@ -134,7 +123,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
   let (objective, retained) ← match auxiliary? with
     | none => pure (old.objective, old.constraints)
     | some auxiliary => do
-      let (name, following) := freshPlaceholder old.nameInventory nextName
+      let (name, following) := old.nameInventory.freshPlaceholder "_terminalConic_" nextName
       nextName := following
       binders := binders.push { name, type := auxiliary }
       auxiliaries := auxiliaries.push (origin, auxiliary)
@@ -148,7 +137,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
         pure (objective, retained)
   let mut entries : Array ConstraintEntry := #[]
   for row in rows do
-    let (name, following) := freshPlaceholder old.nameInventory nextName
+    let (name, following) := old.nameInventory.freshPlaceholder "_terminalConic_" nextName
     nextName := following
     entries := entries.push { name, predicate := row, ref := old.constraints[index]!.ref }
   let presentation := {
@@ -183,7 +172,7 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
   while index < work.presentation.constraints.size do
     let source := work.presentation.constraints[index]!.predicate
     let (leaves, decomposition) ← decomposePredicate source
-    if let some rows ← certifyPredicate source provider then
+    if let .ok rows ← certifyPredicateDetailed source provider then
       work := { work with certifiedRows := work.certifiedRows.set! index (some rows) }
       index := index + 1
       continue
@@ -194,7 +183,7 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
     let presentation := work.presentation
     let retained := splice (presentation.constraints.map (·.predicate)) index #[]
     let conditional ← withLocalDeclD `point presentation.domainType fun point => do
-      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let remainder := mkAndN (retained.toList.map (mkApp · point))
       withLocalDeclD `retained remainder fun hypothesis =>
         mkLambdaFVars #[point, hypothesis] (mkApp decomposition point)
     let rewrite ← rewriteConstraintContextual presentation index leaves conditional
@@ -305,7 +294,7 @@ private def normalizeFinal (work : Work) : MetaM Work := do
     let presentation := work.presentation
     let retained := splice (presentation.constraints.map (·.predicate)) index #[]
     let conditional ← withLocalDeclD `point presentation.domainType fun point => do
-      let remainder := Decomposition.conjunction (retained.toList.map (mkApp · point))
+      let remainder := mkAndN (retained.toList.map (mkApp · point))
       withLocalDeclD `retained remainder fun hypothesis =>
         mkLambdaFVars #[point, hypothesis] (mkApp normalized.pointwiseIff point)
     let rewrite ← rewriteConstraintContextual presentation index

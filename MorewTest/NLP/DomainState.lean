@@ -20,6 +20,7 @@ namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP
+open MorewTest.Affine (elaborate)
 
 private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx
@@ -38,10 +39,9 @@ private def isolatedSuccess (feasible : Expr) (sources : Array Expr) :
   let before ← getMCtx
   let result ← Domain.certify feasible sources
   checkUnchanged before
-  let .ok result := result
-    | match result with
-      | .error error => throwError "expected a complete domain certificate: {error.reason}"
-      | .ok _ => throwError "unreachable domain result"
+  let result ← match result with
+    | .ok result => pure result
+    | .error error => throwError "expected a complete domain certificate: {error.reason}"
   checkResult feasible sources result
   return result
 

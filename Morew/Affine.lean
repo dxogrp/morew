@@ -105,16 +105,8 @@ def mulConstRight {f : X → ℝ} (a : Certified f) (c : ℝ) :
 
 /-- Divide by a constant with a supplied nonzero proof. -/
 noncomputable def divConst {f : X → ℝ} (a : Certified f) (c : ℝ) (_h : c ≠ 0) :
-    Certified (fun x => f x / c) where
-  map := (mulConstRight a c⁻¹).map
-  correct x := by
-    simpa only [div_eq_mul_inv] using (mulConstRight a c⁻¹).correct x
-
-/-- The zeroth power of a scalar affine function is constant. -/
-def powZero {f : X → ℝ} (_a : Certified f) :
-    Certified (fun x => f x ^ (0 : ℕ)) where
-  map := AffineMap.const ℝ X 1
-  correct x := (pow_zero (f x)).symm
+    Certified (fun x => f x / c) :=
+  (mulConstRight a c⁻¹).transport fun x => (div_eq_mul_inv (f x) c).symm
 
 /-- The zeroth power of any real-valued function is constant. -/
 def powZeroSource (f : X → ℝ) :
@@ -189,11 +181,6 @@ def vecCons {n : ℕ} {f : X → Y} {g : X → Fin n → Y}
     refine Fin.cases ?_ (fun j => ?_) i
     · exact a.correct x
     · exact congrFun (b.correct x) j
-
-/-- The empty real vector is constant. -/
-def vecEmpty (X : Type*) [AddCommGroup X] [Module ℝ X] :
-    Certified (fun _ : X => (Matrix.vecEmpty : Fin 0 → ℝ)) :=
-  const X Matrix.vecEmpty
 
 /-- View an affine coordinate vector in Euclidean space. -/
 def toEuclidean {n : ℕ} {f : X → Fin n → ℝ} (a : Certified f) :

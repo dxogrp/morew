@@ -20,15 +20,16 @@ namespace MorewTest.NLP.Terminal
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.Reformulation
 open Morew.Elab.NLP
+open MorewTest.Affine (elaborate)
 open scoped ENNReal
 
 private def presentation (objective : TSyntax `term)
     (rows : Array (Name × TSyntax `term)) : TermElabM PresentationState := do
-  let objective ← Domain.elaborate objective
+  let objective ← elaborate objective
   let .forallE _ domain value _ ← whnf (← inferType objective)
     | throwError "expected a function objective"
   let constraints ← rows.mapM fun (name, row) => do
-    return { name, predicate := ← Domain.elaborate row : ConstraintEntry }
+    return { name, predicate := ← elaborate row : ConstraintEntry }
   return {
     sense := .minimize, domainType := domain, valueType := value
     objective, constraints, binders := #[{ name := `point, type := domain }] }
@@ -126,7 +127,7 @@ run_cmd liftTermElabM do
 -- recursion limits still terminate the attempt without leaking scratch state.
 run_cmd liftTermElabM do
   withLocalDeclD `point (mkConst ``Real) fun point => do
-    let required ← mkAppM ``LT.lt #[← Domain.elaborate (← `((0 : ℝ))), point]
+    let required ← mkAppM ``LT.lt #[← elaborate (← `((0 : ℝ))), point]
     for recursion in [false, true] do
       let context ← getMCtx
       let environment ← getEnv
@@ -160,7 +161,7 @@ run_cmd liftTermElabM do
 -- Independent nonzero evidence is scoped inside the accepted original row.
 -- Both later `L1` auxiliaries must retain the accepted residual and proof data.
 run_cmd liftTermElabM do
-  let expressions ← Domain.elaborate (← `(fun (c : ℝ) (h : c ≠ 0 ∧ True) =>
+  let expressions ← elaborate (← `(fun (c : ℝ) (h : c ≠ 0 ∧ True) =>
     ((fun v : Fin 1 → ℝ => let nonzero : c ≠ 0 := h.1; v 0 / c ≤ 10),
      (fun v : Fin 1 → ℝ => ‖WithLp.toLp 1 v‖ ≤ 2),
      (fun v : Fin 1 → ℝ => ‖WithLp.toLp 1 (fun i => 2 * v i)‖ ≤ 3))))
@@ -229,7 +230,7 @@ run_cmd liftTermElabM do
 run_cmd liftTermElabM do
   let dimension ← mkFreshExprMVar (mkConst ``Nat)
   let domain ← mkArrow (← mkAppM ``Fin #[dimension]) (mkConst ``Real)
-  let zero ← Domain.elaborate (← `((0 : ℝ)))
+  let zero ← elaborate (← `((0 : ℝ)))
   let objective ← withLocalDeclD `point domain fun point => mkLambdaFVars #[point] zero
   let source : PresentationState := {
     sense := .minimize, domainType := domain, valueType := mkConst ``Real

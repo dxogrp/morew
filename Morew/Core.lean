@@ -55,9 +55,7 @@ theorem orderDual_feasible {X : Type u} {V : Type v} (p : Problem X V)
 
 @[simp]
 theorem orderDual_orderDual {X : Type u} {V : Type v} (p : Problem X V) :
-    p.orderDual.orderDual = p := by
-  cases p
-  rfl
+    p.orderDual.orderDual = p := rfl
 
 /-- The problem has at least one feasible decision point. -/
 def HasFeasiblePoint {X : Type u} {V : Type v} (p : Problem X V) : Prop :=
@@ -142,13 +140,6 @@ structure GlobalEquiv {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
   backward : GlobalImprovement q p
 
 namespace GlobalEquiv
-
-/-- Return the forward improvement map. -/
-def toGlobalImprovement
-    {X : Type u} {Y : Type v} {V : Type w} [Preorder V]
-    {p : Problem X V} {q : Problem Y V} (e : GlobalEquiv p q) :
-    GlobalImprovement p q :=
-  e.forward
 
 /-- Global equivalence is reflexive. -/
 protected def refl {X : Type u} {V : Type v} [Preorder V]

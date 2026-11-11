@@ -17,6 +17,7 @@ namespace MorewTest.NLP.Helpers
 
 open Lean Lean.Meta Lean.Elab.Term
 open MorewTest.NLP.Smooth MorewTest.NLP.HelperFixtures
+open MorewTest.Affine (elaborate)
 
 private noncomputable def betaConstantWrapper (x : ℝ) : ℝ :=
   hiddenLog ((fun _ : ℝ => 0) x) + x

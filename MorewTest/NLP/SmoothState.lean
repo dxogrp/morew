@@ -17,6 +17,7 @@ namespace MorewTest.NLP.Smooth
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Smooth
+open MorewTest.Affine (elaborate)
 
 private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx

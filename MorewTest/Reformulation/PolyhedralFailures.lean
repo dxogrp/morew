@@ -101,7 +101,7 @@ reformulation wrongRecord : source certificate wrongRecordAlias := by
 predicate also matches the ordinary automatic absolute-value rule. -/
 def guardedRepr (_ : True) : ConstraintRepr (fun x : ℝ => |x| ≤ 3) :=
   ConstraintRepr.ofIff (fun x => x ≤ 3 ∧ -x ≤ 3)
-    (fun x => Morew.Rewrite.Polyhedral.abs_le_iff x 3)
+    (fun x => abs_le' (a := x) (b := 3))
 
 /-- error: constraint `bound`: failed to elaborate exact rule: exact rule contains unresolved metavariables -/
 #guard_msgs in
@@ -154,7 +154,7 @@ def booleanRepr : ConstraintRepr (fun x : ℝ => |x| ≤ 3) where
   Auxiliary := Bool
   target x _ := x ≤ 3 ∧ -x ≤ 3
   source_iff_exists x := by
-    simp [Morew.Rewrite.Polyhedral.abs_le_iff]
+    simp [abs_le']
 
 /-- error: constraint `bound`: unsupported variable type -/
 #guard_msgs (substring := true) in

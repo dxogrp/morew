@@ -25,7 +25,7 @@ def absEpigraph : EpigraphRepr (fun a : ℝ => |a|) where
   Auxiliary := Unit
   target a t _ := a ≤ t ∧ -a ≤ t
   source_iff_exists a t := by
-    simpa only [exists_const] using Polyhedral.abs_le_iff a t
+    simpa only [exists_const] using abs_le' (a := a) (b := t)
 
 /-- The positive-part epigraph, including nonnegativity of the bound. -/
 def posEpigraph : EpigraphRepr (fun a : ℝ => a⁺) where
@@ -40,7 +40,7 @@ def maxEpigraph :
   Auxiliary := Unit
   target p t _ := p.1 ≤ t ∧ p.2 ≤ t
   source_iff_exists p t := by
-    simpa only [exists_const] using Polyhedral.max_le_iff p.1 p.2 t
+    simpa only [exists_const] using max_le_iff (a := p.1) (b := p.2) (c := t)
 
 /-- The hypograph of the minimum of two real values. -/
 def minHypograph :
@@ -48,7 +48,7 @@ def minHypograph :
   Auxiliary := Unit
   target p t _ := t ≤ p.1 ∧ t ≤ p.2
   source_iff_exists p t := by
-    simpa only [exists_const] using Polyhedral.le_min_iff p.1 p.2 t
+    simpa only [exists_const] using le_min_iff (a := p.1) (b := p.2) (c := t)
 
 /-- The epigraph of a maximum over a nonempty finite support. -/
 def finsetSupEpigraph {ι : Type*} (s : Finset ι) (hs : s.Nonempty) :

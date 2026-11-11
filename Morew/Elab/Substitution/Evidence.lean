@@ -91,9 +91,6 @@ private theorem nonzeroOfPositive {value : ℝ} (h : 0 < value) : value ≠ 0 :=
 private theorem nonzeroOfNegative {value : ℝ} (h : value < 0) : value ≠ 0 :=
   ne_of_lt h
 
-private theorem reverseNonzero {value : ℝ} (h : value ≠ 0) : (0 : ℝ) ≠ value :=
-  Ne.symm h
-
 private def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr) :
     MetaM (Option Expr) := do
   let value : Q(ℝ) ← Expr.reduceStructure value
@@ -167,7 +164,7 @@ private partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
           let some negative ← proveCore? point q($value < 0) feasible? | pure none
           pure (some (← mkAppM ``nonzeroOfNegative #[negative]))
     return ← proof?.mapM fun proof =>
-      if reverse then mkAppM ``reverseNonzero #[proof] else pure proof
+      if reverse then mkAppM ``Ne.symm #[proof] else pure proof
   return none
 
 private def checked? (point goal : Expr) (feasible? : Option Expr) : MetaM (Option Expr) := do

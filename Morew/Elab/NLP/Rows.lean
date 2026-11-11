@@ -306,13 +306,11 @@ private def restrict (certificate : RowCertificate) (subset : Expr) : RowsM (Exp
 
 private def intersect (left right : RowCertificate) :
     RowsM (RowCertificate × (Expr × Expr) × (Expr × Expr)) := do
-  let domain ← mkAppM ``Morew.NLP.Domain.inter #[left.domain, right.domain]
-  let leftSubset ← mkAppM ``Morew.NLP.Domain.inter_left #[left.domain, right.domain]
-  let rightSubset ← mkAppM ``Morew.NLP.Domain.inter_right #[left.domain, right.domain]
-  let isOpen ← analytic <| mkAppM ``Morew.NLP.Domain.inter_open
-    #[left.domain, right.domain, left.isOpen, right.isOpen]
-  let included ← mkAppM ``Morew.NLP.Domain.inter_includes
-    #[(← read).feasible, left.domain, right.domain, left.included, right.included]
+  let domain ← mkAppM ``Set.inter #[left.domain, right.domain]
+  let leftSubset ← mkAppOptM ``Set.inter_subset_left #[none, some left.domain, some right.domain]
+  let rightSubset ← mkAppOptM ``Set.inter_subset_right #[none, some left.domain, some right.domain]
+  let isOpen ← analytic <| mkAppM ``IsOpen.inter #[left.isOpen, right.isOpen]
+  let included ← mkAppM ``Set.subset_inter #[left.included, right.included]
   return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
@@ -456,9 +454,9 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
     let .ok child := outcome | do
       let .error error := outcome | unreachable!
       return .error error
-    let domain ← mkAppM ``Morew.NLP.Domain.inter #[result.domain, child.domain]
-    let left ← mkAppM ``Morew.NLP.Domain.inter_left #[result.domain, child.domain]
-    let right ← mkAppM ``Morew.NLP.Domain.inter_right #[result.domain, child.domain]
+    let domain ← mkAppM ``Set.inter #[result.domain, child.domain]
+    let left ← mkAppOptM ``Set.inter_subset_left #[none, some result.domain, some child.domain]
+    let right ← mkAppOptM ``Set.inter_subset_right #[none, some result.domain, some child.domain]
     let proofs ← result.rowCertificates.mapM fun proof =>
       Space.withCanonicalSpaces #[decision] <|
         mkAppM ``Morew.NLP.Rows.Certified.mono #[proof, left]
@@ -472,10 +470,9 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
     result := {
       domain
       domainIsOpen := ← Space.withCanonicalSpaces #[decision] <|
-        mkAppM ``Morew.NLP.Domain.inter_open
-          #[result.domain, child.domain, result.domainIsOpen, child.isOpen]
-      feasibleMemDomain := ← mkAppM ``Morew.NLP.Domain.inter_includes
-        #[feasible, result.domain, child.domain, result.feasibleMemDomain, child.included]
+        mkAppM ``IsOpen.inter #[result.domainIsOpen, child.isOpen]
+      feasibleMemDomain := ← mkAppM ``Set.subset_inter
+        #[result.feasibleMemDomain, child.included]
       rowCertificates := proofs.push proof
       rowBlocks := blocks.push block
     }

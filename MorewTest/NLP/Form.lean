@@ -19,6 +19,7 @@ namespace MorewTest.NLP.Form
 open Lean Lean.Meta Lean.Elab.Term
 open Morew
 open Morew.Elab.NLP
+open MorewTest.Affine (elaborate)
 
 noncomputable section
 
@@ -46,10 +47,10 @@ private def requireForm (presentation : Elab.Reformulation.PresentationState)
     return form
 
 elab "nlp_form_for% " source:term : term => do
-  requireForm (← presentationFor (← Domain.elaborate source))
+  requireForm (← presentationFor (← elaborate source))
 
 elab "max_nlp_form_for% " source:term : term => do
-  requireForm (← presentationFor (← Domain.elaborate source) .maximize)
+  requireForm (← presentationFor (← elaborate source) .maximize)
 
 def polynomial : Problem ℝ ℝ where
   objective x := -x ^ 4 + x ^ 2
@@ -175,7 +176,7 @@ example : emptyForm.data.rowCount = 0 := rfl
 -- restricted operation is rescued by a tautology or cancellation.
 private def requireFailure (term : TSyntax `term) (kind : Smooth.SmoothFailureKind) :
     TermElabM Unit := do
-  let presentation ← presentationFor (← Domain.elaborate term)
+  let presentation ← presentationFor (← elaborate term)
   let .error error ← buildForm presentation | throwError "unsupported problem was certified"
   unless error.kind == kind do throwError "wrong form failure: {error.reason}"
 
@@ -191,25 +192,25 @@ run_elab requireFailure (← `(show Problem ℝ ℝ from
 -- Cache validation rejects a certificate for a different predicate, even if
 -- both rows happen to be smooth. The successful control reuses exact row data.
 run_elab do
-  let source ← Domain.elaborate (← `(polynomial))
+  let source ← elaborate (← `(polynomial))
   let presentation ← presentationFor source
   let canonical ← presentation.canonicalProblem
   let feasible ← mkAppM ``Problem.feasible #[canonical]
   let .ok cached ← Rows.certifyRows feasible #[presentation.constraints[0]!.predicate]
     | throwError "failed cache setup"
   discard <| requireForm presentation #[some cached]
-  let other ← Domain.elaborate (← `(fun x : ℝ => x ≤ 5))
+  let other ← elaborate (← `(fun x : ℝ => x ≤ 5))
   let wrong := { presentation with constraints := #[{ name := `bounds, predicate := other }] }
   let .error _ ← buildForm wrong #[some cached]
     | throwError "accepted cache for a different problem"
 
 -- Cached rows and their inferred domain survive an added auxiliary coordinate.
 run_elab do
-  let feasible ← Domain.elaborate (← `(fun x : ℝ => 1 ≤ x))
-  let row ← Domain.elaborate (← `(fun x : ℝ => Real.log x ≤ 4))
+  let feasible ← elaborate (← `(fun x : ℝ => 1 ≤ x))
+  let row ← elaborate (← `(fun x : ℝ => Real.log x ≤ 4))
   let .ok cached ← Rows.certifyRows feasible #[row] | throwError "failed cache setup"
-  let next ← Domain.elaborate (← `(fun z : ℝ × ℝ => 1 ≤ z.1 ∧ z.2 = 0))
-  let backward ← Domain.elaborate (← `(fun (z : ℝ × ℝ) (h : 1 ≤ z.1 ∧ z.2 = 0) => h.1))
+  let next ← elaborate (← `(fun z : ℝ × ℝ => 1 ≤ z.1 ∧ z.2 = 0))
+  let backward ← elaborate (← `(fun (z : ℝ × ℝ) (h : 1 ≤ z.1 ∧ z.2 = 0) => h.1))
   let transported ← cached.transport next backward (some (mkConst ``Real))
   for block in transported.rowBlocks do checkWithKernel block
 

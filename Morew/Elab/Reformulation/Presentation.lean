@@ -49,12 +49,6 @@ structure PresentationState where
   /-- Ordered named feasibility predicates. -/
   constraints : Array ConstraintEntry := #[]
 
-private def rightAssociatedConjunction : List Expr → Expr
-  | [] => mkConst ``True
-  | [proposition] => proposition
-  | proposition :: rest =>
-      mkApp2 (mkConst ``And) proposition (rightAssociatedConjunction rest)
-
 private def ensureIsType (type : Expr) (description : String) : MetaM Unit := do
   let sort ← whnf (← inferType type)
   unless sort.isSort do
@@ -89,7 +83,7 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
   let feasible ← withLocalDeclD `point state.domainType fun point => do
     let propositions := state.constraints.map fun constraint =>
       mkApp constraint.predicate point
-    mkLambdaFVars #[point] <| rightAssociatedConjunction propositions.toList
+    mkLambdaFVars #[point] <| mkAndN propositions.toList
   -- Retain the declared `OrderDual` value type for maximization.
   mkAppOptM ``Morew.Problem.mk
     #[some state.domainType, some state.valueType, some state.objective, some feasible]

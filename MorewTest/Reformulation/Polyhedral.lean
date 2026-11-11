@@ -201,7 +201,7 @@ def exactRepr : ConstraintRepr (fun x : Parameter.Index → ℝ =>
   ConstraintRepr.ofIff (fun x =>
     letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
     Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
-    (fun _ => Morew.Rewrite.Polyhedral.abs_le_iff _ _)
+    (fun _ => abs_le')
 
 reformulation customTarget : source := by
   conic at bound using exactRepr

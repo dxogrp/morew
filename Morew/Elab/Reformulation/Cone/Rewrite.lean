@@ -24,21 +24,19 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private abbrev Prepared := Morew.Elab.Cone.Plan.Result
-
 private def conicStyle : Rows.Style := {
   family := "conic", diagnostic := "conic", certificateKind := `_conicCertificate
 }
 
 private def materializeConic (state : ReformState) (index : Nat)
-    (prepared : Prepared) (preparedVars : Array Expr)
+    (prepared : Morew.Elab.Cone.Plan.Result) (preparedVars : Array Expr)
     (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
   runTermElabM fun sectionFVars => do
     -- Instantiate section-local types before kernel checking.
     let context ← instantiateLCtxMVars (← getLCtx)
     withLCtx' context do
     let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
-    let prepared : Prepared :=
+    let prepared : Morew.Elab.Cone.Plan.Result :=
       Morew.Elab.Cone.Plan.Result.replaceFVars prepared preparedVars sectionFVars
     let replacement ← Morew.Elab.Reformulation.Replace.applyReplacement
       typed.presentation index prepared.toResult
@@ -59,20 +57,16 @@ def prepareConic (state : ReformState) (step : Syntax)
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
     let (rule?, declaration?) ← Rows.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
-    let result : Except Morew.Elab.Expr.Error Prepared ←
+    let result : Except Morew.Elab.Expr.Error Morew.Elab.Cone.Plan.Result ←
       Morew.Elab.Cone.Finite.withPresentationFiniteInstances
         Morew.Elab.Cone.Plan.Result.replaceFVars presentation do
+        let retained := presentation.constraints.extract 0 index ++
+          presentation.constraints.extract (index + 1) presentation.constraints.size
         if let some name := declaration? then do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
         else if let some rule := rule? then do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
         else do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planUnique predicate (retained.map (·.predicate))
     match result with
     | .error error =>

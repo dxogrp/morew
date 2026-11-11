@@ -19,26 +19,13 @@ open Morew.Elab.Reformulation
 private theorem unitTargetIff {X : Type u} (source : X → Prop)
     (target : X → Unit → Prop)
     (h : ∀ x, source x ↔ ∃ a, target x a) :
-    ∀ x, source x ↔ target x () := by
-  intro x
-  constructor
-  · intro hx
-    obtain ⟨a, ha⟩ := (h x).mp hx
-    cases a
-    exact ha
-  · intro hx
-    exact (h x).mpr ⟨(), hx⟩
+    ∀ x, source x ↔ target x () :=
+  fun x => (h x).trans Unique.exists_iff
 
-private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () := by
-  constructor
-  · rintro ⟨⟨⟩, h⟩
-    exact h
-  · exact fun h => ⟨(), h⟩
+private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () :=
+  Unique.exists_iff
 
-private def conjunction (propositions : Array Expr) : Expr :=
-  Rewrite.Decomposition.conjunction propositions.toList
-
-open Morew.Elab.Rewrite.Decomposition (conjunctionProof conjunctionParts)
+open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
 private def proveIff (lhs rhs : Expr)
     (forward backward : Expr → MetaM Expr) : MetaM Expr := do
@@ -56,7 +43,7 @@ private def applyRows (rows : Array Expr) (point : Expr) : Array Expr :=
 
 private def feasibleFunction (domain : Expr) (rows : Array Expr) : MetaM Expr :=
   withLocalDeclD `point domain fun point => do
-    mkLambdaFVars #[point] (conjunction (applyRows rows point))
+    mkLambdaFVars #[point] (mkAndN (applyRows rows point).toList)
 
 /-- Separate exactly one displayed row from the retained ordered conjunction.
 Conjunctions inside an individual row keep their original boundaries. -/
@@ -76,11 +63,11 @@ def makeDecomposition (presentation : PresentationState) (index : Nat)
     let proof ← proveIff lhs rhs (fun h => do
       let parts ← conjunctionParts rows.size h
       mkAppM ``And.intro
-        #[← conjunctionProof (splice parts index #[]), parts[index]!]) (fun h => do
+        #[← mkAndIntroN (splice parts index #[]).toList, parts[index]!]) (fun h => do
       let other ← conjunctionParts remainder.size (← mkAppM ``And.left #[h])
       let selected ← mkAppM ``And.right #[h]
-      conjunctionProof (other.extract 0 index ++ #[selected] ++
-        other.extract index other.size))
+      mkAndIntroN (other.extract 0 index ++ #[selected] ++
+        other.extract index other.size).toList)
     mkLambdaFVars #[point] proof
   mkAppM ``Morew.ConstraintDecomposition.mk #[remainderFunction, proof]
 
@@ -141,7 +128,7 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
             let unitIff ← mkAppM ``unitTargetIff #[source, target, exact]
             pure (mkApp unitIff point)
           | .contextual _ target sourceIffExists => do
-            let exact := mkApp2 sourceIffExists point (← conjunctionProof retained)
+            let exact := mkApp2 sourceIffExists point (← mkAndIntroN retained.toList)
             mkAppM ``Iff.trans
               #[exact, ← mkAppM ``existsUnitIff #[mkApp target point]]
         mkAppM ``Iff.trans #[sourceIff, mkApp targetIff point]
@@ -157,16 +144,16 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
             pure (other, ← mkAppM ``And.right #[h])
         let generated ← conjunctionParts rows.size
           (← mkAppM ``Iff.mp #[← blockIff other, selected])
-        conjunctionProof (other.extract 0 index ++ generated ++ other.extract index other.size))
+        mkAndIntroN (other.extract 0 index ++ generated ++ other.extract index other.size).toList)
       (fun h => do
         let parts ← conjunctionParts nextRows.size h
-        let generated ← conjunctionProof (parts.extract index (index + rows.size))
+        let generated ← mkAndIntroN (parts.extract index (index + rows.size)).toList
         let before := parts.extract 0 index
         let after := parts.extract (index + rows.size) parts.size
         let selected ← mkAppM ``Iff.mpr #[← blockIff (before ++ after), generated]
         match auxiliary? with
-        | none => conjunctionProof (before ++ #[selected] ++ after)
-        | some _ => mkAppM ``And.intro #[← conjunctionProof (before ++ after), selected])
+        | none => mkAndIntroN (before ++ #[selected] ++ after).toList
+        | some _ => mkAppM ``And.intro #[← mkAndIntroN (before ++ after).toList, selected])
     mkLambdaFVars #[point] proof
   let objectiveEq ← withLocalDeclD `point nextDomain fun point => do
     mkLambdaFVars #[point] (← mkEqRefl (mkApp objective point))
@@ -204,9 +191,9 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   let nextRows := splice oldRows index rows
   let domain := presentation.domainType
   let expected ← withLocalDeclD `point domain fun point => do
-    let hypothesis := conjunction (applyRows remainder point)
+    let hypothesis := mkAndN (applyRows remainder point).toList
     let conclusion := mkApp2 (mkConst ``Iff) (mkApp oldRows[index]! point)
-      (conjunction (applyRows rows point))
+      (mkAndN (applyRows rows point).toList)
     mkForallFVars #[point] (← mkArrow hypothesis conclusion)
   unless ← isDefEq (← inferType conditionalIff) expected do
     throwError "conditional conic certificate does not match the selected row and retained constraints"
@@ -214,22 +201,22 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   let feasible ← feasibleFunction domain nextRows
   let targetProblem ← mkAppM ``Morew.Problem.mk #[presentation.objective, feasible]
   let feasibleIff ← withLocalDeclD `point domain fun point => do
-    let proof ← proveIff (conjunction (applyRows oldRows point))
-      (conjunction (applyRows nextRows point)) (fun h => do
+    let proof ← proveIff (mkAndN (applyRows oldRows point).toList)
+      (mkAndN (applyRows nextRows point).toList) (fun h => do
         let parts ← conjunctionParts oldRows.size h
         let other := splice parts index #[]
-        let block := mkApp2 conditionalIff point (← conjunctionProof other)
+        let block := mkApp2 conditionalIff point (← mkAndIntroN other.toList)
         let generated ← conjunctionParts rows.size
           (← mkAppM ``Iff.mp #[block, parts[index]!])
-        conjunctionProof (other.extract 0 index ++ generated ++ other.extract index other.size))
+        mkAndIntroN (other.extract 0 index ++ generated ++ other.extract index other.size).toList)
       (fun h => do
         let parts ← conjunctionParts nextRows.size h
         let before := parts.extract 0 index
         let after := parts.extract (index + rows.size) parts.size
-        let block := mkApp2 conditionalIff point (← conjunctionProof (before ++ after))
-        let generated ← conjunctionProof (parts.extract index (index + rows.size))
+        let block := mkApp2 conditionalIff point (← mkAndIntroN (before ++ after).toList)
+        let generated ← mkAndIntroN (parts.extract index (index + rows.size)).toList
         let selected ← mkAppM ``Iff.mpr #[block, generated]
-        conjunctionProof (before ++ #[selected] ++ after))
+        mkAndIntroN (before ++ #[selected] ++ after).toList)
     mkLambdaFVars #[point] proof
   let objectiveEq ← withLocalDeclD `point domain fun point => do
     mkLambdaFVars #[point] (← mkEqRefl (mkApp presentation.objective point))

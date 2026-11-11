@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Mathlib.Analysis.Normed.Module.FiniteDimension
 import Morew.Elab.Expr
+import Morew.Elab.State
 import Lean.Meta.Basic
 
 /-! Canonical normed structures and finite-dimensionality for real, Euclidean,
@@ -104,13 +105,6 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   else
     throwError "unsupported smooth decision or value space {type}; expected ℝ, a finite Euclidean space, a product, or a Fin n function space"
 
-private def installInstances (remaining : List Expr) (action : MetaM Expr) : MetaM Expr := do
-  match remaining with
-  | [] => instantiateMVars (← action)
-  | inst :: rest =>
-    mapLetDeclZeta `_smoothCanonical (← inferType inst) inst fun _ =>
-      installInstances rest action
-
 /-- Use canonical analytic structures on supplied spaces, their components, and `ℝ`.
 Use the matching `Fin` enumeration and substitute temporary instances into the result. -/
 def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
@@ -120,6 +114,6 @@ def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr 
     for inst in result.instances do
       unless instances.contains inst do
         instances := instances.push inst
-  installInstances instances.toList action
+  State.withInstances `_smoothCanonical instances.toList action
 
 end Morew.Elab.NLP.Space

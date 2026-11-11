@@ -36,12 +36,7 @@ def ofIff {X : Type u} {source : X → Prop} (replacement : X → Prop)
     ConstraintRepr source where
   Auxiliary := Unit
   target x _ := replacement x
-  source_iff_exists x := by
-    constructor
-    · intro hx
-      exact ⟨(), (h x).mp hx⟩
-    · rintro ⟨_, hx⟩
-      exact (h x).mpr hx
+  source_iff_exists x := (h x).trans (exists_const Unit).symm
 
 end ConstraintRepr
 
@@ -75,12 +70,8 @@ def toConstraintReprSymm
     ConstraintRepr (fun point => f (input point) = output point) where
   Auxiliary := repr.Auxiliary
   target point := repr.target (input point) (output point)
-  source_iff_exists point := by
-    constructor
-    · intro h
-      exact (repr.source_iff_exists _ _).mp h.symm
-    · intro h
-      exact ((repr.source_iff_exists _ _).mpr h).symm
+  source_iff_exists point :=
+    eq_comm.trans (repr.source_iff_exists (input point) (output point))
 
 end GraphRepr
 

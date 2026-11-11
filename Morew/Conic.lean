@@ -5,7 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Conic.Basic
 import Morew.Conic.Exponential
-import Morew.Conic.Polyhedral
 import Morew.Conic.PSD
 import Morew.Conic.PSD.LambdaMax
 import Morew.Conic.PSD.MatrixFraction

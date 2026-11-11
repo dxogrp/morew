@@ -94,12 +94,6 @@ theorem ofEuclidean {n : Nat} (f : X → EuclideanSpace ℝ (Fin n))
     ContDiffOn ℝ 2 (fun x => WithLp.ofLp (f x)) domain :=
   (EuclideanSpace.equiv (Fin n) ℝ).contDiff.comp_contDiffOn hf
 
-/-- Evaluate a smooth finite vector at a fixed index. -/
-theorem apply {ι : Type z} [Fintype ι] (f : X → ι → Y) (index : ι)
-    (hf : ContDiffOn ℝ 2 f domain) :
-    ContDiffOn ℝ 2 (fun x => f x index) domain :=
-  (contDiff_apply ℝ Y index).comp_contDiffOn hf
-
 /-- Build a smooth finite function from smooth components, including dependent fibers. -/
 theorem pi {ι : Type z} [Fintype ι] {F : ι → Type v}
     [∀ i, NormedAddCommGroup (F i)] [∀ i, NormedSpace ℝ (F i)]

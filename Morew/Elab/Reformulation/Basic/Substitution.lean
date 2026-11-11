@@ -359,8 +359,8 @@ private def parameterizationCertificate (state : ReformState)
           let canonicalEvidence ← mkAppM ``Iff.mp
             #[mkApp typed.normalization.feasibleIff point, feasible]
           let coordinates ← whnf (← mkAppM ``Equiv.toFun #[split, point])
-          let retained ← Morew.Elab.Substitution.Registry.structural (mkProj ``Prod 0 coordinates)
-          let selected ← Morew.Elab.Substitution.Registry.structural (mkProj ``Prod 1 coordinates)
+          let retained ← Morew.Elab.Rewrite.Registry.structural (mkProj ``Prod 0 coordinates)
+          let selected ← Morew.Elab.Rewrite.Registry.structural (mkProj ``Prod 1 coordinates)
           let accept (result : Morew.Elab.Substitution.Match.Result) : MetaM Expr := do
             let coverage ← mkLambdaFVars #[point, feasible] result.rangeProof
             let proof ← mkAppM ``Morew.CoordinateParameterization.toFeasibleSurjection

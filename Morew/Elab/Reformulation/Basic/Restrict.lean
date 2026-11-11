@@ -32,16 +32,7 @@ private def materializeRestrict (state : ReformState) (label : TSyntax `ident)
     let natural ← mkAppM ``Morew.Problem.addConstraint #[typed.semantic, predicate]
     let expected ← mkAppM ``Morew.GlobalImprovement #[typed.semantic, natural]
     -- Prove improvement from the complete current problem before adding the restriction.
-    let improvement ← withRef provided do
-      let proof ← elabTermEnsuringType provided expected
-      synthesizeSyntheticMVarsNoPostponing
-      if (← getThe Core.State).messages.hasErrors then throwAbortTerm
-      let proof ← instantiateMVars proof
-      if proof.hasMVar || proof.hasSorry then
-        throwError "restriction certificate contains unresolved metavariables or placeholders"
-      withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
-        checkWithKernel proof
-      pure proof
+    let improvement ← Rows.Append.elaborateProof provided expected "restriction certificate"
     let addition ← mkAppM ``Morew.restrictionEquiv
       #[typed.semantic, predicate, improvement]
     Rows.Append.finish restrictStyle state typed name proposition

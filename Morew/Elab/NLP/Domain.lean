@@ -84,7 +84,7 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
     | throwError "expected a feasibility predicate"
   let opened : Except MessageData Expr ← try
     pure (.ok (← Space.withCanonicalSpaces #[decision] <|
-      mkAppOptM ``Morew.NLP.Domain.univ_open #[some decision, none]))
+      mkAppOptM ``isOpen_univ #[some decision, none]))
     catch exception => pure (.error exception.toMessageData)
   if let .error reason := opened then
     return .error {
@@ -97,7 +97,7 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
     domain := ← mkAppOptM ``Set.univ #[some decision]
     domainIsOpen := domainIsOpen
     smooth := #[]
-    feasibleMemDomain := ← mkAppM ``Morew.NLP.Domain.univ_includes #[feasible]
+    feasibleMemDomain := ← mkAppM ``Set.subset_univ #[← mkAppM ``Set.ofPred #[feasible]]
   }
   for index in [:sources.size] do
     let source := sources[index]!
@@ -124,9 +124,9 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
         feasibleMemDomain := child.included
       }
     else
-      let domain ← mkAppM ``Morew.NLP.Domain.inter #[result.domain, child.domain]
-      let left ← mkAppM ``Morew.NLP.Domain.inter_left #[result.domain, child.domain]
-      let right ← mkAppM ``Morew.NLP.Domain.inter_right #[result.domain, child.domain]
+      let domain ← mkAppM ``Set.inter #[result.domain, child.domain]
+      let left ← mkAppOptM ``Set.inter_subset_left #[none, some result.domain, some child.domain]
+      let right ← mkAppOptM ``Set.inter_subset_right #[none, some result.domain, some child.domain]
       let mut smooth := #[]
       for i in [:result.smooth.size] do
         smooth := smooth.push (← Space.withCanonicalSpaces #[decision] <|
@@ -137,11 +137,10 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
       result := {
         domain
         domainIsOpen := ← Space.withCanonicalSpaces #[decision] <|
-          mkAppM ``Morew.NLP.Domain.inter_open
-            #[result.domain, child.domain, result.domainIsOpen, child.isOpen]
+          mkAppM ``IsOpen.inter #[result.domainIsOpen, child.isOpen]
         smooth
-        feasibleMemDomain := ← mkAppM ``Morew.NLP.Domain.inter_includes
-          #[feasible, result.domain, child.domain, result.feasibleMemDomain, child.included]
+        feasibleMemDomain := ← mkAppM ``Set.subset_inter
+          #[result.feasibleMemDomain, child.included]
       }
   let expectedOpen ← Space.withCanonicalSpaces #[decision] <|
     mkAppM ``IsOpen #[result.domain]

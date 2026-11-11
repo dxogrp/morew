@@ -13,20 +13,6 @@ open Lean Lean.Meta
 
 namespace Decomposition
 
-/-- The conjunction convention shared by typed problem presentations. -/
-def conjunction : List Expr → Expr
-  | [] => mkConst ``True
-  | [p] => p
-  | p :: rest => mkApp2 (mkConst ``And) p (conjunction rest)
-
-/-- Assemble ordered conjunction proofs; empty input gives `True` and one entry retains its structure. -/
-def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
-  if proofs.isEmpty then return mkConst ``True.intro
-  let mut result := proofs.back!
-  for proof in proofs.pop.toList.reverse do
-    result ← mkAppM ``And.intro #[proof, result]
-  return result
-
 /-- Project exactly the requested ordered entries, retaining any conjunction
 inside an entry. The count comes from the checked presentation or decomposition. -/
 def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
@@ -38,12 +24,6 @@ def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
     rest ← mkAppM ``And.right #[rest]
   return result.push rest
 
-private theorem emptyLeft (p : Prop) : True ∧ p ↔ p :=
-  ⟨fun h => h.2, fun h => ⟨True.intro, h⟩⟩
-
-private theorem emptyRight (p : Prop) : p ∧ True ↔ p :=
-  ⟨fun h => h.1, fun h => ⟨h, True.intro⟩⟩
-
 private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
     (p ∧ q) ∧ r ↔ p ∧ s :=
   and_assoc.trans (and_congr Iff.rfl h)
@@ -51,12 +31,12 @@ private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
 /-- Join two normalized conjunctions without losing their equivalence. -/
 partial def appendIff (left right : List Expr) : MetaM Expr := do
   match left, right with
-  | [], _ => mkAppM ``emptyLeft #[conjunction right]
-  | _, [] => mkAppM ``emptyRight #[conjunction left]
-  | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (conjunction (left ++ right))
+  | [], _ => mkIffOfEq (mkApp (mkConst ``true_and) (mkAndN right))
+  | _, [] => mkIffOfEq (mkApp (mkConst ``and_true) (mkAndN left))
+  | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (mkAndN (left ++ right))
   | p :: rest, _ =>
-      mkAppM ``appendHead #[p, conjunction rest, conjunction right,
-        conjunction (rest ++ right), ← appendIff rest right]
+      mkAppM ``appendHead #[p, mkAndN rest, mkAndN right,
+        mkAndN (rest ++ right), ← appendIff rest right]
 
 /-- Split a proposition using only the supplied structural reduction. Local
 lets remain attached to every conjunct and to the decomposition proof. -/
@@ -98,7 +78,7 @@ def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
     let predicates ← bodies.toArray.mapM (mkLambdaFVars #[point])
     let proof ← instantiateMVars (← mkLambdaFVars #[point] proof)
     let expected ← mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
-      (mkApp predicate point) (Decomposition.conjunction bodies))
+      (mkApp predicate point) (mkAndN bodies))
     unless ← isDefEq (← inferType proof) expected do
       throwError "constraint decomposition does not match its source predicate"
     if proof.hasMVar then

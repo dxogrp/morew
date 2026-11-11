@@ -29,10 +29,9 @@ private def check (term : TSyntax `term) (rows : Nat) (parameters : Nat := 0)
     let result ← match name? with
       | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name #[retained]
       | none => Morew.Elab.Cone.Rewrite.planUnique source #[retained]
-    let .ok result := result
-      | match result with
-        | .error error => throwError "power rule failed: {error.reason}"
-        | .ok _ => throwError "unreachable"
+    let result ← match result with
+      | .ok result => pure result
+      | .error error => throwError "power rule failed: {error.reason}"
     unless before.mvarCounter == (← getMCtx).mvarCounter &&
         before.lmvarCounter == (← getMCtx).lmvarCounter do
       throwError "power rule leaked scratch metavariables"

@@ -20,7 +20,6 @@ import Morew.Conic.PSD.Repr
 import Morew.Conic.PSD.SingularVectors
 import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.PSD.Triangular
-import Morew.Conic.Polyhedral
 import Morew.Conic.Power
 import Morew.Conic.Power.Basic
 import Morew.Conic.Power.Cone

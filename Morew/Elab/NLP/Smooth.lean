@@ -222,9 +222,6 @@ private def supportedSpace (type : Expr) : MetaM Bool :=
 private def helperArgumentSpace (type : Expr) : MetaM Bool :=
   supportedSpaceShape false type
 
-private def functionOf (point body : Expr) : MetaM Expr :=
-  mkLambdaFVars #[point] body
-
 private def certificateFunction (proof : Expr) : MetaM Expr := do
   let type ← instantiateMVars (← inferType proof)
   unless type.isAppOf ``ContDiffOn do
@@ -267,7 +264,7 @@ private def closePendingModels (name : Name) (type binding value : Expr) : Certi
 
 -- Reuse certified operand bodies for domain evidence and selective expansion.
 private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
-  if (← get).steps == 0 then return ← functionOf point operand
+  if (← get).steps == 0 then return ← mkLambdaFVars #[point] operand
   return ← certificateFunction proof
 
 -- Check operation instances independently of operands.
@@ -392,7 +389,7 @@ private def construct (point expression : Expr) (name : Name) (args : Array Expr
   let function ← certificateFunction proof
   if let some count := operands? then
     checkPrefix expression (function.beta #[point]) count
-  unless ← isDefEq function (← functionOf point expression) do
+  unless ← isDefEq function (← mkLambdaFVars #[point] expression) do
     reject expression .invalidInstance "smoothness construction does not match this typed expression"
   return proof
 
@@ -410,8 +407,8 @@ private def univInfo (point : Expr) : CertifyM DomainInfo := do
   return {
     domain := ← mkAppOptM ``Set.univ #[some decision]
     isOpen := ← Space.withCanonicalSpaces #[decision] <|
-      mkAppOptM ``Morew.NLP.Domain.univ_open #[some decision, none]
-    included := ← mkAppM ``Morew.NLP.Domain.univ_includes #[(← read).feasible]
+      mkAppOptM ``isOpen_univ #[some decision, none]
+    included := ← mkAppM ``Set.subset_univ #[← mkAppM ``Set.ofPred #[(← read).feasible]]
   }
 
 private def restrictProof (point proof domain subset : Expr) : MetaM Expr := do
@@ -429,17 +426,15 @@ private def combine (point : Expr) (children : Array Certificate) :
     if info.domain == child.domain then
       proofs := proofs.push child.smooth
     else
-      let domain ← mkAppM ``Morew.NLP.Domain.inter #[info.domain, child.domain]
-      let left ← mkAppM ``Morew.NLP.Domain.inter_left #[info.domain, child.domain]
-      let right ← mkAppM ``Morew.NLP.Domain.inter_right #[info.domain, child.domain]
+      let domain ← mkAppM ``Set.inter #[info.domain, child.domain]
+      let left ← mkAppOptM ``Set.inter_subset_left #[none, some info.domain, some child.domain]
+      let right ← mkAppOptM ``Set.inter_subset_right #[none, some info.domain, some child.domain]
       proofs ← proofs.mapM fun proof => restrictProof point proof domain left
       proofs := proofs.push (← restrictProof point child.smooth domain right)
       info := {
         domain
-        isOpen := ← domainApp point ``Morew.NLP.Domain.inter_open
-          #[info.domain, child.domain, info.isOpen, child.isOpen]
-        included := ← mkAppM ``Morew.NLP.Domain.inter_includes
-          #[(← read).feasible, info.domain, child.domain, info.included, child.included]
+        isOpen := ← domainApp point ``IsOpen.inter #[info.isOpen, child.isOpen]
+        included := ← mkAppM ``Set.subset_inter #[info.included, child.included]
       }
   return (info, proofs)
 
@@ -454,7 +449,7 @@ private def constant (point expression : Expr) (info : DomainInfo) : CertifyM Ce
 private def restrictDomain (point expression value : Expr) (positive : Bool)
     (info : DomainInfo) (proofs : Array Expr) (valueProof : Expr) :
     CertifyM (DomainInfo × Array Expr × Expr) := do
-  let function ← functionOf point value
+  let function ← mkLambdaFVars #[point] value
   let base := if positive then `Morew.NLP.Domain.positive else `Morew.NLP.Domain.nonzero
   let domain ← mkAppM base #[info.domain, function]
   let isOpen ← try
@@ -583,7 +578,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
         restrictProof point proof info.domain subset
         else pure proof
       mkLambdaFVars #[i] proof
-    let function ← if (← get).steps == 0 then functionOf point expression else
+    let function ← if (← get).steps == 0 then mkLambdaFVars #[point] expression else
       withLocalDecl name binderInfo index fun i => do
         let component ← certificateFunction (mkApp smooths i)
         mkLambdaFVars #[point, i] (component.beta #[point])
@@ -794,7 +789,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
       let index ← fixedArgument point index "the vector index"
       let child ← certifyBody point vector
       return { child with
-        smooth := ← construct point expression ``Morew.NLP.Smooth.apply
+        smooth := ← construct point expression ``Morew.NLP.Smooth.component
           #[← operandFunction point vector child.smooth, index, child.smooth] (intermediateSpaces := #[vectorType]) }
   -- Keep constant helper bodies closed; inspect supported value arguments for domain requirements.
   let mut children : Array Certificate := #[]

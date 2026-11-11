@@ -20,9 +20,6 @@ namespace Morew.Elab.NLP.Rewrite
 
 open Lean Lean.Meta
 
-/-- Diagnostics identify the original selected predicate and the failed check. -/
-abbrev Error := Expr.Error
-
 /-- A checked exact replacement before presentation names are allocated. -/
 structure Result extends Morew.Elab.Rewrite.Plan.Result where
   /-- Common-domain and smoothness evidence for precisely the generated rows. -/
@@ -32,8 +29,6 @@ structure Result extends Morew.Elab.Rewrite.Plan.Result where
 def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
   { toResult := result.toResult.replaceFVars oldVars newVars
     certified := result.certified.replaceFVars oldVars newVars }
-
-private abbrev conjunction := Morew.Elab.Rewrite.Decomposition.conjunction
 
 -- Reduce model fields only for named structures independent of the optimization variables.
 -- Normalize structure before checking independence; preserve evidence lets during decomposition.
@@ -113,7 +108,7 @@ private def finish (source domain : Expr) (certificate : Morew.Elab.Rewrite.Plan
     let retainedBodies := retained.map (mkApp · original)
     let allBodies := retainedBodies.extract 0 insertionIndex ++ bodies.toArray ++
       retainedBodies.extract insertionIndex retainedBodies.size
-    let feasible ← mkLambdaFVars #[point] (conjunction allBodies.toList)
+    let feasible ← mkLambdaFVars #[point] (mkAndN allBodies.toList)
     return (rows, targetIff, feasible)
   let prepared : Morew.Elab.Rewrite.Plan.Result := {
     certificate, auxiliary?, nextDomain, rowPredicates, targetIff }
@@ -134,7 +129,7 @@ private def matchAndFinish (source domain : Expr) (retained : Array Expr)
     (finishCertificate : Morew.Elab.Rewrite.Plan.Certificate → MetaM Result) : MetaM Result :=
   withLocalDeclD `point domain fun point => do
     let body ← structural point (mkApp source point)
-    let remainder := conjunction (retained.toList.map (mkApp · point))
+    let remainder := mkAndN (retained.toList.map (mkApp · point))
     withLocalDecl `retained .default remainder (kind := .implDetail) fun evidence => do
       matchRule point body (proveObligation point evidence) fun matched => do
         let auxiliary ← whnf (← instantiateMVars matched.auxiliary)
@@ -150,12 +145,12 @@ private def registeredCandidates (source domain : Expr) : MetaM (Array Name) :=
     let predicate ← mkLambdaFVars #[point] body
     Morew.Elab.Rewrite.Registry.candidates .nlp predicate
 
-private def failure (source : Expr) (exception : Exception) : MetaM Error := do
+private def failure (source : Expr) (exception : Exception) : MetaM Expr.Error := do
   return { expression := source, reason := ← addMessageContext exception.toMessageData }
 
 private def planCore (source : Expr) (retained : Array Expr)
     (rule? : Option Expr) (insertionIndex : Nat) (declaration? : Option Name) :
-    MetaM (Except Error Result) := do
+    MetaM (Except Expr.Error Result) := do
   try
     unless insertionIndex ≤ retained.size do
       throwError "constraint replacement insertion index is out of bounds"
@@ -206,7 +201,7 @@ private def planCore (source : Expr) (retained : Array Expr)
     let mut firstError? := none
     for selected in ← registeredCandidates source domain do
       let reachedTarget ← IO.mkRef false
-      let attempt : Except (Bool × Error) Result ← State.withIsolatedMVars do
+      let attempt : Except (Bool × Expr.Error) Result ← State.withIsolatedMVars do
         try
           return .ok (← finishDeclaration selected fun certificate => do
             reachedTarget.set true
@@ -233,7 +228,7 @@ Try explicit or registered whole-predicate rules.
 Restore metavariables and declarations on failure or ambiguity. -/
 def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
     (insertionIndex : Nat := 0) (declaration? : Option Name := none) :
-    MetaM (Except Error Result) :=
+    MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
     try
       let mut instances := #[]

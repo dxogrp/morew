@@ -26,14 +26,14 @@ structure Result where
 -- Reduce binding syntax while keeping mathematical helpers closed.
 private def structuralTree (expression : Expr) : MetaM Expr :=
   Meta.transform expression (pre := fun expression => do
-    let reduced ← Registry.structural expression
+    let reduced ← Morew.Elab.Rewrite.Registry.structural expression
     if reduced != expression then return .visit reduced
     return .continue)
 
 private partial def matchValue (expected actual : Expr)
     (rigid : Array Expr := #[]) : MetaM Unit := do
-  let expected ← Registry.structural expected
-  let actual ← Registry.structural actual
+  let expected ← Morew.Elab.Rewrite.Registry.structural expected
+  let actual ← Morew.Elab.Rewrite.Registry.structural actual
   if expected.isMVar || expected.getAppFn.isMVar then
     let actual ← structuralTree actual
     let arguments ← expected.getAppArgs.mapM structuralTree
@@ -130,7 +130,7 @@ private def attempt {α : Type} (map point retained selected feasibleEvidence or
     | do
       let obligation ← Evidence.predicateView goal 32
       let obligation ← Meta.transform obligation (post := fun expression => do
-        return .done (← Registry.structural expression))
+        return .done (← Morew.Elab.Rewrite.Registry.structural expression))
       throwError "cannot establish coordinate coverage from the source constraints: {obligation}"
   unless ← isDefEq (← inferType proof) goal do
     throwError "coordinate coverage evidence proves the wrong proposition"

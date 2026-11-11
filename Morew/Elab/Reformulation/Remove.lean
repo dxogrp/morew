@@ -28,7 +28,7 @@ def implicationType (presentation : PresentationState) (index : Nat) : MetaM Exp
     throwError "constraint removal index is out of bounds"
   let rows := retainedRows presentation index
   withLocalDeclD `point presentation.domainType fun point => do
-    let retained := conjunction (rows.toList.map (mkApp · point))
+    let retained := mkAndN (rows.toList.map (mkApp · point))
     mkForallFVars #[point]
       (← mkArrow retained (mkApp presentation.constraints[index]!.predicate point))
 
@@ -98,7 +98,7 @@ def prove? (presentation : PresentationState) (index : Nat) : MetaM (Option Expr
       let selected := presentation.constraints[index]!.predicate
       let rows := retainedRows presentation index
       let proof? ← withLocalDeclD `point presentation.domainType fun point => do
-        let retained := conjunction (rows.toList.map (mkApp · point))
+        let retained := mkAndN (rows.toList.map (mkApp · point))
         withLocalDeclD `retained retained fun evidence => do
           let parts ← conjunctionParts rows.size evidence
           for row in rows, part in parts do
