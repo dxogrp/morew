@@ -19,21 +19,11 @@ open Morew.Elab.Reformulation
 private theorem unitTargetIff {X : Type u} (source : X → Prop)
     (target : X → Unit → Prop)
     (h : ∀ x, source x ↔ ∃ a, target x a) :
-    ∀ x, source x ↔ target x () := by
-  intro x
-  constructor
-  · intro hx
-    obtain ⟨a, ha⟩ := (h x).mp hx
-    cases a
-    exact ha
-  · intro hx
-    exact (h x).mpr ⟨(), hx⟩
+    ∀ x, source x ↔ target x () :=
+  fun x => (h x).trans Unique.exists_iff
 
-private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () := by
-  constructor
-  · rintro ⟨⟨⟩, h⟩
-    exact h
-  · exact fun h => ⟨(), h⟩
+private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () :=
+  Unique.exists_iff
 
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
