@@ -174,14 +174,8 @@ def and (left : Block domain p) (right : Block domain q) :
   rowCount := left.rowCount + right.rowCount
   rows := Fin.addCases left.rows right.rows
   holds_iff x := by
-    constructor
-    · intro h
-      exact ⟨(left.holds_iff x).mp (fun i => by simpa using h (Fin.castAdd _ i)),
-        (right.holds_iff x).mp (fun i => by simpa using h (Fin.natAdd _ i))⟩
-    · rintro ⟨hl, hr⟩ i
-      refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-      · simpa using (left.holds_iff x).mpr hl j
-      · simpa using (right.holds_iff x).mpr hr j
+    simp only [Fin.forall_fin_add, Fin.addCases_left, Fin.addCases_right,
+      left.holds_iff, right.holds_iff]
 
 /-- Left rows retain their indices when a conjunction is appended. -/
 @[simp]
@@ -207,18 +201,10 @@ def family {n : Nat} (p : Fin n → X → Prop)
     let ij := finSigmaFinEquiv.symm j
     (blocks ij.1).rows ij.2
   holds_iff x := by
-    constructor
-    · intro h i
-      apply ((blocks i).holds_iff x).mp
-      intro j
-      have hi := h (finSigmaFinEquiv ⟨i, j⟩)
-      dsimp only at hi
-      exact Eq.mp (congrArg
-        (fun ij : (i : Fin n) × Fin (blocks i).rowCount =>
-          ((blocks ij.1).rows ij.2).Holds x)
-        (finSigmaFinEquiv.symm_apply_apply ⟨i, j⟩)) hi
-    · intro h j
-      exact ((blocks _).holds_iff x).mpr (h _) _
+    rw [← finSigmaFinEquiv.forall_congr_left
+      (p := fun ij : (i : Fin n) × Fin (blocks i).rowCount =>
+        ((blocks ij.1).rows ij.2).Holds x)]
+    simp only [Sigma.forall, Block.holds_iff]
 
 /-- The ordered finite-sum index recovers the original coordinate row. -/
 @[simp]
