@@ -19,6 +19,7 @@ namespace MorewTest.NLP.HelperLimits
 
 open Lean Lean.Meta Lean.Elab.Term
 open MorewTest.NLP.Smooth MorewTest.NLP.HelperFixtures
+open MorewTest.Affine (elaborate)
 
 private def unchanged (before : MetavarContext) (environment : Environment) : MetaM Unit := do
   let after ← getMCtx

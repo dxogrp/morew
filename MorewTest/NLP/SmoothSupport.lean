@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.NLP.Smooth
+import MorewTest.ElabSupport
 import Lean.Meta.Check
 
 /-!
@@ -17,14 +18,7 @@ namespace MorewTest.NLP.Smooth
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Smooth
-
-def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let expression ← instantiateMVars expression
-  if expression.hasSorry || expression.hasMVar then
-    throwError "smoothness test did not fully elaborate: {expression}"
-  return expression
+open MorewTest.Affine (elaborate)
 
 def checkCertificate (source proof : Expr) : MetaM Unit := do
   if proof.hasSorry || proof.hasMVar then

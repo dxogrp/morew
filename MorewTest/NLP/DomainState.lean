@@ -20,6 +20,7 @@ namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP
+open MorewTest.Affine (elaborate)
 
 private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx

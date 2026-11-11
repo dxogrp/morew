@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Conic.Objective
 import Morew.Elab.Expr
+import MorewTest.ElabSupport
 import Lean.Meta.Tactic.AuxLemma
 
 /-!
@@ -53,11 +54,7 @@ private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.Ev
 private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
     (action : Expr → Affine.EvidenceProvider → IO.Ref (Array Name) → TermElabM Unit) :
     TermElabM Unit := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let expression ← instantiateMVars expression
-  if expression.hasMVar || expression.hasSorry then
-    throwError "state regression did not fully elaborate its source"
+  let expression ← MorewTest.Affine.elaborate term
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
     let provider : Morew.Elab.Affine.EvidenceProvider := {

@@ -19,6 +19,7 @@ namespace MorewTest.NLP.Registry
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew
+open MorewTest.Affine (elaborate)
 
 private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop)) :=
   (source, retained)
@@ -222,7 +223,7 @@ run_cmd liftTermElabM do
 -- Concrete exact representations certify the entire source; named declarations
 -- infer an input map.
 run_cmd liftTermElabM do
-  let concreteRule ← Domain.elaborate (← `(boundedRule))
+  let concreteRule ← elaborate (← `(boundedRule))
   exactRows (← `(input (fun x : ℝ => bounded x)
     #[(fun x : ℝ => x ≤ 3), (fun x : ℝ => -x ≤ 3)])) (rule? := some concreteRule)
   exactRows (← `(input (fun x : ℝ => bounded (x + 1))
@@ -318,7 +319,7 @@ run_cmd liftTermElabM do
     #[(fun x : ℝ => shift 3 = x + 1)])) (declaration? := some ``shiftGraph)
   exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
     #[(fun x : ℝ => shift 3 = x + 1)])) (declaration? := some ``shiftGraph)
-  let concreteRule ← Domain.elaborate (← `(shiftGraph))
+  let concreteRule ← elaborate (← `(shiftGraph))
   exactRows (← `(input (fun x : ℝ => shift x = shift 3)
     #[(fun x : ℝ => shift 3 = x + 1)])) (rule? := some concreteRule)
   exactRows (← `(input (fun x : ℝ => shift 3 = shift x)
@@ -408,7 +409,7 @@ noncomputable def nonnegAbsVectorRule (n : ℕ) :
     exact ⟨fun h => ⟨fun _ => x.1, fun _ => rfl, h⟩, fun ⟨_, _, h⟩ => h⟩
 
 run_cmd liftTermElabM do
-  let rule ← Domain.elaborate (← `(nonnegAbsVectorRule 0))
+  let rule ← elaborate (← `(nonnegAbsVectorRule 0))
   Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
     #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
     let .ok result ← Morew.Elab.NLP.Rewrite.plan source retained (some rule)
@@ -418,7 +419,7 @@ run_cmd liftTermElabM do
     for proof in result.certified.rowCertificates do checkWithKernel proof
 
 run_cmd liftTermElabM do
-  let expression ← Domain.elaborate (← `(fun n : ℕ => nonnegAbsVectorRule n))
+  let expression ← elaborate (← `(fun n : ℕ => nonnegAbsVectorRule n))
   lambdaBoundedTelescope expression 1 fun _ rule => do
     Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
       #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
@@ -458,14 +459,14 @@ noncomputable def nonnegAbsLogRule (c : ℝ) (hc : Real.log c = 0) :
   source_iff_exists x t := by simp [userAbs, abs_of_nonneg x.property, hc]
 
 run_cmd liftTermElabM do
-  let rule ← Domain.elaborate (← `(nonnegAbsLogRule 1 Real.log_one))
+  let rule ← elaborate (← `(nonnegAbsLogRule 1 Real.log_one))
   Domain.withInput (← `(input (fun x : ℝ => userAbs x ≤ 3)
     #[(fun x : ℝ => 0 ≤ x)])) 0 fun source retained => do
     let .ok result ← Morew.Elab.NLP.Rewrite.plan source retained (some rule)
       | throwError "generated equality did not establish the conditional target's domain"
     result.toResult.check source retained
     checkWithKernel result.certified.feasibleMemDomain
-  let invalid ← Domain.elaborate (← `(nonnegAbsLogRule 0 Real.log_zero))
+  let invalid ← elaborate (← `(nonnegAbsLogRule 0 Real.log_zero))
   reject (← `(input (fun x : ℝ => userAbs x ≤ 3)
     #[(fun x : ℝ => 0 ≤ x)])) "generated row certification failed" (rule? := some invalid)
 

@@ -32,16 +32,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (finiteDot e a x, (1 : ℝ), finiteDot e b x) ∈
         Morew.Conic.Cone.exponential.carrier)) 4
 
-private def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let expression ← instantiateMVars expression
-  if expression.hasMVar || expression.hasSorry then
-    throwError "helper-budget regression did not fully elaborate its source"
-  return expression
-
 private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
-  let expression ← elaborate term
+  let expression ← MorewTest.Affine.elaborate term
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
     let provider : Affine.EvidenceProvider := {
@@ -74,7 +66,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
       throwError "conic rewriting did not exercise evidence creation before failure"
 
 private def checkSuccess (term : TSyntax `term) : TermElabM Unit := do
-  let source ← elaborate term
+  let source ← MorewTest.Affine.elaborate term
   match ← Cone.Rewrite.planUnique source with
   | .ok _ => pure ()
   | .error error => throwError "conic rewriting failed after an independent limit failure: {error.reason}"

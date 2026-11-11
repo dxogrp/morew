@@ -17,8 +17,7 @@ namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Domain Morew.Elab.NLP.Smooth
-
-abbrev elaborate := MorewTest.NLP.Smooth.elaborate
+open MorewTest.Affine (elaborate)
 
 -- Imported fixtures expose admitted closed rows through actual model fields.
 noncomputable def lowerBoundLogProblem (lower : ℝ) : Morew.Problem ℝ ℝ where

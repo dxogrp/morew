@@ -37,7 +37,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Canonical operations remain fixed when unrelated analytic instances are local. -/
 
 private def checkAmbientGroup (term : TSyntax `term) : TermElabM Unit := do
-  let source ← MorewTest.NLP.Smooth.elaborate term
+  let source ← MorewTest.Affine.elaborate term
   let baseline ← MorewTest.NLP.Smooth.checkSuccess source
   let baselineType ← inferType baseline
   let .forallE _ decision _ _ ← whnf (← inferType source)
