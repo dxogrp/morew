@@ -60,7 +60,7 @@ For a positive semidefinite matrix `P`, consider
 ```math
 \begin{array}{ll}
 \text{minimize} & x^T P x + c^T x + d \\
-\text{subject to} & x \geq 0.
+\text{subject to} & x \succeq 0.
 \end{array}
 ```
 
