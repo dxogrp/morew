@@ -29,8 +29,6 @@ private theorem mulLeftNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : c * a 
   mul_le_mul_of_nonpos_left h sign
 private theorem mulRightNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : a * c ≤ b * c :=
   mul_le_mul_of_nonpos_right h sign
-private theorem exp {a b : ℝ} (h : a ≤ b) : Real.exp a ≤ Real.exp b :=
-  Real.exp_le_exp.mpr h
 private theorem nonposOfNegative {a : ℝ} (h : a < 0) : a ≤ 0 := le_of_lt h
 private theorem nonposOfNegNonneg {a : ℝ} (h : 0 ≤ -a) : a ≤ 0 :=
   neg_nonneg.mp h
@@ -167,7 +165,7 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
     return ← mkAppM ``sub #[← inequality point lhs[0]! rhs[0]! bound,
       ← inequality point rhs[1]! lhs[1]! bound]
   | .neg => return ← mkAppM ``neg #[← inequality point rhs[0]! lhs[0]! bound]
-  | .exp => return ← mkAppM ``exp #[← inequality point lhs[0]! rhs[0]! bound]
+  | .exp => return ← mkAppM ``Real.exp_le_exp_of_le #[← inequality point lhs[0]! rhs[0]! bound]
   | .mul =>
     for i in [:2] do
       let coefficient := lhs[i]!
