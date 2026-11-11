@@ -349,12 +349,7 @@ def epigraphEquiv {X : Type u} {V : Type v} [Preorder V]
 
 /-- The hypograph construction preserves global maximization behavior. -/
 def hypographEquiv {X : Type u} {V : Type v} [Preorder V]
-    (p : Problem X (OrderDual V)) : GlobalEquiv p p.hypograph where
-  forward := {
-    map := fun x => ⟨(x.1, p.objective x.1), x.2, le_rfl⟩
-    objective_le := fun _ => le_rfl }
-  backward := {
-    map := fun xt => ⟨xt.1.1, xt.2.1⟩
-    objective_le := fun xt => xt.2.2 }
+    (p : Problem X (OrderDual V)) : GlobalEquiv p p.hypograph :=
+  epigraphEquiv p
 
 end Morew
