@@ -47,6 +47,23 @@ run_cmd do
       throwError "a binder incorrectly occupied the constraint-label namespace"
 
 run_cmd do
+  for stem in ["_terminalConic_", "_terminalNLP_"] do
+    let candidate := fun index : Nat => Name.mkSimple s!"{stem}{index}"
+    let empty : NameInventory := {}
+    expect (empty.freshPlaceholder stem 0 == (candidate 0, 1))
+      "an empty inventory changed the first placeholder"
+    let active : NameInventory := {
+      decisionBinders := #[candidate 0]
+      constraintLabels := #[candidate 1]
+    }
+    let (first, next) := active.freshPlaceholder stem 0
+    expect (first == candidate 2 && next == 3)
+      "a placeholder collided with a binder or constraint label"
+    let (second, following) := active.freshPlaceholder stem next
+    expect (second == candidate 3 && following == 4)
+      "successive placeholders did not retain their prefix and advance their index"
+
+run_cmd do
   let active : NameInventory := {
     decisionBinders := #[`takenBinder]
     constraintLabels := #[`takenLabel]

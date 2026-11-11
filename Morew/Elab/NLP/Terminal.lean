@@ -59,12 +59,6 @@ private structure Work where
 private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
   entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
 
-private partial def freshPlaceholder (inventory : NameInventory) (index : Nat) : Name × Nat :=
-  let name := Name.mkSimple s!"_terminalNLP_{index}"
-  if inventory.contains .decisionBinder name || inventory.contains .constraintLabel name then
-    freshPlaceholder inventory (index + 1)
-  else (name, index + 1)
-
 private def feasibility (presentation : PresentationState) : MetaM Expr := do
   mkAppM ``Morew.Problem.feasible #[← presentation.canonicalProblem]
 
@@ -102,7 +96,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
   let (objective, retained) ← match auxiliary? with
     | none => pure (old.objective, old.constraints)
     | some auxiliary => do
-      let (name, following) := freshPlaceholder old.nameInventory nextName
+      let (name, following) := old.nameInventory.freshPlaceholder "_terminalNLP_" nextName
       nextName := following
       binders := binders.push { name, type := auxiliary }
       auxiliaries := auxiliaries.push (origin, auxiliary)
@@ -114,7 +108,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
         pure (objective, retained)
   let mut entries : Array ConstraintEntry := #[]
   for row in rows do
-    let (name, following) := freshPlaceholder old.nameInventory nextName
+    let (name, following) := old.nameInventory.freshPlaceholder "_terminalNLP_" nextName
     nextName := following
     entries := entries.push { name, predicate := row, ref := old.constraints[index]!.ref }
   let presentation := {

@@ -79,6 +79,16 @@ def NameInventory.contains (inventory : NameInventory)
     | .constraintLabel => inventory.constraintLabels
   names.any fun occupied => sameVisibleName occupied name
 
+/-- Allocate an internal placeholder outside both presentation namespaces.
+Return the next index to try for subsequent allocations. -/
+partial def NameInventory.freshPlaceholder (inventory : NameInventory)
+    (stem : String) (index : Nat) : Name × Nat :=
+  let name := Name.mkSimple s!"{stem}{index}"
+  if inventory.contains .decisionBinder name || inventory.contains .constraintLabel name then
+    inventory.freshPlaceholder stem (index + 1)
+  else
+    (name, index + 1)
+
 /-- Add a name to one presentation namespace. -/
 def NameInventory.insert (inventory : NameInventory)
     (ns : NameNamespace) (name : Name) : NameInventory :=
