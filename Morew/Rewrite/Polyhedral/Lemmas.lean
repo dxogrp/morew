@@ -27,24 +27,16 @@ theorem sup'_le_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     s.sup' hs f ≤ t ↔
       (fun j : Fin s.card => f (s.equivFin.symm j)) ≤ (fun _ => t) := by
-  rw [Finset.sup'_le_iff]
-  constructor
-  · intro h j
-    exact h _ (s.equivFin.symm j).property
-  · intro h i hi
-    simpa using h (s.equivFin ⟨i, hi⟩)
+  rw [Finset.sup'_le_iff, ← s.forall_coe (fun i => f i ≤ t)]
+  exact s.equivFin.forall_congr_left
 
 /-- Reindex a minimum over a nonempty finite support as a coordinatewise inequality. -/
 theorem le_inf'_iff {ι : Type*} (s : Finset ι) (hs : s.Nonempty)
     (f : ι → ℝ) (t : ℝ) :
     t ≤ s.inf' hs f ↔
       (fun _ : Fin s.card => t) ≤ (fun j => f (s.equivFin.symm j)) := by
-  rw [Finset.le_inf'_iff]
-  constructor
-  · intro h j
-    exact h _ (s.equivFin.symm j).property
-  · intro h i hi
-    simpa using h (s.equivFin ⟨i, hi⟩)
+  rw [Finset.le_inf'_iff, ← s.forall_coe (fun i => t ≤ f i)]
+  exact s.equivFin.forall_congr_left
 
 /-- The standard norm of a finite real function is its infinity norm.
 The explicit nonnegative bound makes the identity valid for `n = 0`. -/
