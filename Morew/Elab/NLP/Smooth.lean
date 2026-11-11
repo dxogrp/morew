@@ -789,7 +789,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
       let index ← fixedArgument point index "the vector index"
       let child ← certifyBody point vector
       return { child with
-        smooth := ← construct point expression ``Morew.NLP.Smooth.apply
+        smooth := ← construct point expression ``Morew.NLP.Smooth.component
           #[← operandFunction point vector child.smooth, index, child.smooth] (intermediateSpaces := #[vectorType]) }
   -- Keep constant helper bodies closed; inspect supported value arguments for domain requirements.
   let mut children : Array Certificate := #[]

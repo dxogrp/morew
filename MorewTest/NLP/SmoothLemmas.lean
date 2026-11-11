@@ -66,14 +66,14 @@ example (n : Nat) (domain : Set ((Fin n → ℝ) × ℝ)) :
   Smooth.sum (domain := domain) Finset.univ
     (fun (i : Fin n) (p : (Fin n → ℝ) × ℝ) => (p.1 i - p.2) ^ 2) fun i =>
     Smooth.pow _ 2 (Smooth.sub _ _
-      (Smooth.apply _ i (Smooth.fst _ (Smooth.id domain)))
+      (Smooth.component _ i (Smooth.fst _ (Smooth.id domain)))
       (Smooth.snd _ (Smooth.id domain)))
 
 example (domain : Set (Fin 0 → ℝ)) :
     ContDiffOn ℝ 2 (fun x => ∑ i : Fin 0, Real.tanh (x i)) domain :=
   Smooth.sum (domain := domain) Finset.univ
     (fun (i : Fin 0) (x : Fin 0 → ℝ) => Real.tanh (x i)) fun i =>
-    Smooth.tanh _ (Smooth.apply _ i (Smooth.id domain))
+    Smooth.tanh _ (Smooth.component _ i (Smooth.id domain))
 
 -- A product can be built first, then projected and composed with a global map.
 example (domain : Set ℝ) :
