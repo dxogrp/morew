@@ -263,8 +263,8 @@ run_cmd liftTermElabM do
     | throwError "ordinary L∞ norm did not produce an unconditional replacement"
   let .ok euclideanResult ← Rewrite.planUnique euclidean
     | throwError "Euclidean norm did not produce an unconditional replacement"
-  let scalar := Lean.mkConst ``Morew.Conic.Cone.nonnegativeScalar
-  let vector ← mkAppM ``Morew.Conic.Cone.nonnegative #[mkNatLit 2]
+  let scalar := Lean.mkConst ``Morew.Conic.Cone.nonnegScalar
+  let vector ← mkAppM ``Morew.Conic.Cone.nonneg #[mkNatLit 2]
   let soc ← mkAppM ``Morew.Conic.Cone.secondOrder #[mkNatLit 2]
   for (source, result, cones) in
       #[(ordinary, ordinaryResult, #[scalar, vector, vector]),

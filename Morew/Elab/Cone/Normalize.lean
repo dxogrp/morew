@@ -112,10 +112,10 @@ private def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
       ← mkAppM ``nativeZeroSub #[rhs])
   return (difference, ← mkEqRefl difference)
 
-private def nonnegativeCone (type : Expr) : MetaM Expr := do
+private def nonnegCone (type : Expr) : MetaM Expr := do
   let type ← whnf type
   if type.isConstOf ``Real then
-    return mkConst ``Morew.Conic.Cone.nonnegativeScalar
+    return mkConst ``Morew.Conic.Cone.nonnegScalar
   let .forallE _ index target _ := type
     | throwError "expected real scalar or finite-vector comparison operands"
   let target ← whnf target
@@ -124,7 +124,7 @@ private def nonnegativeCone (type : Expr) : MetaM Expr := do
   let index ← whnf index
   unless index.isAppOfArity ``Fin 1 do
     throwError "expected real scalar or finite-vector comparison operands"
-  return ← mkAppM ``Morew.Conic.Cone.nonnegative #[index.getAppArgs[0]!]
+  return ← mkAppM ``Morew.Conic.Cone.nonneg #[index.getAppArgs[0]!]
 
 private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
   let args := body.getAppArgs
@@ -132,7 +132,7 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
   let greaterEqual := body.isAppOfArity ``GE.ge 4
   let type := args[0]!
   -- Validate scalar/vector shape for equality as well as inequality.
-  let cone ← nonnegativeCone type
+  let cone ← nonnegCone type
   let lhs := args[args.size - 2]!
   let rhs := args[args.size - 1]!
   let (normalized, proof) ← Space.withCanonicalSpaces type type do

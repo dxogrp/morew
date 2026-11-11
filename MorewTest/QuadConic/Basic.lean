@@ -19,21 +19,21 @@ noncomputable section
 private def shifted : Affine.Certified (fun x : ℝ => x + 3) :=
   (Affine.Certified.id ℝ).add (Affine.Certified.const ℝ 3)
 
-private def shiftedSquare : Certified (fun x : ℝ => (x + 3) ^ 2) :=
-  Certified.square shifted
+private def shiftedSquare : CertifiedExpr (fun x : ℝ => (x + 3) ^ 2) :=
+  CertifiedExpr.square shifted
 
 example (x : ℝ) : shiftedSquare.quadratic x + shiftedSquare.affine x = (x + 3) ^ 2 :=
   shiftedSquare.correct x
 
 example : shiftedSquare.affine 0 = 9 := by
-  norm_num [shiftedSquare, shifted, Certified.square, Affine.Certified.add,
+  norm_num [shiftedSquare, shifted, CertifiedExpr.square, Affine.Certified.add,
     Affine.Certified.id, Affine.Certified.const, AffineMap.const]
 
 private def minimumData : Data ℝ where
   sense := .minimize
   quadratic := shiftedSquare.quadratic
   affine := shiftedSquare.affine
-  curvature := Certified.square_nonnegative shifted
+  curvature := CertifiedExpr.square_nonneg shifted
   rowCount := 0
   constraints := Fin.elim0
 
@@ -41,7 +41,7 @@ private def maximumData : Data ℝ where
   sense := .maximize
   quadratic := shiftedSquare.neg.quadratic
   affine := shiftedSquare.neg.affine
-  curvature := Certified.neg_nonpositive shiftedSquare (Certified.square_nonnegative shifted)
+  curvature := CertifiedExpr.neg_nonpos shiftedSquare (CertifiedExpr.square_nonneg shifted)
   rowCount := 0
   constraints := Fin.elim0
 
@@ -85,15 +85,15 @@ example {X : Type*} [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
 private def firstCoordinate : Affine.Certified (fun x : ℝ × ℝ => x.1) :=
   (Affine.Certified.id (ℝ × ℝ)).fst
 
-example : (Certified.square firstCoordinate).Nonnegative :=
-  Certified.square_nonnegative firstCoordinate
+example : (CertifiedExpr.square firstCoordinate).Nonneg :=
+  CertifiedExpr.square_nonneg firstCoordinate
 
-example : (Certified.square firstCoordinate).quadratic (0, 1) = 0 := by
-  norm_num [Certified.square, firstCoordinate, Affine.Certified.fst, Affine.Certified.id]
+example : (CertifiedExpr.square firstCoordinate).quadratic (0, 1) = 0 := by
+  norm_num [CertifiedExpr.square, firstCoordinate, Affine.Certified.fst, Affine.Certified.id]
 
 example (c : ℝ) :
-    (Certified.smul c (Certified.ofAffine shifted)).quadratic = 0 := by
-  simp [Certified.smul]
+    (CertifiedExpr.smul c (CertifiedExpr.ofAffine shifted)).quadratic = 0 := by
+  simp [CertifiedExpr.smul]
 
 -- Rectangular matrices and their affine offsets are retained exactly.
 private def residual {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :
@@ -102,31 +102,31 @@ private def residual {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m →
 
 example {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
     (x : Fin n → ℝ) :
-    (Certified.fnNorm2Sq (residual A b)).quadratic x +
-      (Certified.fnNorm2Sq (residual A b)).affine x = Fn.norm2 (A *ᵥ x - b) ^ 2 :=
-  (Certified.fnNorm2Sq (residual A b)).correct x
+    (CertifiedExpr.fnNorm2Sq (residual A b)).quadratic x +
+      (CertifiedExpr.fnNorm2Sq (residual A b)).affine x = Fn.norm2 (A *ᵥ x - b) ^ 2 :=
+  (CertifiedExpr.fnNorm2Sq (residual A b)).correct x
 
 example {n : Nat} (A : Matrix (Fin 0) (Fin n) ℝ) (b : Fin 0 → ℝ)
     (x : Fin n → ℝ) :
-    (Certified.fnNorm2Sq (residual A b)).quadratic x +
-      (Certified.fnNorm2Sq (residual A b)).affine x = 0 := by
-  rw [(Certified.fnNorm2Sq (residual A b)).correct]
+    (CertifiedExpr.fnNorm2Sq (residual A b)).quadratic x +
+      (CertifiedExpr.fnNorm2Sq (residual A b)).affine x = 0 := by
+  rw [(CertifiedExpr.fnNorm2Sq (residual A b)).correct]
   simp
 
 example {n : Nat} (A : Matrix (Fin 0) (Fin n) ℝ) (b : Fin 0 → ℝ) :
-    (Certified.fnNorm2Sq (residual A b)).Nonpositive :=
-  Certified.fnNorm2Sq_empty_nonpositive (residual A b)
+    (CertifiedExpr.fnNorm2Sq (residual A b)).Nonpos :=
+  CertifiedExpr.fnNorm2Sq_empty_nonpos (residual A b)
 
 example {m : Nat} (A : Matrix (Fin m) (Fin 0) ℝ) (b : Fin m → ℝ)
     (x : Fin 0 → ℝ) :
-    (Certified.fnNorm2Sq (residual A b)).quadratic x +
-      (Certified.fnNorm2Sq (residual A b)).affine x = Fn.norm2 (A *ᵥ x - b) ^ 2 :=
-  (Certified.fnNorm2Sq (residual A b)).correct x
+    (CertifiedExpr.fnNorm2Sq (residual A b)).quadratic x +
+      (CertifiedExpr.fnNorm2Sq (residual A b)).affine x = Fn.norm2 (A *ᵥ x - b) ^ 2 :=
+  (CertifiedExpr.fnNorm2Sq (residual A b)).correct x
 
 example (x : ℝ) :
-    (Certified.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).quadratic x +
-      (Certified.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).affine x = 0 := by
-  simpa using (Certified.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).correct x
+    (CertifiedExpr.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).quadratic x +
+      (CertifiedExpr.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).affine x = 0 := by
+  simpa using (CertifiedExpr.sum (∅ : Finset Nat) (fun _ => shiftedSquare)).correct x
 
 example (c : ℝ) (hc : c ≠ 0) (x : ℝ) :
     (shiftedSquare.divConst c hc).quadratic x +

@@ -59,7 +59,7 @@ example : terminalLog.nlpForm.data.sense = .minimize := rfl
 def guardedAbs (x : ℝ) : ℝ := |x|
 
 @[morew_conic, morew_nlp]
-def nonnegativeAbsEpigraph :
+def nonnegAbsEpigraph :
     EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := ℝ
   target x t u := u = x.1 ∧ u ≤ t
@@ -124,7 +124,7 @@ def twoBounds :=
   problem (x t s : ℝ)
     minimize t + 2 * s
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
       first : guardedAbs x ≤ t
       second : guardedAbs x ≤ s
 
@@ -151,7 +151,7 @@ example : twoNLP.nlpForm.data.rowCount = 5 := rfl
 
 namespace Imported
 
-def nonnegativeShiftedAbs (center : ℝ) (hc : center ≤ 0) :
+def nonnegShiftedAbs (center : ℝ) (hc : center ≤ 0) :
     EpigraphRepr
       (fun x : {x : ℝ // 0 ≤ x} => Registry.Source.shiftedAbs center x.1) where
   Auxiliary := ℝ
@@ -165,11 +165,11 @@ variable (center : ℝ) (hc : center ≤ 0)
 -- The imported applied family keeps its original parameter and local definition.
 -- The separate hypothesis is needed only by the equivalence certificate.
 reformulation conicTarget : (Registry.Source.source center) := by
-  conic at bound using (nonnegativeShiftedAbs center hc)
+  conic at bound using (nonnegShiftedAbs center hc)
   conic
 
 reformulation nlpTarget : (Registry.Source.source center) := by
-  nlp at bound using (nonnegativeShiftedAbs center hc)
+  nlp at bound using (nonnegShiftedAbs center hc)
   nlp
 
 example : GlobalEquiv (Registry.Source.source center) (conicTarget center) :=
@@ -192,7 +192,7 @@ def maxAbsSource :=
     maximize -t
     subject to
       bound : guardedAbs x ≤ t
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
 
 -- Retained evidence may occur after the selected row.
 reformulation maxConic : maxAbsSource := by
@@ -214,7 +214,7 @@ example : GlobalEquiv targetedNLP continued := continued.equiv
 example : IsConic continued := continued.isConic
 
 -- `Unit` remains the representation of an absent auxiliary optimization variable.
-def nonnegativeAbsUnit :
+def nonnegAbsUnit :
     EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => guardedAbs x.1) where
   Auxiliary := Unit
   target x t _ := x.1 ≤ t
@@ -222,11 +222,11 @@ def nonnegativeAbsUnit :
     simp only [guardedAbs, abs_of_nonneg x.2, exists_const]
 
 reformulation unitConic : absSource := by
-  conic at bound using nonnegativeAbsUnit
+  conic at bound using nonnegAbsUnit
   conic
 
 reformulation unitNLP : absSource := by
-  nlp at bound using nonnegativeAbsUnit
+  nlp at bound using nonnegAbsUnit
   nlp
 
 example : Problem (ℝ × ℝ) ℝ := unitConic
@@ -256,12 +256,12 @@ def missingGuard :=
 #guard_error_fragments ["constraint `bound`", "missing nonnegative constant margin"] in
 assert_contextual_atomic%
 reformulation missingConic : missingGuard := by
-  conic at bound using nonnegativeAbsEpigraph
+  conic at bound using nonnegAbsEpigraph
 
 #guard_error_fragments ["constraint `bound`", "missing retained premise"] in
 assert_contextual_atomic%
 reformulation missingNLP : missingGuard := by
-  nlp at bound using nonnegativeAbsEpigraph
+  nlp at bound using nonnegAbsEpigraph
 
 -- Using the selected guard to discharge itself would erase its restriction.
 def selectedGuardRepr : ConstraintRepr (fun x : {x : ℝ // 0 ≤ x} => 0 ≤ x.1) where
@@ -322,31 +322,31 @@ reformulation generatedOnlyNLP : missingGuard := by
 assert_contextual_atomic%
 reformulation lateFailure : absSource certificate lateFailureAlias := by
   nlp at bound
-  conic at after using nonnegativeAbsEpigraph
+  conic at after using nonnegAbsEpigraph
 
 section Ambiguous
 
-attribute [local morew_conic] nonnegativeAbsUnit
-attribute [local morew_nlp] nonnegativeAbsUnit
+attribute [local morew_conic] nonnegAbsUnit
+attribute [local morew_nlp] nonnegAbsUnit
 
-#guard_error_fragments ["ambiguous exact conic rules", "nonnegativeAbsEpigraph",
-  "nonnegativeAbsUnit", "using"] in
+#guard_error_fragments ["ambiguous exact conic rules", "nonnegAbsEpigraph",
+  "nonnegAbsUnit", "using"] in
 assert_contextual_atomic%
 reformulation ambiguousConic : absSource := by
   conic at bound
 
-#guard_error_fragments ["ambiguous exact NLP rules", "nonnegativeAbsEpigraph",
-  "nonnegativeAbsUnit", "using"] in
+#guard_error_fragments ["ambiguous exact NLP rules", "nonnegAbsEpigraph",
+  "nonnegAbsUnit", "using"] in
 assert_contextual_atomic%
 reformulation ambiguousNLP : absSource := by
   nlp at bound
 
 reformulation explicitConic : absSource := by
-  conic at bound using nonnegativeAbsEpigraph
+  conic at bound using nonnegAbsEpigraph
   conic
 
 reformulation explicitNLP : absSource := by
-  nlp at bound using nonnegativeAbsEpigraph
+  nlp at bound using nonnegAbsEpigraph
   nlp
 
 example : IsConic explicitConic := explicitConic.isConic

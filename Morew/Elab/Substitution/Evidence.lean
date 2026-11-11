@@ -82,7 +82,7 @@ private def direct? (point goal : Expr) (feasible? : Option Expr) : MetaM (Optio
     if let some proof ← projection? proof goal then return some proof
   return none
 
-private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
+private theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
   le_of_lt h
 
 private theorem nonzeroOfPositive {value : ℝ} (h : 0 < value) : value ≠ 0 :=
@@ -101,7 +101,7 @@ private def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr)
   if let some proof ← direct? point goal feasible? then return some proof
   if !strict then
     if let some proof ← direct? point q(0 < $value) feasible? then
-      return some (← mkAppM ``nonnegativeOfPositive #[proof])
+      return some (← mkAppM ``nonnegOfPositive #[proof])
   if let some proof ← Morew.Elab.Evidence.constantSign? point value strict then return some proof
   if let some feasible := feasible? then
     for proof in ← leaves feasible do

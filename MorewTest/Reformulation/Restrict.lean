@@ -63,12 +63,12 @@ def intervalAbsRepair : GlobalImprovement maximum
       abs_nonneg _⟩⟩
   objective_le point := le_abs_self point.1
 
-reformulation nonnegativeMaximum : maximum := by
-  restrict nonnegative : 0 ≤ x using (intervalAbsRepair)
+reformulation nonnegMaximum : maximum := by
+  restrict nonneg : 0 ≤ x using (intervalAbsRepair)
 
-example : GlobalEquiv maximum nonnegativeMaximum := nonnegativeMaximum.equiv
-example (x : ℝ) : nonnegativeMaximum.feasible x ↔ -1 ≤ x ∧ x ≤ 1 ∧ 0 ≤ x := Iff.rfl
-example : ¬ nonnegativeMaximum.feasible (-1) := by norm_num [nonnegativeMaximum]
+example : GlobalEquiv maximum nonnegMaximum := nonnegMaximum.equiv
+example (x : ℝ) : nonnegMaximum.feasible x ↔ -1 ≤ x ∧ x ≤ 1 ∧ 0 ≤ x := Iff.rfl
+example : ¬ nonnegMaximum.feasible (-1) := by norm_num [nonnegMaximum]
 example : (intervalAbsRepair.map ⟨-1, by constructor <;> norm_num⟩).1 = 1 := by
   norm_num [intervalAbsRepair]
 example : (-1 : ℝ) < (intervalAbsRepair.map ⟨-1, by constructor <;> norm_num⟩).1 := by
@@ -80,10 +80,10 @@ info: problem (x : ℝ)
   subject to
     lower : -1 ≤ x
     upper : x ≤ 1
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
-#printp nonnegativeMaximum
+#printp nonnegMaximum
 
 def squareLine := problem (x : ℝ) minimize x ^ 2
 
@@ -94,25 +94,25 @@ def squareAbsRepair : GlobalImprovement squareLine
     change |point.1| ^ 2 ≤ point.1 ^ 2
     rw [sq_abs]
 
-reformulation nonnegativeLine : squareLine := by
-  restrict nonnegative : 0 ≤ x using squareAbsRepair
+reformulation nonnegLine : squareLine := by
+  restrict nonneg : 0 ≤ x using squareAbsRepair
 
-example : GlobalEquiv squareLine nonnegativeLine := nonnegativeLine.equiv
-example (x : ℝ) : nonnegativeLine.feasible x ↔ 0 ≤ x := Iff.rfl
+example : GlobalEquiv squareLine nonnegLine := nonnegLine.equiv
+example (x : ℝ) : nonnegLine.feasible x ↔ 0 ≤ x := Iff.rfl
 
 /--
 info: problem (x : ℝ)
   minimize x ^ 2
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
-#printp nonnegativeLine
+#printp nonnegLine
 
 -- The new row establishes square coverage. Its transformed tautology is then
 -- removed by substitution's independent normalization proof.
 reformulation squaredCoordinates : squareLine := by
-  restrict nonnegative : 0 ≤ x using squareAbsRepair
+  restrict nonneg : 0 ≤ x using squareAbsRepair
   substitute x := u ^ 2
   epigraph t as objective_bound
 
@@ -129,41 +129,41 @@ info: problem (u t : ℝ)
 #guard_msgs in
 #printp squaredCoordinates
 
-def lineSquareCoverage : FeasibleSurjection nonnegativeLine (fun u : ℝ => u ^ 2) where
+def lineSquareCoverage : FeasibleSurjection nonnegLine (fun u : ℝ => u ^ 2) where
   preimage point := Real.sqrt point.1
   rightInverse point := Real.sq_sqrt point.2
 
 -- Explicit coverage can name the corresponding canonical checkpoint too.
 reformulation squaredExplicitly : squareLine := by
-  restrict nonnegative : 0 ≤ x using squareAbsRepair
+  restrict nonneg : 0 ≤ x using squareAbsRepair
   substitute x := u ^ 2 using lineSquareCoverage
   epigraph t as objective_bound
 
 example : squaredExplicitly = squaredCoordinates := rfl
 example : GlobalEquiv squareLine squaredExplicitly := squaredExplicitly.equiv
 
-def nonnegativeSource :=
+def nonnegSource :=
   problem (x : ℝ)
     minimize (x - 4) ^ 2
-    subject to nonnegative : 0 ≤ x
+    subject to nonneg : 0 ≤ x
 
-def squareCoverage : FeasibleSurjection nonnegativeSource (fun u : ℝ => u ^ 2) where
+def squareCoverage : FeasibleSurjection nonnegSource (fun u : ℝ => u ^ 2) where
   preimage point := Real.sqrt point.1
   rightInverse point := Real.sq_sqrt point.2
 
 def principalRepair := squareCoverage.restrictionImprovement
   (fun u => 0 ≤ u) (fun point => Real.sqrt_nonneg point.1)
 
-reformulation ordinaryCoordinates : nonnegativeSource := by
+reformulation ordinaryCoordinates : nonnegSource := by
   substitute x := u ^ 2
 
 -- This helper is about the raw pullback, which is the current semantic source
 -- immediately after substitution, even though its displayed domain row is gone.
-reformulation principalCoordinates : nonnegativeSource := by
+reformulation principalCoordinates : nonnegSource := by
   substitute x := u ^ 2
   restrict branch : 0 ≤ u using principalRepair
 
-example : GlobalEquiv nonnegativeSource principalCoordinates := principalCoordinates.equiv
+example : GlobalEquiv nonnegSource principalCoordinates := principalCoordinates.equiv
 example : ordinaryCoordinates.feasible 2 := True.intro
 example : ordinaryCoordinates.feasible (-2) := True.intro
 example : ordinaryCoordinates.IsGlobalOptimum ⟨2, True.intro⟩ := by
@@ -193,7 +193,7 @@ info: problem (u : ℝ)
 def middleSource :=
   problem (a x b : ℝ)
     minimize (x - 4) ^ 2 + a ^ 2 + b ^ 2
-    subject to nonnegative : 0 ≤ x
+    subject to nonneg : 0 ≤ x
 
 def middleCoverage : FeasibleSurjection middleSource
     (fun point : (ℝ × ℝ) × ℝ => ((point.1.1, point.1.2 ^ 2), point.2)) where
@@ -231,7 +231,7 @@ reformulation capped : squareLine := by
 
 reformulation successive : squareLine := by
   restrict abs_cap : |x| ≤ 1 using zeroCapRepair
-  restrict nonnegative : 0 ≤ x using (by
+  restrict nonneg : 0 ≤ x using (by
     refine { map := fun _ => ⟨0, ?_⟩, objective_le := ?_ }
     · change |(0 : ℝ)| ≤ 1 ∧ 0 ≤ (0 : ℝ)
       norm_num
@@ -252,7 +252,7 @@ info: problem (x : ℝ)
   minimize x ^ 2
   subject to
     abs_cap : |x| ≤ 1
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
 #printp successive
@@ -347,7 +347,7 @@ variable (proofOnly : GlobalImprovement squareLine
 
 -- Only the certificate depends on this parameter, so its name remains usable.
 reformulation proofOnlyParameter : squareLine := by
-  restrict nonnegative : 0 ≤ x using proofOnly
+  restrict nonneg : 0 ≤ x using proofOnly
   epigraph proofOnly
   substitute x := u
 

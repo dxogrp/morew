@@ -15,7 +15,7 @@ noncomputable section
 def free := problem (x : ℝ) minimize x
 
 reformulation oneRow : free := by
-  derive square_nonnegative : 0 ≤ x ^ 2 using (by
+  derive square_nonneg : 0 ≤ x ^ 2 using (by
     intro point _
     exact sq_nonneg point)
 
@@ -27,7 +27,7 @@ example (x : ℝ) : oneRow.feasible x ↔ 0 ≤ x ^ 2 := Iff.rfl
 info: problem (x : ℝ)
   minimize x
   subject to
-    square_nonnegative : 0 ≤ x ^ 2
+    square_nonneg : 0 ≤ x ^ 2
 -/
 #guard_msgs in
 #printp oneRow
@@ -241,7 +241,7 @@ def shiftedFamily (offset : ℝ) :=
     minimize shifted
     subject to lower : 0 ≤ shifted
 
-theorem doubledNonnegative (offset : ℝ) :
+theorem doubledNonneg (offset : ℝ) :
     ∀ point, (shiftedFamily offset).feasible point → 0 ≤ (point + offset) + (point + offset) := by
   intro point hp
   exact add_nonneg hp hp
@@ -250,7 +250,7 @@ section
 variable (offset : ℝ)
 
 reformulation shiftedDerived : (shiftedFamily offset) := by
-  derive doubled_nonnegative : 0 ≤ doubled using doubledNonnegative offset
+  derive doubled_nonneg : 0 ≤ doubled using doubledNonneg offset
 
 example : GlobalEquiv (shiftedFamily offset) (shiftedDerived offset) :=
   shiftedDerived.equiv offset
@@ -264,7 +264,7 @@ info: problem (x : ℝ)
   minimize shifted
   subject to
     lower : 0 ≤ shifted
-    doubled_nonnegative : 0 ≤ doubled
+    doubled_nonneg : 0 ≤ doubled
 -/
 #guard_msgs in
 #printp shiftedDerived

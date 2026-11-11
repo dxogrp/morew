@@ -52,16 +52,16 @@ private def check (term : TSyntax `term) (parameters : Nat) (success : Bool)
           (if independent then proveIndependent? points[0]! goal
            else proveRange? points[0]! goal proof) success
 
-private def NonnegativeAlias (x : ℝ) := 0 ≤ x
+private def NonnegAlias (x : ℝ) := 0 ≤ x
 private def ConjunctionAlias (x : ℝ) := True ∧ (0 < x ∧ True)
-private def NonnegativeConjunctionAlias (x : ℝ) := True ∧ (0 ≤ x ∧ True)
+private def NonnegConjunctionAlias (x : ℝ) := True ∧ (0 ≤ x ∧ True)
 
 run_cmd liftTermElabM do
   check (← `(fun (x : ℝ) => (0 ≤ x, 0 ≤ x))) 0 true
   check (← `(fun (x : ℝ) => (True ∧ (0 < x ∧ x ≤ 2), 0 ≤ x ∧ x ≠ 0))) 0 true
   check (← `(fun (x : ℝ) => (ConjunctionAlias x, 0 ≤ x))) 0 true
-  check (← `(fun (x : ℝ) => (NonnegativeAlias x, 0 ≤ x))) 0 true
-  check (← `(fun (x : ℝ) => (0 ≤ x, NonnegativeAlias x))) 0 true
+  check (← `(fun (x : ℝ) => (NonnegAlias x, 0 ≤ x))) 0 true
+  check (← `(fun (x : ℝ) => (0 ≤ x, NonnegAlias x))) 0 true
   check (← `(fun (x : ℝ) => ((let y := x; 0 < y), 0 ≤ x))) 0 true
   check (← `(fun (x : ℝ) => (1 ≤ x, 0 < x))) 0 true
   check (← `(fun (x : ℝ) => (x ≥ 1, x > 0))) 0 true
@@ -81,7 +81,7 @@ run_cmd liftTermElabM do
     (epsilon ≤ x, 0 < x))) 2 true
   check (← `(fun (epsilon : ℝ) (_h : ConjunctionAlias epsilon) (x : ℝ) =>
     (epsilon ≤ x, 0 ≤ x))) 2 true
-  check (← `(fun (epsilon : ℝ) (_h : NonnegativeConjunctionAlias epsilon) (x : ℝ) =>
+  check (← `(fun (epsilon : ℝ) (_h : NonnegConjunctionAlias epsilon) (x : ℝ) =>
     (epsilon ≤ x, 0 ≤ x))) 2 true
   check (← `(fun (epsilon : ℝ) (x : ℝ) =>
     (ConjunctionAlias epsilon ∧ epsilon ≤ x, 0 < x))) 1 false

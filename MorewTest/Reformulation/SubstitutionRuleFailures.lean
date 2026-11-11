@@ -37,7 +37,7 @@ elab "assert_substitution_atomic% " target:ident aliasName:ident " in " nested:c
 
 def unrestricted := problem (x : ℝ) minimize x
 
-def nonnegative :=
+def nonneg :=
   problem (x : ℝ)
     maximize x
     subject to domain : 0 ≤ x
@@ -69,18 +69,18 @@ reformulation missingSquare : unrestricted certificate missingSquareAlias := by
 
 #guard_error_fragments ["substitution of `x`", "coverage"] in
 assert_substitution_atomic% missingExponential missingExponentialAlias in
-reformulation missingExponential : nonnegative certificate missingExponentialAlias := by
+reformulation missingExponential : nonneg certificate missingExponentialAlias := by
   substitute x := Real.exp u
 
 -- A wrong explicit rule never falls back to an otherwise applicable square rule.
 #guard_error_fragments ["substitution of `x`", "does not match"] in
 assert_substitution_atomic% wrongNamed wrongNamedAlias in
-reformulation wrongNamed : nonnegative certificate wrongNamedAlias := by
+reformulation wrongNamed : nonneg certificate wrongNamedAlias := by
   substitute x := u ^ 2 via Morew.Substitution.exp
 
 #guard_error_fragments ["Type mismatch", "CoordinateParameterization"] in
 assert_substitution_atomic% wrongApplied wrongAppliedAlias in
-reformulation wrongApplied : nonnegative certificate wrongAppliedAlias := by
+reformulation wrongApplied : nonneg certificate wrongAppliedAlias := by
   substitute x := u ^ 2 via (Morew.Substitution.exp (R := Unit))
 
 #guard_error_fragments ["Application type mismatch"] in
@@ -98,7 +98,7 @@ reformulation wrongNegation : unrestricted certificate wrongNegationAlias := by
 
 #guard_error_fragments ["substitution of `x`", "operation instance"] in
 assert_substitution_atomic% wrongPower wrongPowerAlias in
-reformulation wrongPower : nonnegative certificate wrongPowerAlias := by
+reformulation wrongPower : nonneg certificate wrongPowerAlias := by
   substitute x := @HPow.hPow ℝ ℕ ℝ changedPower u 2
 
 -- Proof parameters are independent premises, even when the problem carries
@@ -128,7 +128,7 @@ def unresolvedShape {R : Type*} (_shape : ℕ) :
 
 #guard_error_fragments ["substitution of `x`", "unresolved parameters"] in
 assert_substitution_atomic% missingShape missingShapeAlias in
-reformulation missingShape : nonnegative certificate missingShapeAlias := by
+reformulation missingShape : nonneg certificate missingShapeAlias := by
   substitute x := u ^ 2 via unresolvedShape
 
 -- Distinct imported and local declarations remain ambiguous in sorted order.
@@ -136,7 +136,7 @@ def duplicateSquare {R : Type*} :
     CoordinateParameterization (fun (_ : R) (u : ℝ) => u ^ 2) :=
   Morew.Substitution.square
 
-def squareCoverage : FeasibleSurjection nonnegative (fun u : ℝ => u ^ 2) where
+def squareCoverage : FeasibleSurjection nonneg (fun u : ℝ => u ^ 2) where
   preimage point := Real.sqrt point.1
   rightInverse point := Real.sq_sqrt point.2
 
@@ -147,18 +147,18 @@ attribute [local morew_substitute] duplicateSquare
   "Morew.Substitution.square, MorewTest.Reformulation.SubstitutionRuleFailures.duplicateSquare",
   "via"] in
 assert_substitution_atomic% ambiguous ambiguousAlias in
-reformulation ambiguous : nonnegative certificate ambiguousAlias := by
+reformulation ambiguous : nonneg certificate ambiguousAlias := by
   substitute x := u ^ 2
 
-reformulation explicitSquare : nonnegative := by
+reformulation explicitSquare : nonneg := by
   substitute x := u ^ 2 via duplicateSquare
 
 -- Whole-problem certificates bypass automatic ambiguity entirely.
-reformulation manualSquare : nonnegative := by
+reformulation manualSquare : nonneg := by
   substitute x := u ^ 2 using squareCoverage
 
-example : GlobalEquiv nonnegative explicitSquare := explicitSquare.equiv
-example : GlobalEquiv nonnegative manualSquare := manualSquare.equiv
+example : GlobalEquiv nonneg explicitSquare := explicitSquare.equiv
+example : GlobalEquiv nonneg manualSquare := manualSquare.equiv
 
 end
 
@@ -172,7 +172,7 @@ reformulation wrongImported : unrestricted certificate wrongImportedAlias := by
 -- failure must discard it together with the target, equivalence, and alias.
 #guard_error_fragments ["substitution of `u`", "coverage"] in
 assert_substitution_atomic% failedAfterSquare failedAfterSquareAlias in
-reformulation failedAfterSquare : nonnegative certificate failedAfterSquareAlias := by
+reformulation failedAfterSquare : nonneg certificate failedAfterSquareAlias := by
   substitute x := u ^ 2
   substitute u := Real.exp v
 

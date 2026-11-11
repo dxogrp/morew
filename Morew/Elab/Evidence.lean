@@ -133,7 +133,7 @@ def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     return .ok proof
   return result.toOption
 
-private theorem nonnegativeOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
+private theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
   le_of_lt h
 
 /-- Prove the sign of an independent real constant from an independent local
@@ -148,7 +148,7 @@ def constantSign? (point value : Expr) (strict : Bool)
   if let some proof ← proveIndependent? point obligation index? then return some proof
   if !strict then
     if let some positive ← proveIndependent? point q(0 < $value) index? then
-      return some (← mkAppM ``nonnegativeOfPositive #[positive])
+      return some (← mkAppM ``nonnegOfPositive #[positive])
   return none
 
 end Morew.Elab.Evidence

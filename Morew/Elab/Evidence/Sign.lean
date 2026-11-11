@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Evidence
-import Morew.Elab.Cone.Nonnegative
+import Morew.Elab.Cone.Nonneg
 import Morew.Elab.Rewrite.Decomposition
 import Morew.Elab.Expr
 
@@ -22,9 +22,9 @@ private theorem positiveOfMargin {epsilon value : ℝ}
     (positive : 0 < epsilon) (bound : epsilon ≤ value) : 0 < value :=
   lt_of_lt_of_le positive bound
 
-private theorem nonnegativeOfMargin {epsilon value : ℝ}
-    (nonnegative : 0 ≤ epsilon) (bound : epsilon ≤ value) : 0 ≤ value :=
-  le_trans nonnegative bound
+private theorem nonnegOfMargin {epsilon value : ℝ}
+    (nonneg : 0 ≤ epsilon) (bound : epsilon ≤ value) : 0 ≤ value :=
+  le_trans nonneg bound
 
 private def canonicalDifference (value epsilon : ℝ) : ℝ := value - epsilon
 
@@ -37,17 +37,17 @@ private def canonicalVectorLE (n : Nat) (epsilon value : Fin n → ℝ) : Prop :
 private theorem vectorBoundAt {n : Nat} {epsilon value : Fin n → ℝ}
     (bound : epsilon ≤ value) (i : Fin n) : epsilon i ≤ value i := bound i
 
-private theorem marginOfNonnegativeDifference {epsilon value : ℝ}
+private theorem marginOfNonnegDifference {epsilon value : ℝ}
     (bound : value - epsilon ∈ ℝ₊) : epsilon ≤ value :=
   sub_nonneg.mp bound
 
-private theorem nonnegativeOfMembership {value : ℝ} (bound : value ∈ ℝ₊) :
+private theorem nonnegOfMembership {value : ℝ} (bound : value ∈ ℝ₊) :
     0 ≤ value := bound
 
-private theorem nonnegativeVectorAt {n : Nat} {value : Fin n → ℝ}
+private theorem nonnegVectorAt {n : Nat} {value : Fin n → ℝ}
     (bound : value ∈ ℝ₊^n) (i : Fin n) : 0 ≤ value i := bound i
 
-private theorem marginOfNonnegativeVectorDifference {n : Nat}
+private theorem marginOfNonnegVectorDifference {n : Nat}
     {epsilon value : Fin n → ℝ} (bound : value - epsilon ∈ ℝ₊^n) (i : Fin n) :
     epsilon i ≤ value i := sub_nonneg.mp (bound i)
 
@@ -65,13 +65,13 @@ private def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := 
 private def signInMembership? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) :
     MetaM (Option Expr) := do
-  let some coordinate ← Cone.nonnegativeValue? point body | return none
+  let some coordinate ← Cone.nonnegValue? point body | return none
   let coordinate ← Expr.reduceStructure coordinate
   unless ← isDefEq (← inferType coordinate) q(ℝ) do
     let some index := index? | return none
     let some n ← vectorDimension? point (← inferType coordinate) index | return none
     if !strict && (← isDefEq (mkApp coordinate index) value) then
-      return some (← mkAppM ``nonnegativeVectorAt #[evidence, index])
+      return some (← mkAppM ``nonnegVectorAt #[evidence, index])
     unless coordinate.isAppOfArity ``HSub.hSub 6 do return none
     let args := coordinate.getAppArgs
     let upper := args[4]!
@@ -81,11 +81,11 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
     unless (← isDefEq args[3]! canonical.getAppArgs[3]!) &&
         (← isDefEq coordinate canonical) && (← isDefEq (mkApp upper index) value) do return none
     let some sign ← constantSign? point (mkApp epsilon index) strict index? | return none
-    let bound ← mkAppM ``marginOfNonnegativeVectorDifference #[evidence, index]
+    let bound ← mkAppM ``marginOfNonnegVectorDifference #[evidence, index]
     return some (← mkAppM
-      (if strict then ``positiveOfMargin else ``nonnegativeOfMargin) #[sign, bound])
+      (if strict then ``positiveOfMargin else ``nonnegOfMargin) #[sign, bound])
   if !strict && (← isDefEq coordinate value) then
-    return some (← mkAppM ``nonnegativeOfMembership #[evidence])
+    return some (← mkAppM ``nonnegOfMembership #[evidence])
   unless coordinate.isAppOfArity ``HSub.hSub 6 do return none
   let args := coordinate.getAppArgs
   let upper := args[4]!
@@ -95,9 +95,9 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
   unless (← isDefEq args[3]! canonical.getAppArgs[3]!) &&
       (← isDefEq coordinate canonical) && (← isDefEq upper value) do return none
   let some sign ← constantSign? point epsilon strict index? | return none
-  let bound ← mkAppM ``marginOfNonnegativeDifference #[evidence]
+  let bound ← mkAppM ``marginOfNonnegDifference #[evidence]
   return some (← mkAppM
-    (if strict then ``positiveOfMargin else ``nonnegativeOfMargin) #[sign, bound])
+    (if strict then ``positiveOfMargin else ``nonnegOfMargin) #[sign, bound])
 
 private partial def signInRow? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) (allowForall : Bool := true) :
@@ -138,12 +138,12 @@ private partial def signInRow? (point value body evidence : Expr) (strict : Bool
     let some sign ← constantSign? point (mkApp epsilon index) strict index? | return none
     let bound ← mkAppM ``vectorBoundAt #[evidence, index]
     return some (← mkAppM
-      (if strict then ``positiveOfMargin else ``nonnegativeOfMargin) #[sign, bound])
+      (if strict then ``positiveOfMargin else ``nonnegOfMargin) #[sign, bound])
   unless ← isDefEq args[1]! (mkConst ``Real.instLE) do return none
   unless ← isDefEq upper value do return none
   let some sign ← constantSign? point epsilon strict index? | return none
   return some (← mkAppM
-    (if strict then ``positiveOfMargin else ``nonnegativeOfMargin) #[sign, evidence])
+    (if strict then ``positiveOfMargin else ``nonnegOfMargin) #[sign, evidence])
 
 /-- Certify strict or non-strict nonnegativity from an independent constant or
 the first usable retained lower margin. The caller excludes the selected row. -/

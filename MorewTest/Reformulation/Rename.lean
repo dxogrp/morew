@@ -200,7 +200,7 @@ reformulation principalBound : taggedZero := by
   substitute t := u ^ 2 using squareBoundCoverage
   rename retained to kept
   restrict branch : 0 ≤ u using squareBoundRepair
-  rename branch to nonnegative
+  rename branch to nonneg
 
 example (x u : ℝ) : principalBound.feasible (x, u) ↔ True ∧ 0 ≤ u := Iff.rfl
 example : GlobalEquiv taggedZero principalBound := principalBound.equiv
@@ -316,7 +316,7 @@ run_cmd do
       (``zeroBoundRemoved, #[]),
       (``renamedZeroBoundRemoved, #[]),
       (``zeroContinued, #[`square_bound]),
-      (``principalBound, #[`kept, `nonnegative]),
+      (``principalBound, #[`kept, `nonneg]),
       (``lowerOccurrence, #[`floor, `square_bound]),
       (``vectorRenamed, #[`coordinate_bounds]),
       (``renamedFamily, #[`domain]),

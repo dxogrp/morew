@@ -59,19 +59,19 @@ def absoluteFunction :=
   problem (x : ℝ)
     minimize abs x
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
 
 def absoluteNotation :=
   problem (x : ℝ)
     minimize |x|
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
 
 /--
 info: problem (x : ℝ)
   minimize abs x
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
 #printp absoluteFunction
@@ -80,7 +80,7 @@ info: problem (x : ℝ)
 info: problem (x : ℝ)
   minimize |x|
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
 #printp absoluteNotation
@@ -108,7 +108,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 info: problem (x : ℝ)
   minimize abs x
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
 #printp absoluteFunction
@@ -117,7 +117,7 @@ info: problem (x : ℝ)
 info: problem (x : ℝ)
   minimize |x|
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
 -/
 #guard_msgs in
 #printp absoluteNotation

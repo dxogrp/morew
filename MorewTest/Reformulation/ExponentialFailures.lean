@@ -42,7 +42,7 @@ reformulation missingDomain : source certificate missingDomainAlias := by
   conic at exponential
   conic at logarithm
 
-def nonnegative :=
+def nonneg :=
   problem (x t : ℝ)
     minimize t
     subject to
@@ -51,7 +51,7 @@ def nonnegative :=
 
 /-- error: constraint `logarithm`: -/
 #guard_msgs (substring := true) in
-reformulation zeroMargin : nonnegative := by
+reformulation zeroMargin : nonneg := by
   conic at logarithm
 
 def strictlyPositive :=

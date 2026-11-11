@@ -26,7 +26,7 @@ example : GlobalEquiv positiveMargin customSelected := customSelected.equiv
 reformulation continued : squared := by
   epigraph t
   conic
-example : GlobalEquiv nonnegative continued :=
+example : GlobalEquiv nonneg continued :=
   squared.equiv.trans continued.equiv
 example : IsConic continued := continued.isConic
 

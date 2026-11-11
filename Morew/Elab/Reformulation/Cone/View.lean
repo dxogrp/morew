@@ -58,11 +58,11 @@ private def delabConeCarrier : Delab := do
   let cone := expression.getAppArgs[0]!
   if cone.isConstOf ``Morew.Conic.Cone.exponential then
     return ← `(EXP)
-  if cone.isConstOf ``Morew.Conic.Cone.nonnegativeScalar then
+  if cone.isConstOf ``Morew.Conic.Cone.nonnegScalar then
     return ← `(ℝ₊)
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.secondOrder 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.rotatedSecondOrder 1 ||
-    cone.isAppOfArity ``Morew.Conic.Cone.nonnegative 1 ||
+    cone.isAppOfArity ``Morew.Conic.Cone.nonneg 1 ||
     cone.isAppOfArity ``Morew.Conic.Cone.psd 1
   -- Retain subexpression positions for fixed dimension references.
   let dimension ← withAppArg <| withAppArg do

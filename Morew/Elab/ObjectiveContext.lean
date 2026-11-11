@@ -31,8 +31,8 @@ private theorem mulRightNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : a * c
   mul_le_mul_of_nonpos_right h sign
 private theorem exp {a b : ℝ} (h : a ≤ b) : Real.exp a ≤ Real.exp b :=
   Real.exp_le_exp.mpr h
-private theorem nonpositiveOfNegative {a : ℝ} (h : a < 0) : a ≤ 0 := le_of_lt h
-private theorem nonpositiveOfNegNonnegative {a : ℝ} (h : 0 ≤ -a) : a ≤ 0 :=
+private theorem nonposOfNegative {a : ℝ} (h : a < 0) : a ≤ 0 := le_of_lt h
+private theorem nonposOfNegNonneg {a : ℝ} (h : 0 ≤ -a) : a ≤ 0 :=
   neg_nonneg.mp h
 private theorem trans {a b c : ℝ} (h : a ≤ b) (k : b ≤ c) : a ≤ c := le_trans h k
 
@@ -115,7 +115,7 @@ private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :=
       (← isDefEq args[1]! (mkConst ``Real.instLE)) do return none
   return some (args[if ge then 3 else 2]!, args[if ge then 2 else 3]!)
 
-private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
+private def nonpos? (point value : Expr) : MetaM (Option Expr) := do
   if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value
   for declaration in ← getLCtx do
@@ -126,9 +126,9 @@ private def nonpositive? (point value : Expr) : MetaM (Option Expr) := do
           checkWithKernel declaration.toExpr
           return some declaration.toExpr
         if ← isDefEq declaration.type q($value < 0) then
-          return some (← mkAppM ``nonpositiveOfNegative #[declaration.toExpr])
+          return some (← mkAppM ``nonposOfNegative #[declaration.toExpr])
   if let some proof ← Evidence.constantSign? point q(-$value) false then
-    return some (← mkAppM ``nonpositiveOfNegNonnegative #[proof])
+    return some (← mkAppM ``nonposOfNegNonneg #[proof])
   return none
 
 private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
@@ -177,7 +177,7 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
           let attempt : Except MessageData Expr ← liftM (inequality point lhs[j]! rhs[j]! bound).run
           if let .ok proof := attempt then
             return ← mkAppM (if i == 0 then ``mulLeft else ``mulRight) #[proof, sign]
-        if let some sign ← nonpositive? point coefficient then
+        if let some sign ← nonpos? point coefficient then
           let attempt : Except MessageData Expr ← liftM (inequality point rhs[j]! lhs[j]! bound).run
           if let .ok proof := attempt then
             return ← mkAppM (if i == 0 then ``mulLeftNeg else ``mulRightNeg) #[proof, sign]

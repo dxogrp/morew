@@ -16,7 +16,7 @@ noncomputable section
 -- the raw-pullback helper to this current problem, without weakening matching.
 reformulation principalImported : ordinaryCoordinates := by
   restrict branch : 0 ≤ u using (by
-    simpa only [ordinaryCoordinates, nonnegativeSource, Problem.pullback,
+    simpa only [ordinaryCoordinates, nonnegSource, Problem.pullback,
       Problem.addConstraint, sq_nonneg, true_and] using principalRepair)
 
 example : GlobalEquiv ordinaryCoordinates principalImported := principalImported.equiv

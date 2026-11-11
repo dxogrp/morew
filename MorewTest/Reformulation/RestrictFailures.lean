@@ -98,9 +98,9 @@ reformulation staleAfterEpigraph : free certificate staleAfterEpigraphAlias := b
   epigraph t
   restrict tag : True using trueRepair free
 
-def nonnegative := problem (x : ℝ) minimize x subject to domain : 0 ≤ x
+def nonneg := problem (x : ℝ) minimize x subject to domain : 0 ≤ x
 
-reformulation normalizedSquare : nonnegative := by
+reformulation normalizedSquare : nonneg := by
   substitute x := u ^ 2
 
 -- A raw helper cannot silently match a separately emitted, normalized target.
@@ -108,7 +108,7 @@ reformulation normalizedSquare : nonnegative := by
 #guard_error_fragments ["Type mismatch"] in
 assert_restrict_atomic% rawAfterCheckpoint rawAfterCheckpointAlias in
 reformulation rawAfterCheckpoint : normalizedSquare certificate rawAfterCheckpointAlias := by
-  restrict tag : True using trueRepair (nonnegative.pullback (fun u : ℝ => u ^ 2))
+  restrict tag : True using trueRepair (nonneg.pullback (fun u : ℝ => u ^ 2))
 
 -- Each repair is valid for flat alone, but the second one violates the first row.
 #guard_error_fragments ["Type mismatch"] in

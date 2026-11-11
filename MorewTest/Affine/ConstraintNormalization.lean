@@ -100,7 +100,7 @@ example {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
 example {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
     (n : Nat) (f : X →ᵃ[ℝ] (Fin n → ℝ)) (x : X) :
-    (Conic.Constraint.nonnegative f).Holds x ↔ ∀ i, 0 ≤ f x i := by
+    (Conic.Constraint.nonneg f).Holds x ↔ ∀ i, 0 ≤ f x i := by
   simp [Pi.le_def]
 
 private def expectRejected (source : TSyntax `term) (fragment : String) :

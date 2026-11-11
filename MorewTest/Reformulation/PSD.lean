@@ -51,7 +51,7 @@ example : diagonalTarget.conicForm.data.toProblem = diagonalTarget :=
 example : diagonalTarget.conicForm.data.rowCount = 2 := rfl
 example (x : ℝ) : diagonalTarget.feasible x ↔
     SymmetricMatrix.ofMatrix (Matrix.diagonal ![x, 1]) (Matrix.isSymm_diagonal _) ∈ PSD 2 ∧
-      3 - x ∈ (Cone.nonnegativeScalar).carrier := Iff.rfl
+      3 - x ∈ (Cone.nonnegScalar).carrier := Iff.rfl
 
 /--
 info: problem (x : ℝ)
@@ -423,7 +423,7 @@ def mixedMembershipSource :=
       semidefinite : True ∧
         (SymmetricMatrix.ofMatrix matrix (Matrix.isSymm_diagonal _) ∈ PSD 1 ∧
           matrix.PosSemidef)
-      scalar : let value := x; (value ∈ (Cone.nonnegativeScalar).carrier ∧ True) ∧ 0 ≤ value
+      scalar : let value := x; (value ∈ (Cone.nonnegScalar).carrier ∧ True) ∧ 0 ≤ value
 
 reformulation mixedMembershipTarget : mixedMembershipSource := by conic
 

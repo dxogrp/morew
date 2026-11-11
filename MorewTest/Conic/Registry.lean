@@ -199,37 +199,37 @@ run_cmd liftTermElabM do
 
 end StructuralHelperOpacity
 
-private noncomputable def nonnegativeAbs (x : ℝ) : ℝ := |x|
+private noncomputable def nonnegAbs (x : ℝ) : ℝ := |x|
 
-private noncomputable def nonnegativeAbsGraph :
-    GraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+private noncomputable def nonnegAbsGraph :
+    GraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegAbs x.val) where
   Auxiliary := ℝ
   target x y u := u = x.val ∧ y = u
-  source_iff_exists x y := by simp [nonnegativeAbs, abs_of_nonneg x.property]
+  source_iff_exists x y := by simp [nonnegAbs, abs_of_nonneg x.property]
 
-private noncomputable def nonnegativeAbsEpigraph :
-    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegativeAbs x.val) where
+private noncomputable def nonnegAbsEpigraph :
+    EpigraphRepr (fun x : {x : ℝ // 0 ≤ x} => nonnegAbs x.val) where
   Auxiliary := ℝ
   target x t u := u = x.val ∧ u ≤ t
-  source_iff_exists x t := by simp [nonnegativeAbs, abs_of_nonneg x.property]
+  source_iff_exists x t := by simp [nonnegAbs, abs_of_nonneg x.property]
 
 section
-attribute [local morew_conic] nonnegativeAbsGraph nonnegativeAbsEpigraph
+attribute [local morew_conic] nonnegAbsGraph nonnegAbsEpigraph
 
 run_cmd liftTermElabM do
   let margin ← elaborate (← `(fun p : ℝ × ℝ => 0 ≤ p.1))
   let expected := #[← `(fun p : (ℝ × ℝ) × ℝ => p.2 = p.1.1),
     ← `(fun p : (ℝ × ℝ) × ℝ => p.1.2 = p.2)]
-  check (← `(fun p : ℝ × ℝ => p.2 = nonnegativeAbs p.1)) 2 #[margin]
+  check (← `(fun p : ℝ × ℝ => p.2 = nonnegAbs p.1)) 2 #[margin]
     (expected := expected)
-  check (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 = p.2)) 2 #[margin]
-    (some ``nonnegativeAbsGraph) (expected := expected)
-  reject (← `(fun p : ℝ × ℝ => p.2 = nonnegativeAbs p.1))
-    "nonnegative constant margin" #[] (some ``nonnegativeAbsGraph)
-  check (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 ≤ p.2)) 2 #[margin]
+  check (← `(fun p : ℝ × ℝ => nonnegAbs p.1 = p.2)) 2 #[margin]
+    (some ``nonnegAbsGraph) (expected := expected)
+  reject (← `(fun p : ℝ × ℝ => p.2 = nonnegAbs p.1))
+    "nonnegative constant margin" #[] (some ``nonnegAbsGraph)
+  check (← `(fun p : ℝ × ℝ => nonnegAbs p.1 ≤ p.2)) 2 #[margin]
     (expected := #[expected[0]!, ← `(fun p : (ℝ × ℝ) × ℝ => p.2 ≤ p.1.2)])
-  reject (← `(fun p : ℝ × ℝ => nonnegativeAbs p.1 ≤ p.2))
-    "nonnegative constant margin" #[] (some ``nonnegativeAbsEpigraph)
+  reject (← `(fun p : ℝ × ℝ => nonnegAbs p.1 ≤ p.2))
+    "nonnegative constant margin" #[] (some ``nonnegAbsEpigraph)
 end
 
 noncomputable def positiveLog (x : ℝ) : ℝ := Real.log x

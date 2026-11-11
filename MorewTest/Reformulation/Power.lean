@@ -106,7 +106,7 @@ def source :=
   problem (x t : ℝ)
     maximize t
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
       bound : t ≤ x ^ (1 / 2 : ℝ)
 
 reformulation target : source := by
@@ -130,9 +130,9 @@ def meanSource :=
   problem (x y t : ℝ)
     maximize t
     subject to
-      nonnegativeX : 0 ≤ x
+      nonnegX : 0 ≤ x
       bound : t ≤ Real.rpow x (1 / 3) * y ^ (1 - (1 / 3 : ℝ))
-      nonnegativeY : 0 ≤ y
+      nonnegY : 0 ≤ y
 
 reformulation meanTarget : meanSource := by
   conic
@@ -255,7 +255,7 @@ def source :=
   problem (x t : ℝ)
     minimize t
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
       bound : Real.rpow x p ≤ t
 
 include hp in
@@ -387,7 +387,7 @@ def lateSource :=
   problem (x t : ℝ)
     maximize t
     subject to
-      nonnegative : 0 ≤ x
+      nonneg : 0 ≤ x
       bound : t ≤ x ^ (1 / 2 : ℝ)
       bad : Real.sin x ≤ t
 
@@ -423,7 +423,7 @@ info: problem (x t : ℝ)
 info: problem (x t bound_aux : ℝ)
   maximize t
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
     bound_conic_1 : 0 ≤ bound_aux
     bound_conic_2 : t ≤ bound_aux
     bound_conic_3 : (x, 1, bound_aux) ∈ POW (1 / 2)
@@ -469,7 +469,7 @@ info: problem (x t : ℝ)
 info: problem (x t : ℝ)
   minimize t
   subject to
-    nonnegative : 0 ≤ x
+    nonneg : 0 ≤ x
     bound_conic_1 : (t, 1, x) ∈ POW (1 / p)
 -/
 #guard_msgs in

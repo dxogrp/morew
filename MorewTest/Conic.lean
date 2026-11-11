@@ -32,13 +32,13 @@ example (n : Nat) (x : Fin n → ℝ) : x ∈ (Cone.zero n).carrier ↔ x = 0 :=
   simp
 
 example (n : Nat) (x : Fin n → ℝ) :
-    x ∈ (Cone.nonnegative n).carrier ↔ ∀ i, 0 ≤ x i := by
+    x ∈ (Cone.nonneg n).carrier ↔ ∀ i, 0 ≤ x i := by
   simp
 
 example (x : Fin 0 → ℝ) : x ∈ (Cone.zero 0).carrier := by
   simp [Subsingleton.elim x 0]
 
-example (x : Fin 0 → ℝ) : x ∈ (Cone.nonnegative 0).carrier := by
+example (x : Fin 0 → ℝ) : x ∈ (Cone.nonneg 0).carrier := by
   simp
 
 example : (0 : Fin 1 → ℝ) ∈ (Cone.zero 1).carrier := by
@@ -47,7 +47,7 @@ example : (0 : Fin 1 → ℝ) ∈ (Cone.zero 1).carrier := by
 example : (fun _ : Fin 1 => (1 : ℝ)) ∉ (Cone.zero 1).carrier := by
   simp [funext_iff]
 
-example : (fun _ : Fin 1 => (-1 : ℝ)) ∉ (Cone.nonnegative 1).carrier := by
+example : (fun _ : Fin 1 => (-1 : ℝ)) ∉ (Cone.nonneg 1).carrier := by
   simp
 
 /-- Custom cones retain mathlib's contract, which permits the empty cone. -/
@@ -74,7 +74,7 @@ variable {X : Type u} [AddCommGroup X] [Module ℝ X]
 
 -- Individual rows do not require finite-dimensional decision spaces either.
 def row (f : X →ᵃ[ℝ] ℝ) : Constraint X where
-  cone := Cone.nonnegativeScalar
+  cone := Cone.nonnegScalar
   map := f
 
 example (f : X →ᵃ[ℝ] ℝ) (x : X) : (row f).Holds x ↔ 0 ≤ f x := Iff.rfl
@@ -83,7 +83,7 @@ example (f : X →ᵃ[ℝ] ℝ) (x : X) :
     (Constraint.eqZero f).Holds x ↔ f x = 0 := by simp
 
 example (f : X →ᵃ[ℝ] ℝ) (x : X) :
-    (Constraint.nonnegative f).Holds x ↔ 0 ≤ f x := by simp
+    (Constraint.nonneg f).Holds x ↔ 0 ≤ f x := by simp
 
 example (f : X →ᵃ[ℝ] ℝ) : Convex ℝ {x | (row f).Holds x} :=
   (row f).feasibleSetConvex
@@ -131,19 +131,19 @@ end Algebraic
 
 /-! ## Scalar minimization and maximization -/
 
-def scalarNonnegative : Constraint ℝ where
-  cone := Cone.nonnegative 1
+def scalarNonneg : Constraint ℝ where
+  cone := Cone.nonneg 1
   map := AffineMap.pi fun _ => AffineMap.id ℝ ℝ
 
 def scalarMinimumData : Data ℝ where
   sense := .minimize
   objective := AffineMap.id ℝ ℝ
   rowCount := 1
-  constraints := fun _ => scalarNonnegative
+  constraints := fun _ => scalarNonneg
 
 def scalarMinimum : Problem ℝ ℝ where
   objective := fun x => x
-  feasible := fun x => ∀ _ : Fin 1, scalarNonnegative.Holds x
+  feasible := fun x => ∀ _ : Fin 1, scalarNonneg.Holds x
 
 def scalarMinimumForm : Form scalarMinimum where
   data := scalarMinimumData
@@ -156,16 +156,16 @@ example : IsConic scalarMinimum := scalarMinimumForm.isConic
 example (x : ℝ) : scalarMinimumData.toProblem.objective x = x := by
   simp [scalarMinimumData]
 
-theorem scalarNonnegative_holds (x : ℝ) : scalarNonnegative.Holds x ↔ 0 ≤ x := by
-  change (fun _ : Fin 1 => x) ∈ (Cone.nonnegative 1).carrier ↔ 0 ≤ x
+theorem scalarNonneg_holds (x : ℝ) : scalarNonneg.Holds x ↔ 0 ≤ x := by
+  change (fun _ : Fin 1 => x) ∈ (Cone.nonneg 1).carrier ↔ 0 ≤ x
   simp
 
 example (x : ℝ) : scalarMinimumData.toProblem.feasible x ↔ 0 ≤ x := by
-  change (∀ _ : Fin 1, scalarNonnegative.Holds x) ↔ 0 ≤ x
-  simp [scalarNonnegative_holds]
+  change (∀ _ : Fin 1, scalarNonneg.Holds x) ↔ 0 ≤ x
+  simp [scalarNonneg_holds]
 
-example : Convex ℝ {x | scalarNonnegative.Holds x} :=
-  scalarNonnegative.feasibleSetConvex
+example : Convex ℝ {x | scalarNonneg.Holds x} :=
+  scalarNonneg.feasibleSetConvex
 
 example : Convex ℝ {x | scalarMinimumData.toProblem.feasible x} :=
   scalarMinimumData.feasibleSetConvex
@@ -174,13 +174,13 @@ def scalarMaximumData : Data ℝ where
   sense := .maximize
   objective := AffineMap.id ℝ ℝ
   rowCount := 1
-  constraints := fun _ => scalarNonnegative
+  constraints := fun _ => scalarNonneg
 
 /-- The source problem keeps the dual order explicit; the certificate keeps the
 optimization sense explicit independently of representation equality. -/
 def scalarMaximum : Problem ℝ (OrderDual ℝ) where
   objective := fun x => x
-  feasible := fun x => ∀ _ : Fin 1, scalarNonnegative.Holds x
+  feasible := fun x => ∀ _ : Fin 1, scalarNonneg.Holds x
 
 def scalarMaximumForm : Form scalarMaximum where
   data := scalarMaximumData
@@ -198,7 +198,7 @@ def productEquality : Constraint (ℝ × ℝ) where
   map := AffineMap.pi fun _ => AffineMap.snd
 
 def productInequalities : Constraint (ℝ × ℝ) where
-  cone := Cone.nonnegative 2
+  cone := Cone.nonneg 2
   map := AffineMap.pi fun i : Fin 2 =>
     if i = 0 then AffineMap.fst + AffineMap.const ℝ (ℝ × ℝ) 1
     else AffineMap.snd
@@ -247,12 +247,12 @@ def vectorData : Data (Fin 3 → ℝ) where
   objective := AffineMap.proj 0
   rowCount := 1
   constraints := fun _ => {
-    cone := Cone.nonnegative 3
+    cone := Cone.nonneg 3
     map := AffineMap.id ℝ (Fin 3 → ℝ)
   }
 
 example (x : Fin 3 → ℝ) : vectorData.toProblem.feasible x ↔ ∀ i, 0 ≤ x i := by
-  change (∀ _ : Fin 1, x ∈ (Cone.nonnegative 3).carrier) ↔ ∀ i, 0 ≤ x i
+  change (∀ _ : Fin 1, x ∈ (Cone.nonneg 3).carrier) ↔ ∀ i, 0 ≤ x i
   simp
 
 example : Convex ℝ {x | vectorData.toProblem.feasible x} :=

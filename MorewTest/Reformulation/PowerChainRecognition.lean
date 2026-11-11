@@ -75,7 +75,7 @@ private def role : Option Syntax.PowerChainRow → String
   | none => "ordinary"
   | some (.first _ _ membership) => if membership then "first cone" else "first"
   | some (.step ..) => "step"
-  | some (.nonnegative _ _ membership) => if membership then "sign cone" else "sign"
+  | some (.nonneg _ _ membership) => if membership then "sign cone" else "sign"
   | some (.bound _ _ _ membership) => if membership then "bound cone" else "bound"
   | some (.inverse ..) => "inverse"
 

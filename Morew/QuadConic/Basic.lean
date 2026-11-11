@@ -36,7 +36,7 @@ theorem curvature_zero (sense : ObjectiveSense) :
 
 /-- A nonnegative homogeneous quadratic form is convex. -/
 theorem convexOn_quadratic (quadratic : QuadraticForm ℝ X)
-    (nonnegative : ∀ x, 0 ≤ quadratic x) : ConvexOn ℝ Set.univ quadratic := by
+    (nonneg : ∀ x, 0 ≤ quadratic x) : ConvexOn ℝ Set.univ quadratic := by
   refine ⟨convex_univ, ?_⟩
   intro x _ y _ a b ha hb hab
   have hsub : quadratic (x - y) =
@@ -57,13 +57,13 @@ theorem convexOn_quadratic (quadratic : QuadraticForm ℝ X)
       rw [ha']
       ring
     _ ≤ a * quadratic x + b * quadratic y :=
-      sub_le_self _ (mul_nonneg (mul_nonneg ha hb) (nonnegative (x - y)))
+      sub_le_self _ (mul_nonneg (mul_nonneg ha hb) (nonneg (x - y)))
 
 /-- A nonpositive homogeneous quadratic form is concave. -/
 theorem concaveOn_quadratic (quadratic : QuadraticForm ℝ X)
-    (nonpositive : ∀ x, quadratic x ≤ 0) : ConcaveOn ℝ Set.univ quadratic := by
+    (nonpos : ∀ x, quadratic x ≤ 0) : ConcaveOn ℝ Set.univ quadratic := by
   have hconvex : ConvexOn ℝ Set.univ (-(quadratic : X → ℝ)) :=
-    convexOn_quadratic (-quadratic) (fun x => neg_nonneg.mpr (nonpositive x))
+    convexOn_quadratic (-quadratic) (fun x => neg_nonneg.mpr (nonpos x))
   simpa only [neg_neg] using hconvex.neg
 
 /-- Finite-dimensional quadratic cone-program data.

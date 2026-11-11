@@ -62,8 +62,8 @@ example {m : Nat} (A : Matrix (Fin m) (Fin 0) ℝ) (t : ℝ) :
 example : ¬ Spectral.spectralNormEpigraph.target
     (0 : Matrix (Fin 0) (Fin 0) ℝ) (-1) () := by
   intro h
-  have hnonnegative := h.1
-  norm_num at hnonnegative
+  have hnonneg := h.1
+  norm_num at hnonneg
 
 example (a t : ℝ) : |a| ≤ t ↔
     0 ≤ t ∧ (fromBlocksFin (t • 1) (!![a]) (!![a]).transpose (t • 1)).PosSemidef := by

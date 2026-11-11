@@ -361,7 +361,7 @@ def source :=
     minimize t
     subject to
       norm : ‖WithLp.toLp 2 v‖ ≤ t
-      other : v ∈ (Cone.nonnegative 1).carrier
+      other : v ∈ (Cone.nonneg 1).carrier
 
 reformulation target : source := by
   conic at norm
