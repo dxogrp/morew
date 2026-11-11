@@ -147,8 +147,7 @@ def le (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x ≤ rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .upperBound 0, smooth⟩
-  holds_iff _ := ⟨fun h => (upper_residual_iff _ _).mp (h 0),
-    fun h _ => (upper_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (upper_residual_iff _ _)
 
 /-- Bound `lhs - rhs` below by zero. -/
 def ge (domain : Set X) (lhs rhs : X → ℝ)
@@ -156,8 +155,7 @@ def ge (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x ≥ rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .lowerBound 0, smooth⟩
-  holds_iff _ := ⟨fun h => (lower_residual_iff _ _).mp (h 0),
-    fun h _ => (lower_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (lower_residual_iff _ _)
 
 /-- Set `lhs - rhs` equal to zero. -/
 def eq (domain : Set X) (lhs rhs : X → ℝ)
@@ -165,8 +163,7 @@ def eq (domain : Set X) (lhs rhs : X → ℝ)
     Block domain (fun x => lhs x = rhs x) where
   rowCount := 1
   rows := fun _ => ⟨fun x => lhs x - rhs x, .fixed 0, smooth⟩
-  holds_iff _ := ⟨fun h => (fixed_residual_iff _ _).mp (h 0),
-    fun h _ => (fixed_residual_iff _ _).mpr h⟩
+  holds_iff _ := (forall_const (Fin 1)).trans (fixed_residual_iff _ _)
 
 /-- Concatenate the rows of a conjunction in left-to-right order. -/
 def and (left : Block domain p) (right : Block domain q) :
@@ -255,13 +252,8 @@ def toForm [FiniteDimensional ℝ X] (problem : Problem X ℝ)
     rowCount := block.rowCount
     rows := block.rows
     feasible_mem_domain := fun x hx => feasible_mem_domain x ((block.holds_iff x).mp hx) }
-  represents := by
-    cases problem with
-    | mk objective feasible =>
-      change ({ objective := objective, feasible := _ } : Problem X ℝ) =
-        { objective := objective, feasible := feasible }
-      congr 1
-      exact funext fun x => propext (block.holds_iff x)
+  represents := congrArg (Problem.mk problem.objective)
+    (funext fun x => propext (block.holds_iff x))
 
 end Block
 

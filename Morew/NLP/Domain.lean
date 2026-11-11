@@ -145,13 +145,13 @@ theorem bounded_open [TopologicalSpace X] {ι : Type w}
 /-- A bounded family domain is contained in each included component domain. -/
 theorem bounded_subset {ι : Type w} (indices : Finset ι) (sets : ι → Set X)
     (i : ι) (hi : i ∈ indices) : bounded indices sets ⊆ sets i :=
-  fun _ hx => Set.mem_iInter.mp (Set.mem_iInter.mp hx i) hi
+  Set.biInter_subset_of_mem hi
 
 /-- Feasible inclusion is needed only for the included component domains. -/
 theorem bounded_includes {ι : Type w} (feasible : X → Prop) (indices : Finset ι)
     (sets : ι → Set X) (h : ∀ i ∈ indices, ∀ x, feasible x → x ∈ sets i) :
     ∀ x, feasible x → x ∈ bounded indices sets :=
-  fun x hx => Set.mem_iInter.mpr fun i => Set.mem_iInter.mpr fun hi => h i hi x hx
+  fun x hx => Set.mem_iInter₂.mpr fun i hi => h i hi x hx
 
 /-- Sum smooth functions using evidence only for included summands. -/
 theorem sum [NormedAddCommGroup X] [NormedSpace ℝ X]
