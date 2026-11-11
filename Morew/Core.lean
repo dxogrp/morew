@@ -55,9 +55,7 @@ theorem orderDual_feasible {X : Type u} {V : Type v} (p : Problem X V)
 
 @[simp]
 theorem orderDual_orderDual {X : Type u} {V : Type v} (p : Problem X V) :
-    p.orderDual.orderDual = p := by
-  cases p
-  rfl
+    p.orderDual.orderDual = p := rfl
 
 /-- The problem has at least one feasible decision point. -/
 def HasFeasiblePoint {X : Type u} {V : Type v} (p : Problem X V) : Prop :=

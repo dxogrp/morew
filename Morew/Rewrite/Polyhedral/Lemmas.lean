@@ -61,15 +61,9 @@ theorem sum_abs_le_iff_exists {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
       ∃ u : Fin n → ℝ, v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t := by
   constructor
   · intro h
-    refine ⟨fun i => |v i|, ?_, ?_, h⟩
-    · intro i
-      exact (abs_le'.mp le_rfl).1
-    · intro i
-      exact (abs_le'.mp le_rfl).2
+    exact ⟨fun i => |v i|, fun i => le_abs_self (v i), fun i => neg_le_abs (v i), h⟩
   · rintro ⟨u, hp, hn, ht⟩
-    refine le_trans (Finset.sum_le_sum ?_) ht
-    intro i _hi
-    exact abs_le'.mpr ⟨hp i, hn i⟩
+    exact (Finset.sum_le_sum fun i _ => abs_le'.mpr ⟨hp i, hn i⟩).trans ht
 
 /-- The one-norm epigraph represented by linear inequalities with an auxiliary vector. -/
 theorem norm_toLp_one_le_iff {n : ℕ} (v : Fin n → ℝ) (t : ℝ) :
