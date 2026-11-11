@@ -65,6 +65,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertQuadratic (← `(fun c : ℝ => fun x : ℝ => c * x + 7)) 1 .maximize
   assertQuadratic (← `(fun c : ℝ => fun x : ℝ => c * (0 * x ^ 2))) 1
   assertQuadratic (← `(fun c : ℝ => fun x : ℝ => c * (0 * x ^ 2))) 1 .maximize
+  assertQuadratic (← `(fun x : ℝ × ℝ => 0 * (x.1^2 - x.2^2)))
+  assertQuadratic (← `(fun x : ℝ × ℝ => 0 * (x.1^2 - x.2^2))) 0 .maximize
   assertQuadratic (← `(fun c : ℝ => fun (_ : 0 ≤ c) => fun x : ℝ => c * (x + 1)^2)) 2
   assertQuadratic (← `(fun c : ℝ => fun (_ : c ≤ 0) => fun x : ℝ => c * (x + 1)^2)) 2 .maximize
   assertQuadratic (← `(fun c : ℝ => fun (_ : 0 ≤ c) => fun x : ℝ => -c * (x + 1)^2)) 2 .maximize
@@ -205,5 +207,75 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertRejected (← `(fun x : ℝ => Real.exp x))
   assertRejected (← `(fun x : Fin 2 → ℝ => ‖x‖^2))
   assertRejected (← `(fun x : ℝ => x ^ (2 : ℝ)))
+
+/-! Explicit and automatically constructed certificates share the final checks. -/
+
+private def presentationForObjective (objective : Expr)
+    (sense : Morew.ObjectiveSense := .minimize) :
+    MetaM Morew.Elab.Reformulation.PresentationState := do
+  let .forallE _ domain valueType _ ← whnf (← inferType objective)
+    | throwError "expected a scalar objective"
+  return {
+    sense
+    domainType := domain
+    valueType
+    objective
+    binders := #[{ name := `x, type := domain }] }
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let source ← elaborate (← `(fun x : ℝ => x^2 + 3*x + 7))
+  let presentation ← presentationForObjective source
+  let .ok objective ← reifyQuadratic source .minimize
+    | throwError "failed to construct quadratic fixture"
+  let .ok checked ← validateObjectiveResult presentation objective
+    | throwError "valid quadratic objective fields were rejected"
+  checkWithKernel checked.pointwiseEquality
+  checkWithKernel checked.curvature
+  let .error _ ← validateObjectiveResult { presentation with sense := .maximize } objective
+    | throwError "minimization curvature was accepted for maximization"
+  let changed ← elaborate (← `(fun x : ℝ => x^2 + 3*x + 8))
+  let .error _ ← validateObjectiveResult { presentation with objective := changed } objective
+    | throwError "quadratic fields certified a stale objective"
+  let hole ← mkFreshExprMVar (← inferType objective.curvature)
+  let .error _ ← validateObjectiveResult presentation { objective with curvature := hole }
+    | throwError "unresolved quadratic curvature was accepted"
+  if ← hole.mvarId!.isAssigned then
+    throwError "quadratic field validation assigned caller evidence"
+  let placeholder ← mkSorry (← inferType objective.curvature) true
+  let .error _ ← validateObjectiveResult presentation { objective with curvature := placeholder }
+    | throwError "placeholder quadratic curvature was accepted"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← elaborate (← `(fun (f : ℝ → ℝ)
+    (certificate : Morew.QuadConic.CertifiedMin f) => certificate))
+  lambdaBoundedTelescope expression 2 fun parameters certificate => do
+    let presentation ← presentationForObjective parameters[0]!
+    let .ok objective ← validateObjectiveCertificate presentation certificate
+      | throwError "an abstract minimization certificate was rejected"
+    checkWithKernel objective.pointwiseEquality
+    checkWithKernel objective.curvature
+    let .error _ ← validateObjectiveCertificate
+        { presentation with sense := .maximize } certificate
+      | throwError "a minimization certificate was accepted for maximization"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← elaborate (← `(fun (group : AddCommGroup ℝ)
+    (scalar : @Module ℝ ℝ _ group.toAddCommMonoid) =>
+      @Morew.QuadConic.CertifiedMin.ofAffine ℝ group scalar (fun _ => 0)
+        (@Morew.Affine.Certified.const ℝ Real.instAddCommGroup (inferInstance : Module ℝ ℝ)
+          ℝ group scalar 0)))
+  lambdaBoundedTelescope expression 2 fun _ certificate => do
+    let source ← elaborate (← `(fun _ : ℝ => 0))
+    let presentation ← presentationForObjective source
+    let .error _ ← validateObjectiveCertificate presentation certificate
+      | throwError "a certificate using unrelated vector-space instances was accepted"
+    let decomposition ← mkProjection certificate `toCertifiedExpr
+    let objective : ObjectiveResult := {
+      quadratic := ← mkProjection decomposition `quadratic
+      affine := ← mkProjection decomposition `affine
+      pointwiseEquality := ← mkProjection decomposition `correct
+      curvature := ← mkProjection certificate `curvature }
+    let .error _ ← validateObjectiveResult presentation objective
+      | throwError "quadratic fields using unrelated vector-space instances were accepted"
 
 end MorewTest.QuadConic.Objective

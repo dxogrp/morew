@@ -271,6 +271,49 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   if ← unresolved.mvarId!.isAssigned then
     throwError "cached-row validation assigned a caller metavariable"
 
+
+-- Explicit objective fields receive the same checks as a supplied certificate.
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let source ← MorewTest.Affine.elaborate (← `(show Problem ℝ ℝ from
+    ⟨fun x => 2*x + 3, fun x => x ≤ 1⟩))
+  let presentation ← presentationFor source
+  let .ok objective ← Elab.Conic.reifyObjective presentation
+    | throwError "failed to construct affine objective fixture"
+  let .ok form ← Elab.Conic.buildFormWithObjective presentation objective
+    | throwError "valid explicit objective fields were rejected"
+  checkWithKernel form
+  let canonical ← presentation.canonicalProblem
+  unless ← isDefEq (← inferType form).getAppArgs.back! canonical do
+    throwError "explicit objective fields changed the represented problem"
+  let changed ← MorewTest.Affine.elaborate (← `(fun x : ℝ => 2*x + 4))
+  let .error _ ← Elab.Conic.buildFormWithObjective
+      { presentation with objective := changed } objective
+    | throwError "explicit objective fields certified a stale objective"
+  let hole ← mkFreshExprMVar (← inferType objective.pointwiseEquality)
+  let .error _ ← Elab.Conic.buildFormWithObjective presentation
+      { objective with pointwiseEquality := hole }
+    | throwError "unresolved objective equality was accepted"
+  if ← hole.mvarId!.isAssigned then
+    throwError "explicit objective validation assigned caller evidence"
+  let placeholder ← mkSorry (← inferType objective.pointwiseEquality) true
+  let .error _ ← Elab.Conic.buildFormWithObjective presentation
+      { objective with pointwiseEquality := placeholder }
+    | throwError "placeholder objective equality was accepted"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let expression ← MorewTest.Affine.elaborate (← `(fun (group : AddCommGroup ℝ)
+    (scalar : @Module ℝ ℝ _ group.toAddCommMonoid) =>
+      @Morew.Affine.Certified.id ℝ group scalar))
+  lambdaBoundedTelescope expression 2 fun _ certificate => do
+    let source ← MorewTest.Affine.elaborate (← `(show Problem ℝ ℝ from
+      ⟨fun x => x, fun _ => True⟩))
+    let presentation ← presentationFor source
+    let objective : Elab.Affine.AffineResult := {
+      map := ← mkProjection certificate `map
+      pointwiseEquality := ← mkProjection certificate `correct }
+    let .error _ ← Elab.Conic.buildFormWithObjective presentation objective
+      | throwError "explicit objective fields using unrelated vector-space instances were accepted"
+
 run_cmd Lean.Elab.Command.liftTermElabM do
   rejectForm (← `(show Problem ℝ ℝ from
     ⟨fun x => x * x, fun _ => True⟩)) "objective"

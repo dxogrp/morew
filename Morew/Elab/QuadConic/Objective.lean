@@ -10,9 +10,9 @@ import Morew.Elab.QuadConic.Expansion
 import Morew.Elab.Reformulation.Presentation
 import Lean.Meta.Check
 
-/-! Construct a quadratic part and an affine part whose sum equals the source objective.
-Prove the required global curvature using evidence independent of decision variables.
-Transparent helpers unfold within a shared budget. -/
+/-! Construct or validate a quadratic part and an affine part whose sum equals the source objective.
+Automatic recognition proves global curvature using evidence independent of decision variables.
+Completed and supplied certificates share validation. Transparent helpers unfold within a shared budget. -/
 
 namespace Morew.Elab.QuadConic
 
@@ -43,6 +43,13 @@ private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
     expression
     reason := ← addMessageContext
       m!"quadratic objective: {reason}\nexpression: {expression}" }
+
+-- Printing a synthetic sorry in a diagnostic suppresses that error in Lean.
+private def rejectIncomplete (expression : Expr) : ReifyM α := do
+  throwThe Expr.Error {
+    expression
+    reason := ← addMessageContext
+      "quadratic objective: unresolved metavariables or proof placeholders" }
 
 private noncomputable def canonicalNorm (n : Nat) (x : EuclideanSpace ℝ (Fin n)) : ℝ := ‖x‖
 
@@ -465,10 +472,89 @@ private def withFiniteInstances (instances : List Expr) (action : ReifyM Objecti
         pointwiseEquality := ← result.pointwiseEquality.replaceFVarsM #[binding] #[inst]
         curvature := ← result.curvature.replaceFVarsM #[binding] #[inst] }
 
+private def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSense)
+    (certificate : Expr) : ReifyM ObjectiveResult := do
+  for expression in #[source, certificate] do
+    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+      rejectIncomplete expression
+  let .forallE _ domain codomain _ ← whnf (← inferType source)
+    | reject source "expected a function on the decision space"
+  if codomain.hasLooseBVars || !(← isDefEq codomain q(ℝ)) then
+    reject source "expected a real-valued objective"
+  let certificateName := match sense with
+    | .minimize => ``Morew.QuadConic.CertifiedMin
+    | .maximize => ``Morew.QuadConic.CertifiedMax
+  let expected ← Affine.Space.withCanonicalSpaces #[domain] do
+    mkAppM certificateName #[source]
+  unless ← isDefEq (← inferType certificate) expected do
+    reject certificate
+      "certificate does not match the current objective, declared direction, and canonical vector spaces"
+  checkWithKernel certificate
+  let decomposition ← mkProjection certificate `toCertifiedExpr
+  let quadratic ← instantiateMVars (← mkProjection decomposition `quadratic)
+  let affine ← instantiateMVars (← mkProjection decomposition `affine)
+  let pointwiseEquality ← instantiateMVars (← mkProjection decomposition `correct)
+  let curvature ← instantiateMVars (← mkProjection certificate `curvature)
+  let senseExpr := mkConst <| match sense with
+    | .minimize => ``Morew.ObjectiveSense.minimize
+    | .maximize => ``Morew.ObjectiveSense.maximize
+  let expectedCurvature ← Affine.Space.withCanonicalSpaces #[domain] do
+    mkAppM ``Morew.QuadConic.Curvature #[senseExpr, quadratic]
+  unless ← isDefEq (← inferType curvature) expectedCurvature do
+    reject certificate "curvature certificate does not match the quadratic part and objective sense"
+  for expression in #[quadratic, affine, pointwiseEquality, curvature] do
+    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+      rejectIncomplete expression
+    checkWithKernel expression
+  return { quadratic, affine, pointwiseEquality, curvature }
+
+private def completeCertificate (decomposition curvature : Expr)
+    (sense : Morew.ObjectiveSense) : MetaM Expr :=
+  mkAppM (match sense with
+    | .minimize => ``Morew.QuadConic.CertifiedMin.mk
+    | .maximize => ``Morew.QuadConic.CertifiedMax.mk) #[decomposition, curvature]
+
+private def checkPresentation (presentation : Reformulation.PresentationState) : MetaM Unit := do
+  for expression in #[presentation.valueType, presentation.domainType, presentation.objective] do
+    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+      throwError "unresolved metavariables or proof placeholders in typed objective"
+  unless (← whnf presentation.valueType).isConstOf ``Real do
+    throwError "expected a real-valued objective"
+  let expected ← mkArrow presentation.domainType presentation.valueType
+  unless ← isDefEq (← inferType presentation.objective) expected do
+    throwError "objective function does not match its presentation domain and value type"
+
+/-- Check the completed certificate for the current objective and declared optimization sense. -/
+def validateObjectiveCertificate (presentation : Reformulation.PresentationState)
+    (certificate : Expr) : MetaM (Except Expr.Error ObjectiveResult) :=
+  State.withIsolatedMVars do
+    try
+      checkPresentation presentation
+      (validateCertificateCore presentation.objective presentation.sense certificate).run
+    catch error =>
+      return .error {
+        expression := presentation.objective
+        reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
+
+/-- Validate assembled objective fields before using them in a quadratic conic form. -/
+def validateObjectiveResult (presentation : Reformulation.PresentationState)
+    (objective : ObjectiveResult) : MetaM (Except Expr.Error ObjectiveResult) :=
+  State.withIsolatedMVars do
+    try
+      let certificate ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
+        let decomposition ← mkAppM ``Morew.QuadConic.CertifiedExpr.mk
+          #[objective.quadratic, objective.affine, objective.pointwiseEquality]
+        completeCertificate decomposition objective.curvature presentation.sense
+      validateObjectiveCertificate presentation certificate
+    catch error =>
+      return .error {
+        expression := presentation.objective
+        reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
+
 private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
     (provider : Affine.EvidenceProvider) : ReifyM ObjectiveResult := do
   if (← Expr.hasUnresolved original) || (← Evidence.hasPlaceholders original) then
-    reject original "unresolved metavariables or proof placeholders in the objective"
+    rejectIncomplete original
   let .forallE _ domain codomain _ ← whnf (← inferType source)
     | reject source "expected a function on the decision space"
   if codomain.hasLooseBVars || !(← isDefEq codomain q(ℝ)) then
@@ -487,28 +573,9 @@ private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
         | .maximize => "nonpositive"
       reject (result.missing?.getD original)
         m!"quadratic expression recognized, but {sign} quadratic curvature was not established; provide independent coefficient-sign evidence"
-    let quadratic ← instantiateMVars (← mkProjection result.certificate `quadratic)
-    let affine ← instantiateMVars (← mkProjection result.certificate `affine)
-    let pointwiseEquality ← instantiateMVars (← mkProjection result.certificate `correct)
-    let curvature ← instantiateMVars curvature
-    let expected ← withLocalDeclD `point domain fun point => do
-      let qx ← mkAppM ``DFunLike.coe #[quadratic, point]
-      let ax ← mkAppM ``DFunLike.coe #[affine, point]
-      mkForallFVars #[point] (← mkEq (← mkAppM ``HAdd.hAdd #[qx, ax]) (mkApp original point))
-    unless ← isDefEq (← inferType pointwiseEquality) expected do
-      reject original "certificate does not establish equality with the original objective"
-    let senseExpr := mkConst <| match sense with
-      | .minimize => ``Morew.ObjectiveSense.minimize
-      | .maximize => ``Morew.ObjectiveSense.maximize
-    let expectedCurvature ← Affine.Space.withCanonicalSpaces #[domain] do
-      mkAppM ``Morew.QuadConic.Curvature #[senseExpr, quadratic]
-    unless ← isDefEq (← inferType curvature) expectedCurvature do
-      reject original "curvature certificate does not match the quadratic part and objective sense"
-    for expression in #[quadratic, affine, pointwiseEquality, curvature] do
-      if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
-        reject original "quadratic construction left unresolved metavariables or placeholders"
-      checkWithKernel expression
-    return { quadratic, affine, pointwiseEquality, curvature }
+    let certificate ← Affine.Space.withCanonicalSpaces #[domain] do
+      completeCertificate result.certificate curvature sense
+    validateCertificateCore original sense certificate
 
 /-- Prove an exact quadratic decomposition and the global sign required by the declared sense.
 Try direct recognition before bounded unfolding of transparent helpers. -/
@@ -532,21 +599,12 @@ def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
 def reifyObjective (presentation : Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
-    if (← Expr.hasUnresolved presentation.valueType) ||
-        (← Expr.hasUnresolved presentation.domainType) ||
-        (← Expr.hasUnresolved presentation.objective) then
+    try
+      checkPresentation presentation
+      reifyQuadratic presentation.objective presentation.sense provider
+    catch error =>
       return .error {
         expression := presentation.objective
-        reason := ← addMessageContext "quadratic objective: unresolved presentation" }
-    unless (← whnf presentation.valueType).isConstOf ``Real do
-      return .error {
-        expression := presentation.objective
-        reason := ← addMessageContext "quadratic objective: expected a real-valued objective" }
-    let expected ← mkArrow presentation.domainType presentation.valueType
-    unless ← isDefEq (← inferType presentation.objective) expected do
-      return .error {
-        expression := presentation.objective
-        reason := ← addMessageContext "quadratic objective does not match the presentation types" }
-    reifyQuadratic presentation.objective presentation.sense provider
+        reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
 
 end Morew.Elab.QuadConic

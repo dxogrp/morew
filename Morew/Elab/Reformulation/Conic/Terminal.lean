@@ -54,15 +54,21 @@ private def terminalConicAdapter : TerminalAdapter := {
 }
 
 /-- Plan an affine conic terminal step and request all generated local names. -/
-def prepareTerminalConic (state : ReformState) (step : Syntax) :
-    CommandElabM SurfaceStepDraft :=
-  Cone.prepareTerminalConeForm Morew.Elab.Conic.Terminal.backend
-    terminalConicAdapter `_terminalConic state step
+def prepareTerminalConic (state : ReformState) (step : Syntax)
+    (provided? : Option Term := none) : CommandElabM SurfaceStepDraft := do
+  let makeBackend := fun (presentation : PresentationState) => do
+    let some provided := provided? | return Morew.Elab.Conic.Terminal.backend
+    let expected ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
+      mkAppM ``Morew.Affine.Certified #[presentation.objective]
+    let proof ← Cone.elaborateObjectiveCertificate provided expected
+    return Morew.Elab.Conic.Terminal.backendWithCertificate proof
+  Cone.prepareTerminalConeForm makeBackend terminalConicAdapter `_terminalConic state step
 
 @[morew_reformulation_step Morew.conicStep]
 private def elabConic : StepHandler := fun state step => do
   match step with
-  | `(reformulationStep| conic) => prepareTerminalConic state step
+  | `(reformulationStep| conic $[using $provided:term]?) =>
+      prepareTerminalConic state step provided
   | _ => throwUnsupportedSyntax
 
 end Morew.Elab.Reformulation

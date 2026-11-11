@@ -19,7 +19,8 @@ open Morew.Elab.Rewrite
 open Reformulation
 open Morew.Elab.Cone (RowResult)
 
-private def buildFormCore (presentation : PresentationState) (provider : Affine.EvidenceProvider)
+private def buildFormCore (presentation : PresentationState) (objective? : Option ObjectiveResult)
+    (provider : Affine.EvidenceProvider)
     (certifiedRows : Array (Option (Array RowResult))) :
     MetaM (Except Expr.Error Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
@@ -32,7 +33,10 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
   unless certifiedRows.isEmpty || certifiedRows.size == presentation.constraints.size do
     throwError "cached row entry count does not match the typed presentation"
   let canonical ← presentation.canonicalProblem
-  let objective ← match ← reifyObjective presentation provider with
+  let objectiveResult ← match objective? with
+    | some objective => validateObjectiveResult presentation objective
+    | none => reifyObjective presentation provider
+  let objective ← match objectiveResult with
     | .error error => return .error error
     | .ok result => pure result
   let rows ← match ← Morew.Elab.Cone.buildRows presentation provider certifiedRows with
@@ -64,6 +68,29 @@ private def buildFormCore (presentation : PresentationState) (provider : Affine.
   checkWithKernel form
   return .ok form
 
+private def buildFormWith (presentation : PresentationState) (objective? : Option ObjectiveResult)
+    (provider : Affine.EvidenceProvider) (certifiedRows : Array (Option (Array RowResult))) :
+    MetaM (Except Expr.Error Expr) :=
+  State.withIsolatedMVars do
+    try
+      Morew.Elab.Cone.Finite.withPresentationFiniteInstances
+        (fun result oldVars newVars => result.replaceFVars oldVars newVars)
+        presentation (buildFormCore presentation objective? provider certifiedRows)
+    catch error =>
+      return .error {
+        expression := presentation.objective
+        reason := ← addMessageContext m!"quadratic conic form: {error.toMessageData}"
+      }
+
+/-- Certify the current presentation using explicit objective fields.
+Check the objective against the current domain, canonical instances, and declared direction;
+validate cached rows against the current predicates. -/
+def buildFormWithObjective (presentation : PresentationState) (objective : ObjectiveResult)
+    (provider : Affine.EvidenceProvider := {})
+    (certifiedRows : Array (Option (Array RowResult)) := #[]) :
+    MetaM (Except Expr.Error Expr) :=
+  buildFormWith presentation (some objective) provider certifiedRows
+
 /-- Certify `presentation.canonicalProblem`, retaining objective sense and row order.
 `True` contributes no rows. A nonempty cache has one slot per presentation entry:
 `some` supplies rows in decomposed order; `none` normalizes the entry.
@@ -71,15 +98,6 @@ Cached proofs are checked against the current predicates. -/
 def buildForm (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Expr.Error Expr) :=
-  State.withIsolatedMVars do
-    try
-      Morew.Elab.Cone.Finite.withPresentationFiniteInstances
-        (fun result oldVars newVars => result.replaceFVars oldVars newVars)
-        presentation (buildFormCore presentation provider certifiedRows)
-    catch error =>
-      return .error {
-        expression := presentation.objective
-        reason := ← addMessageContext m!"quadratic conic form: {error.toMessageData}"
-      }
+  buildFormWith presentation none provider certifiedRows
 
 end Morew.Elab.QuadConic

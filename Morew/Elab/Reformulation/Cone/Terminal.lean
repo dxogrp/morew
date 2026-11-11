@@ -83,12 +83,25 @@ private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactSte
       status := .terminal
     }
 
-/-- Plan the complete exact conversion and request all generated local names. -/
-def prepareTerminalConeForm (backend : Morew.Elab.Cone.Terminal.Backend)
+/-- Elaborate an objective certificate against its backend's expected type. -/
+def elaborateObjectiveCertificate (provided : Term) (expected : Expr) : TermElabM Expr :=
+  withRef provided do
+    let proof ← elabTermEnsuringType provided expected
+    synthesizeSyntheticMVarsNoPostponing
+    if (← getThe Core.State).messages.hasErrors then throwAbortTerm
+    return ← instantiateMVars proof
+
+/-- Plan the complete exact conversion and request all generated local names.
+Build the backend in the current section context before normalizing the objective. -/
+def prepareTerminalConeForm
+    (makeBackend : PresentationState → TermElabM Morew.Elab.Cone.Terminal.Backend)
     (adapter : TerminalAdapter) (artifactStem : Name) (state : ReformState) (step : Syntax) :
     CommandElabM SurfaceStepDraft := withRef step do
-  let (prepared, preparedVars) ← runTermElabM fun sectionFVars => do
+  let (prepared, preparedVars) ← runTermElabM fun sectionFVars => withoutErrToSorry do
+    let context ← instantiateLCtxMVars (← getLCtx)
+    withLCtx' context do
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
+    let backend ← makeBackend presentation
     let presentation ← Presentation.normalizeDirectPresentation backend presentation
     match ← Morew.Elab.Cone.Terminal.planWith backend presentation with
     | .error error => throwError "terminal {adapter.description} validation is uncertified: {error.reason}"

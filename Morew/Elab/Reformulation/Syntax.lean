@@ -61,11 +61,13 @@ syntax (name := conicAtStep)
 syntax (name := nlpAtStep)
   "nlp " "at " ident (" using " term)? : reformulationStep
 
-/-- Certify the complete problem and finish the reformulation script. -/
-syntax (name := conicStep) "conic" : reformulationStep
+/-- Certify the complete problem, optionally supplying its affine objective certificate,
+and finish the reformulation script. -/
+syntax (name := conicStep) "conic" (" using " term)? : reformulationStep
 
-/-- Certify a quadratic objective and affine cone constraints, then finish the script. -/
-syntax (name := quadConicStep) "qconic" : reformulationStep
+/-- Certify a quadratic objective and affine cone constraints, optionally supplying
+the objective certificate, then finish the script. -/
+syntax (name := quadConicStep) "qconic" (" using " term)? : reformulationStep
 
 /-- Certify every objective and residual as a smooth NLP and finish the script. -/
 syntax (name := nlpStep) "nlp" : reformulationStep
