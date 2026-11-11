@@ -60,17 +60,13 @@ def prepareConic (state : ReformState) (step : Syntax)
     let result : Except Morew.Elab.Expr.Error Morew.Elab.Cone.Plan.Result ←
       Morew.Elab.Cone.Finite.withPresentationFiniteInstances
         Morew.Elab.Cone.Plan.Result.replaceFVars presentation do
+        let retained := presentation.constraints.extract 0 index ++
+          presentation.constraints.extract (index + 1) presentation.constraints.size
         if let some name := declaration? then do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
         else if let some rule := rule? then do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planExplicit predicate rule (retained.map (·.predicate))
         else do
-          let retained := presentation.constraints.extract 0 index ++
-            presentation.constraints.extract (index + 1) presentation.constraints.size
           Morew.Elab.Cone.Rewrite.planUnique predicate (retained.map (·.predicate))
     match result with
     | .error error =>
