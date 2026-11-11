@@ -13,14 +13,6 @@ open Lean Lean.Meta
 
 namespace Decomposition
 
-/-- Assemble ordered conjunction proofs; empty input gives `True` and one entry retains its structure. -/
-def conjunctionProof (proofs : Array Expr) : MetaM Expr := do
-  if proofs.isEmpty then return mkConst ``True.intro
-  let mut result := proofs.back!
-  for proof in proofs.pop.toList.reverse do
-    result ← mkAppM ``And.intro #[proof, result]
-  return result
-
 /-- Project exactly the requested ordered entries, retaining any conjunction
 inside an entry. The count comes from the checked presentation or decomposition. -/
 def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
@@ -32,12 +24,6 @@ def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
     rest ← mkAppM ``And.right #[rest]
   return result.push rest
 
-private theorem emptyLeft (p : Prop) : True ∧ p ↔ p :=
-  ⟨fun h => h.2, fun h => ⟨True.intro, h⟩⟩
-
-private theorem emptyRight (p : Prop) : p ∧ True ↔ p :=
-  ⟨fun h => h.1, fun h => ⟨h, True.intro⟩⟩
-
 private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
     (p ∧ q) ∧ r ↔ p ∧ s :=
   and_assoc.trans (and_congr Iff.rfl h)
@@ -45,8 +31,8 @@ private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
 /-- Join two normalized conjunctions without losing their equivalence. -/
 partial def appendIff (left right : List Expr) : MetaM Expr := do
   match left, right with
-  | [], _ => mkAppM ``emptyLeft #[mkAndN right]
-  | _, [] => mkAppM ``emptyRight #[mkAndN left]
+  | [], _ => mkIffOfEq (mkApp (mkConst ``true_and) (mkAndN right))
+  | _, [] => mkIffOfEq (mkApp (mkConst ``and_true) (mkAndN left))
   | [_], _ => pure <| mkApp (mkConst ``Iff.rfl) (mkAndN (left ++ right))
   | p :: rest, _ =>
       mkAppM ``appendHead #[p, mkAndN rest, mkAndN right,
