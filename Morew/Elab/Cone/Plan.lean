@@ -26,16 +26,6 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
   { toResult := result.toResult.replaceFVars oldVars newVars
     certifiedRows := result.certifiedRows.map fun row => row.replaceFVars oldVars newVars }
 
-/-- Retain source indexing evidence while constructing a replacement. -/
-def withFiniteInstances (instances : List Expr) (action : MetaM Result) :
-    MetaM Result :=
-  withScopedFiniteInstances Result.replaceFVars instances action
-
-/-- Retain independent source lets while constructing a replacement. -/
-def withPredicateEvidence (point body : Expr)
-    (action : MetaM Result) : MetaM Result :=
-  withScopedEvidence Result.replaceFVars point body action
-
 /-- Reduce checked representation target fields without unfolding predicate helpers. -/
 partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Expr.reduceStructure body (preserveLets := true)
@@ -273,7 +263,8 @@ def finish (source domain : Expr) (certificate : Certificate)
     (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let target ← whnf (← certificate.targetFunction)
   let result ← Finite.withHelperFiniteInstances Result.replaceFVars #[target] do
-    let result ← withFiniteInstances (← Expr.sourceFiniteInstances target).toList do
+    let result ← withScopedFiniteInstances Result.replaceFVars
+        (← Expr.sourceFiniteInstances target).toList do
       finishCore source domain certificate retained provider
     return .ok result
   match result with
@@ -289,9 +280,10 @@ private def planDirect (sourcePredicate rule : Expr)
       let source ← instantiateMVars sourcePredicate
       if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
       let domain ← predicateDomain source
-      let result ← withFiniteInstances (← Expr.sourceFiniteInstances source).toList do
+      let result ← withScopedFiniteInstances Result.replaceFVars
+          (← Expr.sourceFiniteInstances source).toList do
         withLocalDeclD `point domain fun point =>
-          withPredicateEvidence point (mkApp source point) do
+          withScopedEvidence Result.replaceFVars point (mkApp source point) do
             let repr ← customRepr source domain rule
             finish source domain (.exact repr) #[] provider
       return .ok result
