@@ -29,19 +29,27 @@ example : shiftedSquare.affine 0 = 9 := by
   norm_num [shiftedSquare, shifted, CertifiedExpr.square, Affine.Certified.add,
     Affine.Certified.id, Affine.Certified.const, AffineMap.const]
 
+private def minimumCertificate : CertifiedMin (fun x : ℝ => (x + 3) ^ 2) where
+  toCertifiedExpr := shiftedSquare
+  curvature := CertifiedExpr.square_nonneg shifted
+
+private def maximumCertificate : CertifiedMax (fun x : ℝ => -(x + 3) ^ 2) where
+  toCertifiedExpr := shiftedSquare.neg
+  curvature := CertifiedExpr.neg_nonpos shiftedSquare (CertifiedExpr.square_nonneg shifted)
+
 private def minimumData : Data ℝ where
   sense := .minimize
-  quadratic := shiftedSquare.quadratic
-  affine := shiftedSquare.affine
-  curvature := CertifiedExpr.square_nonneg shifted
+  quadratic := minimumCertificate.quadratic
+  affine := minimumCertificate.affine
+  curvature := minimumCertificate.curvature
   rowCount := 0
   constraints := Fin.elim0
 
 private def maximumData : Data ℝ where
   sense := .maximize
-  quadratic := shiftedSquare.neg.quadratic
-  affine := shiftedSquare.neg.affine
-  curvature := CertifiedExpr.neg_nonpos shiftedSquare (CertifiedExpr.square_nonneg shifted)
+  quadratic := maximumCertificate.quadratic
+  affine := maximumCertificate.affine
+  curvature := maximumCertificate.curvature
   rowCount := 0
   constraints := Fin.elim0
 
@@ -50,6 +58,49 @@ example (x : ℝ) : minimumData.toProblem.objective x = (x + 3) ^ 2 :=
 
 example (x : ℝ) : maximumData.toProblem.objective x = -(x + 3) ^ 2 :=
   shiftedSquare.neg.correct x
+
+-- Auxiliary coordinates do not change the objective or its curvature.
+private def liftedMinimum : CertifiedMin (fun x : ℝ × ℝ => (x.1 + 3) ^ 2) :=
+  minimumCertificate.comp (LinearMap.fst ℝ ℝ ℝ)
+
+private def liftedMaximum : CertifiedMax (fun x : ℝ × ℝ => -(x.1 + 3) ^ 2) :=
+  maximumCertificate.comp (LinearMap.fst ℝ ℝ ℝ)
+
+example (x : ℝ × ℝ) :
+    liftedMinimum.quadratic x + liftedMinimum.affine x = (x.1 + 3) ^ 2 :=
+  liftedMinimum.correct x
+
+example (x : ℝ × ℝ) :
+    liftedMaximum.quadratic x + liftedMaximum.affine x = -(x.1 + 3) ^ 2 :=
+  liftedMaximum.correct x
+
+example (x : ℝ × ℝ) : 0 ≤ liftedMinimum.quadratic x := liftedMinimum.curvature x
+
+example (x : ℝ × ℝ) : liftedMaximum.quadratic x ≤ 0 := liftedMaximum.curvature x
+
+example : liftedMinimum.quadratic (0, 1) = 0 := by
+  norm_num [liftedMinimum, minimumCertificate, shiftedSquare, shifted,
+    CertifiedMin.comp, CertifiedExpr.comp, CertifiedExpr.square, Affine.Certified.add,
+    Affine.Certified.id, Affine.Certified.const]
+
+example : liftedMinimum.affine (0, 1) = 9 := by
+  norm_num [liftedMinimum, minimumCertificate, shiftedSquare, shifted,
+    CertifiedMin.comp, CertifiedExpr.comp, CertifiedExpr.square, Affine.Certified.add,
+    Affine.Certified.id, Affine.Certified.const, AffineMap.const]
+
+-- A nonconstant affine objective has zero quadratic part in either direction.
+example : (CertifiedMin.ofAffine shifted).quadratic = 0 := rfl
+
+example : (CertifiedMax.ofAffine shifted).quadratic = 0 := rfl
+
+example (x : ℝ) : (CertifiedMin.ofAffine shifted).affine x = x + 3 := shifted.correct x
+
+example (x : ℝ) : (CertifiedMax.ofAffine shifted).affine x = x + 3 := shifted.correct x
+
+-- Affine precomposition retains offsets in the coordinate map and the function.
+example (x : ℝ) : (shifted.comp shifted.map).map x = x + 6 := by
+  rw [(shifted.comp shifted.map).correct, shifted.correct]
+  ring
 
 example : ConvexOn ℝ Set.univ minimumData.toProblem.objective :=
   minimumData.objective_convexOn rfl

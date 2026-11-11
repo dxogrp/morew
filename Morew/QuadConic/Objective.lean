@@ -12,7 +12,8 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 # Certified quadratic objectives
 
 `CertifiedExpr` records a homogeneous quadratic part, an affine remainder, and equality
-with the source objective. Curvature is proved separately from this decomposition.
+with the source objective. `CertifiedMin` and `CertifiedMax` add the global curvature
+proof required by the optimization direction. Both allow a zero quadratic part.
 -/
 
 namespace Morew.QuadConic
@@ -27,6 +28,16 @@ structure CertifiedExpr (f : X → ℝ) where
   affine : X →ᵃ[ℝ] ℝ
   /-- The two parts sum to the original function at every point. -/
   correct : ∀ x, quadratic x + affine x = f x
+
+/-- An exact quadratic representation with nonnegative curvature for minimization. -/
+structure CertifiedMin (f : X → ℝ) extends CertifiedExpr f where
+  /-- The homogeneous quadratic part is nonnegative at every point. -/
+  curvature : ∀ x, 0 ≤ quadratic x
+
+/-- An exact quadratic representation with nonpositive curvature for maximization. -/
+structure CertifiedMax (f : X → ℝ) extends CertifiedExpr f where
+  /-- The homogeneous quadratic part is nonpositive at every point. -/
+  curvature : ∀ x, quadratic x ≤ 0
 
 namespace CertifiedExpr
 
@@ -49,6 +60,13 @@ def transport (a : CertifiedExpr f) (h : ∀ x, f x = g x) : CertifiedExpr g whe
   quadratic := a.quadratic
   affine := a.affine
   correct x := (a.correct x).trans (h x)
+
+/-- Precompose a quadratic representation with a linear map. -/
+def comp {Y : Type*} [AddCommGroup Y] [Module ℝ Y]
+    (a : CertifiedExpr f) (L : Y →ₗ[ℝ] X) : CertifiedExpr (fun y => f (L y)) where
+  quadratic := a.quadratic.comp L
+  affine := a.affine.comp L.toAffineMap
+  correct y := a.correct (L y)
 
 /-- Add two quadratic objectives. -/
 def add (a : CertifiedExpr f) (b : CertifiedExpr g) : CertifiedExpr (fun x => f x + g x) where
@@ -183,30 +201,30 @@ theorem fnNorm2Sq_empty_nonpos {f : X → Fin 0 → ℝ} (a : Affine.Certified f
 /-- Nonnegative quadratic parts remain nonnegative under addition. -/
 theorem add_nonneg (a : CertifiedExpr f) (b : CertifiedExpr g)
     (ha : a.Nonneg) (hb : b.Nonneg) : (add a b).Nonneg :=
-  fun x => add_nonneg (ha x) (hb x)
+  fun x => _root_.add_nonneg (ha x) (hb x)
 
 /-- Nonpositive quadratic parts remain nonpositive under addition. -/
 theorem add_nonpos (a : CertifiedExpr f) (b : CertifiedExpr g)
     (ha : a.Nonpos) (hb : b.Nonpos) : (add a b).Nonpos :=
-  fun x => add_nonpos (ha x) (hb x)
+  fun x => _root_.add_nonpos (ha x) (hb x)
 
 /-- Subtracting nonpositive curvature from nonnegative curvature preserves nonnegativity. -/
 theorem sub_nonneg (a : CertifiedExpr f) (b : CertifiedExpr g)
     (ha : a.Nonneg) (hb : b.Nonpos) : (sub a b).Nonneg :=
-  fun x => sub_nonneg.mpr ((hb x).trans (ha x))
+  fun x => _root_.sub_nonneg.mpr ((hb x).trans (ha x))
 
 /-- Subtracting nonnegative curvature from nonpositive curvature preserves nonpositivity. -/
 theorem sub_nonpos (a : CertifiedExpr f) (b : CertifiedExpr g)
     (ha : a.Nonpos) (hb : b.Nonneg) : (sub a b).Nonpos :=
-  fun x => sub_nonpos.mpr ((ha x).trans (hb x))
+  fun x => _root_.sub_nonpos.mpr ((ha x).trans (hb x))
 
 /-- Negation turns nonpositive curvature into nonnegative curvature. -/
 theorem neg_nonneg (a : CertifiedExpr f) (ha : a.Nonpos) : (neg a).Nonneg :=
-  fun x => neg_nonneg.mpr (ha x)
+  fun x => _root_.neg_nonneg.mpr (ha x)
 
 /-- Negation turns nonnegative curvature into nonpositive curvature. -/
 theorem neg_nonpos (a : CertifiedExpr f) (ha : a.Nonneg) : (neg a).Nonpos :=
-  fun x => neg_nonpos.mpr (ha x)
+  fun x => _root_.neg_nonpos.mpr (ha x)
 
 /-- A nonnegative coefficient preserves nonnegative quadratic curvature. -/
 theorem smul_nonneg_of_nonneg (c : ℝ) (a : CertifiedExpr f)
@@ -247,5 +265,39 @@ theorem sum_nonpos {ι : Type*} {f : ι → X → ℝ} (s : Finset ι)
   exact Finset.sum_nonpos fun i hi => ha i hi x
 
 end CertifiedExpr
+
+namespace CertifiedMin
+
+variable {f : X → ℝ}
+
+/-- An affine function has zero quadratic part and can be minimized. -/
+def ofAffine (a : Affine.Certified f) : CertifiedMin f where
+  toCertifiedExpr := CertifiedExpr.ofAffine a
+  curvature _ := le_rfl
+
+/-- Linear precomposition preserves a minimization certificate. -/
+def comp {Y : Type*} [AddCommGroup Y] [Module ℝ Y]
+    (a : CertifiedMin f) (L : Y →ₗ[ℝ] X) : CertifiedMin (fun y => f (L y)) where
+  toCertifiedExpr := a.toCertifiedExpr.comp L
+  curvature y := a.curvature (L y)
+
+end CertifiedMin
+
+namespace CertifiedMax
+
+variable {f : X → ℝ}
+
+/-- An affine function has zero quadratic part and can be maximized. -/
+def ofAffine (a : Affine.Certified f) : CertifiedMax f where
+  toCertifiedExpr := CertifiedExpr.ofAffine a
+  curvature _ := le_rfl
+
+/-- Linear precomposition preserves a maximization certificate. -/
+def comp {Y : Type*} [AddCommGroup Y] [Module ℝ Y]
+    (a : CertifiedMax f) (L : Y →ₗ[ℝ] X) : CertifiedMax (fun y => f (L y)) where
+  toCertifiedExpr := a.toCertifiedExpr.comp L
+  curvature y := a.curvature (L y)
+
+end CertifiedMax
 
 end Morew.QuadConic
