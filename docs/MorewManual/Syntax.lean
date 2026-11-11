@@ -182,6 +182,40 @@ where $`Q` is a homogeneous quadratic form and $`a` is affine.
 It proves that $`Q` is nonnegative for minimization or nonpositive for maximization
 on the entire decision space, using parameter hypotheses.
 
+When automatic objective recognition needs additional evidence, supply a
+certificate with `conic using cert` or `qconic using cert`:
+
+:::table +header
+*
+  * Command and direction
+  * Certificate type
+*
+  * `conic using cert`, either direction
+  * `Affine.Certified f`
+*
+  * `qconic using cert`, minimization
+  * `QuadConic.CertifiedMin f`
+*
+  * `qconic using cert`, maximization
+  * `QuadConic.CertifiedMax f`
+:::
+
+Here $`f` is the current objective, including its constant term. An affine
+certificate contains a map and a proof that it equals $`f`. A quadratic
+certificate contains $`Q`, $`a`, a proof that $`Q+a=f`, and the required global
+curvature proof. Both quadratic certificate types allow $`Q=0`; supply the
+type matching the declared direction. The sign condition applies to $`Q`,
+not to the value of $`f`.
+
+`QuadConic.CertifiedExpr f` records the quadratic decomposition without a
+curvature requirement. Its constructions can be used to build a `CertifiedMin`
+or `CertifiedMax`. Automatic recognition also establishes the decomposition
+and curvature before the completed certificate is checked.
+
+The supplied certificate is checked against the current decision space and
+objective. Constraint conversion proceeds automatically and transports the
+certificate when it introduces auxiliary variables.
+
 `qconic` uses the same constraint conversions as `conic`. To select a rule,
 use `conic at label using rule` before the final `qconic` command.
 

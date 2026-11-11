@@ -1,4 +1,5 @@
 import Examples.Advanced.CustomRules
+import Examples.Advanced.ObjectiveCertificates
 import Examples.Advanced.Restrict
 import Examples.Advanced.Schur
 import Examples.Applications.Calibration
