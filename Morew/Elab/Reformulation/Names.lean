@@ -13,13 +13,9 @@ open Lean Lean.Meta
 
 /-! ## Visible names -/
 
-/-- Visible name with macro scopes removed and namespace components retained. -/
-def visibleName (name : Name) : Name :=
-  name.eraseMacroScopes
-
 /-- Whether two names have the same user-visible spelling. -/
 def sameVisibleName (left right : Name) : Bool :=
-  visibleName left == visibleName right
+  left.eraseMacroScopes == right.eraseMacroScopes
 
 /-- Separate namespaces for decision binders and constraint labels. -/
 inductive NameNamespace where
@@ -60,10 +56,6 @@ structure NameRequest where
   /-- Syntax used to locate allocation diagnostics. -/
   ref : Syntax := Syntax.missing
 
-/-- The namespace in which a request is allocated. -/
-def NameRequest.namespace (request : NameRequest) : NameNamespace :=
-  request.kind.namespace
-
 /-- Active binder and constraint-label names in separate namespaces. -/
 structure NameInventory where
   /-- Occupied decision-binder names. -/
@@ -95,7 +87,7 @@ def NameInventory.insert (inventory : NameInventory)
   if inventory.contains ns name then
     inventory
   else
-    let name := visibleName name
+    let name := name.eraseMacroScopes
     match ns with
     | .decisionBinder => { inventory with
         decisionBinders := inventory.decisionBinders.push name }
@@ -134,17 +126,17 @@ def NamePreflightError.message : NamePreflightError → MessageData
   | .collision request occupied =>
       match request.kind with
       | .fixedPublicDefault =>
-          m!"default constraint label `{visibleName occupied}` is already in use; choose an explicit label with `as`"
+          m!"default constraint label `{occupied.eraseMacroScopes}` is already in use; choose an explicit label with `as`"
       | .explicitDecisionBinder | .inferredDecisionBinder =>
-          m!"optimization variable `{visibleName occupied}` already exists"
+          m!"optimization variable `{occupied.eraseMacroScopes}` already exists"
       | .explicitConstraintLabel =>
-          m!"constraint label `{visibleName occupied}` already exists"
+          m!"constraint label `{occupied.eraseMacroScopes}` already exists"
       | .generatedBinderFamily | .generatedRowFamily =>
-          m!"internal error: generated name `{visibleName occupied}` was not freshened"
+          m!"internal error: generated name `{occupied.eraseMacroScopes}` was not freshened"
 
 /-- Use the qualified stem, then suffixes `_1`, `_2`, and so on. -/
 def generatedCandidate (stem : Name) (index : Nat) : Name :=
-  let stem := visibleName stem
+  let stem := stem.eraseMacroScopes
   if index == 0 then stem else stem.appendIndexAfter index
 
 private partial def firstAvailableGeneratedName (inventory : NameInventory)
@@ -169,9 +161,9 @@ def preflightNameRequests (active : NameInventory)
   let mut allocated : Array NameAssignment := #[]
   for request in requests do
     unless request.kind.isGenerated do
-      if reserved.contains request.namespace request.requested then
+      if reserved.contains request.kind.namespace request.requested then
         throw (.collision request request.requested)
-      reserved := reserved.insert request.namespace request.requested
+      reserved := reserved.insert request.kind.namespace request.requested
       allocated := allocated.push {
         requestId := request.id
         name := request.requested
@@ -179,8 +171,8 @@ def preflightNameRequests (active : NameInventory)
 
   for request in requests do
     if request.kind.isGenerated then
-      let name := firstAvailableGeneratedName reserved request.namespace request.requested
-      reserved := reserved.insert request.namespace name
+      let name := firstAvailableGeneratedName reserved request.kind.namespace request.requested
+      reserved := reserved.insert request.kind.namespace name
       allocated := allocated.push { requestId := request.id, name }
 
   let mut result := #[]
@@ -212,7 +204,7 @@ def preflightDeclarationNames (env : Environment)
     Except DeclarationPreflightError Unit := do
   let mut reserved : Array Name := #[]
   for request in requests do
-    let visible := visibleName request.name
+    let visible := request.name.eraseMacroScopes
     if reserved.any fun name => name == visible then
       throw (.duplicate request)
     if env.contains visible then
