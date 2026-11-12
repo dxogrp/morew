@@ -31,6 +31,10 @@ partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM
         if ← hasPlaceholders value seen then return true
   return false
 
+/-- Reject unresolved terms and placeholders through referenced local types and values. -/
+def complete (expression : Expr) : MetaM Bool := do
+  return !(← Expr.hasUnresolved expression) && !(← hasPlaceholders expression)
+
 private partial def projection? (proof goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
   let type ← Expr.reduceStructure (← inferType proof)

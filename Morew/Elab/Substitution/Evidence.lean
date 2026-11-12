@@ -12,10 +12,7 @@ independent lower margins, and bounded numerical evidence. -/
 namespace Morew.Elab.Substitution.Evidence
 
 open Lean Lean.Meta Qq
-
-private def complete (expression : Expr) : MetaM Bool := do
-  return !(← Expr.hasUnresolved expression) &&
-    !(← Morew.Elab.Evidence.hasPlaceholders expression)
+open Morew.Elab.Evidence (complete)
 
 /-- Expose bounded predicate aliases and record fields while preserving comparison and membership heads. -/
 def predicateView (type : Expr) : Nat → MetaM Expr

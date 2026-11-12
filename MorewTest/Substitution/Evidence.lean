@@ -151,4 +151,23 @@ run_cmd liftTermElabM do
       verify point unresolved (proveRange? point unresolved proof) false
       if ← hole.mvarId!.isAssigned then throwError "coverage assigned a caller metavariable"
 
+-- A placeholder in a referenced local type remains incomplete even when that type
+-- reduces to ℝ. The same type application with a complete argument is accepted.
+run_cmd liftTermElabM do
+  let typeBuilder ← elaborate (← `(fun _ : ℕ => ℝ))
+  withLocalDeclD `point q(ℝ) fun point => do
+    for synthetic in [false, true] do
+      let placeholder ← mkSorry q(ℕ) synthetic
+      withLocalDeclD `coefficient (mkApp typeBuilder placeholder) fun coefficient => do
+        let coefficient : Q(ℝ) := coefficient
+        let goal := q(0 ≤ $coefficient)
+        withLocalDeclD `sourceFeasible goal fun proof => do
+          if goal.hasSorry || goal.hasMVar then throwError "type placeholder was not hidden"
+          verify point goal (proveRange? point goal proof) false
+    withLocalDeclD `coefficient (mkApp typeBuilder (mkNatLit 2)) fun coefficient => do
+      let coefficient : Q(ℝ) := coefficient
+      let goal := q(0 ≤ $coefficient)
+      withLocalDeclD `sourceFeasible goal fun proof =>
+        verify point goal (proveRange? point goal proof) true
+
 end MorewTest.Substitution.Evidence

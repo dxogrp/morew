@@ -12,11 +12,8 @@ Duplicate search uses complete rows; tautology proofs use unconditional facts. -
 namespace Morew.Elab.Reformulation.Remove
 
 open Lean Lean.Meta
+open Morew.Elab.Evidence (complete)
 open Morew.Elab.Rewrite.Decomposition
-
-private def complete (expression : Expr) : MetaM Bool := do
-  return !(← Expr.hasUnresolved expression) &&
-    !(← Evidence.hasPlaceholders expression)
 
 private def retainedRows (presentation : PresentationState) (index : Nat) : Array Expr :=
   (presentation.constraints.extract 0 index ++
