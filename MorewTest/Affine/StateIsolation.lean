@@ -114,9 +114,7 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
             "callback-generated evidence was rejected by {repr entry}: {error.reason}"
       assertExprMVarStateUnchanged before "affine recognition"
       for expression in expressions do
-        if expression.hasMVar || expression.hasSorry then
-          throwError "recognition returned an incomplete certificate"
-        checkWithKernel expression
+        checkCompleteWithKernel expression "recognition returned an incomplete certificate"
       let names ← generated.get
       for name in names do
         unless (← getEnv).contains name do

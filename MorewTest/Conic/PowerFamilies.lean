@@ -211,8 +211,7 @@ private def checkEvidence (source : TSyntax `term) (parameters : Nat)
         unless proof?.isSome == accepted do throwError "unexpected parameter evidence for {goal}"
         if let some proof := proof? then
           unless ← isDefEq (← inferType proof) goal do throwError "parameter evidence has wrong type"
-          if proof.hasSorry || proof.hasMVar then throwError "parameter evidence is incomplete"
-          checkWithKernel proof
+          checkCompleteWithKernel proof "parameter evidence is incomplete"
         assertMVarCountersUnchanged before "parameter evidence changed caller state"
         unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
           throwError "parameter evidence changed caller state"

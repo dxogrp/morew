@@ -43,8 +43,7 @@ private def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Exp
   unless result.isSome == accepted do
     throwError "unexpected matrix domain result ({result.isSome}) for {goal}; rows: {retained}"
   if let some evidence := result then
-    if evidence.hasMVar || evidence.hasSorry then throwError "incomplete matrix domain certificate"
-    checkWithKernel evidence
+    checkCompleteWithKernel evidence "incomplete matrix domain certificate"
     unless ← isDefEq (← inferType evidence) goal do
       throwError "matrix domain certificate proves the wrong proposition"
   if ← unrelated.mvarId!.isAssigned then throwError "assigned an unrelated caller metavariable"

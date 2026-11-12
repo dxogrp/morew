@@ -38,8 +38,7 @@ private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
       unless proof.isSome == accepted do
         throwError "unexpected global symmetry result for {matrix}: {proof.isSome}"
       if let some proof := proof then
-        if proof.hasMVar || proof.hasSorry then throwError "incomplete symmetry certificate"
-        checkWithKernel proof
+        checkCompleteWithKernel proof "incomplete symmetry certificate"
         let expected ← mkForallFVars points (← mkAppM ``Matrix.IsSymm #[matrix])
         unless ← isDefEq (← inferType proof) expected do
           throwError "symmetry certificate proves the wrong statement"

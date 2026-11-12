@@ -42,8 +42,7 @@ private def requireForm (presentation : Elab.Reformulation.PresentationState)
   match ← buildForm presentation cached with
   | .error error => throwError "expected smooth-NLP form: {error.reason}"
   | .ok form =>
-    if form.hasMVar || form.hasSorry then throwError "incomplete NLP form"
-    checkWithKernel form
+    checkCompleteWithKernel form "incomplete NLP form"
     return form
 
 elab "nlp_form_for% " source:term : term => do
