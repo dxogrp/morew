@@ -23,21 +23,21 @@ open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite
 
 private def nonemptyEvidence? (point dimension : Expr) : MetaM (Option Expr) := do
-  if (← Expr.depends point dimension) || (← Morew.Elab.Rewrite.Plan.unresolved dimension) then return none
+  if (← Expr.depends point dimension) || (← Expr.hasUnresolvedStrict dimension) then return none
   let n : Q(Nat) := dimension
   let goal : Q(Prop) := q(0 < $n)
   let nonzero : Q(Prop) := q($n ≠ 0)
   for declaration in ← getLCtx do
     if declaration.isImplementationDetail then continue
     let evidence := declaration.toExpr
-    if (← Expr.depends point evidence) || (← Morew.Elab.Rewrite.Plan.unresolved evidence) then continue
+    if (← Expr.depends point evidence) || (← Expr.hasUnresolvedStrict evidence) then continue
     if ← isDefEq declaration.type goal then return some evidence
     if ← isDefEq declaration.type nonzero then
       return some (← mkAppM ``Nat.pos_of_ne_zero #[evidence])
   let saved ← saveState
   try
     let proof ← mkAppOptM ``Fin.pos' #[some dimension, none]
-    if ← Morew.Elab.Rewrite.Plan.unresolved proof then throwError "unresolved finite nonemptiness"
+    if ← Expr.hasUnresolvedStrict proof then throwError "unresolved finite nonemptiness"
     unless ← isDefEq (← inferType proof) goal do throwError "invalid dimension evidence"
     checkWithKernel proof
     return some proof
@@ -64,7 +64,7 @@ private partial def canonicalRealRange (goal : Expr) : MetaM Bool := do
 private def proveObligation (point : Expr) (retained : Array Expr)
     (evidence goal : Expr) : MetaM (Option Expr) := do
   let goal ← instantiateMVars goal
-  if ← Morew.Elab.Rewrite.Plan.unresolved goal then return none
+  if ← Expr.hasUnresolvedStrict goal then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   let reduced ← Expr.reduceStructure goal
   if reduced.isAppOf ``Matrix.IsSymm then
@@ -146,10 +146,10 @@ private def attempt (source : Expr) (retained : Array Expr)
     (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     try
-      if ← Morew.Elab.Rewrite.Plan.unresolved source then throwError "unresolved metavariables in selected predicate"
+      if ← Expr.hasUnresolvedStrict source then throwError "unresolved metavariables in selected predicate"
       let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
       for row in retained do
-        if ← Morew.Elab.Rewrite.Plan.unresolved row then throwError "unresolved metavariables in retained constraints"
+        if ← Expr.hasUnresolvedStrict row then throwError "unresolved metavariables in retained constraints"
         unless ← isDefEq (← Morew.Elab.Rewrite.Plan.predicateDomain row) domain do
           throwError "retained constraint has a different decision domain"
       let mut instances ← Expr.sourceFiniteInstances source
@@ -208,7 +208,7 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
   State.withIsolatedMVars do
     try
-      if ← Morew.Elab.Rewrite.Plan.unresolved predicate then
+      if ← Expr.hasUnresolvedStrict predicate then
         throwError "unresolved metavariables in selected predicate"
       let domain ← Morew.Elab.Rewrite.Plan.predicateDomain predicate
       let lookup ← withLocalDeclD `point domain fun point => do

@@ -278,7 +278,8 @@ private def planDirect (sourcePredicate rule : Expr)
   State.withIsolatedMVars do
     try
       let source ← instantiateMVars sourcePredicate
-      if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
+      if ← Expr.hasUnresolvedStrict source then
+        throwError "unresolved metavariables in the selected predicate"
       let domain ← predicateDomain source
       let result ← withScopedFiniteInstances Result.replaceFVars
           (← Expr.sourceFiniteInstances source).toList do

@@ -57,6 +57,22 @@ def depends (point expression : Expr) : MetaM Bool := do
 def hasUnresolved (expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression none).2
 
+/-- Detect unresolved metavariables through local types and values, requiring every
+referenced free variable to be in the local context. Keep caller metavariables unassigned. -/
+partial def hasUnresolvedStrict (expression : Expr) (seen : FVarIdSet := {}) :
+    MetaM Bool := do
+  let expression ← instantiateMVars expression
+  if expression.hasMVar then return true
+  let mut seen := seen
+  for id in (collectFVars {} expression).fvarIds do
+    unless seen.contains id do
+      seen := seen.insert id
+      let declaration ← id.getDecl
+      if ← hasUnresolvedStrict declaration.type seen then return true
+      if let some value := declaration.value? (allowNondep := true) then
+        if ← hasUnresolvedStrict value seen then return true
+  return false
+
 /-- Reduce local lets, applications, projections, and tuple matches.
 Named unfolding is limited to fields of problem definitions and single-alternative
 product matchers. `preserveLets` stops at outer lets. `opaqueProblemDependencies?`

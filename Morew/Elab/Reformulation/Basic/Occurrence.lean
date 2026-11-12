@@ -138,8 +138,8 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
       | `(boundOccurrence| ($term:term)) =>
           elabPresentationTerm term (binders ++ definitions)
       | _ => throwUnsupportedSyntax
-    if (← Morew.Elab.Rewrite.Plan.unresolved body) ||
-        (← Morew.Elab.Rewrite.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
+    if (← Morew.Elab.Expr.hasUnresolvedStrict body) ||
+        (← Morew.Elab.Expr.hasUnresolvedStrict needle) || body.hasSorry || needle.hasSorry then
       throwErrorAt selector "occurrence selection contains unresolved metavariables"
     if (← isType needle) || (← isProof needle) then
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"

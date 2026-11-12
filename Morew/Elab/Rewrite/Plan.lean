@@ -91,22 +91,6 @@ partial def withScopedEvidence {α : Type}
       return replace result #[binding] #[value]
   else action
 
--- Keep caller metavariables in local declarations unassigned.
-/-- Detect unresolved expressions, including evidence hidden in local declarations. -/
-partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
-    MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasMVar then return true
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    unless seen.contains id do
-      seen := seen.insert id
-      let declaration ← id.getDecl
-      if ← unresolved declaration.type seen then return true
-      if let some value := declaration.value? (allowNondep := true) then
-        if ← unresolved value seen then return true
-  return false
-
 /-- Read the decision domain of a fully elaborated predicate. -/
 def predicateDomain (predicate : Expr) : MetaM Expr := do
   let type ← whnf (← inferType predicate)
@@ -124,7 +108,7 @@ def checkRepr (source repr : Expr) : MetaM Expr := do
   unless ← isDefEq type.getAppArgs[1]! source do
     throwError "the supplied exact certificate does not describe the entire selected predicate"
   let repr ← instantiateMVars repr
-  if ← unresolved repr then
+  if ← Expr.hasUnresolvedStrict repr then
     throwError "the exact certificate contains unresolved metavariables; supply its input and bound maps explicitly"
   checkWithKernel repr
   return repr
@@ -138,17 +122,17 @@ def Certificate.check (certificate : Certificate) (source : Expr)
   for expression in #[source] ++ retained ++ expressions do
     if ← Evidence.hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
-  if ← unresolved source then throwError "unresolved metavariables in the selected predicate"
+  if ← Expr.hasUnresolvedStrict source then throwError "unresolved metavariables in the selected predicate"
   let domain ← predicateDomain source
   for row in retained do
-    if ← unresolved row then throwError "unresolved metavariables in retained constraints"
+    if ← Expr.hasUnresolvedStrict row then throwError "unresolved metavariables in retained constraints"
     unless ← isDefEq (← predicateDomain row) domain do
       throwError "retained constraint has a different decision domain"
   match certificate with
   | .exact repr => discard <| checkRepr source repr
   | .contextual auxiliary target sourceIffExists =>
     for expression in #[auxiliary, target, sourceIffExists] do
-      if ← unresolved expression then
+      if ← Expr.hasUnresolvedStrict expression then
         throwError "conditional exact certificate contains unresolved metavariables"
       checkWithKernel expression
     let targetType ← mkArrow domain (← mkArrow auxiliary (mkSort .zero))
@@ -169,7 +153,7 @@ def closeCertificate (source point evidence auxiliary target sourceIff : Expr) :
   let target ← instantiateMVars target
   let sourceIff ← instantiateMVars sourceIff
   for expression in #[source, auxiliary, target, sourceIff] do
-    if ← unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       throwError "exact replacement contains unresolved metavariables"
     if ← Evidence.hasPlaceholders expression then
       throwError "the exact certificate contains unresolved placeholders"
@@ -236,7 +220,8 @@ def Result.checkTargetIff (result : Result)
   let targetFunction ← result.certificate.targetFunction
   for expression in #[auxiliary, targetFunction, result.nextDomain, result.targetIff] ++
       result.auxiliary?.toArray ++ result.rowPredicates do
-    if ← unresolved expression then throwError "exact replacement contains unresolved metavariables"
+    if ← Expr.hasUnresolvedStrict expression then
+      throwError "exact replacement contains unresolved metavariables"
     if ← Evidence.hasPlaceholders expression then
       throwError "the exact replacement contains unresolved placeholders"
   let targetType ← whnf (← inferType targetFunction)

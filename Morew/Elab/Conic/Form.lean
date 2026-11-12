@@ -25,7 +25,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
     MetaM (Except Expr.Error Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
-    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       return .error {
         expression
         reason := ← addMessageContext "conic form: unresolved metavariables in typed presentation"

@@ -79,7 +79,7 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
 private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     MetaM RowResult := do
   for expression in #[row.constraint, row.pointwiseIff] do
-    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       throwError "cached row contains unresolved metavariables"
   let row ← row.mapExprM instantiateMVars
   checkWithKernel row.constraint

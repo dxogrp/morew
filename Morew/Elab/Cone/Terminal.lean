@@ -257,8 +257,8 @@ private def prepareNormalizations (domain source : Expr) (rows : Array RowResult
     let expected ← withLocalDeclD `point domain fun point =>
       mkForallFVars #[point] (mkApp2 (mkConst ``Iff)
         (mkApp original point) (mkApp conversion.predicate point))
-    if (← Morew.Elab.Rewrite.Plan.unresolved conversion.predicate) ||
-        (← Morew.Elab.Rewrite.Plan.unresolved conversion.pointwiseIff) then
+    if (← Expr.hasUnresolvedStrict conversion.predicate) ||
+        (← Expr.hasUnresolvedStrict conversion.pointwiseIff) then
       throwError "cached membership normalization contains unresolved metavariables"
     unless ← isDefEq (← inferType conversion.pointwiseIff) expected do
       throwError "cached membership normalization does not match its source predicate"
@@ -344,7 +344,7 @@ def planWith (backend : Backend) (presentation : PresentationState)
     try
       for expression in #[presentation.domainType, presentation.valueType,
           presentation.objective] ++ presentation.constraints.map (·.predicate) do
-        if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+        if ← Expr.hasUnresolvedStrict expression then
           throwError "terminal {backend.command} planning requires fully elaborated expressions"
       Finite.withPresentationFiniteInstances
         (fun result oldVars newVars => result.replaceFVars oldVars newVars) presentation do
