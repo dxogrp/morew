@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.NLP
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
+import MorewTest.ElabSupport
 
 /-!
 # Smooth helper certification across reformulation commands
@@ -120,9 +121,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let info ← Lean.getConstInfo name
     let some value := info.value? (allowOpaque := true)
       | Lean.throwError "missing smooth-helper certificate"
-    if value.hasMVar || value.hasSorry then
-      Lean.throwError "smooth helper certification emitted incomplete evidence"
-    Lean.Meta.checkWithKernel value
+    MorewTest.checkCompleteWithKernel value
+      "smooth helper certification emitted incomplete evidence"
 
 elab "assert_smooth_helper_atomic% " nested:command : command => do
   let before ← Lean.getEnv
@@ -130,10 +130,9 @@ elab "assert_smooth_helper_atomic% " nested:command : command => do
       $[certificate $_alias:ident]? := by $_steps:reformulationStep*) := nested
     | Lean.throwError "expected a reformulation command"
   let targetName := (← Lean.getCurrNamespace) ++ target.getId
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  MorewTest.elabNoNewDeclarations nested fun name =>
+    m!"failed smooth helper conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if let some name := MorewTest.newLocalDeclaration? before after then
-    Lean.throwError m!"failed smooth helper conversion leaked declaration {name}"
   if (Syntax.getProblemView? before targetName).isNone &&
       (Syntax.getProblemView? after targetName).isSome then
     Lean.throwError "failed smooth helper conversion leaked presentation metadata"
