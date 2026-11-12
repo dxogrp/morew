@@ -27,12 +27,6 @@ private def terminalNLPAdapter : TerminalAdapter :=
     (formDescription := "NLP.Form") (description := "smooth NLP")
     (formSuffix := `nlpForm) (propertySuffix := `isSmoothNLP)
 
-private def terminalNLPStem (state : ReformState) (origin : Nat) : CommandElabM String := do
-  let name := state.view.constraints[origin]!.name.eraseMacroScopes
-  let .str _ stem := name
-    | throwError "cannot derive a generated-name family from constraint `{name}`"
-  return stem
-
 private def materializeTerminalNLP (state : ReformState)
     (prepared : Morew.Elab.NLP.Terminal.Result) (preparedVars : Array Expr)
     (allocation : NameAllocation) : CommandElabM SurfaceStepResult :=
@@ -107,7 +101,7 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
     | .ok result => pure (result, sectionFVars)
   let mut nameRequests := #[]
   for i in [:prepared.auxiliaries.size] do
-    let stem ← terminalNLPStem state prepared.auxiliaries[i]!.1
+    let stem ← Rows.terminalStem state prepared.auxiliaries[i]!.1
     nameRequests := nameRequests.push {
       id := i, kind := .generatedBinderFamily
       requested := Name.mkSimple (stem ++ "_aux"), ref := step }
@@ -117,7 +111,7 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
     if prepared.replacedIndices.contains origin then
       let count := counts[origin]! + 1
       counts := counts.set! origin count
-      let stem ← terminalNLPStem state origin
+      let stem ← Rows.terminalStem state origin
       nameRequests := nameRequests.push {
         id := prepared.auxiliaries.size + i, kind := .generatedRowFamily
         requested := Name.mkSimple s!"{stem}_nlp_{count}", ref := step }

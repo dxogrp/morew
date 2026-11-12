@@ -13,12 +13,6 @@ namespace Morew.Elab.Reformulation.Cone
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
-  let name := state.view.constraints[origin]!.name.eraseMacroScopes
-  let .str _ stem := name
-    | throwError "cannot derive a generated-name family from constraint `{name}`"
-  return stem
-
 private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactStem : Name)
     (state : ReformState)
     (prepared : Morew.Elab.Cone.Terminal.Result) (preparedVars : Array Expr)
@@ -108,7 +102,7 @@ def prepareTerminalConeForm
     | .ok result => pure (result, sectionFVars)
   let mut nameRequests := #[]
   for i in [:prepared.auxiliaries.size] do
-    let stem ← terminalStem state prepared.auxiliaries[i]!.1
+    let stem ← Rows.terminalStem state prepared.auxiliaries[i]!.1
     nameRequests := nameRequests.push {
       id := i, kind := .generatedBinderFamily
       requested := Name.mkSimple (stem ++ "_aux"), ref := step }
@@ -118,7 +112,7 @@ def prepareTerminalConeForm
     if prepared.replacedIndices.contains origin then
       let count := counts[origin]! + 1
       counts := counts.set! origin count
-      let stem ← terminalStem state origin
+      let stem ← Rows.terminalStem state origin
       nameRequests := nameRequests.push {
         id := prepared.auxiliaries.size + i, kind := .generatedRowFamily
         requested := Name.mkSimple s!"{stem}_conic_{count}", ref := step }

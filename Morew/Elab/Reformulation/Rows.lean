@@ -60,6 +60,13 @@ def generatedStem (selector : TSyntax `ident) : CommandElabM String := do
     throwErrorAt selector "cannot derive a generated-name family from an empty constraint label"
   return stem
 
+/-- Decode a source row's final name component for terminal generated-name families. -/
+def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
+  let name := state.view.constraints[origin]!.name.eraseMacroScopes
+  let .str _ stem := name
+    | throwError "cannot derive a generated-name family from constraint `{name}`"
+  return stem
+
 /-- Request one optional auxiliary and ordered rows; allocation remains with the runner. -/
 def nameRequests (style : Style) (selector : TSyntax `ident)
     (hasAuxiliary : Bool) (rowCount : Nat) : CommandElabM (Array NameRequest) := do
