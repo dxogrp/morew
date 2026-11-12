@@ -26,9 +26,7 @@ private def verify (point goal : Expr) (action : MetaM (Option Expr)) (success :
   let environment ← getEnv
   let result ← action
   unless result.isSome == success do throwError "unexpected coverage result for {goal}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "coverage evidence changed caller metavariables"
+  assertMVarCountersUnchanged before "coverage evidence changed caller metavariables"
   if let some proof := result then
     checkWithKernel proof
     unless ← isDefEq (← inferType proof) goal do throwError "wrong coverage evidence type"

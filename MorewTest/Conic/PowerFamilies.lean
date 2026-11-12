@@ -148,9 +148,8 @@ private def reject (predicate : Expr) (fragment : String) : MetaM Unit := do
   let diagnostic ← error.reason.toString
   unless diagnostic.contains "power_family" && diagnostic.contains fragment do
     throwError "unexpected power-family diagnostic: {diagnostic}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter &&
-      MorewTest.sameLocalDeclarationNames environment (← getEnv) do
+  assertMVarCountersUnchanged before "rejected power family changed caller state"
+  unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "rejected power family changed caller state"
 
 run_cmd liftTermElabM do
@@ -216,9 +215,8 @@ private def checkEvidence (source : TSyntax `term) (parameters : Nat)
           unless ← isDefEq (← inferType proof) goal do throwError "parameter evidence has wrong type"
           if proof.hasSorry || proof.hasMVar then throwError "parameter evidence is incomplete"
           checkWithKernel proof
-        unless before.mvarCounter == (← getMCtx).mvarCounter &&
-            before.lmvarCounter == (← getMCtx).lmvarCounter &&
-            MorewTest.sameLocalDeclarationNames environment (← getEnv) do
+        assertMVarCountersUnchanged before "parameter evidence changed caller state"
+        unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
           throwError "parameter evidence changed caller state"
       if indexed then
         lambdaBoundedTelescope rest 1 fun indices goal => check goal (some indices[0]!)

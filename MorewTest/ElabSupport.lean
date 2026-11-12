@@ -22,12 +22,18 @@ def elaborateUnchecked (term : TSyntax `term) : TermElabM Expr := do
   synthesizeSyntheticMVarsNoPostponing
   instantiateMVars expression
 
+/-- Check expression and universe metavariable allocation counters. -/
+def assertMVarCountersUnchanged (before : MetavarContext) (failureMessage : String) : MetaM Unit := do
+  let after ← getMCtx
+  unless before.mvarCounter == after.mvarCounter && before.lmvarCounter == after.lmvarCounter do
+    throwError "{failureMessage}"
+
 /-- Check allocation counters, depth, and caller expression assignments.
 Universe assignments and other caller state require separate checks. -/
 def assertExprMVarStateUnchanged (before : MetavarContext) (context : String) : MetaM Unit := do
+  assertMVarCountersUnchanged before s!"{context}: scratch metavariable state changed"
   let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
+  unless before.depth == after.depth do
     throwError "{context}: scratch metavariable state changed"
   for (id, value) in before.eAssignment.toList do
     unless after.eAssignment.find? id == some value do

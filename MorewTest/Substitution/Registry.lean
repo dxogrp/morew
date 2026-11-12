@@ -71,9 +71,7 @@ private def matched (map feasible : TSyntax `term) (name? : Option Name := none)
     | none => Match.discover map point retained selected evidence pure
   checkWithKernel result.rule
   checkWithKernel result.rangeProof
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "successful matching leaked scratch metavariables"
+  assertMVarCountersUnchanged before "successful matching leaked scratch metavariables"
 
 private def rejected (map feasible : TSyntax `term) (fragment : String)
     (name? : Option Name := none) : TermElabM Unit :=
@@ -88,9 +86,7 @@ private def rejected (map feasible : TSyntax `term) (fragment : String)
       catch error => pure (some (← error.toMessageData.toString))
     let some error := error? | throwError "coordinate matching unexpectedly succeeded"
     unless error.contains fragment do throwError "unexpected coordinate diagnostic: {error}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "failed matching leaked scratch metavariables"
+    assertMVarCountersUnchanged before "failed matching leaked scratch metavariables"
     unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
       throwError "failed matching changed declarations"
 

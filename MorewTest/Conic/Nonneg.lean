@@ -35,9 +35,7 @@ private def check (term : TSyntax `term) (accepted : Bool) (parameters : Nat := 
       if let some coordinate := result then
         unless ← isDefEq coordinate body.getAppArgs[4]! do
           throwError "nonnegative recognition changed its coordinates"
-      unless before.mvarCounter == (← getMCtx).mvarCounter &&
-          before.lmvarCounter == (← getMCtx).lmvarCounter do
-        throwError "nonnegative recognition changed caller metavariables"
+      assertMVarCountersUnchanged before "nonnegative recognition changed caller metavariables"
       unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
         throwError "nonnegative recognition changed declarations"
 
@@ -77,9 +75,7 @@ run_cmd liftTermElabM do
         unless (← Elab.Cone.nonnegValue? points[0]! predicate).isNone do
           throwError "unresolved nonnegative membership was accepted"
         if ← hole.mvarId!.isAssigned then throwError "recognition assigned a caller metavariable"
-        unless before.mvarCounter == (← getMCtx).mvarCounter &&
-            before.lmvarCounter == (← getMCtx).lmvarCounter do
-          throwError "failed recognition changed caller metavariables"
+        assertMVarCountersUnchanged before "failed recognition changed caller metavariables"
         unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
           throwError "failed recognition changed declarations"
 

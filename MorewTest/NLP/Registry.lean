@@ -41,9 +41,7 @@ private def check (term : TSyntax `term) (rows : Nat)
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
       if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
       checkWithKernel proof
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "registered NLP planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "registered NLP planning leaked scratch metavariables"
 
 private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Expr := none) (declaration? : Option Name := none) : TermElabM Unit :=
@@ -54,9 +52,7 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
         (rule? := rule?) (declaration? := declaration?) with
       | .ok result => pure result
       | .error error => throwError "registered NLP rows failed: {error.reason}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "registered NLP planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "registered NLP planning leaked scratch metavariables"
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "registered NLP planning leaked declaration {name}"
     unless result.rowPredicates.size == expected.size do
@@ -83,9 +79,7 @@ private def reject (term : TSyntax `term) (message : String)
       | throwError "invalid registered NLP plan was accepted"
     unless (← error.reason.toString).contains message do
       throwError "wrong registered NLP diagnostic: {error.reason}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "failed registered NLP planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "failed registered NLP planning leaked scratch metavariables"
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "failed registered NLP planning leaked declaration {name}"
 

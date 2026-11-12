@@ -39,9 +39,7 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
   let source ← elaborate stx
   let before ← getMCtx
   let result ← Morew.Elab.Cone.Rewrite.planUnique source retained
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "automatic selection leaked scratch metavariables"
+  assertMVarCountersUnchanged before "automatic selection leaked scratch metavariables"
   let result ← match result with
     | .ok result => pure result
     | .error error => throwError "expected a unique exact rule: {error.reason}"

@@ -63,9 +63,7 @@ private def expect (term : TSyntax `term) (rowCount : Nat)
     let result ← match ← Rewrite.plan source retained none insertionIndex with
       | .ok result => pure result
       | .error error => throwError "expected exact NLP plan: {error.reason}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "successful planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "successful planning leaked scratch metavariables"
     unless result.rowPredicates.size == rowCount && result.auxiliary?.isSome == auxiliary do
       throwError "unexpected generated rows or auxiliary space"
     checkResult source retained insertionIndex result
@@ -84,9 +82,7 @@ private def rejected (term : TSyntax `term) (message : String)
       unless diagnostic.contains "selected predicate:" && diagnostic.contains "predicate type:" do
         throwError "unsupported rule diagnostic omitted its typed source"
     unless error.expression == source do throwError "NLP failure changed the selected source"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "failed planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "failed planning leaked scratch metavariables"
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "failed planning leaked declaration {name}"
 

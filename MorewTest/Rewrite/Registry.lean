@@ -90,9 +90,7 @@ private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Uni
       | throwError "matching unfolded an unregistered helper in {source}"
     unless failure.contains "does not match" do
       throwError "unexpected helper-opacity diagnostic: {failure}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "rejected helper matching leaked scratch metavariables"
+    assertMVarCountersUnchanged before "rejected helper matching leaked scratch metavariables"
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "rejected helper matching leaked declaration {name}"
 
@@ -215,9 +213,7 @@ private def explicitExactMatch (source rule retained : TSyntax `term)
           if expected?.isSome then
             throwError "explicit exact matching {rule} on {source}: {error.toMessageData}"
           pure none
-      unless before.mvarCounter == (← getMCtx).mvarCounter &&
-          before.lmvarCounter == (← getMCtx).lmvarCounter do
-        throwError "explicit subtype matching leaked scratch metavariables"
+      assertMVarCountersUnchanged before "explicit subtype matching leaked scratch metavariables"
       if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
         throwError "explicit subtype matching leaked declaration {name}"
       match expected?, result? with
@@ -401,9 +397,7 @@ private def graphRetry (source expected : TSyntax `term) (name : Name) : TermEla
         (kind? := some `acceptedGraphOrientation) (cache := false)
       accepted.set (some name)
       return { result with sourceIff := mkApp (mkConst name) point }
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "graph retry leaked scratch metavariables"
+    assertMVarCountersUnchanged before "graph retry leaked scratch metavariables"
     unless ← isDefEq result.target (mkApp expected point) do
       throwError "graph retry did not use the accepted reverse orientation"
     let existsTarget ← mkAppM ``Exists #[result.target]

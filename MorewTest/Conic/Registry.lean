@@ -35,9 +35,7 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
   let result ← match result with
     | .ok result => pure result
     | .error error => throwError "registered conic rule failed: {error.reason}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "registered conic planning leaked scratch metavariables"
+  assertMVarCountersUnchanged before "registered conic planning leaked scratch metavariables"
   result.toResult.check source retained
   let predicates := result.rowPredicates
   let certificates := result.certifiedRows
@@ -68,9 +66,7 @@ private def reject (term : TSyntax `term) (fragment : String)
   let .error error := result | throwError "unsupported registered conic rule was accepted"
   unless (← error.reason.toString).contains fragment do
     throwError "unexpected registered conic failure: {error.reason}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "failed registration use leaked scratch metavariables"
+  assertMVarCountersUnchanged before "failed registration use leaked scratch metavariables"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "failed registration use leaked {name}"
 

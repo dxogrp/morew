@@ -239,9 +239,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let before ← getMCtx
   let .ok _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "the state-isolation success case failed"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "successful planning leaked scratch metavariables"
+  assertMVarCountersUnchanged before "successful planning leaked scratch metavariables"
   if ← missing.mvarId!.isAssigned then throwError "successful planning assigned an unrelated hole"
 
 end

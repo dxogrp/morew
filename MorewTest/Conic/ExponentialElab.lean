@@ -346,9 +346,7 @@ run_cmd liftTermElabM do
   rejectPlan source #[mkApp retainedBuilder missing] "unresolved"
   let before ← getMCtx
   checkPlan source
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "successful planning leaked scratch metavariables"
+  assertMVarCountersUnchanged before "successful planning leaked scratch metavariables"
   if ← missing.mvarId!.isAssigned then throwError "planner assigned an unrelated hole"
 
 end MorewTest.Conic.ExponentialElab
