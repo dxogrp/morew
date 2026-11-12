@@ -39,9 +39,7 @@ private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal
   let result ← match ← Morew.Elab.NLP.Terminal.plan source with
     | .ok result => pure result
     | .error error => throwError "expected terminal NLP certification: {error.reason}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "terminal planning leaked scratch metavariables"
+  assertMVarCountersUnchanged before "terminal planning leaked scratch metavariables"
   let target ← result.presentation.canonicalProblem
   let expected ← mkAppM ``Morew.GlobalEquiv #[← source.canonicalProblem, target]
   unless ← isDefEq (← inferType result.equiv) expected do
@@ -51,8 +49,7 @@ private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal
       (← isDefEq formType.getAppArgs.back! target) do
     throwError "terminal form represents a different problem"
   for proof in #[result.form, result.equiv] do
-    if proof.hasMVar || proof.hasSorry then throwError "terminal certificate is incomplete"
-    checkWithKernel proof
+    checkCompleteWithKernel proof "terminal certificate is incomplete"
   return result
 
 private def count (result : Morew.Elab.NLP.Terminal.Result) (expected : Nat) : MetaM Unit := do
@@ -112,9 +109,7 @@ run_cmd liftTermElabM do
   let context ← getMCtx
   let .error _ ← Rows.certifyRows feasible #[source.constraints[0]!.predicate]
     | throwError "unexpected evidence before lowering the margin"
-  unless context.mvarCounter == (← getMCtx).mvarCounter &&
-      context.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "exhausted domain search leaked metavariables"
+  assertMVarCountersUnchanged context "exhausted domain search leaked metavariables"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "exhausted domain search leaked {name}"
   let result ← checked source
@@ -143,9 +138,7 @@ run_cmd liftTermElabM do
             pure true
           else throw exception
       unless propagated do throwError "domain evidence swallowed a caller resource limit"
-      unless context.mvarCounter == (← getMCtx).mvarCounter &&
-          context.lmvarCounter == (← getMCtx).lmvarCounter do
-        throwError "caller resource exhaustion leaked metavariables"
+      assertMVarCountersUnchanged context "caller resource exhaustion leaked metavariables"
       if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
         throwError "caller resource exhaustion leaked {name}"
 
@@ -191,9 +184,7 @@ private def reject (source : PresentationState) (fragment : String) : MetaM Unit
     | throwError "unsupported terminal NLP was accepted"
   unless (← error.reason.toString).contains fragment do
     throwError "unexpected terminal diagnostic: {error.reason}"
-  unless context.mvarCounter == (← getMCtx).mvarCounter &&
-      context.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "failed terminal planning leaked metavariables"
+  assertMVarCountersUnchanged context "failed terminal planning leaked metavariables"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "failed planning leaked {name}"
 

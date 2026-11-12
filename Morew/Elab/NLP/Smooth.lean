@@ -271,14 +271,10 @@ private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
 private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
-  let actualArgs := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  unless source.getAppFn == expected.getAppFn && actualArgs.size == expectedArgs.size &&
-      operands ≤ actualArgs.size do
-    reject source .invalidInstance "expected a canonical native operation"
-  for i in [:actualArgs.size - operands] do
-    unless ← isDefEq actualArgs[i]! expectedArgs[i]! do
-      reject source .invalidInstance "expected canonical real arithmetic instances"
+  match ← Expr.operationPrefixMismatch? source expected operands with
+  | none => pure ()
+  | some .shape => reject source .invalidInstance "expected a canonical native operation"
+  | some .argument => reject source .invalidInstance "expected canonical real arithmetic instances"
 
 -- Check canonical operation instances and operand domains for fixed product/vector coefficients.
 private structure PointwiseArithmetic (X : Type*) where
@@ -482,17 +478,8 @@ private def restrictDomain (point expression value : Expr) (positive : Bool)
   let proofs ← proofs.mapM fun proof => restrictProof point proof domain subset
   return ({ domain, isOpen, included }, proofs, holds)
 
--- Expose projection-operand bindings while retaining independent evidence lets.
-private def hoistProjectionLets : Expr → Expr
-  | .proj name index value =>
-    match hoistProjectionLets value with
-    | .letE binding type value body nondep =>
-      .letE binding type value (.proj name index body) nondep
-    | value => .proj name index value
-  | expression => expression
-
 private partial def certifyBody (point expression : Expr) : CertifyM Certificate := do
-  let expression := hoistProjectionLets (← reduceStructure point expression)
+  let expression := Expr.hoistProjectionLets (← reduceStructure point expression)
   if let .letE name type value body nondep := expression then
     if (← Expr.depends point type) || (← Expr.depends point value) then
       chargeSubstitution (.lam name type body .default) #[value]
@@ -523,6 +510,13 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let independent := !(← Expr.depends point expression)
   if independent && !inferDomains then
     return ← constant point expression (← univInfo point)
+  let certifyExpanded (step : Expansion.Step) : CertifyM Certificate := do
+    let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
+      unless ← Domain.Evidence.complete step.expression do
+        reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
+      certifyBody point step.expression
+    rememberHelperModel point step.helper result
+    return result
   -- Certify only selected fields of helper-produced tuples and functions.
   if !independent && Expansion.enabled (← read).expansion then
     let head := expression.getAppFn
@@ -532,12 +526,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if structural then
       if let some step ← expansionAction <| unfoldValueHead?
           (← read).expansion expression (← read).helpers.size then
-        let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
-          unless ← Domain.Evidence.complete step.expression do
-            reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
-          certifyBody point step.expression
-        rememberHelperModel point step.helper result
-        return result
+        return ← certifyExpanded step
   if expression == point then
     let info ← univInfo point
     return { info with
@@ -777,12 +766,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   if !independent && Expansion.enabled (← read).expansion then
     if let some step ← expansionAction <| unfoldValueHead?
         (← read).expansion expression (← read).helpers.size then
-      let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
-        unless ← Domain.Evidence.complete step.expression do
-          reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
-        certifyBody point step.expression
-      rememberHelperModel point step.helper result
-      return result
+      return ← certifyExpanded step
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← supportedSpace vectorType) then

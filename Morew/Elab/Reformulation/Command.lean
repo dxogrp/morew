@@ -199,16 +199,6 @@ private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
         typed.canonical state.normalizationLemmas
     pure (type, carrier)
 
-private theorem problemEquality {X : Type u} {V : Type v} (p q : Morew.Problem X V)
-    (objective : ∀ x, p.objective x = q.objective x)
-    (feasible : ∀ x, p.feasible x ↔ q.feasible x) : p = q := by
-  cases p with
-  | mk po pf =>
-    cases q with
-    | mk qo qf =>
-      exact congrArg₂ Morew.Problem.mk (funext objective)
-        (funext fun x => propext (feasible x))
-
 private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
     (appliedTarget : TSyntax `term) (artifact : CheckedTerminalArtifact) :
     CommandElabM Unit := do
@@ -229,7 +219,7 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
                 "cannot inspect the emitted {artifact.adapter.description} target"
           let normalization ← checkedPointwiseNormalization state.sourceName
             represented targetBody state.normalizationLemmas
-          mkAppM ``problemEquality #[represented, target,
+          mkAppM ``Morew.Problem.ext #[represented, target,
             normalization.objectiveEquality, normalization.feasibleIff]
       let form ← artifact.adapter.retarget artifact.form target equality
       discard <| withRef artifact.ref <|

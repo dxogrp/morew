@@ -57,6 +57,52 @@ def depends (point expression : Expr) : MetaM Bool := do
 def hasUnresolved (expression : Expr) : MetaM Bool := do
   return (← inspectLocals expression none).2
 
+/-- Detect unresolved metavariables through local types and values, requiring every
+referenced free variable to be in the local context. Keep caller metavariables unassigned. -/
+partial def hasUnresolvedStrict (expression : Expr) (seen : FVarIdSet := {}) :
+    MetaM Bool := do
+  let expression ← instantiateMVars expression
+  if expression.hasMVar then return true
+  let mut seen := seen
+  for id in (collectFVars {} expression).fvarIds do
+    unless seen.contains id do
+      seen := seen.insert id
+      let declaration ← id.getDecl
+      if ← hasUnresolvedStrict declaration.type seen then return true
+      if let some value := declaration.value? (allowNondep := true) then
+        if ← hasUnresolvedStrict value seen then return true
+  return false
+
+/-- A mismatch before the mathematical operands of an operation. -/
+inductive OperationPrefixMismatch where
+  /-- Different function heads or arities, or too many requested operands. -/
+  | shape
+  /-- A type or instance argument is not definitionally equal. -/
+  | argument
+
+/-- Compare operation heads, arities, and arguments preceding the operands.
+Leave structural reduction and metadata handling to the caller. Compare prefix
+arguments in order and stop at the first mismatch. -/
+def operationPrefixMismatch? (source expected : Expr) (operandCount : Nat) :
+    MetaM (Option OperationPrefixMismatch) := do
+  let sourceArgs := source.getAppArgs
+  let expectedArgs := expected.getAppArgs
+  unless source.getAppFn == expected.getAppFn &&
+      sourceArgs.size == expectedArgs.size && operandCount ≤ sourceArgs.size do
+    return some .shape
+  for index in [:sourceArgs.size - operandCount] do
+    unless ← isDefEq sourceArgs[index]! expectedArgs[index]! do return some .argument
+  return none
+
+/-- Move projection-operand lets outward while retaining their evidence scope. -/
+def hoistProjectionLets : Expr → Expr
+  | .proj name index value =>
+    match hoistProjectionLets value with
+    | .letE binding type value body nondep =>
+      .letE binding type value (.proj name index body) nondep
+    | value => .proj name index value
+  | expression => expression
+
 /-- Reduce local lets, applications, projections, and tuple matches.
 Named unfolding is limited to fields of problem definitions and single-alternative
 product matchers. `preserveLets` stops at outer lets. `opaqueProblemDependencies?`
@@ -209,5 +255,9 @@ def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
     | .mdata _ value => pending := value :: pending
     | _ => pure ()
   return instances
+
+/-- Collect finite-index evidence from sources in order, keeping its first occurrence. -/
+def collectSourceFiniteInstances (sources : Array Expr) : MetaM (List Expr) := do
+  return (← sources.flatMapM sourceFiniteInstances).toList.eraseDups
 
 end Morew.Elab.Expr

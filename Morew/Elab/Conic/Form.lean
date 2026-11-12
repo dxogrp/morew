@@ -25,7 +25,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
     MetaM (Except Expr.Error Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
-    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       return .error {
         expression
         reason := ← addMessageContext "conic form: unresolved metavariables in typed presentation"
@@ -49,7 +49,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
     let data ← mkAppM ``Morew.Conic.Data.mk
       #[sense, objective.map, mkNatLit rows.count, rows.constraints]
     let represented ← mkAppM ``Morew.Conic.Data.toProblem #[data]
-    let equality ← mkAppM ``problemEq
+    let equality ← mkAppM ``Morew.Problem.ext
       #[represented, canonical, objective.pointwiseEquality, rows.feasibleIff]
     let form ← instantiateMVars (← mkAppM ``Morew.Conic.Form.mk #[data, equality])
     let expected ← mkAppM ``Morew.Conic.Form #[canonical]

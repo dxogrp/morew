@@ -271,6 +271,21 @@ private def replaceNormReplay (replays : Array (Lean.Syntax × Lean.Syntax))
   | some (_, replay) => replay
   | none => stx
 
+private def mapProblemViewTerms (view : Morew.Syntax.ProblemView)
+    (transform : Lean.Syntax → TermElabM Lean.Syntax) :
+    TermElabM Morew.Syntax.ProblemView := do
+  pure { view with
+    binders := ← view.binders.mapM fun binder => do
+      pure { binder with typeSyntax := ← transform binder.typeSyntax }
+    definitions := ← view.definitions.mapM fun definition => do
+      pure { definition with
+        typeSyntax? := ← definition.typeSyntax?.mapM transform
+        inferredTypeSyntax? := ← definition.inferredTypeSyntax?.mapM transform
+        value := ← transform definition.value }
+    objective := ← transform view.objective
+    constraints := ← view.constraints.mapM fun constraint => do
+      pure { constraint with proposition := ← transform constraint.proposition } }
+
 /-- Infer one shared local-definition environment before copying the checked
 let spine into the objective and feasibility functions. -/
 private def elaborateModelBody (view : Morew.Syntax.ProblemView)
@@ -380,39 +395,10 @@ private def elaborateProblem (_stx : Lean.Syntax) (bindersStx : Array Lean.Synta
       normReplays ← collectNormReplays fields (tree.substitute infoState.assignment) normReplays
     let replayTerm (stx : Lean.Syntax) :=
       Morew.Syntax.preResolveTerm (replaceNormReplay normReplays stx)
-    let replay : Morew.Syntax.ProblemView := {
-      view with
-      binders := ← binders.mapM fun binder => do
-        pure { binder with typeSyntax := ← replayTerm binder.typeSyntax }
-      definitions := ← definitions.mapM fun definition => do
-        pure { definition with
-          typeSyntax? := ← definition.typeSyntax?.mapM replayTerm
-          inferredTypeSyntax? := ← definition.inferredTypeSyntax?.mapM replayTerm
-          value := ← replayTerm definition.value }
-      objective := ← replayTerm objective.raw
-      constraints := ← constraints.mapM fun constraint => do
-        pure { constraint with proposition := ← replayTerm constraint.proposition }
-    }
-    let binders ← binders.mapM fun binder => do
-      pure { binder with typeSyntax := ← Morew.Syntax.preResolveTerm binder.typeSyntax }
-    let objective ← Morew.Syntax.preResolveTerm objective.raw
-    let definitions ← definitions.mapM fun definition => do
-      pure { definition with
-        typeSyntax? := ← definition.typeSyntax?.mapM Morew.Syntax.preResolveTerm
-        inferredTypeSyntax? := ← definition.inferredTypeSyntax?.mapM Morew.Syntax.preResolveTerm
-        value := ← Morew.Syntax.preResolveTerm definition.value }
-    let constraints ← constraints.mapM fun constraint => do
-      pure {
-        constraint with
-        proposition := ← Morew.Syntax.preResolveTerm constraint.proposition
-      }
-    Morew.Syntax.registerProblemView declName replay (some {
-      sense
-      binders
-      definitions
-      objective
-      constraints
-    })
+    let view := { view with definitions }
+    let replay ← mapProblemViewTerms view replayTerm
+    let display ← mapProblemViewTerms view Morew.Syntax.preResolveTerm
+    Morew.Syntax.registerProblemView declName replay (some display)
   pure result
 
 /-- Elaborate an unconstrained minimization problem term. -/

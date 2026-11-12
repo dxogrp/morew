@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.NegationNLP
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Imported signed NLP bounds and graph certificates. -/
 
@@ -56,12 +57,8 @@ run_cmd do
       (``MorewTest.Reformulation.NegationNLP.Graph.target, `graphCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported signed NLP declaration lost its presentation"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "signed NLP replay contains incomplete evidence"
+    MorewTest.Reformulation.replayView view copied
+      "signed NLP replay contains incomplete evidence"
 
 example : logCopy = logSource := rfl
 example : boundCopy = absoluteBound := rfl

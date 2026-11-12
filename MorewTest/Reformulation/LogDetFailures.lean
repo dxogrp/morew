@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
+import MorewTest.ElabSupport
 
 /-! Log-det rewriting preserves domains, instance semantics, and atomic failure. -/
 
@@ -15,11 +16,8 @@ open Morew Morew.Conic
 
 noncomputable section
 
-elab "assert_logdet_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed log-det rewrite leaked declaration {name}"
+elab "assert_logdet_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed log-det rewrite leaked declaration {name}"
 
 def missingDomain :=
   problem (X : SymmetricMatrix 2) (t : ℝ)
@@ -327,19 +325,14 @@ assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedNative
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command in
 run_cmd liftTermElabM do
-  let term ← elabTerm (← `(fun p : SymmetricMatrix 2 × ℝ =>
-    p.2 ≤ Fn.logDet p.1.toMatrix)) none
-  synthesizeSyntheticMVarsNoPostponing
-  let source ← instantiateMVars term
+  let source ← elaborateUnchecked (← `(fun p : SymmetricMatrix 2 × ℝ =>
+    p.2 ≤ Fn.logDet p.1.toMatrix))
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let environment ← getEnv
   let .error _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "log-det planning accepted a matrix without a domain"
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "failed log-det planning leaked scratch metavariables"
+  assertMVarAllocationStateUnchanged before "failed log-det planning leaked scratch metavariables"
   if ← sentinel.mvarId!.isAssigned then
     throwError "failed log-det planning assigned a caller metavariable"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then

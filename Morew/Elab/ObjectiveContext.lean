@@ -73,13 +73,7 @@ private def same (left right : Expr) : MetaM Bool :=
 private def canonicalPrefix (source expected : Expr) (operands : Nat) : MetaM Bool := do
   let source := source.consumeMData
   let expected := expected.consumeMData
-  unless source.getAppFn == expected.getAppFn &&
-      source.getAppNumArgs == expected.getAppNumArgs do return false
-  let sourceArgs := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  for i in [:sourceArgs.size - operands] do
-    unless ← isDefEq sourceArgs[i]! expectedArgs[i]! do return false
-  return true
+  return (← Expr.operationPrefixMismatch? source expected operands).isNone
 
 private inductive Arithmetic where
   | add | sub | neg | mul | exp

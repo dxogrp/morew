@@ -110,15 +110,13 @@ noncomputable def divConst {f : X → ℝ} (a : Certified f) (c : ℝ) (_h : c �
 
 /-- The zeroth power of any real-valued function is constant. -/
 def powZeroSource (f : X → ℝ) :
-    Certified (fun x => f x ^ (0 : ℕ)) where
-  map := AffineMap.const ℝ X 1
-  correct x := (pow_zero (f x)).symm
+    Certified (fun x => f x ^ (0 : ℕ)) :=
+  (const X (1 : ℝ)).transport fun x => (pow_zero (f x)).symm
 
 /-- The first power preserves a scalar affine function. -/
 def powOne {f : X → ℝ} (a : Certified f) :
-    Certified (fun x => f x ^ (1 : ℕ)) where
-  map := a.map
-  correct x := (a.correct x).trans (pow_one (f x)).symm
+    Certified (fun x => f x ^ (1 : ℕ)) :=
+  a.transport fun x => (pow_one (f x)).symm
 
 /-- The real zeroth power of any real-valued function is constant. -/
 def rpowZeroSource (f : X → ℝ) :

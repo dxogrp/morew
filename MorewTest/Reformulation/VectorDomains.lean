@@ -197,16 +197,7 @@ private def checkPlan (source : Expr) (retained : Array Expr) (accepted : Bool)
   let environment ← getEnv
   let result ← Morew.Elab.Cone.Rewrite.planDeclaration source
     ``positiveSumEpigraph retained provider
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "vector domain planning changed caller metavariable state"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "vector domain planning changed an existing assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "vector domain planning assigned a caller hole"
+  assertExprMVarStateUnchanged before "vector domain planning"
   if ← unresolved.mvarId!.isAssigned then throwError "vector domain planning assigned a caller hole"
   unless (← instantiateMVars assigned) == mkNatLit 7 do
     throwError "vector domain planning discarded a caller assignment"

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Proof detail selected when a registered problem is printed
@@ -67,12 +68,8 @@ run_cmd do
     let views := if original == ``registeredDetailed then
       #[(exact, exactName), (display, displayName)] else #[(exact, exactName)]
     for (view, name) in views do
-      let term ← Lean.Elab.liftMacroM view.toTermSyntax
-      elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-      let declaration ← getConstInfo ((← getCurrNamespace) ++ name)
-      if declaration.type.hasMVar || declaration.type.hasSorry ||
-          declaration.value!.hasMVar || declaration.value!.hasSorry then
-        throwError "proof-detail printing left an incomplete replay declaration"
+      replayView view name
+        "proof-detail printing left an incomplete replay declaration"
 
 example : exactReplay = target := rfl
 example : detailedExactReplay = registeredDetailed := rfl

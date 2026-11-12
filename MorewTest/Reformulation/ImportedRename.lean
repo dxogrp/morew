@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.RenameBackends
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Renamed labels and exact presentation reconstruction survive module imports -/
 
@@ -95,12 +96,8 @@ run_cmd do
       (``hygienic, `hygienicCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported rename lost presentation metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "renamed presentation replay contains incomplete evidence"
+    replayView view copied
+      "renamed presentation replay contains incomplete evidence"
 
 example : orderedCopy = ordered := rfl
 example : groupedCopy = grouped := rfl

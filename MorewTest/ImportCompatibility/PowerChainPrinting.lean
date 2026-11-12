@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.ImportCompatibility.PowerChainPrinting.Defined
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Imported mathematical chains after specialization and continuation
@@ -63,12 +64,8 @@ run_cmd do
       (``specialized, `specializedReplay), (``ready, `readyReplay)] do
     let some view := Syntax.getProblemView? (← getEnv) original
       | throwError "mathematical printing lost imported exact replay"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent copied) := $term))
-    let declaration ← getConstInfo ((← getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      throwError "imported mathematical chain replay is incomplete"
+    MorewTest.Reformulation.replayView view copied
+      "imported mathematical chain replay is incomplete"
 
 example : sourceReplay n = Defined.source n := rfl
 example : importedReplay n hn = Defined.lowered n hn := rfl

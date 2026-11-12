@@ -92,14 +92,6 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       return .proj name index value
   | other => return other
 
-private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
-  | 0 => pure #[]
-  | 1 => pure #[point]
-  | n + 2 => do
-      let first ← mkAppM ``Prod.fst #[point]
-      let last ← mkAppM ``Prod.snd #[point]
-      return (← pointComponents first (n + 1)).push last
-
 private def closeBody (domain : Expr) (binders definitions : Array Expr)
     (body : Expr) : MetaM Expr := do
   let body ← mkLetFVars definitions body (usedLetOnly := false)
@@ -138,8 +130,8 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
       | `(boundOccurrence| ($term:term)) =>
           elabPresentationTerm term (binders ++ definitions)
       | _ => throwUnsupportedSyntax
-    if (← Morew.Elab.Rewrite.Plan.unresolved body) ||
-        (← Morew.Elab.Rewrite.Plan.unresolved needle) || body.hasSorry || needle.hasSorry then
+    if (← Morew.Elab.Expr.hasUnresolvedStrict body) ||
+        (← Morew.Elab.Expr.hasUnresolvedStrict needle) || body.hasSorry || needle.hasSorry then
       throwErrorAt selector "occurrence selection contains unresolved metavariables"
     if (← isType needle) || (← isProof needle) then
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"
@@ -253,8 +245,7 @@ private def proveRearrangement (type : Expr) : TermElabM Expr := do
 private def makeDecomposition (presentation : PresentationState) (index : Nat)
     (sourceProblem : Expr) : TermElabM Expr := do
   let rows := presentation.constraints.map (·.predicate)
-  let remainder ← mkFeasibleFunction presentation.domainType
-    (rows.extract 0 index ++ rows.extract (index + 1) rows.size)
+  let remainder ← mkFeasibleFunction presentation.domainType (splice rows index #[])
   let source := rows[index]!
   let feasible ← mkAppM ``Morew.Problem.feasible #[sourceProblem]
   let proofType ← withLocalDeclD `point presentation.domainType fun point => do
@@ -343,13 +334,8 @@ private def materializeOccurrenceBound (state : ReformState)
     let equiv ← mkAppM ``Morew.GlobalEquiv.trans
       #[typed.normalization.equiv, equiv]
     let primitive ← state.runner.liftEquiv equiv
-    let primitive ← instantiateMVars primitive
-    checkWithKernel primitive
     -- Store the certificate as a constant to avoid repeated proof elaboration.
-    let primitiveName ← mkAuxDeclName (kind := `_occurrenceCertificate)
-    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
-      (compile := false)
-    modifyEnv (addNoncomputable · primitiveName)
+    let primitive ← Rows.storeCertificate `_occurrenceCertificate primitive []
     let semantic ← exactExpressionSyntax target
     return {
       view := selected.view

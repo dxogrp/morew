@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-!
 # Terminal conic failure and declaration atomicity
@@ -26,10 +26,9 @@ elab "assert_terminal_atomic% " nested:command : command => do
       $[certificate $_alias:ident]? := by $_steps:reformulationStep*) := nested
     | Lean.throwError "expected a reformulation command"
   let targetName := (← Lean.getCurrNamespace) ++ target.getId
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
+  MorewTest.elabNoNewDeclarations nested fun name =>
+    m!"failed terminal conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if let some name := MorewTest.newLocalDeclaration? before after then
-    Lean.throwError m!"failed terminal conversion leaked declaration {name}"
   if (Syntax.getProblemView? before targetName).isNone &&
       (Syntax.getProblemView? after targetName).isSome then
     Lean.throwError "failed terminal conversion leaked presentation metadata"

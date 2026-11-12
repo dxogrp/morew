@@ -160,14 +160,14 @@ independent hypotheses and bounded structural or literal proofs. -/
 def prove? (point matrix : Expr) : MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     try
-      if (← Expr.hasUnresolved matrix) || (← Evidence.hasPlaceholders matrix) then
+      unless ← Evidence.complete matrix do
         return .error ()
       let mut hypotheses := #[]
       for declaration in ← getLCtx do
         if declaration.isImplementationDetail then continue
         let hypothesis := declaration.toExpr
         if (← isProp declaration.type) && !(← Expr.depends point hypothesis) &&
-            !(← Expr.hasUnresolved hypothesis) && !(← Evidence.hasPlaceholders hypothesis) then
+            (← Evidence.complete hypothesis) then
           hypotheses := hypotheses.push hypothesis
           let (consequences, _) ← conjunctionConsequences hypothesis 128
           hypotheses := hypotheses ++ consequences

@@ -61,6 +61,7 @@ import Morew.Elab.NLP.Rules
 import Morew.Elab.NLP.Smooth
 import Morew.Elab.NLP.Space
 import Morew.Elab.NLP.Terminal
+import Morew.Elab.Objective
 import Morew.Elab.ObjectiveContext
 import Morew.Elab.QuadConic.Expansion
 import Morew.Elab.QuadConic.Form

@@ -314,17 +314,8 @@ private def intersect (left right : RowCertificate) :
   return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
--- Keep independent evidence lets scoped to their predicates and finite-family indices.
-private def hoistProjectionLets : Expr → Expr
-  | .proj name index value =>
-    match hoistProjectionLets value with
-    | .letE binding type value body nondep =>
-      .letE binding type value (.proj name index body) nondep
-    | value => .proj name index value
-  | expression => expression
-
 private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
-  let body := hoistProjectionLets (← Expr.reduceStructure body (preserveLets := true)
+  let body := Expr.hoistProjectionLets (← Expr.reduceStructure body (preserveLets := true)
     (opaqueProblemDependencies? := some point))
   if let .letE name type value rest nondep := body then
     if (← Expr.depends point type) || (← Expr.depends point value) then

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-! # Finite power-cone representation boundaries and atomic failures -/
 
@@ -15,11 +15,8 @@ open Morew
 open scoped ENNReal
 noncomputable section
 
-elab "assert_power_family_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed finite power rewrite leaked declaration {name}"
+elab "assert_power_family_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed finite power rewrite leaked declaration {name}"
 
 def normSource (p : ℝ≥0∞) :=
   problem (x : Fin 2 → ℝ) (t : ℝ)

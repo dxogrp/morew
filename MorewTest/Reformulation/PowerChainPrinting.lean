@@ -7,6 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PowerPrinting
 import MorewTest.Reformulation.PowerFamilies
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Mathematical chain output and detailed inspection
@@ -137,12 +138,8 @@ run_cmd do
       (Syntax.getProblemDisplayView?, `displayReplay)] do
     let some view := getter (← getEnv) ``registeredDetailed
       | throwError "missing detailed chain replay view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-    let declaration ← getConstInfo ((← getCurrNamespace) ++ name)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      throwError "chain replay contains unresolved terms or placeholders"
+    replayView view name
+      "chain replay contains unresolved terms or placeholders"
 
 example : exactReplay = registeredDetailed := rfl
 example : displayReplay = registeredDetailed := rfl

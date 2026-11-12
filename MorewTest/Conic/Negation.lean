@@ -34,10 +34,7 @@ private def reject (term : TSyntax `term) (rule? : Option Name := none) :
     | some name => Morew.Elab.Cone.Rewrite.planDeclaration source name
     | none => Morew.Elab.Cone.Rewrite.planUnique source
   let .error _ := outcome | throwError "expected negated comparison rejection"
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "negation matching leaked scratch metavariables"
+  assertMVarAllocationStateUnchanged before "negation matching leaked scratch metavariables"
   if ← sentinel.mvarId!.isAssigned then
     throwError "negation matching assigned a caller metavariable"
   unless (← instantiateMVars assigned) == mkNatLit 7 do
@@ -123,10 +120,7 @@ run_cmd liftTermElabM do
         if (← generated.get).size == 1 then
           throwError "reject this view during target certification"
         pure { matched with sourceIff := mkApp (mkConst name) point })
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "comparison retry leaked scratch metavariables"
+    assertMVarAllocationStateUnchanged before "comparison retry leaked scratch metavariables"
     if ← sentinel.mvarId!.isAssigned then
       throwError "comparison retry changed a caller metavariable"
     let names ← generated.get

@@ -83,15 +83,11 @@ private def certifiedFunction (certificate : Expr) : MetaM Expr := do
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
-  let sourceArgs := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  unless source.getAppFn == expected.getAppFn &&
-      sourceArgs.size == expectedArgs.size && operandCount ≤ sourceArgs.size do
-    reject source "unsupported operation or arithmetic instance"
-  let prefixSize := sourceArgs.size - operandCount
-  for i in [:prefixSize] do
-    unless ← isDefEq sourceArgs[i]! expectedArgs[i]! do
-      reject source "unsupported arithmetic instance; expected the canonical real operation"
+  match ← Expr.operationPrefixMismatch? source expected operandCount with
+  | none => pure ()
+  | some .shape => reject source "unsupported operation or arithmetic instance"
+  | some .argument =>
+    reject source "unsupported arithmetic instance; expected the canonical real operation"
 
 private def finish (point source certificate : Expr)
     (operandCount? : Option Nat := none) : ReifyM Expr := do
@@ -225,7 +221,7 @@ private partial def reifyBody (point expression : Expr) (provider : EvidenceProv
   if name == some ``Morew.Conic.SymmetricMatrix.ofMatrix && args.size == 3 then
     let value ← reifyBody point args[1]! provider
     let proof ← mkLambdaFVars #[point] args[2]!
-    if (← Expr.hasUnresolved proof) || (← Evidence.hasPlaceholders proof) then
+    unless ← Evidence.complete proof do
       reject args[2]! "the symmetry proof contains unresolved metavariables or placeholders"
     return ← construct point expression ``Morew.Affine.Certified.toSymmetricMatrix #[value, proof]
   if name == some ``Morew.Conic.fromBlocksFin && args.size == 6 then
@@ -477,7 +473,7 @@ def reifyAffine (source : Expr) (provider : EvidenceProvider := {}) :
     if let .ok result := direct then return .ok result
     unless ← Expansion.enabled do return direct
     -- Reject unresolved inputs before expansion can discard their arguments.
-    if (← Expr.inspectLocals source none).2 || (← Evidence.hasPlaceholders source) then return direct
+    unless ← Evidence.complete source do return direct
     let prepared ← Expansion.prepare source
       (fun expression preserve => Expr.reduceStructure expression preserve)
     if prepared.expansions == 0 then return direct

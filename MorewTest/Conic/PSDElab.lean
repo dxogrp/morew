@@ -20,18 +20,6 @@ namespace MorewTest.Conic.PSDElab
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Conic MorewTest.Affine
 
-private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "symmetry recognition leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "symmetry recognition changed a caller assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "symmetry recognition assigned an unresolved caller metavariable"
-
 private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
     (accepted : Bool := true) : TermElabM Unit := do
   let expression ← elaborate term
@@ -44,14 +32,13 @@ private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
       let before ← getMCtx
       let messagesBefore ← Core.getMessageLog
       let proof ← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix
-      checkUnchanged before
+      assertExprMVarStateUnchanged before "symmetry recognition"
       unless (← Core.getMessageLog).toList.length == messagesBefore.toList.length do
         throwError "symmetry recognition leaked tactic diagnostics"
       unless proof.isSome == accepted do
         throwError "unexpected global symmetry result for {matrix}: {proof.isSome}"
       if let some proof := proof then
-        if proof.hasMVar || proof.hasSorry then throwError "incomplete symmetry certificate"
-        checkWithKernel proof
+        checkCompleteWithKernel proof "incomplete symmetry certificate"
         let expected ← mkForallFVars points (← mkAppM ``Matrix.IsSymm #[matrix])
         unless ← isDefEq (← inferType proof) expected do
           throwError "symmetry certificate proves the wrong statement"
@@ -195,27 +182,27 @@ run_cmd Lean.Elab.Command.liftTermElabM do
         let before ← getMCtx
         if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "feasibility-local symmetry was accepted globally"
-        checkUnchanged before
+        assertExprMVarStateUnchanged before "symmetry recognition"
       let conjoined ← mkAppM ``And #[mkConst ``True, proposition]
       withLocalDeclD `feasibleConjoinedSymmetry conjoined fun _ => do
         let before ← getMCtx
         if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "conjoined feasibility-local symmetry was accepted globally"
-        checkUnchanged before
+        assertExprMVarStateUnchanged before "symmetry recognition"
       let universal ← mkForallFVars points proposition
       let hole ← mkFreshExprMVar universal
       withLetDecl `unfinishedSymmetry universal hole fun _ => do
         let before ← getMCtx
         if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "unfinished symmetry proof was accepted"
-        checkUnchanged before
+        assertExprMVarStateUnchanged before "symmetry recognition"
       if ← hole.mvarId!.isAssigned then throwError "symmetry checker solved a caller proof hole"
       let placeholder ← mkSorry universal true
       withLetDecl `placeholderSymmetry universal placeholder fun _ => do
         let before ← getMCtx
         if (← Morew.Elab.Cone.Symmetry.prove? points[0]! matrix).isSome then
           throwError "placeholder symmetry proof was accepted"
-        checkUnchanged before
+        assertExprMVarStateUnchanged before "symmetry recognition"
 
 /-! Source operations and relations must use canonical instances, regardless
 of whether a custom operation happens to agree at a particular point. -/
@@ -242,7 +229,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
         let before ← getMCtx
         let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `unfinished_psd)
           | throwError "unfinished PSD membership instance was accepted"
-        checkUnchanged before
+        assertExprMVarStateUnchanged before "symmetry recognition"
         let diagnostic ← error.reason.toString
         unless diagnostic.contains "unfinished_psd" && diagnostic.contains "unresolved metavariables" do
           throwError "missing contextual unresolved PSD diagnostic: {diagnostic}"

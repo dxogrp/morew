@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Cone.Constraint
 import Mathlib.Tactic.NormNum
 
@@ -30,9 +31,7 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
 elab "certified_row% " source:term : term => do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an affine row: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
@@ -105,9 +104,7 @@ example {X : Type u} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
 private def expectRejected (source : TSyntax `term) (fragment : String) :
     TermElabM Unit := do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   let entry : Morew.Elab.Reformulation.ConstraintEntry := {
     name := `bad_row
     predicate

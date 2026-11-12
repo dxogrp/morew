@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Environment
-import Lean.Elab.GuardMsgs
+import MorewTest.DiagnosticsSupport
 
 /-! Invalid objective certificates fail atomically, without automatic fallback. -/
 
@@ -17,13 +17,8 @@ noncomputable section
 elab "assert_objective_rejected% " target:ident " in " nested:command : command => do
   let before ← getEnv
   let targetName := (← Lean.getCurrNamespace) ++ target.getId
-  let previous := (← get).messages
-  let previousTasks := (← get).snapshotTasks
-  modify fun state => { state with snapshotTasks := #[] }
-  let messages ← try
+  let messages ← MorewTest.Diagnostics.withSavedDiagnostics do
     Lean.Elab.Tactic.GuardMsgs.runAndCollectMessages nested
-  finally
-    modify fun state => { state with messages := previous, snapshotTasks := previousTasks }
   unless messages.toList.any (·.severity == .error) do
     throwError "invalid objective certificate did not report an error"
   let after ← getEnv

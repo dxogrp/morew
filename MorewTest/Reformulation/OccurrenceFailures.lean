@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Reformulation.Basic
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-!
 # Occurrence-bound selection failures and atomicity
@@ -27,12 +27,8 @@ private def assertAbsent (target aliasName : Lean.Name) :
   if (Morew.Syntax.getProblemView? env target).isSome then
     Lean.throwError "failed occurrence lift registered presentation metadata"
 
-elab "assert_occurrence_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  let after ← Lean.getEnv
-  if let some name := MorewTest.newLocalDeclaration? before after then
-    Lean.throwError m!"failed occurrence lift leaked declaration {name}"
+elab "assert_occurrence_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed occurrence lift leaked declaration {name}"
 
 def source :=
   problem (x : ℝ)

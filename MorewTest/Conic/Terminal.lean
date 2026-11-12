@@ -53,9 +53,7 @@ private def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
   unless ← isDefEq formType.getAppArgs.back! after do
     throwError "terminal form does not represent the final canonical problem"
   for expression in #[result.equiv, result.form] do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "terminal planning returned incomplete proof evidence"
-    checkWithKernel expression
+    checkCompleteWithKernel expression "terminal planning returned incomplete proof evidence"
   unless result.rowOrigins.size == result.presentation.constraints.size do
     throwError "terminal row provenance does not match the presentation"
   unless result.presentation.binders.size == source.binders.size + result.auxiliaries.size do

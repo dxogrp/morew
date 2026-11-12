@@ -23,11 +23,7 @@ theorem posDef_of_fromBlocksFin_identity_psd {n : Nat}
     (P W : Matrix (Fin n) (Fin n) ℝ)
     (h : (fromBlocksFin P 1 1 W).PosSemidef) : P.PosDef := by
   have hB := (psd_fromBlocksFin_iff P 1 1 W).mp h
-  have hP : P.PosSemidef := by
-    have he : (Matrix.fromBlocks P 1 1 W).submatrix Sum.inl Sum.inl = P := by
-      ext i j
-      rfl
-    simpa only [he] using hB.submatrix Sum.inl
+  have hP : P.PosSemidef := hB.submatrix Sum.inl
   apply Matrix.PosDef.of_dotProduct_mulVec_pos hP.isHermitian
   intro x hx
   have hnonneg := hP.dotProduct_mulVec_nonneg x

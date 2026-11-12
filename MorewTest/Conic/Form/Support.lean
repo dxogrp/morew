@@ -34,8 +34,7 @@ def requireForm (presentation : Elab.Reformulation.PresentationState)
   match ← Elab.Conic.buildForm presentation {} certifiedRows with
   | .error error => throwError "expected conic form: {error.reason}"
   | .ok form =>
-    if form.hasMVar || form.hasSorry then throwError "incomplete conic form"
-    checkWithKernel form
+    checkCompleteWithKernel form "incomplete conic form"
     return form
 
 elab "form_for% " source:term : term => do

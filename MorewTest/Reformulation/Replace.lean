@@ -111,5 +111,37 @@ reformulation nlpContinued : nlpTarget := by
 example : GlobalEquiv conicTarget conicContinued := conicContinued.equiv
 example : GlobalEquiv nlpTarget nlpContinued := nlpContinued.equiv
 
+-- Removing the boundary rows leaves the middle conjunction as one constraint.
+def boundarySource :=
+  problem (x : ℝ)
+    minimize x
+    subject to
+      first : x = x
+      grouped : 0 ≤ x ∧ x ≤ 1
+      last : x = x
+
+def boundaryRepr : ConstraintRepr (fun x : ℝ => x = x) :=
+  .ofIff (fun _ => True) (fun _ => by simp)
+
+reformulation conicBoundaries : boundarySource := by
+  conic at first using boundaryRepr
+  conic at last using boundaryRepr
+
+reformulation nlpBoundaries : boundarySource := by
+  nlp at first using boundaryRepr
+  nlp at last using boundaryRepr
+
+example : GlobalEquiv boundarySource conicBoundaries := conicBoundaries.equiv
+example : GlobalEquiv boundarySource nlpBoundaries := nlpBoundaries.equiv
+example (x : ℝ) : conicBoundaries.feasible x ↔ 0 ≤ x ∧ x ≤ 1 := Iff.rfl
+example (x : ℝ) : nlpBoundaries.feasible x ↔ 0 ≤ x ∧ x ≤ 1 := Iff.rfl
+
+run_cmd do
+  for name in #[``conicBoundaries, ``nlpBoundaries] do
+    let some view := Morew.Syntax.getProblemView? (← Lean.getEnv) name
+      | Lean.throwError "missing boundary replacement presentation"
+    unless view.constraints.map (·.name.eraseMacroScopes) == #[`grouped] do
+      Lean.throwError "boundary replacement changed the retained constraint group"
+
 end
 end MorewTest.Reformulation.Replace

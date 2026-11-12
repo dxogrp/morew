@@ -35,8 +35,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
   if result.certificate.expression.hasMVar || result.certificate.expression.hasSorry then throwError "incomplete exact NLP plan"
   for proof in #[result.targetIff, result.certified.domainIsOpen,
       result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
-    if proof.hasMVar || proof.hasSorry then throwError "incomplete exact NLP plan"
-    checkWithKernel proof
+    checkCompleteWithKernel proof "incomplete exact NLP plan"
   let expectedInclusion ← withLocalDeclD `point result.nextDomain fun point => do
     let original := if result.auxiliary?.isSome then Expr.proj ``Prod 0 point else point
     let retained := retained.map (mkApp · original)
@@ -63,9 +62,7 @@ private def expect (term : TSyntax `term) (rowCount : Nat)
     let result ← match ← Rewrite.plan source retained none insertionIndex with
       | .ok result => pure result
       | .error error => throwError "expected exact NLP plan: {error.reason}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "successful planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "successful planning leaked scratch metavariables"
     unless result.rowPredicates.size == rowCount && result.auxiliary?.isSome == auxiliary do
       throwError "unexpected generated rows or auxiliary space"
     checkResult source retained insertionIndex result
@@ -84,9 +81,7 @@ private def rejected (term : TSyntax `term) (message : String)
       unless diagnostic.contains "selected predicate:" && diagnostic.contains "predicate type:" do
         throwError "unsupported rule diagnostic omitted its typed source"
     unless error.expression == source do throwError "NLP failure changed the selected source"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "failed planning leaked scratch metavariables"
+    assertMVarCountersUnchanged before "failed planning leaked scratch metavariables"
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "failed planning leaked declaration {name}"
 

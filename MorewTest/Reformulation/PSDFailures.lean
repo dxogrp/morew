@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 import MorewTest.Reformulation.PSD.Fixtures
 
 /-!
@@ -26,11 +26,8 @@ example (A : Matrix (Fin 2) (Fin 2) ℝ) (B : Matrix (Fin 2) (Fin 3) ℝ)
     (C : Matrix (Fin 2) (Fin 2) ℝ) (D : Matrix (Fin 3) (Fin 3) ℝ) :=
   fromBlocksFin A B C D
 
-elab "assert_psd_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed PSD conversion leaked declaration {name}"
+elab "assert_psd_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed PSD conversion leaked declaration {name}"
 
 def nonsymmetricSource :=
   problem (X : Matrix (Fin 2) (Fin 2) ℝ)

@@ -52,7 +52,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   assertAtom (← `(fun x y : ℝ => rpow x y)) .rpow #[0, 1]
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let expression ← elaborate (← `(fun x : ℝ => Real.log (Real.exp x)))
+  let expression ← elaborateUnchecked (← `(fun x : ℝ => Real.log (Real.exp x)))
   lambdaTelescope expression fun binders body => do
     let some outer ← recognizeAtom? body
       | throwError "did not recognize a logarithm with a nested operand"
@@ -63,7 +63,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless inner.kind == .exp && inner.operands == binders do
       throwError "changed the nested exponential operand"
 
-  let expression ← elaborate (← `(fun x : ℝ => Real.tanh (Real.sin x)))
+  let expression ← elaborateUnchecked (← `(fun x : ℝ => Real.tanh (Real.sin x)))
   lambdaTelescope expression fun binders body => do
     let some outer ← recognizeAtom? body
       | throwError "did not recognize a hyperbolic tangent with a nested operand"
@@ -74,7 +74,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     unless inner.kind == .sin && inner.operands == binders do
       throwError "changed the nested sine operand"
 
-  let expression ← elaborate (← `(fun x : ℝ => max x 0))
+  let expression ← elaborateUnchecked (← `(fun x : ℝ => max x 0))
   lambdaTelescope expression fun binders body => do
     let some atom ← recognizeAtom? body
       | throwError "did not recognize maximum with zero"

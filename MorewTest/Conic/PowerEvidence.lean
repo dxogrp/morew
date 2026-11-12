@@ -25,9 +25,7 @@ private def check (term : TSyntax `term) (parameters : Nat) (success : Bool) :
       let result ← Morew.Elab.Evidence.proveIndependent? points[0]! goal
       unless result.isSome == success do
         throwError "unexpected independent exponent evidence result for {goal}"
-      unless before.mvarCounter == (← getMCtx).mvarCounter &&
-          before.lmvarCounter == (← getMCtx).lmvarCounter do
-        throwError "parameter evidence changed caller metavariables"
+      assertMVarCountersUnchanged before "parameter evidence changed caller metavariables"
       if let some proof := result then
         checkWithKernel proof
         unless ← isDefEq (← inferType proof) goal do throwError "evidence proves the wrong goal"

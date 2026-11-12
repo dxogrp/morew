@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Rewrite.Match
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
@@ -68,9 +69,7 @@ def familyOutputGraph (flag : Bool) : GraphRepr (familyOutputOperation flag) whe
 
 private def selected (term : TSyntax `term) (expected : Array Name)
     (parameters : Nat := 0) (checkedRule? : Option Name := none) : TermElabM Unit := do
-  let source ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  let source ← instantiateMVars source
+  let source ← elaborateUnchecked term
   lambdaBoundedTelescope source parameters fun _ source => do
     let actual ← Registry.candidates .conic source
     let expected := expected.qsort fun a b => a.toString < b.toString

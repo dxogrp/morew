@@ -21,15 +21,7 @@ open Morew.Conic MorewTest.Affine
 
 private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "matrix domain recognition leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "matrix domain recognition changed a caller assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "matrix domain recognition assigned a caller metavariable"
+  assertExprMVarStateUnchanged before "matrix domain recognition"
   for (id, value) in before.lAssignment.toList do
     unless after.lAssignment.find? id == some value do
       throwError "matrix domain recognition changed a caller universe assignment"
@@ -51,8 +43,7 @@ private def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Exp
   unless result.isSome == accepted do
     throwError "unexpected matrix domain result ({result.isSome}) for {goal}; rows: {retained}"
   if let some evidence := result then
-    if evidence.hasMVar || evidence.hasSorry then throwError "incomplete matrix domain certificate"
-    checkWithKernel evidence
+    checkCompleteWithKernel evidence "incomplete matrix domain certificate"
     unless ← isDefEq (← inferType evidence) goal do
       throwError "matrix domain certificate proves the wrong proposition"
   if ← unrelated.mvarId!.isAssigned then throwError "assigned an unrelated caller metavariable"

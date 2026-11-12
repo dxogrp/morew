@@ -16,6 +16,7 @@ import MorewTest.Affine.Unsupported
 import MorewTest.Atom.Recognition
 import MorewTest.Atom.Support
 import MorewTest.Atom.Unsupported
+import MorewTest.CommandSupport
 import MorewTest.Conic
 import MorewTest.Conic.AffineMembership
 import MorewTest.Conic.EuclideanAffine
@@ -248,6 +249,7 @@ import MorewTest.Reformulation.RenameFailures
 import MorewTest.Reformulation.RenameFailuresBackends
 import MorewTest.Reformulation.RenameIsolation
 import MorewTest.Reformulation.Replace
+import MorewTest.Reformulation.ReplaySupport
 import MorewTest.Reformulation.Restrict
 import MorewTest.Reformulation.RestrictBackends
 import MorewTest.Reformulation.RestrictFailures

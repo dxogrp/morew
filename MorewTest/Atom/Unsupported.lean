@@ -117,7 +117,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let real := Lean.mkConst ``Real
-  let instanceType ← elaborate (← `(Inv ℝ))
+  let instanceType ← elaborateUnchecked (← `(Inv ℝ))
   let unresolvedInstance ← mkFreshExprMVar instanceType
   withLocalDeclD `x real fun x => do
     let expression := mkAppN (mkConst ``Inv.inv [Level.zero]) #[real, unresolvedInstance, x]
@@ -145,7 +145,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     if ← missing.mvarId!.isAssigned then
       throwError "real-power recognition assigned an operand metavariable"
 
-  let instanceType ← elaborate (← `(HPow ℝ ℝ ℝ))
+  let instanceType ← elaborateUnchecked (← `(HPow ℝ ℝ ℝ))
   let missingInstance ← mkFreshExprMVar instanceType
   let makePower := fun operation =>
     mkAppN (mkConst ``HPow.hPow [.zero, .zero, .zero])

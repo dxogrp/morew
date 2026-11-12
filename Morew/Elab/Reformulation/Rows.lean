@@ -60,6 +60,13 @@ def generatedStem (selector : TSyntax `ident) : CommandElabM String := do
     throwErrorAt selector "cannot derive a generated-name family from an empty constraint label"
   return stem
 
+/-- Decode a source row's final name component for terminal generated-name families. -/
+def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
+  let name := state.view.constraints[origin]!.name.eraseMacroScopes
+  let .str _ stem := name
+    | throwError "cannot derive a generated-name family from constraint `{name}`"
+  return stem
+
 /-- Request one optional auxiliary and ordered rows; allocation remains with the runner. -/
 def nameRequests (style : Style) (selector : TSyntax `ident)
     (hasAuxiliary : Bool) (rowCount : Nat) : CommandElabM (Array NameRequest) := do
@@ -75,6 +82,52 @@ def nameRequests (style : Style) (selector : TSyntax `ident)
       id := i + 1, kind := .generatedRowFamily
       requested := Name.mkSimple s!"{stem}_{style.family}_{i + 1}", ref := selector.raw
     }
+  return requests
+
+/-- Build a terminal template from allocated auxiliary names and source row origins.
+Retain source rows and leave generated propositions for the backend renderer. -/
+def terminalTemplate (description : String) (view : Morew.Syntax.ProblemView)
+    (auxiliaryTypes : Array Expr) (rowOrigins replacedIndices : Array Nat)
+    (allocation : NameAllocation) : TermElabM Morew.Syntax.ProblemView := do
+  let mut binders := view.binders
+  for i in [:auxiliaryTypes.size] do
+    let some name := allocation.findName? i
+      | throwError "internal error: missing {description} auxiliary allocation"
+    let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
+    binders := binders.push {
+      name
+      typeSyntax := ← presentationTypeSyntax auxiliaryTypes[i]!
+    }
+  let mut rows := #[]
+  for i in [:rowOrigins.size] do
+    let origin := rowOrigins[i]!
+    if replacedIndices.contains origin then
+      let some name := allocation.findName? (auxiliaryTypes.size + i)
+        | throwError "internal error: missing {description} row allocation"
+      rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
+    else
+      rows := rows.push view.constraints[origin]!
+  return { view with binders, constraints := rows }
+
+/-- Request terminal auxiliaries followed by replaced rows, numbered within each source row. -/
+def terminalNameRequests (family : String) (state : ReformState) (ref : Syntax)
+    (auxiliaryOrigins rowOrigins replacedIndices : Array Nat) : CommandElabM (Array NameRequest) := do
+  let mut requests := #[]
+  for i in [:auxiliaryOrigins.size] do
+    let stem ← terminalStem state auxiliaryOrigins[i]!
+    requests := requests.push {
+      id := i, kind := .generatedBinderFamily
+      requested := Name.mkSimple (stem ++ "_aux"), ref }
+  let mut counts := Array.replicate state.view.constraints.size 0
+  for i in [:rowOrigins.size] do
+    let origin := rowOrigins[i]!
+    if replacedIndices.contains origin then
+      let count := counts[origin]! + 1
+      counts := counts.set! origin count
+      let stem ← terminalStem state origin
+      requests := requests.push {
+        id := auxiliaryOrigins.size + i, kind := .generatedRowFamily
+        requested := Name.mkSimple s!"{stem}_{family}_{count}", ref }
   return requests
 
 /-- Share repeated rows, certificates, and problems in stored proof data. -/
@@ -153,8 +206,7 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
   let view := {
     state.view with
     binders
-    constraints := state.view.constraints.extract 0 index ++ renderedRows ++
-      state.view.constraints.extract (index + 1) state.view.constraints.size
+    constraints := splice state.view.constraints index renderedRows
   }
   let semantic ← exactExpressionSyntax (← simpOnly replacement.targetProblem
     (preserveProofLets := true))
@@ -186,14 +238,6 @@ structure Style where
   certificateKind : Name
   /-- Prefix of shared expressions within the stored certificate. -/
   family : String
-
-private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
-  | 0 => pure #[]
-  | 1 => pure #[point]
-  | n + 2 => do
-      let first ← mkAppM ``Prod.fst #[point]
-      let last ← mkAppM ``Prod.snd #[point]
-      return (← pointComponents first (n + 1)).push last
 
 /-- Elaborate a supplied constraint certificate, reject incomplete terms, and kernel-check
 it after instantiating metavariables in the local context. -/

@@ -25,7 +25,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
     MetaM (Except Expr.Error Expr) := do
   for expression in #[presentation.domainType, presentation.valueType, presentation.objective] ++
       presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
-    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       return .error {
         expression
         reason := ← addMessageContext "quadratic conic form: unresolved metavariables in typed presentation"
@@ -50,7 +50,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
       #[sense, objective.quadratic, objective.affine, objective.curvature,
         mkNatLit rows.count, rows.constraints]
     let represented ← mkAppM ``Morew.QuadConic.Data.toProblem #[data]
-    let equality ← mkAppM ``Morew.Elab.Cone.problemEq
+    let equality ← mkAppM ``Morew.Problem.ext
       #[represented, canonical, objective.pointwiseEquality, rows.feasibleIff]
     let form ← instantiateMVars (← mkAppM ``Morew.QuadConic.Form.mk #[data, equality])
     let expected ← mkAppM ``Morew.QuadConic.Form #[canonical]

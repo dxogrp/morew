@@ -75,9 +75,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
   unless ← isDefEq (← inferType row.pointwiseIff) rowExpected do
     throwError "the certified row does not match the generated membership"
   for expression in proofs ++ #[row.constraint, row.pointwiseIff] do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "second-order planning returned an incomplete certificate"
-    checkWithKernel expression
+    checkCompleteWithKernel expression "second-order planning returned an incomplete certificate"
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
@@ -248,9 +246,7 @@ run_cmd liftTermElabM do
   rejectPlan source #[mkApp retainedBuilder missing] "unresolved"
   let before ← getMCtx
   checkPlan source
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "successful planning leaked scratch metavariables"
+  assertMVarCountersUnchanged before "successful planning leaked scratch metavariables"
   if ← missing.mvarId!.isAssigned then throwError "planner assigned an unrelated hole"
 
 /-! The registered norm rules preserve the carrier distinction: ordinary

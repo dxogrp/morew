@@ -13,12 +13,6 @@ namespace Morew.Elab.Reformulation.Cone
 
 open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
 
-private def terminalStem (state : ReformState) (origin : Nat) : CommandElabM String := do
-  let name := state.view.constraints[origin]!.name.eraseMacroScopes
-  let .str _ stem := name
-    | throwError "cannot derive a generated-name family from constraint `{name}`"
-  return stem
-
 private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactStem : Name)
     (state : ReformState)
     (prepared : Morew.Elab.Cone.Terminal.Result) (preparedVars : Array Expr)
@@ -36,25 +30,8 @@ private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactSte
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate (artifactStem.appendAfter "Certificate") primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
-    let mut binders := state.view.binders
-    for i in [:prepared.auxiliaries.size] do
-      let some name := allocation.findName? i
-        | throwError "internal error: missing terminal auxiliary allocation"
-      let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
-      binders := binders.push {
-        name
-        typeSyntax := ← presentationTypeSyntax prepared.auxiliaries[i]!.2
-      }
-    let mut rows := #[]
-    for i in [:prepared.rowOrigins.size] do
-      let origin := prepared.rowOrigins[i]!
-      if prepared.replacedIndices.contains origin then
-        let some name := allocation.findName? (prepared.auxiliaries.size + i)
-          | throwError "internal error: missing terminal row allocation"
-        rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-      else
-        rows := rows.push state.view.constraints[origin]!
-    let template := { state.view with binders, constraints := rows }
+    let template ← Rows.terminalTemplate "terminal" state.view
+      (prepared.auxiliaries.map (·.2)) prepared.rowOrigins prepared.replacedIndices allocation
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
     -- Prove agreement with reduced zero/negation definitions while retaining their display names.
     let normalizationLemmas := state.normalizationLemmas ++
@@ -106,22 +83,8 @@ def prepareTerminalConeForm
     match ← Morew.Elab.Cone.Terminal.planWith backend presentation with
     | .error error => throwError "terminal {adapter.description} validation is uncertified: {error.reason}"
     | .ok result => pure (result, sectionFVars)
-  let mut nameRequests := #[]
-  for i in [:prepared.auxiliaries.size] do
-    let stem ← terminalStem state prepared.auxiliaries[i]!.1
-    nameRequests := nameRequests.push {
-      id := i, kind := .generatedBinderFamily
-      requested := Name.mkSimple (stem ++ "_aux"), ref := step }
-  let mut counts := Array.replicate state.view.constraints.size 0
-  for i in [:prepared.rowOrigins.size] do
-    let origin := prepared.rowOrigins[i]!
-    if prepared.replacedIndices.contains origin then
-      let count := counts[origin]! + 1
-      counts := counts.set! origin count
-      let stem ← terminalStem state origin
-      nameRequests := nameRequests.push {
-        id := prepared.auxiliaries.size + i, kind := .generatedRowFamily
-        requested := Name.mkSimple s!"{stem}_conic_{count}", ref := step }
+  let nameRequests ← Rows.terminalNameRequests "conic" state step
+    (prepared.auxiliaries.map (·.1)) prepared.rowOrigins prepared.replacedIndices
   return {
     nameRequests
     materialize := materializeTerminalConeForm adapter artifactStem state prepared preparedVars

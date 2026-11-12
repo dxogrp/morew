@@ -32,9 +32,7 @@ private def check (term : TSyntax `term) (rows : Nat) (parameters : Nat := 0)
     let result ← match result with
       | .ok result => pure result
       | .error error => throwError "power rule failed: {error.reason}"
-    unless before.mvarCounter == (← getMCtx).mvarCounter &&
-        before.lmvarCounter == (← getMCtx).lmvarCounter do
-      throwError "power rule leaked scratch metavariables"
+    assertMVarCountersUnchanged before "power rule leaked scratch metavariables"
     result.toResult.check source #[retained]
     unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
       throwError "wrong number of power-rule rows"

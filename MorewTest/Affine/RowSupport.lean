@@ -19,9 +19,7 @@ def assertRow (term : TSyntax `term) (parameterCount : Nat := 0) : TermElabM Uni
       | .ok result => pure result
       | .error error => throwError "expected affine row {source}\n{error.reason}"
     for expression in #[result.constraint, result.pointwiseIff] do
-      if expression.hasMVar || expression.hasSorry then
-        throwError "row normalization returned an incomplete certificate"
-      checkWithKernel expression
+      checkCompleteWithKernel expression "row normalization returned an incomplete certificate"
     let constraintType ← whnf (← inferType result.constraint)
     unless constraintType.isAppOfArity ``Morew.Conic.Constraint 3 do
       throwError "normalization did not produce a semantic constraint"

@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Reformulation.Restrict
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Restriction continuations and presentation reconstruction across imports -/
 
@@ -70,12 +71,8 @@ run_cmd do
       (``Hygiene.target, `hygienicCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported restriction lost presentation metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "restriction replay contains incomplete evidence"
+    replayView view copied
+      "restriction replay contains incomplete evidence"
 
 example : orderedCopy = ordered := rfl
 example : rowsCopy = explicitRows := rfl

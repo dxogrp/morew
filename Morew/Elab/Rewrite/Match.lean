@@ -269,7 +269,7 @@ private def attempt (point sourceBody originalRule : Expr) (prove? : Prove)
         let rhs := actual.getAppArgs[2]!
         mkAppM ``Iff.trans #[← mkAppOptM ``eq_comm #[none, some lhs, some rhs], proof]
       else pure proof
-    if ← Plan.unresolved proof then
+    if ← Expr.hasUnresolvedStrict proof then
       throwError "the representation contains unresolved parameters or missing domain evidence"
     let proof ← match view? with
       | some view => mkAppM ``Iff.trans #[view.sourceIff, proof]

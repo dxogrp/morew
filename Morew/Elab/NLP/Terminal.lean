@@ -56,9 +56,6 @@ private structure Work where
   auxiliaries : Array (Nat × Expr) := #[]
   nextName : Nat := 0
 
-private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
-  entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
-
 private def feasibility (presentation : PresentationState) : MetaM Expr := do
   mkAppM ``Morew.Problem.feasible #[← presentation.canonicalProblem]
 
@@ -276,14 +273,12 @@ def plan (presentation : PresentationState) (reduce? : Option (Expr → MetaM Ex
           presentation.binders.map (·.type) ++ presentation.constraints.map (·.predicate) do
         unless ← Domain.Evidence.complete expression do
           throwError "terminal NLP validation requires fully elaborated expressions without placeholders"
-      let mut instances := #[]
-      for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
-        for inst in ← Expr.sourceFiniteInstances source do
-          unless instances.contains inst do instances := instances.push inst
+      let instances ← Expr.collectSourceFiniteInstances
+        (#[presentation.objective] ++ presentation.constraints.map (·.predicate))
       Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map
           (fun (value : Result) => value.replaceFVars oldVars newVars))
-        instances.toList (planCore presentation reduce?)
+        instances (planCore presentation reduce?)
     catch error =>
       return .error {
         source := presentation.objective, expression := presentation.objective

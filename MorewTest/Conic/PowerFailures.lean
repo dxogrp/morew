@@ -30,9 +30,7 @@ private def reject (source : Expr) (retained : Array Expr := #[])
   let diagnostic ← error.reason.toString
   if diagnostic.isEmpty || (!fragment.isEmpty && !diagnostic.contains fragment) then
     throwError "unexpected power diagnostic: {diagnostic}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter do
-    throwError "failed power planning leaked metavariables"
+  assertMVarCountersUnchanged before "failed power planning leaked metavariables"
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed power planning changed declarations"
 
@@ -123,9 +121,8 @@ private def rejectRow (source : Expr) (fragment : String := "") : MetaM Unit := 
   unless diagnostic.contains "power_row" &&
       (fragment.isEmpty || diagnostic.contains fragment) do
     throwError "power membership lost its diagnostic context: {diagnostic}"
-  unless before.mvarCounter == (← getMCtx).mvarCounter &&
-      before.lmvarCounter == (← getMCtx).lmvarCounter &&
-      MorewTest.sameLocalDeclarationNames environment (← getEnv) do
+  assertMVarCountersUnchanged before "failed power membership changed caller state"
+  unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed power membership changed caller state"
 
 run_cmd liftTermElabM do

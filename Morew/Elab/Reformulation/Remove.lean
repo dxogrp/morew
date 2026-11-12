@@ -12,15 +12,11 @@ Duplicate search uses complete rows; tautology proofs use unconditional facts. -
 namespace Morew.Elab.Reformulation.Remove
 
 open Lean Lean.Meta
+open Morew.Elab.Evidence (complete)
 open Morew.Elab.Rewrite.Decomposition
 
-private def complete (expression : Expr) : MetaM Bool := do
-  return !(← Expr.hasUnresolved expression) &&
-    !(← Evidence.hasPlaceholders expression)
-
 private def retainedRows (presentation : PresentationState) (index : Nat) : Array Expr :=
-  (presentation.constraints.extract 0 index ++
-    presentation.constraints.extract (index + 1) presentation.constraints.size).map (·.predicate)
+  (splice presentation.constraints index #[]).map (·.predicate)
 
 /-- The required proof type, formed from the constraints remaining after removal. -/
 def implicationType (presentation : PresentationState) (index : Nat) : MetaM Expr := do
@@ -132,9 +128,7 @@ private def applyRemovalCore (presentation : PresentationState) (index : Nat)
     let decomposition ← Replace.makeDecomposition presentation index source
     let equiv ← instantiateMVars (← mkAppM ``Morew.removeConstraintEquiv
       #[source, decomposition, implied])
-    let next := { presentation with constraints :=
-      presentation.constraints.extract 0 index ++
-        presentation.constraints.extract (index + 1) presentation.constraints.size }
+    let next := { presentation with constraints := splice presentation.constraints index #[] }
     let targetProblem ← instantiateMVars (← next.canonicalProblem)
     let expected ← mkAppM ``Morew.GlobalEquiv #[source, targetProblem]
     unless ← isDefEq (← inferType equiv) expected do

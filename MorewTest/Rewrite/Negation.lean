@@ -140,10 +140,7 @@ run_cmd liftTermElabM do
       throwError "symbolic conic parameter changed its value"
     if let .ok _ ← Morew.Elab.NLP.Rewrite.plan source #[] (some rule) then
       throwError "symbolic NLP parameter changed its value"
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "failed symbolic parameter matching leaked scratch metavariables"
+    assertMVarAllocationStateUnchanged before "failed symbolic parameter matching leaked scratch metavariables"
     if ← sentinel.mvarId!.isAssigned then
       throwError "failed symbolic parameter matching changed a caller metavariable"
     unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
@@ -208,10 +205,7 @@ run_cmd liftTermElabM do
         if (← generated.get).size < 4 then
           throwError "reject this graph orientation during target certification"
         pure { matched with sourceIff := mkApp (mkConst name) point })
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "signed graph retry leaked scratch metavariables"
+    assertMVarAllocationStateUnchanged before "signed graph retry leaked scratch metavariables"
     if ← sentinel.mvarId!.isAssigned then
       throwError "signed graph retry changed a caller metavariable"
     unless (← instantiateMVars assigned) == mkNatLit 7 do

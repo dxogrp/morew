@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.SubstitutionRules
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Imported substitution descriptors and continued certified reformulations -/
 
@@ -51,12 +52,8 @@ run_cmd do
       (``MorewTest.Reformulation.SubstitutionRules.squared, `squareCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported substitution lost presentation metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "substitution replay contains incomplete evidence"
+    MorewTest.Reformulation.replayView view copied
+      "substitution replay contains incomplete evidence"
 
 example : customCopy = custom := rfl
 example : continuedCopy = continued := rfl

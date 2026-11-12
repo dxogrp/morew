@@ -16,17 +16,6 @@ open Lean Lean.Meta
 open Morew.Elab.Rewrite
 open Reformulation
 
-/-- Equality of objective values and feasibility predicates determines a problem. -/
-theorem problemEq {X : Type u} {V : Type v} (p q : Morew.Problem X V)
-    (objective : ∀ x, p.objective x = q.objective x)
-    (feasible : ∀ x, p.feasible x ↔ q.feasible x) : p = q := by
-  cases p with
-  | mk po pf =>
-    cases q with
-    | mk qo qf =>
-      exact congrArg₂ Morew.Problem.mk (funext objective)
-        (funext fun x => propext (feasible x))
-
 private theorem emptyRows {X : Type u} [AddCommGroup X] [Module ℝ X]
     (x : X) :
     (∀ i : Fin 0, (Fin.elim0 i : Morew.Conic.Constraint X).Holds x) ↔ True :=
@@ -90,7 +79,7 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
 private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     MetaM RowResult := do
   for expression in #[row.constraint, row.pointwiseIff] do
-    if ← Morew.Elab.Rewrite.Plan.unresolved expression then
+    if ← Expr.hasUnresolvedStrict expression then
       throwError "cached row contains unresolved metavariables"
   let row ← row.mapExprM instantiateMVars
   checkWithKernel row.constraint

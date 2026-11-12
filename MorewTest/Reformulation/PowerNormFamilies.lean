@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-!
 # Complete finite power-cone workflows
@@ -100,11 +100,8 @@ def customNormEpigraph {n : ℕ} :
     EpigraphRepr (fun z : EuclideanSpace ℝ (Fin n) => ‖z‖) :=
   Conic.SecondOrder.normEpigraph
 
-elab "assert_l2_ambiguity_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed L2 selection leaked declaration {name}"
+elab "assert_l2_ambiguity_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed L2 selection leaked declaration {name}"
 
 section CustomAmbiguity
 

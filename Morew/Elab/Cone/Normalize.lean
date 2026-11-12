@@ -188,20 +188,6 @@ private partial def normalizeBodyCore (original : Expr)
     return ← normalizeComparison body
   return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
 
-private partial def unresolved (expression : Expr) (seen : FVarIdSet := {}) :
-    MetaM Bool := do
-  let expression ← instantiateMVars expression
-  if expression.hasMVar then return true
-  let mut seen := seen
-  for id in (collectFVars {} expression).fvarIds do
-    unless seen.contains id do
-      seen := seen.insert id
-      let declaration ← id.getDecl
-      if ← unresolved declaration.type seen then return true
-      if let some value := declaration.value? (allowNondep := true) then
-        if ← unresolved value seen then return true
-  return false
-
 private def isolated (action : MetaM α) : MetaM α := do
   let result ← State.withIsolatedMVars (ε := Empty) do
     return .ok (← action)
@@ -212,7 +198,7 @@ private def isolated (action : MetaM α) : MetaM α := do
 /-- Normalize standard comparisons, preserving operands, local lets, and conjunctions.
 Leave other predicates intact; reject unresolved inputs in isolation. -/
 def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
-  if ← unresolved original then
+  if ← Expr.hasUnresolvedStrict original then
     throwError "membership normalization requires fully elaborated expressions"
   let result ← normalizeBodyCore original
   let body ← instantiateMVars result.body
@@ -231,7 +217,7 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
 def normalizePredicate (predicate : Expr)
     (certificates : Array PredicateNormalization := #[]) :
     MetaM PredicateNormalization := isolated do
-  if ← unresolved predicate then
+  if ← Expr.hasUnresolvedStrict predicate then
     throwError "membership normalization requires fully elaborated expressions"
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type

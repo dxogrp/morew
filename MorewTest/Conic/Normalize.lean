@@ -255,4 +255,34 @@ run_cmd liftTermElabM do
     if ← hole.mvarId!.isAssigned then
       throwError "failed normalization assigned its caller's metavariable"
 
+-- Strict inspection requires referenced locals; tolerant inspection skips absent locals.
+run_cmd liftTermElabM do
+  let nat := Lean.mkConst ``Nat
+  let outside ← withLocalDeclD `binding nat fun binding => do
+    if ← Morew.Elab.Expr.hasUnresolvedStrict binding then
+      throwError "strict inspection rejected a complete local declaration"
+    pure binding
+  if ← Morew.Elab.Expr.hasUnresolved outside then
+    throwError "tolerant inspection treated an absent local as unresolved"
+  let rejected ← try
+    discard <| Morew.Elab.Expr.hasUnresolvedStrict outside
+    pure false
+  catch _ => pure true
+  unless rejected do
+    throwError "strict inspection accepted a free variable outside the local context"
+  let hole ← mkFreshExprMVar nat
+  withLetDecl `hidden nat hole fun hidden => do
+    unless ← Morew.Elab.Expr.hasUnresolvedStrict hidden do
+      throwError "strict inspection missed an unresolved local value"
+    unless ← Morew.Elab.Expr.hasUnresolved hidden do
+      throwError "tolerant inspection missed an unresolved local value"
+  let typeHole ← mkFreshExprMVar (mkSort (.succ .zero))
+  withLocalDeclD `hiddenType typeHole fun hidden => do
+    unless ← Morew.Elab.Expr.hasUnresolvedStrict hidden do
+      throwError "strict inspection missed an unresolved local type"
+    unless ← Morew.Elab.Expr.hasUnresolved hidden do
+      throwError "tolerant inspection missed an unresolved local type"
+  if (← hole.mvarId!.isAssigned) || (← typeHole.mvarId!.isAssigned) then
+    throwError "local inspection assigned a caller metavariable"
+
 end MorewTest.Conic.Normalize

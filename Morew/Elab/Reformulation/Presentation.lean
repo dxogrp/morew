@@ -12,6 +12,10 @@ namespace Morew.Elab.Reformulation
 
 open Lean Lean.Meta
 
+/-- Replace one entry by an ordered array, using the bounds behavior of `Array.extract`. -/
+def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
+  entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
+
 /-! ## Typed presentation state -/
 
 /-- One typed decision-binder presentation entry. -/
@@ -62,6 +66,21 @@ private def leftAssociatedDomain (binders : Array BinderEntry) : MetaM Expr := d
     domain ← mkAppM ``Prod #[domain, binders[index]!.type]
   pure domain
 
+/-- Build a feasibility predicate from ordered constraint predicates. -/
+def mkFeasibleFunction (domain : Expr) (constraints : Array Expr) : MetaM Expr :=
+  withLocalDeclD `point domain fun point => do
+    let propositions := constraints.map fun constraint => mkApp constraint point
+    mkLambdaFVars #[point] <| mkAndN propositions.toList
+
+/-- Project decision components from their left-associated product, leaving one component intact. -/
+partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
+  | 0 => pure #[]
+  | 1 => pure #[point]
+  | n + 2 => do
+      let first ← mkAppM ``Prod.fst #[point]
+      let last ← mkAppM ``Prod.snd #[point]
+      return (← pointComponents first (n + 1)).push last
+
 /-- Build the canonical problem with `True`, a single predicate, or right-associated conjunction. -/
 def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr := do
   ensureIsType state.domainType "presentation decision domain"
@@ -80,10 +99,7 @@ def PresentationState.canonicalProblem (state : PresentationState) : MetaM Expr 
     let predicateType ← inferType constraint.predicate
     unless ← isDefEq predicateType expectedPredicateType do
       throwError "constraint `{constraint.name}` has predicate type{indentExpr predicateType}\nbut expected{indentExpr expectedPredicateType}"
-  let feasible ← withLocalDeclD `point state.domainType fun point => do
-    let propositions := state.constraints.map fun constraint =>
-      mkApp constraint.predicate point
-    mkLambdaFVars #[point] <| mkAndN propositions.toList
+  let feasible ← mkFeasibleFunction state.domainType (state.constraints.map (·.predicate))
   -- Retain the declared `OrderDual` value type for maximization.
   mkAppOptM ``Morew.Problem.mk
     #[some state.domainType, some state.valueType, some state.objective, some feasible]

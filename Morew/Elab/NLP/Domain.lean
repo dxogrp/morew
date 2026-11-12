@@ -162,13 +162,12 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
     checkWithKernel proof
   return .ok result
 
-/-- Infer an open domain and kernel-check smoothness and feasible inclusion for sources.
-Restore metavariables and auxiliary declarations on failure. -/
-def certify (feasible : Expr) (sources : Array Expr) :
+private def certifyWith (feasible : Expr) (sources : Array Expr)
+    (facts? : Option Evidence.FactsProvider) :
     MetaM (Except DomainError DomainResult) :=
   State.withIsolatedMVars do
     try
-      certifyCore feasible sources
+      certifyCore feasible sources facts?
     catch exception =>
       return .error {
         source := feasible, expression := feasible, type := ← inferType feasible
@@ -176,18 +175,16 @@ def certify (feasible : Expr) (sources : Array Expr) :
         reason := ← addMessageContext exception.toMessageData
       }
 
+/-- Infer an open domain and kernel-check smoothness and feasible inclusion for sources.
+Restore metavariables and auxiliary declarations on failure. -/
+def certify (feasible : Expr) (sources : Array Expr) :
+    MetaM (Except DomainError DomainResult) :=
+  certifyWith feasible sources none
+
 /-- Certify using a separately admitted row grammar. The provider receives the feasibility
 proof; check returned smoothness and inclusion against that predicate. -/
 def certifyWithEvidence (feasible : Expr) (sources : Array Expr)
     (facts : Evidence.FactsProvider) : MetaM (Except DomainError DomainResult) :=
-  State.withIsolatedMVars do
-    try
-      certifyCore feasible sources (some facts)
-    catch exception =>
-      return .error {
-        source := feasible, expression := feasible, type := ← inferType feasible
-        kind := .invalidInstance
-        reason := ← addMessageContext exception.toMessageData
-      }
+  certifyWith feasible sources (some facts)
 
 end Morew.Elab.NLP.Domain

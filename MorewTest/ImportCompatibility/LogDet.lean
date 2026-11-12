@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.LogDet.Defined
 import MorewTest.Reformulation.LogDet.Objectives
+import MorewTest.Reformulation.ReplaySupport
 
 /-! Imported log-det certificates retain domain evidence and exact presentation reconstruction. -/
 
@@ -60,12 +61,8 @@ run_cmd do
       (``MorewTest.Reformulation.LogDet.negativeMinimumTarget, `negativeCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported log-det declaration lost replay metadata: {original}"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "log-det replay contains incomplete evidence"
+    MorewTest.Reformulation.replayView view copied
+      "log-det replay contains incomplete evidence"
 
 example : domainCopy n = MorewTest.Reformulation.LogDet.domainIntermediate n := rfl
 example : continuedCopy n = continued n := rfl

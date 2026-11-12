@@ -31,6 +31,10 @@ partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM
         if ← hasPlaceholders value seen then return true
   return false
 
+/-- Reject unresolved terms and placeholders through referenced local types and values. -/
+def complete (expression : Expr) : MetaM Bool := do
+  return !(← Expr.hasUnresolved expression) && !(← hasPlaceholders expression)
+
 private partial def projection? (proof goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
   let type ← Expr.reduceStructure (← inferType proof)
@@ -63,13 +67,11 @@ def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
 
 private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
-  if (← Expr.depends point goal) || (← Expr.hasUnresolved goal) ||
-      (← hasPlaceholders goal) then return none
+  if (← Expr.depends point goal) || !(← complete goal) then return none
   for declaration in ← getLCtx do
     if declaration.isImplementationDetail then continue
     let proof := declaration.toExpr
-    if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
-        (← hasPlaceholders proof) then continue
+    if (← Expr.depends point proof) || !(← complete proof) then continue
     unless ← isProp declaration.type do continue
     if let some proof ← projection? proof goal index? then return some proof
   let goal ← Expr.reduceStructure goal
@@ -121,13 +123,10 @@ def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     if let some index := index? then
-      if (← Expr.depends point index) || (← Expr.hasUnresolved index) ||
-          (← hasPlaceholders index) then return .error ()
+      if (← Expr.depends point index) || !(← complete index) then return .error ()
       unless (← whnf (← inferType index)).isAppOfArity ``Fin 1 do return .error ()
     let some proof ← proveCore? point goal index? | return .error ()
-    if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
-        (← hasPlaceholders proof) then
-      return .error ()
+    if (← Expr.depends point proof) || !(← complete proof) then return .error ()
     unless ← isDefEq (← inferType proof) goal do return .error ()
     checkWithKernel proof
     return .ok proof
