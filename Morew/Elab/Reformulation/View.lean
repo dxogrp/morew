@@ -73,28 +73,12 @@ private def compactFiniteIndexProofs (expression : Expr) (replay : Bool) : MetaM
         mkAnnotation `Morew.Elab.Reformulation.compactFiniteIndexProof args[2]!])
     return .continue)
 
-private def annotatedConstName? (infos : SubExpr.PosMap Elab.Info)
-    (stx : Lean.Syntax) : Option Name := do
+private def annotatedExpr? (infos : SubExpr.PosMap Elab.Info)
+    (stx : Lean.Syntax) : Option Expr := do
   let .ident (.synthetic start _ _) _ _ _ := stx | none
   match infos.get? start.byteIdx with
-  | some (.ofTermInfo info) =>
-      let .const name _ := info.expr | none
-      some name
-  | some (.ofDelabTermInfo info) =>
-      let .const name _ := info.toTermInfo.expr | none
-      some name
-  | _ => none
-
-private def annotatedFVarId? (infos : SubExpr.PosMap Elab.Info)
-    (stx : Lean.Syntax) : Option FVarId := do
-  let .ident (.synthetic start _ _) _ _ _ := stx | none
-  match infos.get? start.byteIdx with
-  | some (.ofTermInfo info) =>
-      let .fvar id := info.expr | none
-      some id
-  | some (.ofDelabTermInfo info) =>
-      let .fvar id := info.toTermInfo.expr | none
-      some id
+  | some (.ofTermInfo info) => some info.expr
+  | some (.ofDelabTermInfo info) => some info.toTermInfo.expr
   | _ => none
 
 /-- Preserve readable spelling with fixed declaration identity and capture protection. -/
@@ -108,13 +92,13 @@ private partial def freezePresentationReferences
     (sectionReferences : Std.HashMap FVarId Name)
     (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (stx : Lean.Syntax) : Lean.Syntax :=
-  if let some id := annotatedFVarId? infos stx then
+  if let some id := (annotatedExpr? infos stx).bind (·.fvarId?) then
     match binders.find? fun entry => entry.1 == id with
     | some (_, name) => mkIdentFrom stx name
     | none => match sectionReferences.get? id with
       | some uid => mkCIdentFrom stx uid
       | none => (parameterInstances.get? id).getD stx
-  else if let some name := annotatedConstName? infos stx then
+  else if let some name := (annotatedExpr? infos stx).bind (·.constName?) then
     freezePresentationConstant stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
@@ -131,9 +115,10 @@ private def sectionReferenceNames : TermElabM (Std.HashMap FVarId Name) := do
 private partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
     (sectionReferences : Std.HashMap FVarId Name)
     (stx : Lean.Syntax) : Lean.Syntax :=
-  if let some uid := (annotatedFVarId? infos stx).bind sectionReferences.get? then
+  if let some uid :=
+      ((annotatedExpr? infos stx).bind (·.fvarId?)).bind sectionReferences.get? then
     mkCIdentFrom stx uid
-  else if let some name := annotatedConstName? infos stx then
+  else if let some name := (annotatedExpr? infos stx).bind (·.constName?) then
     mkCIdentFrom stx name
   else
     stx.setArgs <| stx.getArgs.map fun child =>
