@@ -99,22 +99,8 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
     match ← Morew.Elab.NLP.Terminal.plan presentation (some reduce) with
     | .error error => throwError error.reason
     | .ok result => pure (result, sectionFVars)
-  let mut nameRequests := #[]
-  for i in [:prepared.auxiliaries.size] do
-    let stem ← Rows.terminalStem state prepared.auxiliaries[i]!.1
-    nameRequests := nameRequests.push {
-      id := i, kind := .generatedBinderFamily
-      requested := Name.mkSimple (stem ++ "_aux"), ref := step }
-  let mut counts := Array.replicate state.view.constraints.size 0
-  for i in [:prepared.rowOrigins.size] do
-    let origin := prepared.rowOrigins[i]!
-    if prepared.replacedIndices.contains origin then
-      let count := counts[origin]! + 1
-      counts := counts.set! origin count
-      let stem ← Rows.terminalStem state origin
-      nameRequests := nameRequests.push {
-        id := prepared.auxiliaries.size + i, kind := .generatedRowFamily
-        requested := Name.mkSimple s!"{stem}_nlp_{count}", ref := step }
+  let nameRequests ← Rows.terminalNameRequests "nlp" state step
+    (prepared.auxiliaries.map (·.1)) prepared.rowOrigins prepared.replacedIndices
   return { nameRequests, materialize := materializeTerminalNLP state prepared preparedVars }
 
 @[morew_reformulation_step Morew.nlpStep]

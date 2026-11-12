@@ -84,6 +84,27 @@ def nameRequests (style : Style) (selector : TSyntax `ident)
     }
   return requests
 
+/-- Request terminal auxiliaries followed by replaced rows, numbered within each source row. -/
+def terminalNameRequests (family : String) (state : ReformState) (ref : Syntax)
+    (auxiliaryOrigins rowOrigins replacedIndices : Array Nat) : CommandElabM (Array NameRequest) := do
+  let mut requests := #[]
+  for i in [:auxiliaryOrigins.size] do
+    let stem ← terminalStem state auxiliaryOrigins[i]!
+    requests := requests.push {
+      id := i, kind := .generatedBinderFamily
+      requested := Name.mkSimple (stem ++ "_aux"), ref }
+  let mut counts := Array.replicate state.view.constraints.size 0
+  for i in [:rowOrigins.size] do
+    let origin := rowOrigins[i]!
+    if replacedIndices.contains origin then
+      let count := counts[origin]! + 1
+      counts := counts.set! origin count
+      let stem ← terminalStem state origin
+      requests := requests.push {
+        id := auxiliaryOrigins.size + i, kind := .generatedRowFamily
+        requested := Name.mkSimple s!"{stem}_{family}_{count}", ref }
+  return requests
+
 /-- Share repeated rows, certificates, and problems in stored proof data. -/
 partial def shareCertificate (certificate : Expr)
     (candidates : List (Name × Expr)) : MetaM Expr := do
