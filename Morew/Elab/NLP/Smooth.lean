@@ -482,17 +482,8 @@ private def restrictDomain (point expression value : Expr) (positive : Bool)
   let proofs ← proofs.mapM fun proof => restrictProof point proof domain subset
   return ({ domain, isOpen, included }, proofs, holds)
 
--- Expose projection-operand bindings while retaining independent evidence lets.
-private def hoistProjectionLets : Expr → Expr
-  | .proj name index value =>
-    match hoistProjectionLets value with
-    | .letE binding type value body nondep =>
-      .letE binding type value (.proj name index body) nondep
-    | value => .proj name index value
-  | expression => expression
-
 private partial def certifyBody (point expression : Expr) : CertifyM Certificate := do
-  let expression := hoistProjectionLets (← reduceStructure point expression)
+  let expression := Expr.hoistProjectionLets (← reduceStructure point expression)
   if let .letE name type value body nondep := expression then
     if (← Expr.depends point type) || (← Expr.depends point value) then
       chargeSubstitution (.lam name type body .default) #[value]

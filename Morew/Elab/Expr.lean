@@ -73,6 +73,15 @@ partial def hasUnresolvedStrict (expression : Expr) (seen : FVarIdSet := {}) :
         if ← hasUnresolvedStrict value seen then return true
   return false
 
+/-- Move projection-operand lets outward while retaining their evidence scope. -/
+def hoistProjectionLets : Expr → Expr
+  | .proj name index value =>
+    match hoistProjectionLets value with
+    | .letE binding type value body nondep =>
+      .letE binding type value (.proj name index body) nondep
+    | value => .proj name index value
+  | expression => expression
+
 /-- Reduce local lets, applications, projections, and tuple matches.
 Named unfolding is limited to fields of problem definitions and single-alternative
 product matchers. `preserveLets` stops at outer lets. `opaqueProblemDependencies?`
