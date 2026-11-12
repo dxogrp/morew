@@ -35,15 +35,8 @@ private def proveIff (lhs rhs : Expr)
     mkLambdaFVars #[h] (← backward h)
   mkAppM ``Iff.intro #[forward, backward]
 
-private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
-  entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
-
 private def applyRows (rows : Array Expr) (point : Expr) : Array Expr :=
   rows.map (mkApp · point)
-
-private def feasibleFunction (domain : Expr) (rows : Array Expr) : MetaM Expr :=
-  withLocalDeclD `point domain fun point => do
-    mkLambdaFVars #[point] (mkAndN (applyRows rows point).toList)
 
 /-- Separate exactly one displayed row from the retained ordered conjunction.
 Conjunctions inside an individual row keep their original boundaries. -/
@@ -53,7 +46,7 @@ def makeDecomposition (presentation : PresentationState) (index : Nat)
     throwError "constraint decomposition index is out of bounds"
   let rows := presentation.constraints.map (·.predicate)
   let remainder := splice rows index #[]
-  let remainderFunction ← feasibleFunction presentation.domainType remainder
+  let remainderFunction ← mkFeasibleFunction presentation.domainType remainder
   let source := rows[index]!
   let feasible ← mkAppM ``Morew.Problem.feasible #[targetProblem]
   let proof ← withLocalDeclD `point presentation.domainType fun point => do
@@ -97,7 +90,7 @@ private def rewriteConstraintCore (presentation : PresentationState) (index : Na
         mkLambdaFVars #[point] (mkApp row original)
       pure (objective, retained)
   let nextRows := splice retainedRows index rows
-  let feasible ← feasibleFunction nextDomain nextRows
+  let feasible ← mkFeasibleFunction nextDomain nextRows
   let targetProblem ← mkAppM ``Morew.Problem.mk #[objective, feasible]
   let (natural, primitive) ← match auxiliary? with
     | none => pure (oldProblem, none)
@@ -198,7 +191,7 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   unless ← isDefEq (← inferType conditionalIff) expected do
     throwError "conditional conic certificate does not match the selected row and retained constraints"
   checkWithKernel conditionalIff
-  let feasible ← feasibleFunction domain nextRows
+  let feasible ← mkFeasibleFunction domain nextRows
   let targetProblem ← mkAppM ``Morew.Problem.mk #[presentation.objective, feasible]
   let feasibleIff ← withLocalDeclD `point domain fun point => do
     let proof ← proveIff (mkAndN (applyRows oldRows point).toList)

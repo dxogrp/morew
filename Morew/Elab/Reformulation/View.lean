@@ -341,12 +341,6 @@ private def sourceProblemParts (sourceName : Name) (source : Expr)
     bodies.mapM fun body => mkLambdaFVars #[point] body
   pure (domain, objective, constraints)
 
-/-- Build a feasibility predicate from ordered constraint predicates. -/
-def mkFeasibleFunction (domain : Expr) (constraints : Array Expr) : MetaM Expr :=
-  withLocalDeclD `point domain fun point => do
-    let propositions := constraints.map fun constraint => mkApp constraint point
-    mkLambdaFVars #[point] <| mkAndN propositions.toList
-
 /-- Replace the stored source problem at the start of the transformation sequence. -/
 private partial def protectCheckpoint (expression checkpoint replacement : Expr) : MetaM Expr := do
   let expression := expression.consumeMData.headBeta

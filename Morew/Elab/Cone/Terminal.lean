@@ -69,9 +69,6 @@ private structure Work where
   auxiliaries : Array (Nat × Expr) := #[]
   nextName : Nat := 0
 
-private def splice (entries : Array α) (index : Nat) (replacement : Array α) : Array α :=
-  entries.extract 0 index ++ replacement ++ entries.extract (index + 1) entries.size
-
 private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Expr.Error (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate

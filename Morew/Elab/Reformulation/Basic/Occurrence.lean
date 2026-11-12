@@ -92,14 +92,6 @@ private partial def replaceOccurrence (expression needle hole : Expr) (predicate
       return .proj name index value
   | other => return other
 
-private partial def pointComponents (point : Expr) : Nat → MetaM (Array Expr)
-  | 0 => pure #[]
-  | 1 => pure #[point]
-  | n + 2 => do
-      let first ← mkAppM ``Prod.fst #[point]
-      let last ← mkAppM ``Prod.snd #[point]
-      return (← pointComponents first (n + 1)).push last
-
 private def closeBody (domain : Expr) (binders definitions : Array Expr)
     (body : Expr) : MetaM Expr := do
   let body ← mkLetFVars definitions body (usedLetOnly := false)
