@@ -35,8 +35,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
   if result.certificate.expression.hasMVar || result.certificate.expression.hasSorry then throwError "incomplete exact NLP plan"
   for proof in #[result.targetIff, result.certified.domainIsOpen,
       result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
-    if proof.hasMVar || proof.hasSorry then throwError "incomplete exact NLP plan"
-    checkWithKernel proof
+    checkCompleteWithKernel proof "incomplete exact NLP plan"
   let expectedInclusion ← withLocalDeclD `point result.nextDomain fun point => do
     let original := if result.auxiliary?.isSome then Expr.proj ``Prod 0 point else point
     let retained := retained.map (mkApp · original)

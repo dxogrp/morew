@@ -32,9 +32,7 @@ elab "certified_exp_row% " source:term : term => do
   | .error error => throwError "expected an exponential row: {error.reason}"
   | .ok result =>
       for expression in #[result.constraint, result.pointwiseIff] do
-        if expression.hasMVar || expression.hasSorry then
-          throwError "exponential row has an incomplete certificate"
-        checkWithKernel expression
+        checkCompleteWithKernel expression "exponential row has an incomplete certificate"
       mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
 
 def scalar : CertifiedRow (fun p : ℝ × ℝ × ℝ =>

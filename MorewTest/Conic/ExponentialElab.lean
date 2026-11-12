@@ -38,8 +38,7 @@ private def checkRows (domain : Expr) (rows : Array Expr) (certificates : Array 
     unless ← isDefEq (← inferType certificate.pointwiseIff) expected do
       throwError "the checked cone row does not match its presentation predicate"
     for expression in #[certificate.constraint, certificate.pointwiseIff] do
-      if expression.hasMVar || expression.hasSorry then throwError "incomplete cone certificate"
-      checkWithKernel expression
+      checkCompleteWithKernel expression "incomplete cone certificate"
 
 private def rowCone (constraint : Expr) : MetaM Expr := do
   let type ← whnf (← inferType constraint)
@@ -97,9 +96,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
           (← mkArrow remainder (← mkAppM ``Iff #[mkApp source point, target]))
       unless ← isDefEq (← inferType conditionalIff) expected do
         throwError "contextual certificate changed the exact source or retained conjunction"
-      if conditionalIff.hasMVar || conditionalIff.hasSorry then
-        throwError "incomplete contextual exponential certificate"
-      checkWithKernel conditionalIff
+      checkCompleteWithKernel conditionalIff "incomplete contextual exponential certificate"
       checkRows domain result.rowPredicates result.certifiedRows
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :

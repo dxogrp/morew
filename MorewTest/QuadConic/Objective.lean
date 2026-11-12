@@ -26,8 +26,7 @@ private def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
       | .ok result => pure result
       | .error error => throwError "quadratic recognition failed for {source}: {error.reason}"
     for proof in #[result.quadratic, result.affine, result.pointwiseEquality, result.curvature] do
-      if proof.hasMVar || proof.hasSorry then throwError "incomplete quadratic certificate"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete quadratic certificate"
     let sense := Lean.mkConst <| match sense with
       | .minimize => ``Morew.ObjectiveSense.minimize
       | .maximize => ``Morew.ObjectiveSense.maximize

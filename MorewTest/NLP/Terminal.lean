@@ -49,8 +49,7 @@ private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal
       (← isDefEq formType.getAppArgs.back! target) do
     throwError "terminal form represents a different problem"
   for proof in #[result.form, result.equiv] do
-    if proof.hasMVar || proof.hasSorry then throwError "terminal certificate is incomplete"
-    checkWithKernel proof
+    checkCompleteWithKernel proof "terminal certificate is incomplete"
   return result
 
 private def count (result : Morew.Elab.NLP.Terminal.Result) (expected : Nat) : MetaM Unit := do

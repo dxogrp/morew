@@ -29,9 +29,7 @@ private def checkPrepared (source : Expr) (result : Plan.Result)
   unless predicates.size == rows.size do throwError "missing certified replacement rows"
   for row in rows do
     for expression in #[row.constraint, row.pointwiseIff] do
-      if expression.hasMVar || expression.hasSorry then
-        throwError "incomplete automatic certificate"
-      checkWithKernel expression
+      checkCompleteWithKernel expression "incomplete automatic certificate"
   return rows.size
 
 private def expectUnique (stx : TSyntax `term) (count : Nat)

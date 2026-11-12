@@ -39,8 +39,7 @@ private def check (term : TSyntax `term) (rows : Nat)
       throwError "incomplete registered NLP evidence"
     for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
-      if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete registered NLP evidence"
     assertMVarCountersUnchanged before "registered NLP planning leaked scratch metavariables"
 
 private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
@@ -65,8 +64,7 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
       throwError "incomplete registered NLP evidence"
     for proof in #[result.targetIff, result.certified.domainIsOpen,
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
-      if proof.hasMVar || proof.hasSorry then throwError "incomplete registered NLP evidence"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete registered NLP evidence"
 
 private def reject (term : TSyntax `term) (message : String)
     (declaration? : Option Name := none) (parameters : Nat := 0)

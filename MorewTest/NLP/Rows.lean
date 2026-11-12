@@ -27,8 +27,7 @@ private def check (feasible : Expr) (rows : Array Expr)
       unless ← isDefEq (← inferType result.rowCertificates[i]!) expected do
         throwError "generated row or common domain changed"
     for proof in result.rowCertificates ++ #[result.domainIsOpen, result.feasibleMemDomain] do
-      if proof.hasMVar || proof.hasSorry then throwError "incomplete generated-row evidence"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete generated-row evidence"
 
 private def assertRows (term : TSyntax `term) (parameters : Nat := 0)
     (failure? : Option Smooth.SmoothFailureKind := none) : TermElabM Unit :=

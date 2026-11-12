@@ -22,6 +22,12 @@ def elaborateUnchecked (term : TSyntax `term) : TermElabM Expr := do
   synthesizeSyntheticMVarsNoPostponing
   instantiateMVars expression
 
+/-- Reject incomplete expressions before checking them with the kernel. -/
+def checkCompleteWithKernel (expression : Expr) (failureMessage : String) : MetaM Unit := do
+  if expression.hasMVar || expression.hasSorry then
+    throwError "{failureMessage}"
+  checkWithKernel expression
+
 /-- Check expression and universe metavariable allocation counters. -/
 def assertMVarCountersUnchanged (before : MetavarContext) (failureMessage : String) : MetaM Unit := do
   let after ← getMCtx

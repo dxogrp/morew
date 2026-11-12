@@ -75,9 +75,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
   unless ← isDefEq (← inferType row.pointwiseIff) rowExpected do
     throwError "the certified row does not match the generated membership"
   for expression in proofs ++ #[row.constraint, row.pointwiseIff] do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "second-order planning returned an incomplete certificate"
-    checkWithKernel expression
+    checkCompleteWithKernel expression "second-order planning returned an incomplete certificate"
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do

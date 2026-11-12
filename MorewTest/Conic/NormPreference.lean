@@ -58,9 +58,7 @@ private def check (term : TSyntax `term) (expected : Array (TSyntax `term))
       throwError "norm selection changed a generated row or its position: {actual}"
   for expression in #[result.certificate.expression, result.targetIff] ++
       result.certifiedRows.flatMap (fun row => #[row.constraint, row.pointwiseIff]) do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "norm selection returned an incomplete certificate"
-    checkWithKernel expression
+    checkCompleteWithKernel expression "norm selection returned an incomplete certificate"
 
 private def reject (term : TSyntax `term) (message : String)
     (rule? : Option Name := none) (exact : Bool := true) : TermElabM Unit := do
@@ -138,9 +136,7 @@ private def checkCandidateEvidence (ambiguous : Bool := false)
       let certificates := #[result.certificate.expression, result.targetIff] ++
         result.certifiedRows.flatMap (fun row => #[row.constraint, row.pointwiseIff])
       for certificate in certificates do
-        if certificate.hasMVar || certificate.hasSorry then
-          throwError "evidence-backed norm certificate is incomplete"
-        checkWithKernel certificate
+        checkCompleteWithKernel certificate "evidence-backed norm certificate is incomplete"
       let referenced := names.filter fun name =>
         certificates.any fun certificate => (certificate.find? (·.isConstOf name)).isSome
       unless referenced.size == 1 do

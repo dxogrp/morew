@@ -56,9 +56,7 @@ elab "certified_power_family% " source:term : term => do
   let .ok result ← Morew.Elab.Cone.normalizeRow predicate
     | throwError "expected a checked finite power family"
   for expression in #[result.constraint, result.pointwiseIff] do
-    if expression.hasMVar || expression.hasSorry then
-      throwError "power family has an incomplete certificate"
-    checkWithKernel expression
+    checkCompleteWithKernel expression "power family has an incomplete certificate"
   mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
 
 def varying (n : Nat) (α : Fin n → ℝ) (hα : ∀ i, 0 < α i ∧ α i < 1) :
