@@ -231,13 +231,10 @@ def plan (source : Expr) (retained : Array Expr) (rule? : Option Expr := none)
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
     try
-      let mut instances := #[]
-      for expression in #[source] ++ retained ++ rule?.toArray do
-        for inst in ← Expr.sourceFiniteInstances expression do
-          unless instances.contains inst do instances := instances.push inst
+      let instances ← Expr.collectSourceFiniteInstances (#[source] ++ retained ++ rule?.toArray)
       Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
         (fun result oldVars newVars => result.map (·.replaceFVars oldVars newVars))
-        instances.toList do
+        instances do
           let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
           withLocalDeclD `point domain fun point =>
             Morew.Elab.Rewrite.Plan.withScopedEvidence

@@ -64,14 +64,12 @@ def prepareNLP (state : ReformState) (step : Syntax)
     let predicate := presentation.constraints[index]!.predicate
     let retained := splice presentation.constraints index #[]
     -- Share structural finite evidence without affine helper expansion.
-    let mut instances := #[]
-    for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do
-      for inst in ← Morew.Elab.Expr.sourceFiniteInstances source do
-        unless instances.contains inst do instances := instances.push inst
+    let instances ← Morew.Elab.Expr.collectSourceFiniteInstances
+      (#[presentation.objective] ++ presentation.constraints.map (·.predicate))
     let result ← Morew.Elab.Rewrite.Plan.withScopedFiniteInstances
       (fun result oldVars newVars => result.map
         (fun (value : Morew.Elab.NLP.Rewrite.Result) =>
-          value.replaceFVars oldVars newVars)) instances.toList do
+          value.replaceFVars oldVars newVars)) instances do
       Morew.Elab.NLP.Rewrite.plan predicate (retained.map (·.predicate)) rule? index declaration?
     match result with
     | .error error =>

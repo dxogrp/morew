@@ -48,15 +48,11 @@ def withPresentationFiniteInstances {α : Type}
     (presentation : Reformulation.PresentationState)
     (action : MetaM (Except Expr.Error α)) :
     MetaM (Except Expr.Error α) := do
-  let mut instances := #[]
   let sources := #[presentation.objective] ++ presentation.constraints.map (·.predicate)
-  for source in sources do
-    for inst in ← Expr.sourceFiniteInstances source do
-      unless instances.contains inst do
-        instances := instances.push inst
+  let instances ← Expr.collectSourceFiniteInstances sources
   withHelperFiniteInstances replace sources do
     withScopedFiniteInstances
       (fun result oldVars newVars => result.map (fun value => replace value oldVars newVars))
-      instances.toList action
+      instances action
 
 end Morew.Elab.Cone.Finite

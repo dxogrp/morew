@@ -256,4 +256,8 @@ def sourceFiniteInstances (source : Expr) : MetaM (Array Expr) := do
     | _ => pure ()
   return instances
 
+/-- Collect finite-index evidence from sources in order, keeping its first occurrence. -/
+def collectSourceFiniteInstances (sources : Array Expr) : MetaM (List Expr) := do
+  return (← sources.flatMapM sourceFiniteInstances).toList.eraseDups
+
 end Morew.Elab.Expr
