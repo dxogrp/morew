@@ -245,8 +245,7 @@ private def proveRearrangement (type : Expr) : TermElabM Expr := do
 private def makeDecomposition (presentation : PresentationState) (index : Nat)
     (sourceProblem : Expr) : TermElabM Expr := do
   let rows := presentation.constraints.map (·.predicate)
-  let remainder ← mkFeasibleFunction presentation.domainType
-    (rows.extract 0 index ++ rows.extract (index + 1) rows.size)
+  let remainder ← mkFeasibleFunction presentation.domainType (splice rows index #[])
   let source := rows[index]!
   let feasible ← mkAppM ``Morew.Problem.feasible #[sourceProblem]
   let proofType ← withLocalDeclD `point presentation.domainType fun point => do

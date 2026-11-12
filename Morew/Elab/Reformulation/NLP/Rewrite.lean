@@ -62,8 +62,7 @@ def prepareNLP (state : ReformState) (step : Syntax)
     let presentation := state.typed.presentation.replaceFVars state.sectionFVars sectionFVars
     let (rule?, declaration?) ← Rows.elaborateRule selector rule?
     let predicate := presentation.constraints[index]!.predicate
-    let retained := presentation.constraints.extract 0 index ++
-      presentation.constraints.extract (index + 1) presentation.constraints.size
+    let retained := splice presentation.constraints index #[]
     -- Share structural finite evidence without affine helper expansion.
     let mut instances := #[]
     for source in #[presentation.objective] ++ presentation.constraints.map (·.predicate) do

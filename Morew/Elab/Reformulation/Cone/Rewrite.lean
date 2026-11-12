@@ -60,8 +60,7 @@ def prepareConic (state : ReformState) (step : Syntax)
     let result : Except Morew.Elab.Expr.Error Morew.Elab.Cone.Plan.Result ←
       Morew.Elab.Cone.Finite.withPresentationFiniteInstances
         Morew.Elab.Cone.Plan.Result.replaceFVars presentation do
-        let retained := presentation.constraints.extract 0 index ++
-          presentation.constraints.extract (index + 1) presentation.constraints.size
+        let retained := splice presentation.constraints index #[]
         if let some name := declaration? then do
           Morew.Elab.Cone.Rewrite.planDeclaration predicate name (retained.map (·.predicate))
         else if let some rule := rule? then do

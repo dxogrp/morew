@@ -160,8 +160,7 @@ def finish (style : Style) (state : ReformState) (typed : RunnerState) (index : 
   let view := {
     state.view with
     binders
-    constraints := state.view.constraints.extract 0 index ++ renderedRows ++
-      state.view.constraints.extract (index + 1) state.view.constraints.size
+    constraints := splice state.view.constraints index renderedRows
   }
   let semantic ← exactExpressionSyntax (← simpOnly replacement.targetProblem
     (preserveProofLets := true))
