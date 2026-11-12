@@ -118,16 +118,7 @@ private def checkCandidateEvidence (ambiguous : Bool := false)
         return some (mkAppN (mkConst name) parameters)
     }
     let outcome ← Morew.Elab.Cone.Rewrite.planUnique source #[] provider
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "candidate evidence leaked scratch metavariables"
-    for (id, value) in before.eAssignment.toList do
-      unless after.eAssignment.find? id == some value do
-        throwError "candidate evidence changed a caller assignment"
-    for (id, _) in before.decls.toList do
-      unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-        throwError "candidate evidence assigned a caller hole"
+    assertExprMVarStateUnchanged before "candidate evidence"
     if ← sentinel.mvarId!.isAssigned then
       throwError "candidate evidence retained the callback's caller assignment"
     unless (← instantiateMVars assigned) == mkNatLit 7 do

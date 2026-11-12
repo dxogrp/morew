@@ -19,23 +19,11 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Smooth
 open MorewTest.Affine (elaborate)
 
-private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "smoothness certification leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "smoothness certification changed a caller assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "smoothness certification assigned an unresolved caller metavariable"
-
 private def rejectUnresolved (source : Expr) : MetaM Unit := do
   let before ← getMCtx
   let .error error ← certifyGlobal source
     | throwError "an unresolved smoothness source was certified"
-  checkUnchanged before
+  assertExprMVarStateUnchanged before "smoothness certification"
   unless error.kind == .unresolved do
     throwError "expected an unresolved-source diagnostic, got {repr error.kind}: {error.reason}"
   unless error.source == source do
@@ -51,12 +39,12 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let before ← getMCtx
     let .ok proof ← certifyGlobal good
       | throwError "state-isolation positive control was rejected"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     checkCertificate good proof
     let before ← getMCtx
     let .error error ← certifyGlobal bad
       | throwError "state-isolation negative control was certified"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     unless error.kind == .restrictedDomain do
       throwError "negative control failed before reaching its logarithm"
   if ← unresolved.mvarId!.isAssigned then
@@ -135,7 +123,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let before ← getMCtx
     let .ok proof ← certifyGlobal source
       | throwError "a complete exponent hidden in local declarations was rejected"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     checkCertificate source proof
   accept (mkApp builder (mkNatLit 7))
   withLetDecl `exponent nat (mkNatLit 7) fun exponent =>
@@ -179,7 +167,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let before ← getMCtx
     let .ok proof ← certifyGlobal source
       | throwError "an assigned coefficient hidden in a local value was rejected"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     checkCertificate source proof
   let assignedType ← mkFreshExprMVar (mkSort (.succ .zero))
   assignedType.mvarId!.assign real
@@ -188,7 +176,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let before ← getMCtx
     let .ok proof ← certifyGlobal source
       | throwError "an assigned coefficient type was rejected"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     checkCertificate source proof
 
 /-! Index sets and natural exponents must be independent of the decision. -/
@@ -214,7 +202,7 @@ source and leave caller metavariables untouched. -/
 private def checkStructuralSource (source : Expr) : MetaM Unit := do
   let before ← getMCtx
   let result ← certifyGlobal source
-  checkUnchanged before
+  assertExprMVarStateUnchanged before "smoothness certification"
   match result with
   | .ok proof => checkCertificate source proof
   | .error error => throwError "expected structural smoothness of {source}\n{error.reason}"
@@ -398,7 +386,7 @@ private def checkIntermediateEnumeration (source indexType : Expr) : MetaM Unit 
     let before ← getMCtx
     let .ok proof ← certifyGlobal source
       | throwError "an ambient enumeration prevented intermediate-vector certification"
-    checkUnchanged before
+    assertExprMVarStateUnchanged before "smoothness certification"
     checkCertificate source proof
     let proofType ← inferType proof
     if proof.containsFVar ambient.fvarId! || proofType.containsFVar ambient.fvarId! then

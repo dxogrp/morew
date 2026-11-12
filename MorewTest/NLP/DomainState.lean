@@ -22,23 +22,11 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP
 open MorewTest.Affine (elaborate)
 
-private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "domain certification leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "domain certification changed a caller assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "domain certification assigned an unresolved caller metavariable"
-
 private def isolatedSuccess (feasible : Expr) (sources : Array Expr) :
     MetaM Domain.DomainResult := do
   let before ← getMCtx
   let result ← Domain.certify feasible sources
-  checkUnchanged before
+  assertExprMVarStateUnchanged before "domain certification"
   let result ← match result with
     | .ok result => pure result
     | .error error => throwError "expected a complete domain certificate: {error.reason}"
@@ -49,7 +37,7 @@ private def isolatedFailure (feasible : Expr) (sources : Array Expr)
     (kind : Smooth.SmoothFailureKind) : MetaM Domain.DomainError := do
   let before ← getMCtx
   let result ← Domain.certify feasible sources
-  checkUnchanged before
+  assertExprMVarStateUnchanged before "domain certification"
   let .error error := result
     | throwError "incomplete or unsupported domain input was certified"
   unless error.kind == kind do

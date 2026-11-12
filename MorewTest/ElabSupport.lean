@@ -7,7 +7,7 @@ import Lean.Elab.Term
 import Lean.Elab.SyntheticMVars
 
 /-!
-# Checked and unchecked elaboration of test inputs
+# Test elaboration and metavariable state checks
 
 Shared elaboration checks independent of affine and conic certification.
 -/
@@ -21,6 +21,20 @@ def elaborateUnchecked (term : TSyntax `term) : TermElabM Expr := do
   let expression ← elabTerm term none
   synthesizeSyntheticMVarsNoPostponing
   instantiateMVars expression
+
+/-- Check allocation counters, depth, and caller expression assignments.
+Universe assignments and other caller state require separate checks. -/
+def assertExprMVarStateUnchanged (before : MetavarContext) (context : String) : MetaM Unit := do
+  let after ← getMCtx
+  unless before.mvarCounter == after.mvarCounter &&
+      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
+    throwError "{context}: scratch metavariable state changed"
+  for (id, value) in before.eAssignment.toList do
+    unless after.eAssignment.find? id == some value do
+      throwError "{context}: an existing caller assignment changed"
+  for (id, _) in before.decls.toList do
+    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
+      throwError "{context}: an unresolved caller metavariable was assigned"
 
 def Affine.elaborate (term : TSyntax `term) : TermElabM Expr := do
   let expression ← elaborateUnchecked term

@@ -22,16 +22,7 @@ open MorewTest.NLP.Smooth MorewTest.NLP.HelperFixtures
 open MorewTest.Affine (elaborate)
 
 private def unchanged (before : MetavarContext) (environment : Environment) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "helper certification leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "helper certification changed an existing assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "helper certification assigned a caller hole"
+  assertExprMVarStateUnchanged before "helper certification"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "helper certification leaked declaration {name}"
 

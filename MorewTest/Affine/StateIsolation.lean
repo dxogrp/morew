@@ -73,17 +73,32 @@ private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
     }
     action source provider generated
 
-private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "affine recognition leaked scratch metavariables"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "affine recognition changed a caller metavariable assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "affine recognition assigned an unresolved caller metavariable"
+private def expectStateChange (before : MetavarContext) (change : MetaM Unit) : MetaM Unit :=
+  withoutModifyingMCtx do
+    change
+    let rejected ← try
+      assertExprMVarStateUnchanged before "state assertion control"
+      pure false
+    catch _ => pure true
+    unless rejected do throwError "state assertion accepted changed caller state"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let missing ← mkFreshExprMVar (Lean.mkConst ``Nat)
+  let assigned ← mkFreshExprMVar (Lean.mkConst ``Nat)
+  assigned.mvarId!.assign (mkNatLit 7)
+  let before ← getMCtx
+  assertExprMVarStateUnchanged before "unchanged state control"
+  expectStateChange before do discard <| mkFreshExprMVar (Lean.mkConst ``Nat)
+  expectStateChange before do discard <| mkFreshLevelMVar
+  expectStateChange before do assigned.mvarId!.assign (mkNatLit 8)
+  expectStateChange before do missing.mvarId!.assign (mkNatLit 8)
+  let rejected ← withNewMCtxDepth do
+    try
+      assertExprMVarStateUnchanged before "depth control"
+      pure false
+    catch _ => pure true
+  unless rejected do throwError "state assertion accepted a changed metavariable depth"
+  assertExprMVarStateUnchanged before "restored state control"
 
 private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     (cache : Bool := true) : TermElabM Unit :=
@@ -97,7 +112,7 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
         | .ok expressions => pure expressions
         | .error error => throwError
             "callback-generated evidence was rejected by {repr entry}: {error.reason}"
-      checkUnchanged before
+      assertExprMVarStateUnchanged before "affine recognition"
       for expression in expressions do
         if expression.hasMVar || expression.hasSorry then
           throwError "recognition returned an incomplete certificate"
@@ -127,7 +142,7 @@ private def checkFailure (entry : EntryPoint) (term : TSyntax `term)
       let before ← getMCtx
       let .error error ← recognize entry source provider
         | throwError "nonlinear expression was accepted"
-      checkUnchanged before
+      assertExprMVarStateUnchanged before "affine recognition"
       unless (← error.reason.toString).contains "both factors of multiplication" do
         throwError "recognition failed before reaching the nonlinear operand: {error.reason}"
       for name in (← generated.get) do

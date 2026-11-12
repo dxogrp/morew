@@ -88,18 +88,9 @@ private def checkRows (rows : Array Expr) (expected : Array String)
   let before ← getMCtx
   let environment ← getEnv
   let result ← Morew.Elab.Reformulation.Cone.powerChainPrintRows rows renderer
-  let after ← getMCtx
   unless result.map role == expected do
     throwError "unexpected power-chain roles: {result.map role}; expected {expected}"
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "power-chain printing changed caller metavariable state"
-  for (id, value) in before.eAssignment.toList do
-    unless after.eAssignment.find? id == some value do
-      throwError "power-chain printing changed a caller assignment"
-  for (id, _) in before.decls.toList do
-    unless before.eAssignment.contains id || !(after.eAssignment.contains id) do
-      throwError "power-chain printing assigned a caller hole"
+  assertExprMVarStateUnchanged before "power-chain printing"
   if ← hole.mvarId!.isAssigned then throwError "power-chain printing assigned a caller hole"
   unless (← instantiateMVars assigned) == mkNatLit 7 do
     throwError "power-chain printing discarded a caller assignment"
