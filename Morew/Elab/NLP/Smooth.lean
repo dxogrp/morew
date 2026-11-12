@@ -510,6 +510,13 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   let independent := !(← Expr.depends point expression)
   if independent && !inferDomains then
     return ← constant point expression (← univInfo point)
+  let certifyExpanded (step : Expansion.Step) : CertifyM Certificate := do
+    let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
+      unless ← Domain.Evidence.complete step.expression do
+        reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
+      certifyBody point step.expression
+    rememberHelperModel point step.helper result
+    return result
   -- Certify only selected fields of helper-produced tuples and functions.
   if !independent && Expansion.enabled (← read).expansion then
     let head := expression.getAppFn
@@ -519,12 +526,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
     if structural then
       if let some step ← expansionAction <| unfoldValueHead?
           (← read).expansion expression (← read).helpers.size then
-        let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
-          unless ← Domain.Evidence.complete step.expression do
-            reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
-          certifyBody point step.expression
-        rememberHelperModel point step.helper result
-        return result
+        return ← certifyExpanded step
   if expression == point then
     let info ← univInfo point
     return { info with
@@ -764,12 +766,7 @@ private partial def certifyBody (point expression : Expr) : CertifyM Certificate
   if !independent && Expansion.enabled (← read).expansion then
     if let some step ← expansionAction <| unfoldValueHead?
         (← read).expansion expression (← read).helpers.size then
-      let result ← withReader (fun ctx => { ctx with helpers := ctx.helpers.push step.helper }) do
-        unless ← Domain.Evidence.complete step.expression do
-          reject step.expression .unresolved "expanded helper contains unresolved expressions or placeholders"
-        certifyBody point step.expression
-      rememberHelperModel point step.helper result
-      return result
+      return ← certifyExpanded step
   if let .app vector index := expression then
     let vectorType ← whnf (← inferType vector)
     if vectorType.isForall && (← supportedSpace vectorType) then
