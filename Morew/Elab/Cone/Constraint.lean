@@ -353,6 +353,18 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
     return .error (← rowError body "membership does not match the canonical zero singleton" label?)
   return .ok value
 
+private def finishRow (predicate point constraint pointwiseIff : Expr)
+    (description : String := "row") : MetaM (Expr × Expr) := do
+  if constraint.hasMVar || pointwiseIff.hasMVar then
+    throwError "{description} construction left unresolved metavariables"
+  let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
+  let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
+  checkWithKernel constraint
+  checkWithKernel pointwiseIff
+  unless ← isDefEq (← inferType pointwiseIff) expected do
+    throwError "{description} equivalence did not match the input predicate"
+  return (constraint, pointwiseIff)
+
 private def normalizeZeroMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
@@ -368,15 +380,7 @@ private def normalizeZeroMembershipRow (predicate domain point body : Expr)
     let constraint ← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.eqZero #[affine.map])
     let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeZeroMembership
       #[affine.map, source, affine.pointwiseEquality])
-    if constraint.hasMVar || pointwiseIff.hasMVar then
-      throwError "row construction left unresolved metavariables"
-    let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
-    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-    checkWithKernel constraint
-    checkWithKernel pointwiseIff
-    unless ← isDefEq (← inferType pointwiseIff) expected do
-      throwError "row equivalence did not match the input predicate"
-    return (constraint, pointwiseIff)
+    finishRow predicate point constraint pointwiseIff
   return .ok { constraint, pointwiseIff }
 
 private def normalizePSDRow (predicate domain point body : Expr)
@@ -473,15 +477,7 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
     let constraint ← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.mk #[cone, affine.map])
     let pointwiseIff ← instantiateMVars (← mkAppM ``normalizeMembership
       #[cone, affine.map, source, affine.pointwiseEquality])
-    if constraint.hasMVar || pointwiseIff.hasMVar then
-      throwError "row construction left unresolved metavariables"
-    let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
-    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-    checkWithKernel constraint
-    checkWithKernel pointwiseIff
-    unless ← isDefEq (← inferType pointwiseIff) expected do
-      throwError "row equivalence did not match the input predicate"
-    return (constraint, pointwiseIff)
+    finishRow predicate point constraint pointwiseIff
   return .ok { constraint, pointwiseIff }
 
 private structure FamilyMember where
@@ -559,15 +555,7 @@ private def normalizeFiniteFamilyRow (predicate domain point body : Expr)
     let constraint ← instantiateMVars (← mkAppM ``Morew.Conic.Constraint.mk #[cone, affine.map])
     let pointwiseIff ← instantiateMVars (← mkAppM theoremName
       (parameters ++ #[affine.map, source, affine.pointwiseEquality]))
-    if constraint.hasMVar || pointwiseIff.hasMVar then
-      throwError "quantified row construction left unresolved metavariables"
-    let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
-    let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-    checkWithKernel constraint
-    checkWithKernel pointwiseIff
-    unless ← isDefEq (← inferType pointwiseIff) expected do
-      throwError "quantified row equivalence did not match the input predicate"
-    return (constraint, pointwiseIff)
+    finishRow predicate point constraint pointwiseIff "quantified row"
   return .ok { constraint, pointwiseIff }
 
 private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.EvidenceProvider)
@@ -632,15 +620,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
           else
             #[left.map, right.map, lhs, rhs, left.pointwiseEquality, right.pointwiseEquality]
         let pointwiseIff ← instantiateMVars (← mkAppM theoremName proofArguments)
-        if constraint.hasMVar || pointwiseIff.hasMVar then
-          throwError "row construction left unresolved metavariables"
-        let holds ← mkAppM ``Morew.Conic.Constraint.Holds #[constraint, point]
-        let expected ← mkForallFVars #[point] (← mkAppM ``Iff #[holds, mkApp predicate point])
-        checkWithKernel constraint
-        checkWithKernel pointwiseIff
-        unless ← isDefEq (← inferType pointwiseIff) expected do
-          throwError "row equivalence did not match the input predicate"
-        return (constraint, pointwiseIff)
+        finishRow predicate point constraint pointwiseIff
       return .ok { constraint, pointwiseIff }
 
 private def withFiniteInstances (instances : List Expr)
