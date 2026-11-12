@@ -271,14 +271,10 @@ private def operandFunction (point operand proof : Expr) : CertifyM Expr := do
 private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
-  let actualArgs := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  unless source.getAppFn == expected.getAppFn && actualArgs.size == expectedArgs.size &&
-      operands ≤ actualArgs.size do
-    reject source .invalidInstance "expected a canonical native operation"
-  for i in [:actualArgs.size - operands] do
-    unless ← isDefEq actualArgs[i]! expectedArgs[i]! do
-      reject source .invalidInstance "expected canonical real arithmetic instances"
+  match ← Expr.operationPrefixMismatch? source expected operands with
+  | none => pure ()
+  | some .shape => reject source .invalidInstance "expected a canonical native operation"
+  | some .argument => reject source .invalidInstance "expected canonical real arithmetic instances"
 
 -- Check canonical operation instances and operand domains for fixed product/vector coefficients.
 private structure PointwiseArithmetic (X : Type*) where

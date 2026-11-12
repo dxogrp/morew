@@ -194,14 +194,10 @@ private def affine? (point expression : Expr) (provider : Affine.EvidenceProvide
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
-  let args := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  unless source.getAppFn == expected.getAppFn && args.size == expectedArgs.size &&
-      operandCount ≤ args.size do
-    reject source "unsupported operation or arithmetic instance"
-  for i in [:args.size - operandCount] do
-    unless ← isDefEq args[i]! expectedArgs[i]! do
-      reject source "expected the canonical real operation"
+  match ← Expr.operationPrefixMismatch? source expected operandCount with
+  | none => pure ()
+  | some .shape => reject source "unsupported operation or arithmetic instance"
+  | some .argument => reject source "expected the canonical real operation"
 
 private def finish (point source certificate : Expr) (count? : Option Nat := none) :
     ReifyM Expr := do

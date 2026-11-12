@@ -79,18 +79,6 @@ private theorem powerMembershipCongr (α β : ℝ)
   subst β
   rfl
 
--- Check operation instances independently of their operands.
-private def sameOperationPrefix (source canonical : Expr) (operandCount : Nat) :
-    MetaM Bool := do
-  let sourceArgs := source.getAppArgs
-  let canonicalArgs := canonical.getAppArgs
-  unless source.getAppFn == canonical.getAppFn &&
-      sourceArgs.size == canonicalArgs.size && operandCount ≤ sourceArgs.size do
-    return false
-  for index in [:sourceArgs.size - operandCount] do
-    unless ← isDefEq sourceArgs[index]! canonicalArgs[index]! do return false
-  return true
-
 -- Reduce standard extended-real numerals, inverses, and quotients inside `toReal`.
 private partial def literalENNReal (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
@@ -100,15 +88,15 @@ private partial def literalENNReal (expression : Expr) : MetaM Bool := do
     let numeral : Q(ℕ) := args[1]!
     let ⟨canonical, _⟩ ← Mathlib.Meta.NormNum.mkOfNat (u := .zero)
       q(ENNReal) q(inferInstance) numeral
-    return ← sameOperationPrefix expression canonical 0
+    return (← Expr.operationPrefixMismatch? expression canonical 0).isNone
   if expression.isAppOfArity ``Inv.inv 3 then
     let operand : Q(ENNReal) := args[2]!
-    return (← sameOperationPrefix expression q($operand⁻¹) 1) &&
+    return (← Expr.operationPrefixMismatch? expression q($operand⁻¹) 1).isNone &&
       (← literalENNReal operand)
   unless expression.isAppOfArity ``HDiv.hDiv 6 do return false
   let left : Q(ENNReal) := args[4]!
   let right : Q(ENNReal) := args[5]!
-  return (← sameOperationPrefix expression q($left / $right) 2) &&
+  return (← Expr.operationPrefixMismatch? expression q($left / $right) 2).isNone &&
     (← literalENNReal left) && (← literalENNReal right)
 
 -- Preserve named constants, local definitions, and symbolic parameters.
@@ -123,18 +111,19 @@ private partial def literalRational (expression : Expr) : MetaM Bool := do
       else natural
     unless numeral.isRawNatLit && (← isDefEq natural numeral) do return false
     let numeral : Q(ℕ) := numeral
-    return ← sameOperationPrefix expression q(($numeral : ℝ)) 1
+    return (← Expr.operationPrefixMismatch? expression q(($numeral : ℝ)) 1).isNone
   if expression.isAppOfArity ``OfNat.ofNat 3 then
     unless args[1]!.isRawNatLit do return false
     let numeral : Q(ℕ) := args[1]!
     let ⟨canonical, _⟩ ← Mathlib.Meta.NormNum.mkOfNat (u := .zero)
       q(ℝ) q(inferInstance) numeral
-    return ← sameOperationPrefix expression canonical 0
+    return (← Expr.operationPrefixMismatch? expression canonical 0).isNone
   if expression.isAppOfArity ``Neg.neg 3 || expression.isAppOfArity ``Inv.inv 3 then
     let operand : Q(ℝ) := args[2]!
     let canonical := if expression.isAppOfArity ``Neg.neg 3 then q(-$operand)
       else q($operand⁻¹)
-    return (← sameOperationPrefix expression canonical 1) && (← literalRational operand)
+    return (← Expr.operationPrefixMismatch? expression canonical 1).isNone &&
+      (← literalRational operand)
   unless expression.isAppOfArity ``HAdd.hAdd 6 ||
       expression.isAppOfArity ``HSub.hSub 6 ||
       expression.isAppOfArity ``HMul.hMul 6 ||
@@ -145,7 +134,7 @@ private partial def literalRational (expression : Expr) : MetaM Bool := do
     else if expression.isAppOfArity ``HSub.hSub 6 then q($left - $right)
     else if expression.isAppOfArity ``HMul.hMul 6 then q($left * $right)
     else q($left / $right)
-  return (← sameOperationPrefix expression canonical 2) &&
+  return (← Expr.operationPrefixMismatch? expression canonical 2).isNone &&
     (← literalRational left) && (← literalRational right)
 
 private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Expr)) := do

@@ -83,15 +83,11 @@ private def certifiedFunction (certificate : Expr) : MetaM Expr := do
 private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
-  let sourceArgs := source.getAppArgs
-  let expectedArgs := expected.getAppArgs
-  unless source.getAppFn == expected.getAppFn &&
-      sourceArgs.size == expectedArgs.size && operandCount ≤ sourceArgs.size do
-    reject source "unsupported operation or arithmetic instance"
-  let prefixSize := sourceArgs.size - operandCount
-  for i in [:prefixSize] do
-    unless ← isDefEq sourceArgs[i]! expectedArgs[i]! do
-      reject source "unsupported arithmetic instance; expected the canonical real operation"
+  match ← Expr.operationPrefixMismatch? source expected operandCount with
+  | none => pure ()
+  | some .shape => reject source "unsupported operation or arithmetic instance"
+  | some .argument =>
+    reject source "unsupported arithmetic instance; expected the canonical real operation"
 
 private def finish (point source certificate : Expr)
     (operandCount? : Option Nat := none) : ReifyM Expr := do
