@@ -334,13 +334,8 @@ private def materializeOccurrenceBound (state : ReformState)
     let equiv ← mkAppM ``Morew.GlobalEquiv.trans
       #[typed.normalization.equiv, equiv]
     let primitive ← state.runner.liftEquiv equiv
-    let primitive ← instantiateMVars primitive
-    checkWithKernel primitive
     -- Store the certificate as a constant to avoid repeated proof elaboration.
-    let primitiveName ← mkAuxDeclName (kind := `_occurrenceCertificate)
-    let primitive ← mkAuxDefinitionFor primitiveName primitive (zetaDelta := true)
-      (compile := false)
-    modifyEnv (addNoncomputable · primitiveName)
+    let primitive ← Rows.storeCertificate `_occurrenceCertificate primitive []
     let semantic ← exactExpressionSyntax target
     return {
       view := selected.view
