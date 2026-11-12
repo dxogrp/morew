@@ -21,7 +21,7 @@ def validateObjectiveCertificate (presentation : Reformulation.PresentationState
   State.withIsolatedMVars do
     try
       checkRealObjective presentation
-      if (← Expr.hasUnresolved certificate) || (← Evidence.hasPlaceholders certificate) then
+      unless ← Evidence.complete certificate do
         throwError "unresolved metavariables or proof placeholders in affine certificate"
       let expected ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
         mkAppM ``Morew.Affine.Certified #[presentation.objective]
@@ -31,7 +31,7 @@ def validateObjectiveCertificate (presentation : Reformulation.PresentationState
       let map ← instantiateMVars (← mkProjection certificate `map)
       let pointwiseEquality ← instantiateMVars (← mkProjection certificate `correct)
       for expression in #[map, pointwiseEquality] do
-        if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+        unless ← Evidence.complete expression do
           throwError "affine certificate left unresolved metavariables or proof placeholders"
         checkWithKernel expression
       return .ok { map, pointwiseEquality }

@@ -84,8 +84,7 @@ private def independentEvidence? (point goal : Expr) : MetaM (Option Expr) := do
     if declaration.isImplementationDetail then continue
     let proof := declaration.toExpr
     unless ← isProp declaration.type do continue
-    if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
-        (← Evidence.hasPlaceholders proof) then continue
+    if (← Expr.depends point proof) || !(← Evidence.complete proof) then continue
     let saved ← saveState
     if let some result ← directEvidence? goal declaration.type proof true then
       let result ← instantiateMVars result
@@ -189,7 +188,7 @@ The caller excludes the selected row; caller metavariables remain fixed. -/
 def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
     MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
-    if (← Expr.hasUnresolved goal) || (← Evidence.hasPlaceholders goal) then return .error ()
+    unless ← Evidence.complete goal do return .error ()
     unless goal.isAppOf ``Matrix.PosDef do return .error ()
     let matrix := goal.getAppArgs.back!
     let some n ← squareDimension? point matrix | return .error ()
@@ -199,13 +198,12 @@ def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
     if result.isNone then
       let proofs ← conjunctionParts retained.size remainderProof
       for body in retained, proof in proofs do
-        if (← Expr.hasUnresolved body) || (← Evidence.hasPlaceholders body) ||
-            (← Evidence.hasPlaceholders proof) then continue
+        if !(← Evidence.complete body) || (← Evidence.hasPlaceholders proof) then continue
         if let some evidence ← retainedEvidence? point n matrix canonical body proof then
           result := some evidence
           break
     let some proof := result | return .error ()
-    if (← Expr.hasUnresolved proof) || (← Evidence.hasPlaceholders proof) then return .error ()
+    unless ← Evidence.complete proof do return .error ()
     unless ← isDefEq (← inferType proof) goal do return .error ()
     checkWithKernel proof
     return .ok proof

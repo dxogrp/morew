@@ -15,7 +15,7 @@ open Lean Lean.Meta
 /-- Check completeness, the real codomain, and the objective's declared function type. -/
 def checkRealObjective (presentation : Reformulation.PresentationState) : MetaM Unit := do
   for expression in #[presentation.valueType, presentation.domainType, presentation.objective] do
-    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+    unless ← Evidence.complete expression do
       throwError "unresolved metavariables or proof placeholders in typed objective"
   unless (← whnf presentation.valueType).isConstOf ``Real do
     throwError "expected a real-valued objective"

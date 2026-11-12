@@ -127,14 +127,12 @@ private partial def parameterProjection? (proof goal : Expr) (indices : List Exp
 
 private def parameterProof? (point goal : Expr) (indices : Array Expr) :
     MetaM (Option Expr) := do
-  if (← Expr.depends point goal) || (← Expr.hasUnresolved goal) ||
-      (← Evidence.hasPlaceholders goal) then return none
+  if (← Expr.depends point goal) || !(← Evidence.complete goal) then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
   for declaration in ← getLCtx do
     if declaration.isImplementationDetail || !(← isProp declaration.type) then continue
     let proof := declaration.toExpr
-    if (← Expr.depends point proof) || (← Expr.hasUnresolved proof) ||
-        (← Evidence.hasPlaceholders proof) then continue
+    if (← Expr.depends point proof) || !(← Evidence.complete proof) then continue
     -- Preserve the search that consumes indices, then bound the fallback that reuses them.
     let found? ← match ← (parameterProjection? proof goal indices.toList false).run' 0 with
       | some found => pure (some found)
@@ -381,8 +379,7 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
     let some proof ← (affineProvider point indices provider).nonzeroEvidence?.get! q($divisor ≠ 0)
       | reject divisor m!"missing nonzero evidence; required {divisor} ≠ 0"
     unless (← isDefEq (← inferType proof) q($divisor ≠ 0)) &&
-        !(← Expr.depends point proof) && !(← Expr.hasUnresolved proof) &&
-        !(← Evidence.hasPlaceholders proof) do
+        !(← Expr.depends point proof) && (← Evidence.complete proof) do
       reject divisor "invalid independent nonzero evidence"
     let certificate ← construct point expression ``Morew.QuadConic.CertifiedExpr.divConst
       #[value.certificate, divisor, proof] (some 2)
@@ -471,7 +468,7 @@ private def withFiniteInstances (instances : List Expr) (action : ReifyM Objecti
 private def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSense)
     (certificate : Expr) : ReifyM ObjectiveResult := do
   for expression in #[source, certificate] do
-    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+    unless ← Evidence.complete expression do
       rejectIncomplete expression
   let .forallE _ domain codomain _ ← whnf (← inferType source)
     | reject source "expected a function on the decision space"
@@ -499,7 +496,7 @@ private def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSens
   unless ← isDefEq (← inferType curvature) expectedCurvature do
     reject certificate "curvature certificate does not match the quadratic part and objective sense"
   for expression in #[quadratic, affine, pointwiseEquality, curvature] do
-    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
+    unless ← Evidence.complete expression do
       rejectIncomplete expression
     checkWithKernel expression
   return { quadratic, affine, pointwiseEquality, curvature }
@@ -539,7 +536,7 @@ def validateObjectiveResult (presentation : Reformulation.PresentationState)
 
 private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
     (provider : Affine.EvidenceProvider) : ReifyM ObjectiveResult := do
-  if (← Expr.hasUnresolved original) || (← Evidence.hasPlaceholders original) then
+  unless ← Evidence.complete original do
     rejectIncomplete original
   let .forallE _ domain codomain _ ← whnf (← inferType source)
     | reject source "expected a function on the decision space"
@@ -572,7 +569,7 @@ def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
       let direct ← State.withIsolatedMVars <| (reifyCore source source sense provider).run
       if let .ok result := direct then return .ok result
       unless ← Expansion.enabled do return direct
-      if (← Expr.hasUnresolved source) || (← Evidence.hasPlaceholders source) then return direct
+      unless ← Evidence.complete source do return direct
       let expanded ← Expansion.prepare source
       if expanded.expansions == 0 then return direct
       (reifyCore expanded.expression source sense provider).run
