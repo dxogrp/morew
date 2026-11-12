@@ -325,10 +325,8 @@ assert_not_exists rejectedMissingTargeted rejectedMissingTerminal rejectedNative
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command in
 run_cmd liftTermElabM do
-  let term ← elabTerm (← `(fun p : SymmetricMatrix 2 × ℝ =>
-    p.2 ≤ Fn.logDet p.1.toMatrix)) none
-  synthesizeSyntheticMVarsNoPostponing
-  let source ← instantiateMVars term
+  let source ← elaborateUnchecked (← `(fun p : SymmetricMatrix 2 × ℝ =>
+    p.2 ≤ Fn.logDet p.1.toMatrix))
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let environment ← getEnv

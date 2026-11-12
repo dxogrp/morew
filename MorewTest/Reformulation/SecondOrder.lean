@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Reformulation.Conic
 
 /-!
@@ -377,17 +378,14 @@ example : copied = target := rfl
 
 -- The presentation hook must not alter exact semantic serialization.
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let original ← Lean.Elab.Term.elabTerm (← `(
-    fun (v : Fin 2 → ℝ) (t : ℝ) => (t, v) ∈ SOC 2 ∧ (t, 1 / 2, v) ∈ RSOC 2)) none
-  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
-  let original ← Lean.instantiateMVars original
+  let original ← elaborateUnchecked (← `(
+    fun (v : Fin 2 → ℝ) (t : ℝ) => (t, v) ∈ SOC 2 ∧ (t, 1 / 2, v) ∈ RSOC 2))
   let exact ← Morew.Elab.Reformulation.exactExpressionSyntax original
   if (exact.raw.findStack? (fun _ => true) (fun stx =>
       stx.isOfKind ``Morew.Conic.socCarrier || stx.isOfKind ``Morew.Conic.rsocCarrier)).isSome then
     Lean.throwError "cone presentation notation leaked into exact semantic syntax"
-  let restored ← Lean.Elab.Term.elabTerm exact none
-  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
-  unless ← Lean.Meta.isDefEq original (← Lean.instantiateMVars restored) do
+  let restored ← elaborateUnchecked exact
+  unless ← Lean.Meta.isDefEq original restored do
     Lean.throwError "exact cone syntax changed its meaning"
 
 end CarrierPresentation

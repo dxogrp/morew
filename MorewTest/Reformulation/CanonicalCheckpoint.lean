@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Reformulation.View
 import Morew.Syntax
 import Morew.Elab.Cone.Constraint
@@ -45,17 +46,15 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     (Morew.Problem.pullback $checkpoint (fun y : ℝ => Real.exp y)))
   let canonical ← canonicalTargetExpression ``source checkpoint checkpoint view
     (({} : Std.HashSet Nat).insert 1) semantic true
-  let expected ← elabTerm (← `(Morew.Problem.mk
+  let expected ← elaborateUnchecked (← `(Morew.Problem.mk
     (fun point : ℝ × ℝ => point.2)
     (fun point : ℝ × ℝ =>
-      (Real.exp point.1 ≤ 3 ∧ 0 ≤ Real.exp point.1) ∧ point.1 ≤ point.2))) none
-  synthesizeSyntheticMVarsNoPostponing
-  unless ← isDefEq canonical (← instantiateMVars expected) do
+      (Real.exp point.1 ≤ 3 ∧ 0 ≤ Real.exp point.1) ∧ point.1 ≤ point.2)))
+  unless ← isDefEq canonical expected do
     throwError "checkpoint normalization changed grouped rows or failed to remove aliased positivity"
-  let semanticExpr ← elabTerm semantic none
-  synthesizeSyntheticMVarsNoPostponing
+  let semanticExpr ← elaborateUnchecked semantic
   discard <| checkedPointwiseNormalization ``source
-    (← instantiateMVars semanticExpr) canonical #[← `(inDomain_iff)]
+    semanticExpr canonical #[← `(inDomain_iff)]
   let nextView : Morew.Syntax.ProblemView := {
     view with
     binders := view.binders.push { name := `bound, typeSyntax := ← `(ℝ) }
@@ -118,9 +117,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let objective ← simpOnly objective
   if (objective.find? fun expression => expression.isConstOf ``constantSource).isSome then
     throwError "a bare protected objective was restored as a source projection"
-  let expected ← elabTerm (← `(fun _ : ℝ => (0 : ℝ))) none
-  synthesizeSyntheticMVarsNoPostponing
-  unless ← isDefEq objective (← instantiateMVars expected) do
+  let expected ← elaborateUnchecked (← `(fun _ : ℝ => (0 : ℝ)))
+  unless ← isDefEq objective expected do
     throwError "normalizing the bare protected objective changed its value"
 
 end
@@ -168,9 +166,8 @@ run_cmd do
   let stableDimensionType ← stabilizeTerm exactDimensionType
   Lean.Elab.Command.runTermElabM fun sectionFVars => do
     for serialized in #[exact, stable] do
-      let actual ← elabTerm serialized none
-      synthesizeSyntheticMVarsNoPostponing
-      unless (← instantiateMVars actual) == sectionFVars[0]! do
+      let actual ← elaborateUnchecked serialized
+      unless actual == sectionFVars[0]! do
         throwError "serialized section reference selected a different anonymous instance"
     let actualDimensionType ← elabTerm stableDimensionType none
     synthesizeSyntheticMVarsNoPostponing

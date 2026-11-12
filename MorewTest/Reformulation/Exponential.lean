@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Reformulation.Conic
 
 /-!
@@ -278,17 +279,14 @@ example : softplusCopy = softplusTarget := rfl
 
 -- The compact EXP carrier spelling belongs only to stored presentations.
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let original ← Lean.Elab.Term.elabTerm
-    (← `(fun (x y z : ℝ) => (x, y, z) ∈ EXP)) none
-  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
-  let original ← Lean.instantiateMVars original
+  let original ← elaborateUnchecked
+    (← `(fun (x y z : ℝ) => (x, y, z) ∈ EXP))
   let exact ← Morew.Elab.Reformulation.exactExpressionSyntax original
   if (exact.raw.findStack? (fun _ => true) (fun stx =>
       stx.isOfKind ``Morew.Conic.exponentialCarrier)).isSome then
     Lean.throwError "exponential notation leaked into exact semantic syntax"
-  let restored ← Lean.Elab.Term.elabTerm exact none
-  Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
-  unless ← Lean.Meta.isDefEq original (← Lean.instantiateMVars restored) do
+  let restored ← elaborateUnchecked exact
+  unless ← Lean.Meta.isDefEq original restored do
     Lean.throwError "exact exponential syntax changed its meaning"
 
 end FiniteLifts
