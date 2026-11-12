@@ -1,5 +1,5 @@
 name = "morew"
-version = "0.1.0"
+version = "0.2.0"
 defaultTargets = ["Morew", "MorewTest", "Examples"]
 lintDriver = "batteries/runLinter"
 lintDriverArgs = ["Morew"]
