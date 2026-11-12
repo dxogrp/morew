@@ -28,13 +28,18 @@ def assertMVarCountersUnchanged (before : MetavarContext) (failureMessage : Stri
   unless before.mvarCounter == after.mvarCounter && before.lmvarCounter == after.lmvarCounter do
     throwError "{failureMessage}"
 
+/-- Check expression and universe allocation counters and metavariable depth. -/
+def assertMVarAllocationStateUnchanged (before : MetavarContext)
+    (failureMessage : String) : MetaM Unit := do
+  assertMVarCountersUnchanged before failureMessage
+  unless before.depth == (← getMCtx).depth do
+    throwError "{failureMessage}"
+
 /-- Check allocation counters, depth, and caller expression assignments.
 Universe assignments and other caller state require separate checks. -/
 def assertExprMVarStateUnchanged (before : MetavarContext) (context : String) : MetaM Unit := do
-  assertMVarCountersUnchanged before s!"{context}: scratch metavariable state changed"
+  assertMVarAllocationStateUnchanged before s!"{context}: scratch metavariable state changed"
   let after ← getMCtx
-  unless before.depth == after.depth do
-    throwError "{context}: scratch metavariable state changed"
   for (id, value) in before.eAssignment.toList do
     unless after.eAssignment.find? id == some value do
       throwError "{context}: an existing caller assignment changed"

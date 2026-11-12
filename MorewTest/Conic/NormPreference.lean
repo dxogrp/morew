@@ -24,10 +24,7 @@ open scoped ENNReal
 
 private def checkState (before : MetavarContext) (environment : Environment)
     (sentinel : Expr) : MetaM Unit := do
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "norm rule selection leaked scratch metavariables"
+  assertMVarAllocationStateUnchanged before "norm rule selection leaked scratch metavariables"
   if ← sentinel.mvarId!.isAssigned then
     throwError "norm rule selection assigned a caller metavariable"
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do

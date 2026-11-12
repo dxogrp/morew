@@ -53,10 +53,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
         | throwError "conic rewriting exceeded the helper-depth limit"
       unless (← error.reason.toString).contains "maxExpansionDepth" do
         throwError "conic rewriting lost the budget diagnostic: {error.reason}"
-      let after ← getMCtx
-      unless before.mvarCounter == after.mvarCounter &&
-          before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-        throwError "conic rewriting leaked speculative metavariables"
+      assertMVarAllocationStateUnchanged before "conic rewriting leaked speculative metavariables"
       if ← callerHole.mvarId!.isAssigned then
         throwError "conic rewriting assigned a caller metavariable"
       for name in ← generated.get do

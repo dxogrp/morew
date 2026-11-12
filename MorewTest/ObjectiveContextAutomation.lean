@@ -29,10 +29,7 @@ private def checkInequality (stx : TSyntax `term) (success : Bool := true) : Ter
     let bound := args.back!
     let before ← getMCtx
     let result ← proveInequality point operands[2]! operands[3]! bound
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "context recognition leaked scratch metavariables"
+    assertMVarAllocationStateUnchanged before "context recognition leaked scratch metavariables"
     match result with
     | .error reason => if success then throwError "expected context proof: {reason}"
     | .ok proof =>
@@ -121,10 +118,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "an unresolved selected value was accepted"
     if ← unknown.mvarId!.isAssigned then
       throwError "context recognition assigned a caller metavariable"
-    let after ← getMCtx
-    unless before.mvarCounter == after.mvarCounter &&
-        before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-      throwError "failed context recognition leaked scratch metavariables"
+    assertMVarAllocationStateUnchanged before "failed context recognition leaked scratch metavariables"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let value ← elaborateUnchecked (← `((2 : ℝ)))

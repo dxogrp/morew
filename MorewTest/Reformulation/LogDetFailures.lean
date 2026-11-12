@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
 import MorewTest.CommandSupport
+import MorewTest.ElabSupport
 
 /-! Log-det rewriting preserves domains, instance semantics, and atomic failure. -/
 
@@ -333,10 +334,7 @@ run_cmd liftTermElabM do
   let environment ← getEnv
   let .error _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "log-det planning accepted a matrix without a domain"
-  let after ← getMCtx
-  unless before.mvarCounter == after.mvarCounter &&
-      before.lmvarCounter == after.lmvarCounter && before.depth == after.depth do
-    throwError "failed log-det planning leaked scratch metavariables"
+  assertMVarAllocationStateUnchanged before "failed log-det planning leaked scratch metavariables"
   if ← sentinel.mvarId!.isAssigned then
     throwError "failed log-det planning assigned a caller metavariable"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
