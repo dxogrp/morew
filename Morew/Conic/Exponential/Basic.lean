@@ -38,8 +38,7 @@ theorem relEntr_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
   rcases eq_or_lt_of_le ha with hzero | hpos
   · subst a
     exact relEntr_zero_le_iff b t hb.le
-  rw [Fn.relEntr, Cone.mem_exponential]
-  simp only [hpos, true_and, hpos.ne', false_and, or_false]
+  rw [Fn.relEntr, Cone.mem_exponential_of_pos _ _ _ hpos]
   rw [mul_comm a, ← le_div_iff₀ hpos,
     mul_comm a, ← le_div_iff₀ hpos, ← Real.le_log_iff_exp_le (div_pos hb hpos),
     Real.log_div hpos.ne' hb.ne', Real.log_div hb.ne' hpos.ne', neg_div]

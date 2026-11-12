@@ -141,17 +141,28 @@ theorem norm_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (t : ℝ) :
     ‖z‖ ≤ t ↔ (t, WithLp.ofLp z) ∈ (Cone.secondOrder n).carrier :=
   Iff.rfl
 
+/-- With a positive denominator, a quadratic-over-linear bound is equivalent to
+a rotated second-order cone constraint. -/
+theorem norm_toLp_sq_div_le_iff {n : Nat} (v : Fin n → ℝ) (y t : ℝ) (hy : 0 < y) :
+    ‖WithLp.toLp 2 v‖ ^ 2 / y ≤ t ↔
+      (t, y / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
+  rw [div_le_iff₀ hy, Cone.mem_rotatedSecondOrder]
+  constructor
+  · intro h
+    have ht : 0 ≤ t := by
+      by_contra ht
+      have hneg := mul_neg_of_neg_of_pos (lt_of_not_ge ht) hy
+      nlinarith [sq_nonneg ‖WithLp.toLp 2 v‖]
+    refine ⟨ht, by positivity, ?_⟩
+    nlinarith
+  · rintro ⟨_, _, h⟩
+    nlinarith
+
 /-- A squared Euclidean norm bound is equivalent to `(t, 1/2, v) ∈ RSOC n`. -/
 theorem norm_toLp_sq_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 2 v‖ ^ 2 ≤ t ↔
       (t, 1 / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
-  rw [Cone.mem_rotatedSecondOrder]
-  constructor
-  · intro h
-    refine ⟨(sq_nonneg _).trans h, by norm_num, ?_⟩
-    nlinarith
-  · rintro ⟨_, _, h⟩
-    nlinarith
+  simpa only [div_one] using norm_toLp_sq_div_le_iff v 1 t (by norm_num)
 
 /-- A squared norm bound in Euclidean space is a rotated cone constraint on its coordinates. -/
 theorem norm_sq_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (t : ℝ) :
@@ -170,23 +181,6 @@ theorem sumSquares_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
 theorem square_le_iff (a t : ℝ) :
     a ^ 2 ≤ t ↔ (t, 1 / 2, ![a]) ∈ (Cone.rotatedSecondOrder 1).carrier := by
   simpa using sumSquares_le_iff (![a] : Fin 1 → ℝ) t
-
-/-- With a positive denominator, a quadratic-over-linear bound is equivalent to
-a rotated second-order cone constraint. -/
-theorem norm_toLp_sq_div_le_iff {n : Nat} (v : Fin n → ℝ) (y t : ℝ) (hy : 0 < y) :
-    ‖WithLp.toLp 2 v‖ ^ 2 / y ≤ t ↔
-      (t, y / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier := by
-  rw [div_le_iff₀ hy, Cone.mem_rotatedSecondOrder]
-  constructor
-  · intro h
-    have ht : 0 ≤ t := by
-      by_contra ht
-      have hneg := mul_neg_of_neg_of_pos (lt_of_not_ge ht) hy
-      nlinarith [sq_nonneg ‖WithLp.toLp 2 v‖]
-    refine ⟨ht, by positivity, ?_⟩
-    nlinarith
-  · rintro ⟨_, _, h⟩
-    nlinarith
 
 /-- The quadratic-over-linear representation for vectors in Euclidean space. -/
 theorem norm_sq_div_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (y t : ℝ)
