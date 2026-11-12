@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.PSD
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Imported PSD proof reconstruction and continued reformulations
@@ -42,12 +43,8 @@ run_cmd do
       (``nestedBlocks, `nestedBlocksCopy), (``lambdaDiagonals, `lambdaDiagonalsCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported PSD declaration lost its replay metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "imported PSD replay contains incomplete evidence"
+    MorewTest.Reformulation.replayView view copied
+      "imported PSD replay contains incomplete evidence"
 
 example : diagonalCopy = diagonalTarget := rfl
 example : registeredDetailedCopy = diagonalRegisteredDetailed := rfl

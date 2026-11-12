@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.Remove
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Removed rows stay absent across imports and continued reformulations -/
 
@@ -87,12 +88,8 @@ run_cmd do
       (``hygienic, `hygienicCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported removal lost presentation metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "removed presentation replay contains incomplete evidence"
+    replayView view copied
+      "removed presentation replay contains incomplete evidence"
 
 example : shortenedCopy = shortened := rfl
 example : groupedCopy = aliasRemoved := rfl

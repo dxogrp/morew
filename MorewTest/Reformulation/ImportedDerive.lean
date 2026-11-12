@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Reformulation.DeriveBackends
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Imported derived constraints retain their meanings and presentation -/
 
@@ -89,12 +90,8 @@ run_cmd do
       (``Hygiene.target, `hygienicCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported derivation lost presentation metadata"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "derived-constraint replay contains incomplete evidence"
+    replayView view copied
+      "derived-constraint replay contains incomplete evidence"
 
 example : marginCopy = withMargin := rfl
 example : minimumCopy = continuedMinimum := rfl

@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-! Shared checks for Euclidean presentation reconstruction. -/
 
@@ -27,11 +28,7 @@ def replayStored (declaration exactName displayName : Name) : CommandElabM Unit 
       (Syntax.getProblemDisplayView?, displayName)] do
     let some view := getter (← getEnv) declaration
       | throwError "missing Euclidean reconstruction view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-    let result ← getConstInfo ((← getCurrNamespace) ++ name)
-    if result.type.hasMVar || result.type.hasSorry ||
-        result.value!.hasMVar || result.value!.hasSorry then
-      throwError "Euclidean replay contains incomplete evidence"
+    replayView view name
+      "Euclidean replay contains incomplete evidence"
 
 end MorewTest.Reformulation.EuclideanPrintingSupport

@@ -7,6 +7,7 @@ import Morew.Reformulation.Conic
 import MorewTest.Reformulation.MatrixFraction.Defined
 import MorewTest.Reformulation.Spectral.Defined
 import MorewTest.Conic.Form.Defined
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Imported spectral and matrix-fraction certificates
@@ -95,12 +96,8 @@ run_cmd do
       (``continuedNuclear, `continuedNuclearCopy)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "imported spectral declaration lost replay metadata: {original}"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      Lean.throwError "spectral replay contains incomplete evidence"
+    MorewTest.Reformulation.replayView view copied
+      "spectral replay contains incomplete evidence"
 
 example : domainCopy n = MorewTest.Reformulation.MatrixFraction.domainIntermediate n := rfl
 example : fractionCopy n = continuedFraction n := rfl

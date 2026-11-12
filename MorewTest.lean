@@ -248,6 +248,7 @@ import MorewTest.Reformulation.RenameFailures
 import MorewTest.Reformulation.RenameFailuresBackends
 import MorewTest.Reformulation.RenameIsolation
 import MorewTest.Reformulation.Replace
+import MorewTest.Reformulation.ReplaySupport
 import MorewTest.Reformulation.Restrict
 import MorewTest.Reformulation.RestrictBackends
 import MorewTest.Reformulation.RestrictFailures

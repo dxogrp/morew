@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.ImportCompatibility.PrintDetails.Defined
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-!
 # Print-time proof detail after importing and continuing a reformulation
@@ -45,12 +46,8 @@ run_cmd do
       (``Defined.registeredDetailed, `detailedImportedReplay), (``continued, `continuedReplay)] do
     let some view := Syntax.getProblemView? (← getEnv) original
       | throwError "proof-detail printing lost imported exact replay"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent copied) := $term))
-    let declaration ← getConstInfo ((← getCurrNamespace) ++ copied)
-    if declaration.type.hasMVar || declaration.type.hasSorry ||
-        declaration.value!.hasMVar || declaration.value!.hasSorry then
-      throwError "imported proof-detail replay is incomplete"
+    MorewTest.Reformulation.replayView view copied
+      "imported proof-detail replay is incomplete"
 
 end Shadow
 

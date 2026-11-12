@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.Norm
+import MorewTest.Reformulation.ReplaySupport
 
 /-! # Named vector-norm certificates and source views survive imports -/
 
@@ -59,11 +60,8 @@ run_cmd do
       (``shadowedNLP, `nlpReplay)] do
     let some view := Syntax.getProblemView? (← Lean.getEnv) original
       | Lean.throwError "named-norm import lost its presentation"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    Lean.Elab.Command.elabCommand (← `(noncomputable def $(Lean.mkIdent copied) := $term))
-    let info ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
-    if info.type.hasMVar || info.type.hasSorry || info.value!.hasMVar || info.value!.hasSorry then
-      Lean.throwError "named-norm replay contains incomplete evidence"
+    replayView view copied
+      "named-norm replay contains incomplete evidence"
 
 example : objectiveReplay = negativeObjective := rfl
 example : sourceReplay = source 2 := rfl

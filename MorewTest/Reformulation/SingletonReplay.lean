@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Basic
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.ReplaySupport
 
 /-! Scalar and vector singleton sets retain their types without importing conic or NLP commands. -/
 
@@ -38,12 +39,8 @@ run_cmd do
       (Syntax.getProblemDisplayView?, `displayReplay)] do
     let some view := getter (← getEnv) ``target
       | throwError "singleton reformulation lost a stored reconstruction view"
-    let term ← Lean.Elab.liftMacroM view.toTermSyntax
-    elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-    let result ← getConstInfo ((← getCurrNamespace) ++ name)
-    if result.type.hasMVar || result.type.hasSorry ||
-        result.value!.hasMVar || result.value!.hasSorry then
-      throwError "singleton replay contains incomplete evidence"
+    replayView view name
+      "singleton replay contains incomplete evidence"
 
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
