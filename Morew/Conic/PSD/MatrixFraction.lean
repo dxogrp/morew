@@ -37,8 +37,7 @@ theorem matFrac_le_iff {n : Nat} (x : Fin n → ℝ)
     change t - ∑ k, (∑ l, x l * P⁻¹ l k) * x k =
       t - ∑ l, x l * ∑ k, P⁻¹ l k * x k
     congr 1
-    simp only [Finset.sum_mul, Finset.mul_sum, mul_assoc]
-    exact Finset.sum_comm
+    exact (Matrix.dotProduct_mulVec x P⁻¹ x).symm
   have hs := schurComplement_mem_iff A B D hP
   rw [hscalar] at hs
   have hB : B.transpose = (fun _ : Fin 1 => x) := by ext i j; rfl
