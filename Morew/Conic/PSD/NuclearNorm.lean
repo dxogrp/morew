@@ -135,26 +135,18 @@ theorem normNuc_le_half_trace {W : Matrix (Fin m) (Fin m) ℝ}
     (hB : (Matrix.fromBlocks W A A.transpose V).PosSemidef) :
     Fn.normNuc A ≤ (W.trace + V.trace) / 2 := by
   classical
-  have hW : W.PosSemidef := by
-    convert hB.submatrix Sum.inl using 1
-    ext i j
-    rfl
-  have hV : V.PosSemidef := by
-    convert hB.submatrix Sum.inr using 1
-    ext i j
-    rfl
+  have hW : W.PosSemidef := hB.submatrix Sum.inl
+  have hV : V.PosSemidef := hB.submatrix Sum.inr
   have hi (i : PositiveSingularIndex A) : 2 * singularValue A i.val ≤
       (leftSingularVector A i).ofLp ⬝ᵥ W *ᵥ (leftSingularVector A i).ofLp +
       (rightSingularBasis A i.val).ofLp ⬝ᵥ V *ᵥ (rightSingularBasis A i.val).ofLp := by
     let u := (leftSingularVector A i).ofLp
     let v := (rightSingularBasis A i.val).ofLp
     have h := hB.dotProduct_mulVec_nonneg (Sum.elim u (-v))
-    have hcross : v ⬝ᵥ A.transpose *ᵥ u = u ⬝ᵥ A *ᵥ v := by
-      rw [dotProduct_mulVec, Matrix.vecMul_transpose, dotProduct_comm]
     simp only [star_trivial, Matrix.fromBlocks_mulVec, Function.comp_def,
       Sum.elim_inl, Sum.elim_inr, Matrix.mulVec_neg, sumElim_dotProduct_sumElim,
       dotProduct_add, dotProduct_neg, neg_dotProduct, neg_neg] at h
-    rw [hcross] at h
+    rw [Matrix.dotProduct_transpose_mulVec A v u] at h
     have hc : u ⬝ᵥ A *ᵥ v = singularValue A i.val := singular_cross A i
     change 2 * singularValue A i.val ≤ u ⬝ᵥ W *ᵥ u + v ⬝ᵥ V *ᵥ v
     linarith

@@ -44,10 +44,7 @@ private theorem block_psd_iff {m n : Nat}
     · apply Matrix.isHermitian_iff_isSymm.mpr
       exact (Matrix.isSymm_one.smul t).fromBlocks rfl (Matrix.isSymm_one.smul t)
     · intro x
-      have hx : x = Sum.elim (x ∘ Sum.inl) (x ∘ Sum.inr) := by
-        funext i
-        cases i <;> rfl
-      rw [hx, block_quadratic]
+      rw [← Sum.elim_comp_inl_inr x, block_quadratic]
       exact h _ _
 
 /-- A rectangular Euclidean operator-norm upper bound is exactly the usual

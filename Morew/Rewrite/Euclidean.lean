@@ -23,8 +23,8 @@ namespace Morew.Rewrite
 theorem norm2_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
     ‖WithLp.toLp 2 v‖ ≤ t ↔ 0 ≤ t ∧ (∑ i, v i ^ 2) ≤ t ^ 2 := by
   have hnorm := norm_nonneg (WithLp.toLp 2 v)
-  have hsq : ‖WithLp.toLp 2 v‖ ^ 2 = ∑ i, v i ^ 2 := by
-    simpa only [PiLp.toLp_apply] using EuclideanSpace.real_norm_sq_eq (WithLp.toLp 2 v)
+  have hsq : ‖WithLp.toLp 2 v‖ ^ 2 = ∑ i, v i ^ 2 :=
+    Fn.norm2_sq_eq_sum v
   constructor
   · intro h
     have ht := hnorm.trans h
