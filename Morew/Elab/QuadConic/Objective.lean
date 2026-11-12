@@ -7,7 +7,7 @@ import Morew.QuadConic.Objective
 import Morew.Elab.Affine
 import Morew.Elab.Evidence
 import Morew.Elab.QuadConic.Expansion
-import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Objective
 import Lean.Meta.Check
 
 /-! Construct or validate a quadratic part and an affine part whose sum equals the source objective.
@@ -510,22 +510,12 @@ private def completeCertificate (decomposition curvature : Expr)
     | .minimize => ``Morew.QuadConic.CertifiedMin.mk
     | .maximize => ``Morew.QuadConic.CertifiedMax.mk) #[decomposition, curvature]
 
-private def checkPresentation (presentation : Reformulation.PresentationState) : MetaM Unit := do
-  for expression in #[presentation.valueType, presentation.domainType, presentation.objective] do
-    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
-      throwError "unresolved metavariables or proof placeholders in typed objective"
-  unless (← whnf presentation.valueType).isConstOf ``Real do
-    throwError "expected a real-valued objective"
-  let expected ← mkArrow presentation.domainType presentation.valueType
-  unless ← isDefEq (← inferType presentation.objective) expected do
-    throwError "objective function does not match its presentation domain and value type"
-
 /-- Check the completed certificate for the current objective and declared optimization sense. -/
 def validateObjectiveCertificate (presentation : Reformulation.PresentationState)
     (certificate : Expr) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try
-      checkPresentation presentation
+      checkRealObjective presentation
       (validateCertificateCore presentation.objective presentation.sense certificate).run
     catch error =>
       return .error {
@@ -596,7 +586,7 @@ def reifyObjective (presentation : Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try
-      checkPresentation presentation
+      checkRealObjective presentation
       reifyQuadratic presentation.objective presentation.sense provider
     catch error =>
       return .error {

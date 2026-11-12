@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Elab.Affine
-import Morew.Elab.Reformulation.Presentation
+import Morew.Elab.Objective
 import Morew.Elab.Expr
 import Morew.Elab.State
 import Morew.Elab.Evidence
@@ -15,22 +15,12 @@ namespace Morew.Elab.Conic
 
 open Lean Lean.Meta
 
-private def checkPresentation (presentation : Reformulation.PresentationState) : MetaM Unit := do
-  for expression in #[presentation.valueType, presentation.domainType, presentation.objective] do
-    if (← Expr.hasUnresolved expression) || (← Evidence.hasPlaceholders expression) then
-      throwError "unresolved metavariables or proof placeholders in typed objective"
-  unless (← whnf presentation.valueType).isConstOf ``Real do
-    throwError "expected a real-valued objective"
-  let expected ← mkArrow presentation.domainType presentation.valueType
-  unless ← isDefEq (← inferType presentation.objective) expected do
-    throwError "objective function does not match its presentation domain and value type"
-
 /-- Check an affine certificate against the current objective and canonical vector spaces. -/
 def validateObjectiveCertificate (presentation : Reformulation.PresentationState)
     (certificate : Expr) : MetaM (Except Expr.Error Affine.AffineResult) :=
   State.withIsolatedMVars do
     try
-      checkPresentation presentation
+      checkRealObjective presentation
       if (← Expr.hasUnresolved certificate) || (← Evidence.hasPlaceholders certificate) then
         throwError "unresolved metavariables or proof placeholders in affine certificate"
       let expected ← Affine.Space.withCanonicalSpaces #[presentation.domainType] do
@@ -74,7 +64,7 @@ def reifyObjective (presentation : Reformulation.PresentationState)
         reason := ← addMessageContext m!"objective: {reason}"
       }
     try
-      checkPresentation presentation
+      checkRealObjective presentation
       match ← Affine.reifyAffine presentation.objective provider with
       | .ok result => validateObjectiveResult presentation result
       | .error error => fail error.expression error.reason
