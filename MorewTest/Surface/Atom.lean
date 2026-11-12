@@ -90,7 +90,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let some before := Morew.Syntax.getProblemView? (← getEnv) name
       | throwError "missing original problem presentation"
     withLocalDeclD before.binders[0]!.name (mkConst ``Real) fun x => do
-      let expression ← elaborate ⟨before.objective⟩
+      let expression ← elaborateUnchecked ⟨before.objective⟩
       let some atom ← recognizeAtom? expression
         | throwError "did not recognize the source objective"
       unless atom.original == expression && atom.kind == .abs && atom.operands == #[x] do

@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Reformulation.Cone.PowerChain
 import Morew.Conic.Power.GeometricMean
 import MorewTest.Environment
@@ -187,18 +188,13 @@ run_cmd liftTermElabM do
     if (← generated.get).isEmpty then throwError "callback isolation was not exercised"
     checkRows rows geometricRoles
 
-private def elaborate (source : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars expression
-
 private def namedDimension : ℕ := 3
 
 run_cmd liftTermElabM do
   for (term, accepted) in #[(← `(namedDimension), true),
       (← `(@OfNat.ofNat Nat 3 ⟨4⟩), false),
       (← `(@HAdd.hAdd Nat Nat Nat ⟨fun _ _ => 3⟩ 1 1), false)] do
-    let dimension ← elaborate term
+    let dimension ← elaborateUnchecked term
     let positive ← mkDecideProof (← mkAppM ``LT.lt #[mkNatLit 0, dimension])
     let expression := (← getConstInfo ``geometric).value!.beta #[dimension, positive]
     lambdaTelescope expression fun _ body => do
@@ -209,17 +205,17 @@ run_cmd liftTermElabM do
   let expression := (← getConstInfo ``inverse).value!.beta #[mkNatLit 3, positive]
   lambdaTelescope expression fun _ body => do
     let rows := splitRows body
-    let exponent ← elaborate (← `((1 / 4 : ℝ)))
+    let exponent ← elaborateUnchecked (← `((1 / 4 : ℝ)))
     let membership := rows[2]!
     let normalized := mkAppN membership.getAppFn
       (membership.getAppArgs.set! 3 (mkApp (mkConst ``Cone.powerSet) exponent))
     checkRows (rows.set! 2 normalized) #["first", "step", "inverse"]
 
 run_cmd liftTermElabM do
-  let fakeAddition ← elaborate (← `((⟨fun a (_ : ℝ) => a + 1⟩ : HAdd ℝ ℝ ℝ)))
-  let fakeIndexAddition ← elaborate (← `((⟨fun a (_ : ℕ) => a + 1⟩ : HAdd ℕ ℕ ℕ)))
-  let fakeCast ← elaborate (← `(fun n : ℕ => (⟨fun _ => (n : ℝ)⟩ : NatCast ℝ)))
-  let fakeMembership ← elaborate (← `(fun α : ℝ =>
+  let fakeAddition ← elaborateUnchecked (← `((⟨fun a (_ : ℝ) => a + 1⟩ : HAdd ℝ ℝ ℝ)))
+  let fakeIndexAddition ← elaborateUnchecked (← `((⟨fun a (_ : ℕ) => a + 1⟩ : HAdd ℕ ℕ ℕ)))
+  let fakeCast ← elaborateUnchecked (← `(fun n : ℕ => (⟨fun _ => (n : ℝ)⟩ : NatCast ℝ)))
+  let fakeMembership ← elaborateUnchecked (← `(fun α : ℝ =>
     (⟨fun _ p => p ∈ POW α⟩ : Membership (ℝ × ℝ × ℝ) (Set (ℝ × ℝ × ℝ)))))
   withRows ``geometric fun parameters rows => do
     let alteredAdd ← Meta.transform rows[1]! (post := fun value => do

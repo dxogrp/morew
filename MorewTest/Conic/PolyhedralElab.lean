@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Cone.Rewrite
 import Morew.Rewrite.Polyhedral.Lemmas
 import Mathlib.Analysis.SpecialFunctions.Exp
@@ -23,17 +24,12 @@ open scoped ENNReal
 
 noncomputable section
 
-private def elaborate (stx : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm stx none
-  synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars expression
-
 private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
     (rule? : Option (TSyntax `term) := none) (parameterCount : Nat := 0) :
     TermElabM Unit := do
-  let expression ← elaborate stx
+  let expression ← elaborateUnchecked stx
   lambdaBoundedTelescope expression parameterCount fun _ source => do
-    let rule? ← rule?.mapM elaborate
+    let rule? ← rule?.mapM elaborateUnchecked
     let outcome ← match rule? with
       | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule
       | none => Morew.Elab.Cone.Rewrite.planUnique source
@@ -55,8 +51,8 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
 
 private def expectRejected (stx : TSyntax `term) (fragment : String)
     (rule? : Option (TSyntax `term) := none) : TermElabM Unit := do
-  let source ← elaborate stx
-  let rule? ← rule?.mapM elaborate
+  let source ← elaborateUnchecked stx
+  let rule? ← rule?.mapM elaborateUnchecked
   let outcome ← match rule? with
     | some rule => Morew.Elab.Cone.Rewrite.planExplicit source rule
     | none => Morew.Elab.Cone.Rewrite.planUnique source
@@ -67,7 +63,7 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
     throwError "expected diagnostic containing {fragment}, got {message}"
 
 elab "polyhedral_repr% " source:term : term => do
-  let source ← elaborate source
+  let source ← elaborateUnchecked source
   match ← Morew.Elab.Cone.Rewrite.planUnique source with
   | .ok result =>
     let .exact repr := result.certificate
@@ -216,7 +212,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Unresolved data may be hidden in let declarations. Neither failed nor
 successful recognition may assign caller metavariables or retain scratch ones. -/
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let builder ← elaborate (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
+  let builder ← elaborateUnchecked (← `(fun c : ℝ => fun x : ℝ => |x| ≤ c))
   let missing ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let .error error ← Morew.Elab.Cone.Rewrite.planUnique (mkApp builder missing)
@@ -231,7 +227,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "an unresolved bound hidden in a let was accepted"
     unless (← error.reason.toString).contains "unresolved metavariables" do
       throwError "wrong hidden-bound diagnostic: {error.reason}"
-  let coefficientBuilder ← elaborate (← `(fun (a x : ℝ) => |a * x| ≤ 1))
+  let coefficientBuilder ← elaborateUnchecked (← `(fun (a x : ℝ) => |a * x| ≤ 1))
   withLetDecl `coefficient (mkConst ``Real) missing fun coefficient => do
     let .error error ← Morew.Elab.Cone.Rewrite.planUnique (mkApp coefficientBuilder coefficient)
       | throwError "planner specialized an unresolved coefficient hidden in a local declaration"
@@ -239,7 +235,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "missing unresolved-coefficient diagnostic"
     if ← missing.mvarId!.isAssigned then
       throwError "failed planning assigned a caller metavariable"
-  let source ← elaborate (← `(fun x : ℝ => |x| ≤ 2))
+  let source ← elaborateUnchecked (← `(fun x : ℝ => |x| ≤ 2))
   let before ← getMCtx
   let .ok _ ← Morew.Elab.Cone.Rewrite.planUnique source
     | throwError "the state-isolation success case failed"

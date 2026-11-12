@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Rewrite.Plan
 
 /-!
@@ -18,11 +19,6 @@ namespace MorewTest.Rewrite.Plan
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Rewrite.Plan
-
-private def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let expression ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars expression
 
 private def graph : Morew.GraphRepr (fun x : ℝ => x + 1) where
   Auxiliary := Unit
@@ -49,8 +45,8 @@ private def auxiliary : Morew.ConstraintRepr (fun x : ℝ => x ≤ 1) where
   source_iff_exists _ := by simp
 
 private def adapts (source rule : TSyntax `term) : TermElabM Unit := do
-  let source ← elaborate source
-  let rule ← elaborate rule
+  let source ← elaborateUnchecked source
+  let rule ← elaborateUnchecked rule
   let repr ← customRepr source (← predicateDomain source) rule
   discard <| checkRepr source repr
 
@@ -66,29 +62,29 @@ private def expectRejected (action : MetaM Unit) : MetaM Unit := do
   unless rejected do throwError "an incorrect exact replacement passed validation"
 
 run_elab do
-  let source ← elaborate (← `(fun x : ℝ => x ≤ 1))
-  let wrong ← elaborate (← `(identity 2))
+  let source ← elaborateUnchecked (← `(fun x : ℝ => x ≤ 1))
+  let wrong ← elaborateUnchecked (← `(identity 2))
   expectRejected do discard <| checkRepr source wrong
-  let repr ← elaborate (← `(identity 2))
-  let row₁ ← elaborate (← `(fun x : ℝ => x ≤ 2))
-  let row₂ ← elaborate (← `(fun x : ℝ => x = x))
-  let targetIff ← elaborate (← `(fun x : ℝ => (Iff.rfl : (x ≤ 2 ∧ x = x) ↔ _)))
+  let repr ← elaborateUnchecked (← `(identity 2))
+  let row₁ ← elaborateUnchecked (← `(fun x : ℝ => x ≤ 2))
+  let row₂ ← elaborateUnchecked (← `(fun x : ℝ => x = x))
+  let targetIff ← elaborateUnchecked (← `(fun x : ℝ => (Iff.rfl : (x ≤ 2 ∧ x = x) ↔ _)))
   let result : Result := {
     certificate := .exact repr, auxiliary? := none, nextDomain := mkConst ``Real
     rowPredicates := #[row₁, row₂], targetIff }
   result.checkTargetIff
   expectRejected ({ result with rowPredicates := #[row₂, row₁] }.checkTargetIff)
   expectRejected ({ result with rowPredicates := #[row₁] }.checkTargetIff)
-  let repr ← elaborate (← `(Morew.ConstraintRepr.ofIff
+  let repr ← elaborateUnchecked (← `(Morew.ConstraintRepr.ofIff
     (fun _ : ℝ => True) (fun _ => Iff.rfl)))
-  let targetIff ← elaborate (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
+  let targetIff ← elaborateUnchecked (← `(fun _ : ℝ => (Iff.rfl : True ↔ True)))
   ({ certificate := .exact repr, auxiliary? := none, nextDomain := mkConst ``Real
      rowPredicates := #[], targetIff } : Result).checkTargetIff
-  let repr ← elaborate (← `(auxiliary))
+  let repr ← elaborateUnchecked (← `(auxiliary))
   let nextDomain ← mkAppM ``Prod #[mkConst ``Real, mkConst ``Real]
-  let row₁ ← elaborate (← `(fun p : ℝ × ℝ => p.2 = 0))
-  let row₂ ← elaborate (← `(fun p : ℝ × ℝ => p.1 ≤ 1))
-  let targetIff ← elaborate (← `(fun p : ℝ × ℝ =>
+  let row₁ ← elaborateUnchecked (← `(fun p : ℝ × ℝ => p.2 = 0))
+  let row₂ ← elaborateUnchecked (← `(fun p : ℝ × ℝ => p.1 ≤ 1))
+  let targetIff ← elaborateUnchecked (← `(fun p : ℝ × ℝ =>
     (Iff.rfl : (p.2 = 0 ∧ p.1 ≤ 1) ↔ _)))
   let result : Result := {
     certificate := .exact repr, auxiliary? := some (mkConst ``Real), nextDomain
@@ -98,7 +94,7 @@ run_elab do
 
 -- Rebased proofs must remain closed after their temporary parameter leaves scope.
 run_elab do
-  let two ← elaborate (← `((2 : ℝ)))
+  let two ← elaborateUnchecked (← `((2 : ℝ)))
   let result ← withLocalDeclD `bound (mkConst ``Real) fun bound => do
     let repr ← mkAppM ``identity #[bound]
     let rows ← withLocalDeclD `point (mkConst ``Real) fun point => do
@@ -124,17 +120,17 @@ private theorem conditionalExact (x : ℝ) (retained : x = 0) :
 
 run_elab do
   let domain := Lean.mkConst ``Real
-  let source ← elaborate (← `(fun x : ℝ => x ≤ 1))
-  let retained ← elaborate (← `(fun x : ℝ => x = 0))
-  let target ← elaborate (← `(fun x a : ℝ => a = x))
-  let proof ← elaborate (← `(conditionalExact))
+  let source ← elaborateUnchecked (← `(fun x : ℝ => x ≤ 1))
+  let retained ← elaborateUnchecked (← `(fun x : ℝ => x = 0))
+  let target ← elaborateUnchecked (← `(fun x a : ℝ => a = x))
+  let proof ← elaborateUnchecked (← `(conditionalExact))
   let certificate : Certificate := .contextual domain target proof
   certificate.check source #[retained]
   expectRejected (certificate.check source #[])
   expectRejected (certificate.check source #[source])
   let nextDomain ← mkAppM ``Prod #[domain, domain]
-  let row ← elaborate (← `(fun p : ℝ × ℝ => p.2 = p.1))
-  let targetIff ← elaborate (← `(fun p : ℝ × ℝ => (Iff.rfl : p.2 = p.1 ↔ _)))
+  let row ← elaborateUnchecked (← `(fun p : ℝ × ℝ => p.2 = p.1))
+  let targetIff ← elaborateUnchecked (← `(fun p : ℝ × ℝ => (Iff.rfl : p.2 = p.1 ↔ _)))
   let result : Result := {
     certificate, auxiliary? := some domain, nextDomain
     rowPredicates := #[row], targetIff }
@@ -171,26 +167,26 @@ run_elab do
   for synthetic in [false, true] do
     let placeholder ← mkSorry (mkConst ``Nat) synthetic
     withLetDecl `targetAlias (mkConst ``Nat) placeholder fun binding => do
-      let targetBuilder ← elaborate (← `(fun (_ : ℕ) (x a : ℝ) => a = x))
+      let targetBuilder ← elaborateUnchecked (← `(fun (_ : ℕ) (x a : ℝ) => a = x))
       expectRejected ((Certificate.contextual domain (mkApp targetBuilder binding) proof).check
         source #[retained])
-      let auxiliaryBuilder ← elaborate (← `(fun _ : ℕ => ℝ))
+      let auxiliaryBuilder ← elaborateUnchecked (← `(fun _ : ℕ => ℝ))
       expectRejected ((Certificate.contextual (mkApp auxiliaryBuilder binding) target proof).check
         source #[retained])
-      let proofBuilder ← elaborate (← `(fun _ : ℕ => conditionalExact))
+      let proofBuilder ← elaborateUnchecked (← `(fun _ : ℕ => conditionalExact))
       expectRejected ((Certificate.contextual domain target (mkApp proofBuilder binding)).check
         source #[retained])
-      let sourceBuilder ← elaborate (← `(fun (_ : ℕ) (x : ℝ) => x ≤ 1))
+      let sourceBuilder ← elaborateUnchecked (← `(fun (_ : ℕ) (x : ℝ) => x ≤ 1))
       expectRejected (certificate.check (mkApp sourceBuilder binding) #[retained])
     let placeholder ← mkSorry domain synthetic
-    let typeBuilder ← elaborate (← `(fun _ : ℝ => ℝ))
+    let typeBuilder ← elaborateUnchecked (← `(fun _ : ℝ => ℝ))
     withLocalDeclD `bound (mkApp typeBuilder placeholder) fun bound => do
-      let retainedBuilder ← elaborate (← `(fun (_ : ℝ) (x : ℝ) => x = 0))
+      let retainedBuilder ← elaborateUnchecked (← `(fun (_ : ℝ) (x : ℝ) => x = 0))
       expectRejected (certificate.check source #[mkApp retainedBuilder bound])
 
 run_elab do
-  let source ← elaborate (← `(fun x : ℝ => x ≤ 1))
-  let repr ← elaborate (← `(auxiliary))
+  let source ← elaborateUnchecked (← `(fun x : ℝ => x ≤ 1))
+  let repr ← elaborateUnchecked (← `(auxiliary))
   let target ← mkAppM ``Morew.ConstraintRepr.target #[repr]
   let proof ← mkAppM ``Morew.ConstraintRepr.source_iff_exists #[repr]
   let certificate ← withLocalDeclD `point (mkConst ``Real) fun point => do
@@ -201,5 +197,37 @@ run_elab do
   | .exact _ => pure ()
   | .contextual .. => throwError "independent exactness was unnecessarily made conditional"
   certificate.check source #[]
+
+/-! Unchecked inputs retain incomplete expressions and synthesize tasks that
+were already pending before the input was elaborated. -/
+
+run_elab do
+  let pending ← mkTacticMVar (mkConst ``True) (← `(by exact True.intro)) .term
+  if ← pending.mvarId!.isAssigned then
+    throwError "pending-task regression started with an assigned task"
+  let complete ← elaborateUnchecked (← `((7 : Nat)))
+  unless complete == mkNatLit 7 && (← instantiateMVars pending) == Lean.mkConst ``True.intro do
+    throwError "unchecked elaboration did not synthesize an existing pending task"
+  unless (← MorewTest.Affine.elaborate (← `((7 : Nat)))) == complete do
+    throwError "checked elaboration changed a complete input"
+  let missing ← mkFreshExprMVar (mkConst ``Nat)
+  for expression in #[missing, ← mkSorry (mkConst ``Nat) false,
+      ← mkSorry (mkConst ``Nat) true] do
+    elabToSyntax (fun _ => pure expression) fun term => do
+      unless (← elaborateUnchecked term) == expression do
+        throwError "unchecked elaboration changed an incomplete input"
+      let rejected ← try
+        discard <| MorewTest.Affine.elaborate term
+        pure false
+      catch _ => pure true
+      unless rejected do throwError "checked elaboration accepted an incomplete input"
+  if ← missing.mvarId!.isAssigned then
+    throwError "test input elaboration assigned an ordinary caller metavariable"
+  let rejected ← try
+    withoutErrToSorry <| elabToSyntax (fun _ => throwError "input elaboration failed") fun term =>
+      discard <| elaborateUnchecked term
+    pure false
+  catch _ => pure true
+  unless rejected do throwError "unchecked elaboration swallowed an input error"
 
 end MorewTest.Rewrite.Plan

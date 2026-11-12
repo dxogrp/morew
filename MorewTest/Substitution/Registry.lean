@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import MorewTest.Substitution.Registry.Source
 import Morew.Elab.Substitution.Match
 import MorewTest.Environment
@@ -20,13 +21,8 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Substitution
 open Source
 
-private def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let value ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars value
-
 private def selected (map : TSyntax `term) (expected : Array Name) : TermElabM Unit := do
-  let actual ← Registry.candidates (← elaborate map)
+  let actual ← Registry.candidates (← elaborateUnchecked map)
   unless actual == expected do throwError "unexpected coordinate candidates {actual}"
 
 run_elab do
@@ -59,8 +55,8 @@ run_elab do
 
 private def withSource {α : Type} (map feasible : TSyntax `term)
     (action : Expr → Expr → Expr → Expr → Expr → TermElabM α) : TermElabM α := do
-  let map ← elaborate map
-  let feasible ← elaborate feasible
+  let map ← elaborateUnchecked map
+  let feasible ← elaborateUnchecked feasible
   let .forallE _ domain _ _ ← whnf (← inferType feasible)
     | throwError "expected feasibility predicate"
   withLocalDeclD `point domain fun point =>
@@ -160,7 +156,7 @@ private def wildcardRule (h : ℝ → ℝ → ℝ) (inverse : ∀ r x, h r (x - 
 -- A custom schema can explicitly pass both rigid coordinates to a wildcard.
 -- Its independently checked inverse then justifies the more general map.
 run_elab do
-  let inverse ← elaborate (← `(show ∀ r x : ℝ, (x - r) + r = x from
+  let inverse ← elaborateUnchecked (← `(show ∀ r x : ℝ, (x - r) + r = x from
     fun r x => sub_add_cancel x r))
   withLetDecl `inverse (← inferType inverse) inverse fun _ => do
     matched (← `(fun (r : ℝ) (u : ℝ) => wrapped (u + r)))
@@ -177,7 +173,7 @@ run_elab do
 run_elab do
   withSource (← `(fun (r : ℝ) (u : ℝ) => shift (r + 1) u))
       (← `(fun _ : ℝ × ℝ => True)) fun map point retained selected evidence => do
-    let expression ← elaborate (← `(shiftAlias (fun r : ℝ => r + 1)))
+    let expression ← elaborateUnchecked (← `(shiftAlias (fun r : ℝ => r + 1)))
     let result ← Match.rule map point retained selected evidence expression pure
     checkWithKernel result.rangeProof
 
@@ -185,7 +181,7 @@ run_elab do
 run_elab do
   withSource (← `(fun (_ : ℝ) (u : ℝ) => u))
       (← `(fun _ : ℝ × ℝ => True)) fun _ point retained selected evidence => do
-    let real ← elaborate (← `(ℝ))
+    let real ← elaborateUnchecked (← `(ℝ))
     let coefficient ← mkFreshExprMVar real
     let map ← withLocalDeclD `retained real fun r =>
       withLocalDeclD `coordinate real fun u => do
@@ -242,14 +238,14 @@ private noncomputable def positiveShift {R : Type*} (c : ℝ) (_positive : 0 < c
 -- Conditions on declaration parameters must be established independently of
 -- source feasibility, even when the feasible predicate ignores its point.
 run_elab do
-  let real ← elaborate (← `(ℝ))
+  let real ← elaborateUnchecked (← `(ℝ))
   withLocalDeclD `coefficient real fun coefficient => do
     let map ← withLocalDeclD `retained real fun r =>
       withLocalDeclD `coordinate real fun u => do
         mkLambdaFVars #[r, u] (← mkAppM ``shift #[coefficient, u])
-    let zero ← elaborate (← `((0 : ℝ)))
+    let zero ← elaborateUnchecked (← `((0 : ℝ)))
     let condition ← mkAppM ``LT.lt #[zero, coefficient]
-    let domain ← elaborate (← `(ℝ × ℝ))
+    let domain ← elaborateUnchecked (← `(ℝ × ℝ))
     let feasible ← withLocalDeclD `source domain fun source =>
       mkLambdaFVars #[source] condition
     withLocalDeclD `point domain fun point =>

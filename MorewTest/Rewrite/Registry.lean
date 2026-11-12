@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import MorewTest.Rewrite.Registry.Source
 import Morew.Elab.Rewrite.Match
 import MorewTest.Environment
@@ -21,14 +22,9 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Rewrite
 open MorewTest.Rewrite.Registry.Source
 
-private def elaborate (term : TSyntax `term) : TermElabM Expr := do
-  let value ← elabTerm term none
-  synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars value
-
 private def selected (target : Registry.Target) (source : TSyntax `term)
     (expected : Array Name) : TermElabM Unit := do
-  let source ← elaborate source
+  let source ← elaborateUnchecked source
   let actual ← Registry.candidates target source
   unless actual == expected do throwError "unexpected registry candidates {actual}"
 
@@ -65,7 +61,7 @@ run_elab do
   selected .nlp (← `(fun p : ℝ × ℝ => shifted 3 p.1 ≤ p.2)) #[]
 
 private def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := do
-  let source ← elaborate source
+  let source ← elaborateUnchecked source
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
     let result ← try Match.declaration point (mkApp source point) name pure
@@ -81,7 +77,7 @@ section HelperOpacity
 open Source.HelperOpacity
 
 private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Unit := do
-  let source ← elaborate source
+  let source ← elaborateUnchecked source
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
     let before ← getMCtx
@@ -197,9 +193,9 @@ private noncomputable def exactNestedSubtypeRule : Morew.ConstraintRepr
 -- They must not inherit declaration matching's arbitrary input maps.
 private def explicitExactMatch (source rule retained : TSyntax `term)
     (expected? : Option (Array Nat)) : TermElabM Unit := do
-  let source ← elaborate source
-  let rule ← elaborate rule
-  let retained ← elaborate retained
+  let source ← elaborateUnchecked source
+  let rule ← elaborateUnchecked rule
+  let retained ← elaborateUnchecked retained
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
     withLocalDeclD `retained (mkApp retained point) fun hypothesis => do
@@ -320,11 +316,11 @@ private noncomputable def subtypeAbs :
   source_iff_exists x t := by simp [abs_of_nonneg x.property]
 
 run_elab do
-  let source ← elaborate (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2))
+  let source ← elaborateUnchecked (← `(fun p : ℝ × ℝ => |p.1| ≤ p.2))
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
     let first := Expr.proj ``Prod 0 point
-    let zero ← elaborate (← `((0 : ℝ)))
+    let zero ← elaborateUnchecked (← `((0 : ℝ)))
     let condition ← mkAppM ``LE.le #[zero, first]
     withLocalDeclD `retained condition fun retained => do
       let before ← getMCtx
@@ -377,8 +373,8 @@ end
 -- Graph orientation retries include the consumer's certification work. Failed
 -- proof dependencies are discarded before retry, while accepted ones survive.
 private def graphRetry (source expected : TSyntax `term) (name : Name) : TermElabM Unit := do
-  let source ← elaborate source
-  let expected ← elaborate expected
+  let source ← elaborateUnchecked source
+  let expected ← elaborateUnchecked expected
   let domain ← Plan.predicateDomain source
   let attempts ← IO.mkRef 0
   let discarded ← IO.mkRef (none : Option Name)
