@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Syntax.Printer
-import Lean.Elab.GuardMsgs
+import MorewTest.DiagnosticsSupport
 
 /-!
 # Shared problem-printing assertions
@@ -19,16 +19,11 @@ open Morew
 
 /-- Capture the actual command, including its selection of print-time options. -/
 def printed (declaration : Name) (proofs : Bool) : CommandElabM String := do
-  let previous := (← get).messages
-  let previousTasks := (← get).snapshotTasks
-  modify fun state => { state with snapshotTasks := #[] }
-  let messages ← try
+  let messages ← MorewTest.Diagnostics.withSavedDiagnostics do
     let command ← if proofs then
       `(set_option pp.proofs true in #printp $(mkIdent declaration))
       else `(set_option pp.proofs false in #printp $(mkIdent declaration))
     runAndCollectMessages command
-  finally
-    modify fun state => { state with messages := previous, snapshotTasks := previousTasks }
   let visible := messages.toList.filter (!·.isSilent)
   let [message] := visible
     | throwError "expected one problem presentation, got {visible.length} diagnostics"

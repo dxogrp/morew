@@ -22,17 +22,22 @@ namespace MorewTest.Diagnostics
 
 open Lean Elab Command Tactic.GuardMsgs
 
+/-- Run with fresh snapshot tasks, then restore caller diagnostics while retaining
+environment changes. -/
+def withSavedDiagnostics {α : Type} (action : CommandElabM α) : CommandElabM α := do
+  let previous := (← get).messages
+  let previousTasks := (← get).snapshotTasks
+  modify fun state => { state with snapshotTasks := #[] }
+  try
+    action
+  finally
+    modify fun state => { state with messages := previous, snapshotTasks := previousTasks }
+
 elab "#guard_error_fragments " "[" fragments:str,+ "]" " in " cmd:command : command => do
   let fragments := fragments.getElems.map (WhitespaceMode.lax.apply ·.getString)
   if fragments.any String.isEmpty then
     throwError "diagnostic fragments must be nonempty"
-  let previous := (← get).messages
-  let previousTasks := (← get).snapshotTasks
-  modify fun state => { state with snapshotTasks := #[] }
-  let messages ← try
-    runAndCollectMessages cmd
-  finally
-    modify fun state => { state with messages := previous, snapshotTasks := previousTasks }
+  let messages ← withSavedDiagnostics <| runAndCollectMessages cmd
   let visible := messages.toList.filter (!·.isSilent)
   let [message] := visible
     | throwError "expected exactly one error, got {visible.length} diagnostics:\n{MessageData.joinSep (visible.map (·.data)) "\n"}"
