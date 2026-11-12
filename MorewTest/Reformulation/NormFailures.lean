@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-! # Named norms retain target certification, ambiguity, and transaction boundaries -/
 
@@ -16,11 +16,8 @@ open Morew
 
 noncomputable section
 
-elab "assert_norm_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed named-norm rewrite leaked declaration {name}"
+elab "assert_norm_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed named-norm rewrite leaked declaration {name}"
 
 def reverse :=
   problem (x : Fin 2 → ℝ) (t : ℝ)

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
 import Morew.Conic.Exponential
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-!
 # Exponential rewrite diagnostics and atomic failure
@@ -22,12 +22,8 @@ open Morew
 
 noncomputable section
 
-elab "assert_exp_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  let after ← Lean.getEnv
-  if let some name := MorewTest.newLocalDeclaration? before after then
-    Lean.throwError m!"failed exponential rewrite leaked auxiliary declaration {name}"
+elab "assert_exp_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed exponential rewrite leaked auxiliary declaration {name}"
 
 def source :=
   problem (x y t : ℝ)

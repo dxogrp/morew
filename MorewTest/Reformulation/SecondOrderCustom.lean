@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 
 /-!
@@ -133,12 +133,8 @@ example (x y u : ℝ) : combinedTarget.feasible ((x, y), u) ↔
       (x - y, (0 : Fin 0 → ℝ)) ∈ (Cone.secondOrder 0).carrier ∧
       u = x ∧ (y, 1 / 2, ![u]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧ y ≤ 10 := Iff.rfl
 
-elab "assert_atomic_reformulation% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  let after ← Lean.getEnv
-  if let some name := MorewTest.newLocalDeclaration? before after then
-    Lean.throwError m!"failed reformulation leaked auxiliary declaration {name}"
+elab "assert_atomic_reformulation% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed reformulation leaked auxiliary declaration {name}"
 
 #guard_error_fragments ["constraint `after`: the constraint representation's input type does not match the decision type"] in
 assert_atomic_reformulation%

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+import MorewTest.CommandSupport
 
 /-! Log-det rewriting preserves domains, instance semantics, and atomic failure. -/
 
@@ -15,11 +15,8 @@ open Morew Morew.Conic
 
 noncomputable section
 
-elab "assert_logdet_atomic% " nested:command : command => do
-  let before ← Lean.getEnv
-  try Lean.Elab.Command.elabCommand nested catch error => Lean.Elab.logException error
-  if let some name := MorewTest.newLocalDeclaration? before (← Lean.getEnv) then
-    Lean.throwError m!"failed log-det rewrite leaked declaration {name}"
+elab "assert_logdet_atomic% " nested:command : command =>
+  MorewTest.elabNoNewDeclarations nested fun name => m!"failed log-det rewrite leaked declaration {name}"
 
 def missingDomain :=
   problem (X : SymmetricMatrix 2) (t : ℝ)
