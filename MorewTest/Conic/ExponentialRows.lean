@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Cone.Constraint
 
 /-!
@@ -26,9 +27,7 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
 elab "certified_exp_row% " source:term : term => do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an exponential row: {error.reason}"
   | .ok result =>
@@ -113,9 +112,7 @@ example (x : ℝ) : singletonFamily.row.Holds x ↔
   simp
 
 private def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `bad_exp)
     | throwError "unsupported exponential row was accepted"
   let diagnostic ← error.reason.toString
@@ -182,10 +179,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 -- An unresolved relation hidden in a local declaration must not be solved by
 -- the recognizer, even when the finite family happens to be empty.
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let predicate ← elabTerm (← `(fun x : ℝ =>
-    ∀ _i : Fin 0, (x, (1 : ℝ), x) ∈ Conic.Cone.exponential.carrier)) none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked (← `(fun x : ℝ =>
+    ∀ _i : Fin 0, (x, (1 : ℝ), x) ∈ Conic.Cone.exponential.carrier))
   lambdaTelescope predicate fun points body => do
     forallTelescope body fun indices membership => do
       let args := membership.getAppArgs

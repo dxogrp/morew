@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.ObjectiveContext
 import Morew.Transform.Context
 import Lean.Elab.Command
@@ -21,9 +22,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.ObjectiveContext
 
 private def checkInequality (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
-  let term ← elabTerm stx none
-  synthesizeSyntheticMVarsNoPostponing
-  let term ← instantiateMVars term
+  let term ← elaborateUnchecked stx
   lambdaTelescope term fun args relation => do
     let operands := relation.getAppArgs
     let point := args[args.size - 3]!
@@ -43,9 +42,7 @@ private def checkInequality (stx : TSyntax `term) (success : Bool := true) : Ter
       checkWithKernel proof
 
 private def checkPredicate (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
-  let term ← elabTerm stx none
-  synthesizeSyntheticMVarsNoPostponing
-  let term ← instantiateMVars term
+  let term ← elaborateUnchecked stx
   lambdaTelescope term fun args target => do
     let point := args[args.size - 4]!
     let bound := args[args.size - 2]!
@@ -116,9 +113,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     @LE.le ℝ ⟨fun a b => b ≤ a⟩ x 1)) false
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let source ← elabTerm (← `(fun (x t : ℝ) (_ : x ≤ t) => x ≤ t)) none
-  synthesizeSyntheticMVarsNoPostponing
-  lambdaTelescope (← instantiateMVars source) fun args _ => do
+  let source ← elaborateUnchecked (← `(fun (x t : ℝ) (_ : x ≤ t) => x ≤ t))
+  lambdaTelescope source fun args _ => do
     let unknown ← mkFreshExprMVar (Lean.mkConst ``Real)
     let before ← getMCtx
     let .error _ ← proveInequality args[0]! unknown args[1]! args[2]!
@@ -131,9 +127,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       throwError "failed context recognition leaked scratch metavariables"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let value ← elabTerm (← `((2 : ℝ))) none
-  synthesizeSyntheticMVarsNoPostponing
-  let value ← instantiateMVars value
+  let value ← elaborateUnchecked (← `((2 : ℝ)))
   withLetDecl `first (Lean.mkConst ``Real) value fun first =>
   withLetDecl `second (Lean.mkConst ``Real) value fun second => do
     if ← sameExpression first second then

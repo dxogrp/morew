@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Evidence.Sign
 import Morew.Elab.Cone.Constraint
 
@@ -26,9 +27,7 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
 elab "certified_membership% " source:term : term => do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an affine membership: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
@@ -86,9 +85,7 @@ example (x : Fin 0 → ℝ) : (vectorZero 0).row.Holds x := by
   exact funext fun i => Fin.elim0 i
 
 private def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `affine_member)
     | throwError "unsupported affine membership was accepted"
   let diagnostic ← error.reason.toString
@@ -127,9 +124,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       ({0} : Vectors (if x ≤ 0 then 1 else 2)))) "dimension depends"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let predicate ← elabTerm (← `(fun x : ℝ => x ∈ ({0} : Set ℝ))) none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked (← `(fun x : ℝ => x ∈ ({0} : Set ℝ)))
   lambdaTelescope predicate fun points body => do
     let args := body.getAppArgs
     let type ← inferType args[2]!
@@ -144,9 +139,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
         throwError "singleton recognition assigned a caller metavariable"
 
 private def expectSign (source : TSyntax `term) (strict accepted : Bool) : TermElabM Unit := do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   lambdaTelescope predicate fun points body => do
     withLocalDeclD `retained body fun evidence => do
       let result ← Morew.Elab.Evidence.Sign.signFromRetained? points[0]! points[0]!

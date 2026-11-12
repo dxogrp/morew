@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import MorewTest.ElabSupport
 import Morew.Elab.Cone.Constraint
 
 assert_not_exists Morew.Conic.Spectral.lambdaMax_le_iff
@@ -30,9 +31,7 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
 elab "certified_soc_row% " source:term : term => do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected a cone row: {error.reason}"
   | .ok result => mkAppM ``CertifiedRow.mk #[result.constraint, result.pointwiseIff]
@@ -96,9 +95,7 @@ example (p : ℝ × ℝ) :
     exact ⟨hu, hv, mul_nonneg (mul_nonneg (by norm_num) hu) hv⟩
 
 private def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
-  let predicate ← elabTerm source none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked source
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `bad_soc)
     | throwError "unsupported cone row was accepted"
   let diagnostic ← error.reason.toString
@@ -133,10 +130,8 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 -- A local membership alias must not hide an unresolved instance that a
 -- definitional-equality comparison could accidentally complete for the caller.
 run_cmd Lean.Elab.Command.liftTermElabM do
-  let predicate ← elabTerm (← `(fun x : ℝ =>
-    (x, (0 : Fin 1 → ℝ)) ∈ (Morew.Conic.Cone.secondOrder 1).carrier)) none
-  synthesizeSyntheticMVarsNoPostponing
-  let predicate ← instantiateMVars predicate
+  let predicate ← elaborateUnchecked (← `(fun x : ℝ =>
+    (x, (0 : Fin 1 → ℝ)) ∈ (Morew.Conic.Cone.secondOrder 1).carrier))
   lambdaTelescope predicate fun points body => do
     let args := body.getAppArgs
     let type ← inferType args[2]!
