@@ -84,6 +84,31 @@ def nameRequests (style : Style) (selector : TSyntax `ident)
     }
   return requests
 
+/-- Build a terminal template from allocated auxiliary names and source row origins.
+Retain source rows and leave generated propositions for the backend renderer. -/
+def terminalTemplate (description : String) (view : Morew.Syntax.ProblemView)
+    (auxiliaryTypes : Array Expr) (rowOrigins replacedIndices : Array Nat)
+    (allocation : NameAllocation) : TermElabM Morew.Syntax.ProblemView := do
+  let mut binders := view.binders
+  for i in [:auxiliaryTypes.size] do
+    let some name := allocation.findName? i
+      | throwError "internal error: missing {description} auxiliary allocation"
+    let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
+    binders := binders.push {
+      name
+      typeSyntax := ← presentationTypeSyntax auxiliaryTypes[i]!
+    }
+  let mut rows := #[]
+  for i in [:rowOrigins.size] do
+    let origin := rowOrigins[i]!
+    if replacedIndices.contains origin then
+      let some name := allocation.findName? (auxiliaryTypes.size + i)
+        | throwError "internal error: missing {description} row allocation"
+      rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
+    else
+      rows := rows.push view.constraints[origin]!
+  return { view with binders, constraints := rows }
+
 /-- Request terminal auxiliaries followed by replaced rows, numbered within each source row. -/
 def terminalNameRequests (family : String) (state : ReformState) (ref : Syntax)
     (auxiliaryOrigins rowOrigins replacedIndices : Array Nat) : CommandElabM (Array NameRequest) := do

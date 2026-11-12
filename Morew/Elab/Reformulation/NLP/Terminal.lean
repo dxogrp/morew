@@ -43,25 +43,8 @@ private def materializeTerminalNLP (state : ReformState)
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate `_terminalNLPCertificate primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
-    let mut binders := state.view.binders
-    for i in [:prepared.auxiliaries.size] do
-      let some name := allocation.findName? i
-        | throwError "internal error: missing terminal NLP auxiliary allocation"
-      let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
-      binders := binders.push {
-        name
-        typeSyntax := ← presentationTypeSyntax prepared.auxiliaries[i]!.2
-      }
-    let mut rows := #[]
-    for i in [:prepared.rowOrigins.size] do
-      let origin := prepared.rowOrigins[i]!
-      if prepared.replacedIndices.contains origin then
-        let some name := allocation.findName? (prepared.auxiliaries.size + i)
-          | throwError "internal error: missing terminal NLP row allocation"
-        rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-      else
-        rows := rows.push state.view.constraints[origin]!
-    let template := { state.view with binders, constraints := rows }
+    let template ← Rows.terminalTemplate "terminal NLP" state.view
+      (prepared.auxiliaries.map (·.2)) prepared.rowOrigins prepared.replacedIndices allocation
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
     -- Retain source binding identities; use planner expressions for generated rows.
     let constraints := template.constraints.mapIdx fun i row =>

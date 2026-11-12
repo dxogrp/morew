@@ -30,25 +30,8 @@ private def materializeTerminalConeForm (adapter : TerminalAdapter) (artifactSte
       |>.zipIdx |>.map fun (row, index) => (Name.mkSimple s!"terminal_row_{index}", row.predicate)
     let primitive ← Rows.storeCertificate (artifactStem.appendAfter "Certificate") primitive
       (candidates ++ [(`terminal_source, typed.canonical), (`terminal_target, targetProblem)])
-    let mut binders := state.view.binders
-    for i in [:prepared.auxiliaries.size] do
-      let some name := allocation.findName? i
-        | throwError "internal error: missing terminal auxiliary allocation"
-      let name ← withFreshMacroScope do MonadQuotation.addMacroScope name
-      binders := binders.push {
-        name
-        typeSyntax := ← presentationTypeSyntax prepared.auxiliaries[i]!.2
-      }
-    let mut rows := #[]
-    for i in [:prepared.rowOrigins.size] do
-      let origin := prepared.rowOrigins[i]!
-      if prepared.replacedIndices.contains origin then
-        let some name := allocation.findName? (prepared.auxiliaries.size + i)
-          | throwError "internal error: missing terminal row allocation"
-        rows := rows.push { name, proposition := (← `(True)).raw : Morew.Syntax.ConstraintView }
-      else
-        rows := rows.push state.view.constraints[origin]!
-    let template := { state.view with binders, constraints := rows }
+    let template ← Rows.terminalTemplate "terminal" state.view
+      (prepared.auxiliaries.map (·.2)) prepared.rowOrigins prepared.replacedIndices allocation
     let rendered ← problemViewFromExpression targetProblem template (recoverDefinitions := false)
     -- Prove agreement with reduced zero/negation definitions while retaining their display names.
     let normalizationLemmas := state.normalizationLemmas ++
