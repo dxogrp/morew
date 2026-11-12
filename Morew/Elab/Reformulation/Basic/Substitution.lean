@@ -342,14 +342,12 @@ private def parameterizationCertificate (state : ReformState)
       let selection ← match selectedRule? with
         | none => pure (none, none)
         | some ruleSyntax => do
-          if ruleSyntax.raw.isIdent then
-            if let some (.const name _) ← resolveId? ruleSyntax (withInfo := true) then
-              pure (none, some name)
-            else
-              let rule ← elabTermEnsuringType ruleSyntax expectedRuleType
-              synthesizeSyntheticMVarsNoPostponing
-              pure (some (← instantiateMVars rule), none)
-          else
+          let resolved? ← if ruleSyntax.raw.isIdent then
+            resolveId? ruleSyntax (withInfo := true)
+          else pure none
+          match resolved? with
+          | some (.const name _) => pure (none, some name)
+          | _ =>
             let rule ← elabTermEnsuringType ruleSyntax expectedRuleType
             synthesizeSyntheticMVarsNoPostponing
             pure (some (← instantiateMVars rule), none)
