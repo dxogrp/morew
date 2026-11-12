@@ -39,6 +39,17 @@ abbrev FeasiblePoint {X : Type u} {V : Type v} (p : Problem X V) :=
 
 namespace Problem
 
+/-- Equality of objective values and feasibility predicates determines a problem. -/
+theorem ext {X : Type u} {V : Type v} (p q : Problem X V)
+    (objective : ∀ x, p.objective x = q.objective x)
+    (feasible : ∀ x, p.feasible x ↔ q.feasible x) : p = q := by
+  cases p with
+  | mk po pf =>
+    cases q with
+    | mk qo qf =>
+      exact congrArg₂ Problem.mk (funext objective)
+        (funext fun x => propext (feasible x))
+
 /-- Reverse the optimization order while preserving the objective and constraints. -/
 def orderDual {X : Type u} {V : Type v} (p : Problem X V) :
     Problem X (OrderDual V) where

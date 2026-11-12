@@ -50,7 +50,7 @@ private def buildFormCore (presentation : PresentationState) (objective? : Optio
       #[sense, objective.quadratic, objective.affine, objective.curvature,
         mkNatLit rows.count, rows.constraints]
     let represented ← mkAppM ``Morew.QuadConic.Data.toProblem #[data]
-    let equality ← mkAppM ``Morew.Elab.Cone.problemEq
+    let equality ← mkAppM ``Morew.Problem.ext
       #[represented, canonical, objective.pointwiseEquality, rows.feasibleIff]
     let form ← instantiateMVars (← mkAppM ``Morew.QuadConic.Form.mk #[data, equality])
     let expected ← mkAppM ``Morew.QuadConic.Form #[canonical]
