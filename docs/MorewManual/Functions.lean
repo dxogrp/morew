@@ -82,6 +82,12 @@ positive real numbers, respectively.
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
+  * `Real.negMulLog x`
+  * $`-x\log x`
+  * $`x\in\mathbf{R}_+`
+  * {functionSymbol concave}[]
+  * {functionSymbol notMonotone}[]
+*
   * `Real.sqrt x`
   * $`\sqrt{x}`
   * $`x\in\mathbf{R}_+`
@@ -99,9 +105,16 @@ positive real numbers, respectively.
   * $`x\in\mathbf{R}_+`, $`y\in\mathbf{R}_{++}`
   * {functionSymbol convex}[]
   * {functionSymbol decreasing}[] in $`y`; {functionSymbol notMonotone}[] in $`x`
+*
+  * [`Fn.klDiv x y`](api/Morew/Fn/Exponential.html#Morew.Fn.klDiv)
+  * $`x\log(x/y)-x+y`
+  * $`x\in\mathbf{R}_+`, $`y\in\mathbf{R}_{++}`
+  * {functionSymbol convex}[]
+  * {functionSymbol notMonotone}[]
 :::
 
-Relative entropy has value zero at $`x=0`.
+Entropy and relative entropy have value zero at $`x=0`. KL divergence has value
+$`y` at $`x=0` and value zero at $`x=y`; its denominator remains positive.
 
 # Powers
 
