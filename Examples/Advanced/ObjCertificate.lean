@@ -100,6 +100,22 @@ example : GlobalEquiv (matrixProblem P c d) (matrixConic P c d) :=
 example : (matrixConic.quadConicForm P c d hP).data.toProblem = matrixConic P c d :=
   (matrixConic.quadConicForm P c d hP).represents
 
+/-!
+The same hypothesis lets `qconic` construct the objective certificate automatically.
+The quadratic term may also be written `Fn.quadForm x P`.
+-/
+
+reformulation matrixConicAutomatic : (matrixProblem P c d) := by
+  qconic
+
+example : GlobalEquiv (matrixProblem P c d) (matrixConicAutomatic P c d) :=
+  matrixConicAutomatic.equiv P c d
+example : IsQuadConic (matrixConicAutomatic P c d) :=
+  matrixConicAutomatic.isQuadConic P c d hP
+example : (matrixConicAutomatic.quadConicForm P c d hP).data.toProblem =
+    matrixConicAutomatic P c d :=
+  (matrixConicAutomatic.quadConicForm P c d hP).represents
+
 end
 
 /-!
