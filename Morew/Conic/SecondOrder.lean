@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.Cone
+import Morew.Fn.Huber
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
@@ -14,7 +15,8 @@ import Mathlib.Tactic.Ring
 
 The second-order cone is `{(t, x) | ‖x‖₂ ≤ t}`. The rotated cone uses
 `‖x‖₂² ≤ 2uv`, with `u ≥ 0` and `v ≥ 0`. Quadratic-over-linear representations
-require a positive denominator.
+require a positive denominator. Huber loss with a fixed nonnegative threshold
+uses a rotated cone and three linear inequalities.
 -/
 
 namespace Morew.Conic
@@ -181,6 +183,13 @@ theorem sumSquares_le_iff {n : Nat} (v : Fin n → ℝ) (t : ℝ) :
 theorem square_le_iff (a t : ℝ) :
     a ^ 2 ≤ t ↔ (t, 1 / 2, ![a]) ∈ (Cone.rotatedSecondOrder 1).carrier := by
   simpa using sumSquares_le_iff (![a] : Fin 1 → ℝ) t
+
+/-- Huber loss has an exact epigraph with one rotated cone and three linear rows. -/
+theorem huber_le_iff (M x t : ℝ) (hM : 0 ≤ M) :
+    Fn.huber M x ≤ t ↔ ∃ z s r : ℝ,
+      (s, 1 / 2, ![z]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
+      -r ≤ x - z ∧ x - z ≤ r ∧ s + 2 * M * r ≤ t := by
+  simpa only [square_le_iff] using Fn.huber_le_iff M x t hM
 
 /-- The quadratic-over-linear representation for vectors in Euclidean space. -/
 theorem norm_sq_div_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (y t : ℝ)
