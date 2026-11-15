@@ -221,11 +221,17 @@ def sumMissingDomain :=
     maximize t
     subject to
       entropy : t ≤ ∑ i, Fn.entr (x i)
+      divergence : (∑ i, Fn.klDiv (x i) 1) ≤ t
 
 #guard_error_fragments ["constraint `entropy`:"] in
 assert_exp_atomic%
 reformulation sumMissingNonnegativity : sumMissingDomain := by
-  conic at entropy using Morew.Conic.Exponential.sumEntrHypograph
+  conic at entropy
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation sumKLMissingNonnegativity : sumMissingDomain := by
+  conic at divergence
 
 def sumNonlinear :=
   problem (x : Fin 2 → ℝ) (t : ℝ)
@@ -233,11 +239,35 @@ def sumNonlinear :=
     subject to
       domain : ∀ i, 0 ≤ x i ^ 2
       entropy : t ≤ ∑ i, Fn.entr (x i ^ 2)
+      divergence : (∑ i, Fn.klDiv (x i ^ 2) 1) ≤ t
 
 #guard_error_fragments ["constraint `entropy`:"] in
 assert_exp_atomic%
 reformulation sumNonaffineCoordinates : sumNonlinear := by
-  conic at entropy using Morew.Conic.Exponential.sumEntrHypograph
+  conic at entropy
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation sumKLNonaffineCoordinates : sumNonlinear := by
+  conic at divergence
+
+def unsupportedSums :=
+  problem (x : Fin 2 → ℝ) (t : ℝ)
+    minimize t
+    subject to
+      domain : ∀ i, 0 ≤ x i
+      reversed : (∑ i, Fn.entr (x i)) ≤ t
+      mixed : t ≤ ∑ i, (Fn.entr (x i) + Real.exp (x i))
+
+#guard_error_fragments ["constraint `reversed`:"] in
+assert_exp_atomic%
+reformulation sumReversedPolarity : unsupportedSums := by
+  conic at reversed
+
+#guard_error_fragments ["constraint `mixed`:"] in
+assert_exp_atomic%
+reformulation sumUnrelatedSummands : unsupportedSums := by
+  conic at mixed
 
 def empty :=
   problem (xs : Fin 0 → ℝ) (t : ℝ)

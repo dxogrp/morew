@@ -178,33 +178,33 @@ run_cmd liftTermElabM do
   -- may be imposed on a successful upper-exponential representation.
   expectPlan (← `(fun x : ℝ => Real.exp x ≤ Real.log 0))
 
-/-! Explicit finite-sum representations admit empty and symbolic dimensions.
+/-! Finite-sum representations admit empty and symbolic dimensions.
 The grouped cone row is accompanied by an aggregate scalar bound. -/
 
 run_cmd liftTermElabM do
-  expectPlan (← `(fun (n : ℕ) (x : Fin n → ℝ) (_ : ∀ i, 0 ≤ x i) =>
-    fun t : ℝ => t ≤ ∑ i, Morew.Fn.entr (x i))) 3 true
-    (some ``Morew.Conic.Exponential.sumEntrHypograph)
-  expectPlan (← `(fun (n : ℕ) (x q : Fin n → ℝ)
-    (_ : ∀ i, 0 ≤ x i) (_ : ∀ i, 0 < q i) =>
-      fun t : ℝ => (∑ i, Morew.Fn.klDiv (x i) (q i)) ≤ t)) 5 true
-    (some ``Morew.Conic.Exponential.sumKlDivEpigraph)
+  for rule? in #[none, some ``Morew.Conic.Exponential.sumEntrHypograph] do
+    expectPlan (← `(fun (n : ℕ) (x : Fin n → ℝ) (_ : ∀ i, 0 ≤ x i) =>
+      fun t : ℝ => t ≤ ∑ i, Morew.Fn.entr (x i))) 3 true rule?
+  for rule? in #[none, some ``Morew.Conic.Exponential.sumKlDivEpigraph] do
+    expectPlan (← `(fun (n : ℕ) (x q : Fin n → ℝ)
+      (_ : ∀ i, 0 ≤ x i) (_ : ∀ i, 0 < q i) =>
+        fun t : ℝ => (∑ i, Morew.Fn.klDiv (x i) (q i)) ≤ t)) 5 true rule?
   expectPlan (← `(fun t : ℝ => t ≤ ∑ _i : Fin 0, Morew.Fn.entr 0))
-    (auxiliary := true) (rule? := some ``Morew.Conic.Exponential.sumEntrHypograph)
+    (auxiliary := true)
   expectPlan (← `(fun t : ℝ => (∑ _i : Fin 0, Morew.Fn.klDiv 0 1) ≤ t))
-    (auxiliary := true) (rule? := some ``Morew.Conic.Exponential.sumKlDivEpigraph)
+    (auxiliary := true)
   expectPlan (← `(fun t : ℝ => t ≤ ∑ _i : Fin 1, Morew.Fn.entr 0))
-    (auxiliary := true) (rule? := some ``Morew.Conic.Exponential.sumEntrHypograph)
+    (auxiliary := true)
   expectPlan (← `(fun t : ℝ => (∑ _i : Fin 1, Morew.Fn.klDiv 0 1) ≤ t))
-    (auxiliary := true) (rule? := some ``Morew.Conic.Exponential.sumKlDivEpigraph)
+    (auxiliary := true)
   contextCase (← `(fun n : ℕ =>
     ((fun p : (Fin n → ℝ) × ℝ => p.2 ≤ ∑ i, Morew.Fn.entr (p.1 i)),
       #[fun p : (Fin n → ℝ) × ℝ => ∀ i, 0 ≤ p.1 i]))) 1
-    (rule? := some ``Morew.Conic.Exponential.sumEntrHypograph) (auxiliary := true)
+    (auxiliary := true)
   contextCase (← `(fun (n : ℕ) (q : Fin n → ℝ) (_ : ∀ i, 0 < q i) =>
     ((fun p : (Fin n → ℝ) × ℝ => (∑ i, Morew.Fn.klDiv (p.1 i) (q i)) ≤ p.2),
       #[fun p : (Fin n → ℝ) × ℝ => ∀ i, 0 ≤ p.1 i]))) 3
-    (rule? := some ``Morew.Conic.Exponential.sumKlDivEpigraph) (auxiliary := true)
+    (auxiliary := true)
 
 /-! Nonempty dimensions can be certified by an exact local fact or standard
 finite-index evidence. No positive-real domain assumption is needed for LSE. -/

@@ -138,7 +138,6 @@ variable (n : ℕ)
 
 reformulation entropyConic : (p n) := by
   hypograph s as entropyBound
-  conic at entropyBound using Morew.Conic.Exponential.sumEntrHypograph
   conic
 
 #printp entropyConic
@@ -196,9 +195,9 @@ def p (q : Fin n → ℝ) :=
 
 variable (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
 
+include hq in
 reformulation klConic : (p q) := by
   epigraph s as divergenceBound
-  conic at divergenceBound using (Morew.Conic.Exponential.sumKlDivEpigraph q hq)
   conic
 
 #printp klConic
