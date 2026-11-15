@@ -11,8 +11,8 @@ import Mathlib.Tactic.Linarith
 /-!
 # Exact exponential-cone representations
 
-Exponential, logarithm, relative-entropy, log-sum-exp, and softplus bounds
-represented by exponential cone constraints.
+Exponential, logarithm, entropy, relative-entropy, KL-divergence, log-sum-exp,
+and softplus bounds represented by exponential cone constraints.
 -/
 
 namespace Morew.Conic.Exponential
@@ -43,6 +43,25 @@ theorem relEntr_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     mul_comm a, ← le_div_iff₀ hpos, ← Real.le_log_iff_exp_le (div_pos hb hpos),
     Real.log_div hpos.ne' hb.ne', Real.log_div hb.ne' hpos.ne', neg_div]
   constructor <;> intro h <;> linarith
+
+/-- Entropy has an exponential-cone hypograph on nonnegative inputs. -/
+theorem le_negMulLog_iff (a t : ℝ) (ha : 0 ≤ a) :
+    t ≤ Real.negMulLog a ↔ (t, a, 1) ∈ EXP := by
+  calc
+    t ≤ Real.negMulLog a ↔ Fn.relEntr a 1 ≤ -t := by
+      rw [Fn.relEntr_one_right]
+      exact neg_le_neg_iff.symm
+    _ ↔ (t, a, 1) ∈ EXP := by
+      simpa only [neg_neg] using relEntr_le_iff a 1 (-t) ha zero_lt_one
+
+/-- KL divergence has an exponential-cone epigraph for `a ≥ 0` and `b > 0`. -/
+theorem klDiv_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
+    Fn.klDiv a b ≤ t ↔ (b - a - t, a, b) ∈ EXP := by
+  have hbound : Fn.klDiv a b ≤ t ↔ Fn.relEntr a b ≤ t + a - b := by
+    rw [Fn.klDiv]
+    constructor <;> intro h <;> linarith
+  have hcoord : -(t + a - b) = b - a - t := by linarith
+  rw [hbound, relEntr_le_iff a b (t + a - b) ha hb, hcoord]
 
 /-- A nonempty finite log-sum-exp bound is represented by a family of
 exponential-cone constraints and one affine sum bound. -/

@@ -66,4 +66,21 @@ def relEntrNativeEpigraph :
       p.1.1 * Real.log (p.1.1 / p.2.1)) :=
   relEntrEpigraph
 
+/-- The entropy hypograph on nonnegative inputs. -/
+def negMulLogHypograph :
+    HypographRepr (fun a : {a : ℝ // 0 ≤ a} => Real.negMulLog a.1) where
+  Auxiliary := Unit
+  target a t _ := (t, a.1, 1) ∈ EXP
+  source_iff_exists a t := by
+    simpa only [exists_const] using le_negMulLog_iff a.1 t a.2
+
+/-- The KL-divergence epigraph for a nonnegative first and positive second argument. -/
+def klDivEpigraph :
+    EpigraphRepr (fun p : {a : ℝ // 0 ≤ a} × {b : ℝ // 0 < b} =>
+      Fn.klDiv p.1.1 p.2.1) where
+  Auxiliary := Unit
+  target p t _ := (p.2.1 - p.1.1 - t, p.1.1, p.2.1) ∈ EXP
+  source_iff_exists p t := by
+    simpa only [exists_const] using klDiv_le_iff p.1.1 p.2.1 t p.1.2 p.2.2
+
 end Morew.Conic.Exponential

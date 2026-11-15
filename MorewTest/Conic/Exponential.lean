@@ -38,6 +38,28 @@ example (b t : ℝ) (hb : 0 ≤ b) :
 example (t : ℝ) : Fn.relEntr 0 0 ≤ t ↔ (-t, 0, 0) ∈ EXP :=
   relEntr_zero_le_iff 0 t le_rfl
 
+example (a : ℝ) : Fn.relEntr a 1 = -Real.negMulLog a :=
+  Fn.relEntr_one_right a
+
+example (a t : ℝ) (ha : 0 ≤ a) :
+    t ≤ Real.negMulLog a ↔ (t, a, 1) ∈ EXP :=
+  le_negMulLog_iff a t ha
+
+example (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
+    Fn.klDiv a b ≤ t ↔ (b - a - t, a, b) ∈ EXP :=
+  klDiv_le_iff a b t ha hb
+
+example (a b : ℝ) (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ Fn.klDiv a b :=
+  Fn.klDiv_nonneg a b ha hb
+
+example (a b : ℝ) : Fn.klDiv 0 b = b ∧ Fn.klDiv a a = 0 := by simp
+
+example (t : ℝ) : t ≤ 0 ↔ (t, 0, 1) ∈ EXP := by
+  simp
+
+example (b t : ℝ) (hb : 0 < b) : b ≤ t ↔ (b - t, 0, b) ∈ EXP := by
+  simpa using klDiv_le_iff 0 b t le_rfl hb
+
 /-! Totalized logarithm and entropy values extend beyond their modeling domains. -/
 
 example : (0 : ℝ) ≤ Real.log 0 := by simp
@@ -46,6 +68,10 @@ example : Fn.relEntr 1 0 ≤ 0 := by simp [Fn.relEntr]
 example : ¬ (-(0 : ℝ), 1, 0) ∈ EXP := by norm_num
 example : Fn.relEntr 1 (-1) ≤ 0 := by simp [Fn.relEntr]
 example : ¬ (-(0 : ℝ), 1, -1) ∈ EXP := by norm_num
+example : Real.negMulLog (-1) = 0 := by simp [Real.negMulLog]
+example : ¬ ((0 : ℝ), -1, 1) ∈ EXP := by norm_num
+example : Fn.klDiv 1 0 = -1 := by norm_num [Fn.klDiv, Fn.relEntr]
+example : ¬ ((0 : ℝ) - 1 - (-1), 1, 0) ∈ EXP := by norm_num
 
 /-! Finite representations retain one grouped row and one scalar sum. -/
 
