@@ -68,6 +68,15 @@ def huberEpigraph (M : ℝ) (hM : 0 ≤ M) : EpigraphRepr (Fn.huber M) where
   source_iff_exists x t := by
     simpa only [Prod.exists] using huber_le_iff M x t hM
 
+/-- A finite Huber sum represented by one rotated cone and two vector bounds. -/
+def sumHuberEpigraph {n : Nat} (M : ℝ) (hM : 0 ≤ M) :
+    EpigraphRepr (fun v : Fin n → ℝ => ∑ i, Fn.huber M (v i)) where
+  Auxiliary := (Fin n → ℝ) × (Fin n → ℝ)
+  target v t a := (t - 2 * M * (∑ i, a.2 i), 1 / 2, a.1) ∈
+      (Cone.rotatedSecondOrder n).carrier ∧ -a.2 ≤ v - a.1 ∧ v - a.1 ≤ a.2
+  source_iff_exists v t := by
+    simpa only [Prod.exists] using sum_huber_le_iff M v t hM
+
 /-- A positive-denominator squared Euclidean norm represented by a rotated cone. -/
 def normSquareDivEpigraph {n : Nat} :
     EpigraphRepr (fun p : EuclideanSpace ℝ (Fin n) × {y : ℝ // 0 < y} =>

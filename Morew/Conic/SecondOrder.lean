@@ -16,7 +16,7 @@ import Mathlib.Tactic.Ring
 The second-order cone is `{(t, x) | ‖x‖₂ ≤ t}`. The rotated cone uses
 `‖x‖₂² ≤ 2uv`, with `u ≥ 0` and `v ≥ 0`. Quadratic-over-linear representations
 require a positive denominator. Huber loss with a fixed nonnegative threshold
-uses a rotated cone and three linear inequalities.
+and finite sums of Huber losses use a rotated cone and linear inequalities.
 -/
 
 namespace Morew.Conic
@@ -190,6 +190,43 @@ theorem huber_le_iff (M x t : ℝ) (hM : 0 ≤ M) :
       (s, 1 / 2, ![z]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
       -r ≤ x - z ∧ x - z ≤ r ∧ s + 2 * M * r ≤ t := by
   simpa only [square_le_iff] using Fn.huber_le_iff M x t hM
+
+/-- A finite Huber sum has an exact epigraph with one rotated cone and two vector bounds. -/
+theorem sum_huber_le_iff {n : Nat} (M : ℝ) (v : Fin n → ℝ) (t : ℝ) (hM : 0 ≤ M) :
+    (∑ i, Fn.huber M (v i)) ≤ t ↔ ∃ z u : Fin n → ℝ,
+      (t - 2 * M * (∑ i, u i), 1 / 2, z) ∈ (Cone.rotatedSecondOrder n).carrier ∧
+      -u ≤ v - z ∧ v - z ≤ u := by
+  constructor
+  · intro ht
+    let z : Fin n → ℝ := fun i => max (-M) (min M (v i))
+    let u : Fin n → ℝ := fun i => |v i - z i|
+    have hvalue : (∑ i, Fn.huber M (v i)) =
+        (∑ i, z i ^ 2) + 2 * M * (∑ i, u i) := by
+      calc
+        _ = ∑ i, (z i ^ 2 + 2 * M * u i) :=
+          Finset.sum_congr rfl fun i _ => Fn.huber_eq_square_add_abs_clamp M (v i) hM
+        _ = _ := by rw [Finset.sum_add_distrib, ← Finset.mul_sum]
+    refine ⟨z, u, ?_, ?_, ?_⟩
+    · apply (sumSquares_le_iff z _).mp
+      rw [hvalue] at ht
+      linarith
+    · intro i
+      exact neg_abs_le (v i - z i)
+    · intro i
+      exact le_abs_self (v i - z i)
+  · rintro ⟨z, u, hcone, hlower, hupper⟩
+    have hsquare := (sumSquares_le_iff z _).mpr hcone
+    have hbound (i : Fin n) : Fn.huber M (v i) ≤ z i ^ 2 + 2 * M * u i := by
+      have habs : |v i - z i| ≤ u i := abs_le.mpr ⟨hlower i, hupper i⟩
+      calc
+        _ ≤ z i ^ 2 + 2 * M * |v i - z i| :=
+          Fn.huber_le_square_add_abs M (v i) (z i) hM
+        _ ≤ _ := add_le_add le_rfl
+          (mul_le_mul_of_nonneg_left habs
+            (mul_nonneg (by norm_num : (0 : ℝ) ≤ 2) hM))
+    have hsum := Finset.sum_le_sum fun i (_ : i ∈ Finset.univ) => hbound i
+    rw [Finset.sum_add_distrib, ← Finset.mul_sum] at hsum
+    linarith
 
 /-- The quadratic-over-linear representation for vectors in Euclidean space. -/
 theorem norm_sq_div_le_iff {n : Nat} (z : EuclideanSpace ℝ (Fin n)) (y t : ℝ)

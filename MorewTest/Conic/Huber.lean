@@ -11,7 +11,8 @@ import MorewTest.Environment
 # Huber epigraph certification
 
 The scalar rule produces one rotated cone and three affine inequalities.
-These checks cover parameter evidence, affine residuals, and rejected bounds.
+The finite-sum rule combines the squares into one cone and retains two vector
+inequalities. These checks cover parameter evidence, affine residuals, and rejected bounds.
 -/
 
 namespace MorewTest.Conic.Huber
@@ -32,7 +33,8 @@ example (x t : ℝ) :
   simpa only [Fn.huber_zero_left] using
     (SecondOrder.huberEpigraph 0 (le_refl 0)).source_iff_exists x t |>.symm
 
-private def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private def check (source : Expr) (rule? : Option Name := none)
+    (rows : Nat := 4) : MetaM Unit := do
   let before ← getMCtx
   let outcome ← match rule? with
     | none => Morew.Elab.Cone.Rewrite.planUnique source
@@ -42,12 +44,13 @@ private def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := 
     | .error error => throwError "Huber epigraph was rejected: {error.reason}"
   assertMVarCountersUnchanged before "Huber planning changed caller metavariables"
   result.toResult.check source #[]
-  let auxiliary ← mkAppM ``Prod #[mkConst ``Real,
-    ← mkAppM ``Prod #[mkConst ``Real, mkConst ``Real]]
   let some actual := result.auxiliary? | throwError "missing Huber auxiliary variables"
-  unless ← isDefEq actual auxiliary do throwError "wrong Huber auxiliary type"
-  unless result.rowPredicates.size == 4 && result.certifiedRows.size == 4 do
-    throwError "Huber epigraph must have four certified rows"
+  if rows == 4 then
+    let auxiliary ← mkAppM ``Prod #[mkConst ``Real,
+      ← mkAppM ``Prod #[mkConst ``Real, mkConst ``Real]]
+    unless ← isDefEq actual auxiliary do throwError "wrong scalar Huber auxiliary type"
+  unless result.rowPredicates.size == rows && result.certifiedRows.size == rows do
+    throwError "wrong number of certified Huber rows"
   for proof in #[result.certificate.expression, result.targetIff] do
     checkCompleteWithKernel proof "incomplete Huber representation certificate"
   for predicate in result.rowPredicates, row in result.certifiedRows do
@@ -62,9 +65,9 @@ private def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := 
       throwError "Huber row certificate does not match its predicate"
 
 private def expect (term : TSyntax `term) (parameters : Nat := 0)
-    (rule? : Option Name := none) : TermElabM Unit := do
+    (rule? : Option Name := none) (rows : Nat := 4) : TermElabM Unit := do
   let expression ← elaborate term
-  lambdaBoundedTelescope expression parameters fun _ source => check source rule?
+  lambdaBoundedTelescope expression parameters fun _ source => check source rule? rows
 
 private def reject (source : Expr) (retained : Array Expr := #[])
     (rule? : Option Name := none) : MetaM Unit := do
@@ -122,6 +125,45 @@ run_cmd liftTermElabM do
   check source (some ``SecondOrder.huberEpigraph)
 
 end Removed
+
+/-! Finite sums use the same parameter evidence, including at empty dimension. -/
+
+example (M : ℝ) (hM : 0 ≤ M) :
+    (SecondOrder.sumHuberEpigraph (n := n) M hM).Auxiliary =
+      ((Fin n → ℝ) × (Fin n → ℝ)) := rfl
+
+example (M : ℝ) (hM : 0 ≤ M) (v z u : Fin n → ℝ) (t : ℝ) :
+    (SecondOrder.sumHuberEpigraph M hM).target v t (z, u) ↔
+      (t - 2 * M * (∑ i, u i), 1 / 2, z) ∈ RSOC n ∧
+        -u ≤ v - z ∧ v - z ≤ u := Iff.rfl
+
+example (v : Fin n → ℝ) (t : ℝ) :
+    (∃ a, (SecondOrder.sumHuberEpigraph 0 (le_refl 0)).target v t a) ↔ 0 ≤ t := by
+  simpa using (SecondOrder.sumHuberEpigraph 0 (le_refl 0)).source_iff_exists v t |>.symm
+
+example (M : ℝ) (hM : 0 ≤ M) (v : Fin 0 → ℝ) (t : ℝ) :
+    (∃ a, (SecondOrder.sumHuberEpigraph M hM).target v t a) ↔ 0 ≤ t := by
+  simpa using (SecondOrder.sumHuberEpigraph M hM).source_iff_exists v t |>.symm
+
+run_cmd liftTermElabM do
+  for rule? in #[none, some ``SecondOrder.sumHuberEpigraph] do
+    expect (← `(fun (m n : Nat) (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+      (M : ℝ) (_hM : 0 ≤ M) => fun p : (Fin n → ℝ) × ℝ =>
+        (∑ i, Fn.huber M ((A *ᵥ p.1 - b) i)) ≤ p.2)) 6 rule? 3
+    expect (← `(fun p : (Fin 2 → ℝ) × ℝ =>
+      (∑ i, Fn.huber 0 (p.1 i)) ≤ p.2)) 0 rule? 3
+    expect (← `(fun p : (Fin 0 → ℝ) × ℝ =>
+      (∑ i, Fn.huber 2 (p.1 i)) ≤ p.2)) 0 rule? 3
+    rejected (← `(fun M : ℝ => fun p : (Fin 2 → ℝ) × ℝ =>
+      (∑ i, Fn.huber M (p.1 i)) ≤ p.2)) 1 rule?
+    rejected (← `(fun p : (Fin 2 → ℝ) × ℝ =>
+      p.2 ≤ ∑ i, Fn.huber 2 (p.1 i))) 0 rule?
+    rejected (← `(fun p : (Fin 2 → ℝ) × ℝ =>
+      (∑ i, Fn.huber 2 (p.1 i ^ 2)) ≤ p.2)) 0 rule?
+    let source ← elaborate (← `(fun p : ℝ × (Fin 2 → ℝ) × ℝ =>
+      (∑ i, Fn.huber p.1 (p.2.1 i)) ≤ p.2.2))
+    let retained ← elaborate (← `(fun p : ℝ × (Fin 2 → ℝ) × ℝ => 0 ≤ p.1))
+    reject source #[retained] rule?
 
 end
 end MorewTest.Conic.Huber

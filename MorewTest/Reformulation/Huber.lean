@@ -87,5 +87,63 @@ example {p : FeasiblePoint (objectiveTarget M)}
 example : GlobalEquiv (objectiveSource 0) (objectiveTarget 0) :=
   objectiveTarget.equiv 0 (le_refl 0)
 
+namespace FiniteSum
+
+open scoped Matrix
+
+def source (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) (M : ℝ) :=
+  problem (x : Fin n → ℝ)
+    let residual := A *ᵥ x - b
+    minimize ∑ i, Fn.huber M (residual i)
+
+variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) (M : ℝ) (hM : 0 ≤ M)
+
+include hM in
+reformulation automatic : (source A b M) := by
+  epigraph t as loss
+  conic
+
+reformulation selected : (source A b M) := by
+  epigraph t as loss
+  conic at loss using (SecondOrder.sumHuberEpigraph (n := m) M hM)
+  conic
+
+example : GlobalEquiv (source A b M) (automatic A b M) := automatic.equiv A b M hM
+example : GlobalEquiv (source A b M) (selected A b M) := selected.equiv A b M hM
+example : automatic A b M = selected A b M := rfl
+example : IsConic (automatic A b M) := automatic.isConic A b M
+example : (automatic.conicForm A b M).data.toProblem = automatic A b M :=
+  (automatic.conicForm A b M).represents
+example : (automatic.conicForm A b M).data.rowCount = 3 := rfl
+
+example (x : Fin n → ℝ) (t : ℝ) (z u : Fin m → ℝ) :
+    (automatic A b M).objective ((x, t), z, u) = t := rfl
+
+example (p : FeasiblePoint (automatic A b M)) :
+    ((automatic.equiv A b M hM).backward.map p).val = p.val.1.1 := rfl
+
+example {p : FeasiblePoint (automatic A b M)}
+    (hp : (automatic A b M).IsGlobalOptimum p) :
+    (source A b M).IsGlobalOptimum ((automatic.equiv A b M hM).backward.map p) :=
+  (automatic.equiv A b M hM).map_isGlobalOptimum_backward hp
+
+example (x : Fin n → ℝ) : (source A b 0).objective x = 0 := by
+  simp [source]
+
+example : GlobalEquiv (source A b 0) (automatic A b 0) :=
+  automatic.equiv A b 0 (le_refl 0)
+
+example (A : Matrix (Fin 0) (Fin n) ℝ) (b : Fin 0 → ℝ) (x : Fin n → ℝ) :
+    (source A b M).objective x = 0 := by
+  simp [source]
+
+example (A : Matrix (Fin 0) (Fin n) ℝ) (b : Fin 0 → ℝ) :
+    GlobalEquiv (source A b M) (automatic A b M) := automatic.equiv A b M hM
+
+example (A : Matrix (Fin m) (Fin 0) ℝ) : IsConic (automatic A b M) :=
+  automatic.isConic A b M
+
+end FiniteSum
+
 end
 end MorewTest.Reformulation.Huber
