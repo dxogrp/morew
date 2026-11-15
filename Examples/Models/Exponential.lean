@@ -95,104 +95,120 @@ end
 end Softplus
 
 /-!
-For a probability vector `(x,y)`, the entropy maximization problem is
+The entropy of a probability vector `x ∈ ℝⁿ` is
+
+```math
+H(x)=-\sum_{i=1}^{n}x_i\log x_i,
+```
+
+with each term defined as zero at `xᵢ = 0`. Consider the problem
 
 ```math
 \begin{array}{ll}
-\text{maximize} & -x\log x-y\log y \\
-\text{subject to} & x,y\geq0, \quad x+y=1.
+\text{maximize} & H(x) \\
+\text{subject to} & \mathbf{1}^T x=1, \quad x\succeq0.
 \end{array}
 ```
 
-Each entropy term has value zero at zero. Introduce lower bounds `u` and `v`
-for the two terms, then replace these bounds by exponential-cone constraints.
-The resulting objective is `u + v`.
+Introduce a scalar lower bound `s ≤ H(x)`. The finite-sum hypograph
+representation introduces `t ∈ ℝⁿ` satisfying
+
+```math
+\begin{gathered}
+s\leq\mathbf{1}^T t, \\
+(t_i,x_i,1)\in\mathrm{EXP},\qquad i=1,\ldots,n.
+\end{gathered}
+```
+
+The resulting problem maximizes `s`. Its backward map recovers `x` by discarding
+the bound and auxiliary variables.
 -/
 
-namespace BinaryEntropy
+namespace Entropy
 noncomputable section
 
-def p :=
-  problem (x y : ℝ)
-    let first := Real.negMulLog x
-    let second := Real.negMulLog y
-    maximize first + second
+def p (n : ℕ) :=
+  problem (x : Fin n → ℝ)
+    maximize ∑ i, Fn.entr (x i)
     subject to
-      firstNonneg : 0 ≤ x
-      secondNonneg : 0 ≤ y
-      mass : x + y = 1
+      domain : 0 ≤ x
+      mass : ∑ i, x i = 1
 
-reformulation entropyConic : p := by
-  hypograph u at first as firstBound
-  hypograph v at second as secondBound
+variable (n : ℕ)
+
+reformulation entropyConic : (p n) := by
+  hypograph s as entropyBound
+  conic at entropyBound using Morew.Conic.Exponential.sumEntrHypograph
   conic
 
 #printp entropyConic
-example : GlobalEquiv p entropyConic := entropyConic.equiv
-example : IsConic entropyConic := entropyConic.isConic
-example : entropyConic.conicForm.data.toProblem = entropyConic :=
-  entropyConic.conicForm.represents
+example : GlobalEquiv (p n) (entropyConic n) := entropyConic.equiv n
+example : IsConic (entropyConic n) := entropyConic.isConic n
+example : (entropyConic.conicForm n).data.toProblem = entropyConic n :=
+  (entropyConic.conicForm n).represents
 
--- The forward map chooses exact entropy values; recovery keeps the probabilities.
-example (z : FeasiblePoint p) :
-    (entropyConic.equiv.forward.map z).val =
-      ((z.val, Real.negMulLog z.val.1), Real.negMulLog z.val.2) := rfl
-example (z : FeasiblePoint entropyConic) :
-    (entropyConic.equiv.backward.map z).val = z.val.1.1 := rfl
+example (z : FeasiblePoint (entropyConic n)) :
+    ((entropyConic.equiv n).backward.map z).val = z.val.1.1 := rfl
 
 end
-end BinaryEntropy
+end Entropy
 
 /-!
-For probability vectors `p = (x,y)` and `q = (1/3,2/3)`, the KL divergence is
+For a fixed positive reference vector `q ∈ ℝⁿ₊₊` and `x ∈ ℝⁿ₊`, the generalized
+KL divergence is
 
 ```math
-D_{\mathrm{KL}}(p,q)=\sum_{i=1}^{2}\bigl(p_i\log(p_i/q_i)-p_i+q_i\bigr).
+D_{\mathrm{KL}}(x,q)=\sum_{i=1}^{n}\bigl(x_i\log(x_i/q_i)-x_i+q_i\bigr).
 ```
 
-The entries of `q` are positive, and a zero entry of `p` contributes `qᵢ`.
-Fit `p` to `q` by solving
+A zero entry of `x` contributes `qᵢ`. Fit a probability vector `x` to `q` by solving
 
 ```math
 \begin{array}{ll}
-\text{minimize} & D_{\mathrm{KL}}((x,y),q) \\
-\text{subject to} & x,y\geq0, \quad x+y=1.
+\text{minimize} & D_{\mathrm{KL}}(x,q) \\
+\text{subject to} & \mathbf{1}^T x=1, \quad x\succeq0.
 \end{array}
 ```
 
-Introduce an upper bound for each scalar KL term, then rewrite the bounds as
-exponential-cone constraints. The backward map recovers the probability vector.
+Introduce a scalar upper bound `D_KL(x,q) ≤ s`. The finite-sum epigraph
+representation introduces `t ∈ ℝⁿ` satisfying
+
+```math
+\begin{gathered}
+\mathbf{1}^T t\leq s, \\
+(q_i-x_i-t_i,x_i,q_i)\in\mathrm{EXP},\qquad i=1,\ldots,n.
+\end{gathered}
+```
+
+The resulting problem minimizes `s`. Its backward map recovers the probability
+vector `x`.
 -/
 
 namespace KullbackLeibler
 noncomputable section
 
-def p :=
-  problem (x y : ℝ)
-    let first := Fn.klDiv x (1 / 3)
-    let second := Fn.klDiv y (2 / 3)
-    minimize first + second
+def p (q : Fin n → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ∑ i, Fn.klDiv (x i) (q i)
     subject to
-      firstNonneg : 0 ≤ x
-      secondNonneg : 0 ≤ y
-      mass : x + y = 1
+      domain : 0 ≤ x
+      mass : ∑ i, x i = 1
 
-reformulation klConic : p := by
-  epigraph u at first as firstBound
-  epigraph v at second as secondBound
+variable (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
+
+reformulation klConic : (p q) := by
+  epigraph s as divergenceBound
+  conic at divergenceBound using (Morew.Conic.Exponential.sumKlDivEpigraph q hq)
   conic
 
 #printp klConic
-example : GlobalEquiv p klConic := klConic.equiv
-example : IsConic klConic := klConic.isConic
-example : klConic.conicForm.data.toProblem = klConic :=
-  klConic.conicForm.represents
+example : GlobalEquiv (p q) (klConic q) := klConic.equiv q hq
+example : IsConic (klConic q) := klConic.isConic q
+example : (klConic.conicForm q).data.toProblem = klConic q :=
+  (klConic.conicForm q).represents
 
-example (z : FeasiblePoint p) :
-    (klConic.equiv.forward.map z).val =
-      ((z.val, Fn.klDiv z.val.1 (1 / 3)), Fn.klDiv z.val.2 (2 / 3)) := rfl
-example (z : FeasiblePoint klConic) :
-    (klConic.equiv.backward.map z).val = z.val.1.1 := rfl
+example (z : FeasiblePoint (klConic q)) :
+    ((klConic.equiv q hq).backward.map z).val = z.val.1.1 := rfl
 
 end
 end KullbackLeibler

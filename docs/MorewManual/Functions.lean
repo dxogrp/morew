@@ -82,7 +82,7 @@ positive real numbers, respectively.
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
-  * `Real.negMulLog x`
+  * [`Fn.entr x`](api/Morew/Fn/Exponential.html#Morew.Fn.entr)
   * $`-x\log x`
   * $`x\in\mathbf{R}_+`
   * {functionSymbol concave}[]
@@ -113,6 +113,7 @@ positive real numbers, respectively.
   * {functionSymbol notMonotone}[]
 :::
 
+`Fn.entr x` is defined as `Real.negMulLog x`; both forms are supported.
 Entropy and relative entropy have value zero at $`x=0`. KL divergence has value
 $`y` at $`x=0` and value zero at $`x=y`; its denominator remains positive.
 
