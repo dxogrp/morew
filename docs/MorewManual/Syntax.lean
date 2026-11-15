@@ -177,15 +177,14 @@ generates an equivalence certificate `q.equiv`.
 
 `conic` requires an affine objective. For a nonlinear objective, first apply
 `epigraph t` for minimization or `hypograph t` for maximization.
+
 `qconic` preserves a compatible quadratic objective in the form $`Q(x)+a(x)`,
 where $`Q` is a homogeneous quadratic form and $`a` is affine.
 It proves that $`Q` is nonnegative for minimization or nonpositive for maximization
 on the entire decision space, using parameter hypotheses.
-
 For an affine vector `v`, it recognizes `Fn.quadForm v Q` and `v ⬝ᵥ (Q *ᵥ v)`
 using a fixed matrix and a hypothesis `Q.PosSemidef`. These terms can be minimized,
 or negated and maximized, together with compatible quadratic and affine terms.
-
 `qconic` uses the same constraint conversions as `conic`. To select a rule,
 use `conic at label using rule` before the final `qconic` command.
 

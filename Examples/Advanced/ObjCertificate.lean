@@ -101,7 +101,7 @@ example : (matrixConic.quadConicForm P c d hP).data.toProblem = matrixConic P c 
   (matrixConic.quadConicForm P c d hP).represents
 
 /-!
-The same hypothesis lets `qconic` construct the objective certificate automatically.
+In fact, the same hypothesis lets `qconic` construct the objective certificate automatically.
 The quadratic term may also be written `Fn.quadForm x P`.
 -/
 
