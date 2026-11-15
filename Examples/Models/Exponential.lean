@@ -195,7 +195,6 @@ def p (q : Fin n → ℝ) :=
 
 variable (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
 
-include hq in
 reformulation klConic : (p q) := by
   epigraph s as divergenceBound
   conic
