@@ -63,6 +63,7 @@ import MorewTest.DiagnosticsSupport
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
+import MorewTest.Fn.Huber
 import MorewTest.Fn.Norm
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
