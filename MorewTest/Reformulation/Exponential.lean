@@ -175,6 +175,67 @@ example (s t : ℝ) : boundaryTarget.feasible (s, t) ↔
 
 end EntropyAndKL
 
+namespace BinaryEntropy
+
+def p :=
+  problem (x y : ℝ)
+    let first := Fn.entr x
+    let second := Fn.entr y
+    maximize first + second
+    subject to
+      firstNonneg : 0 ≤ x
+      secondNonneg : 0 ≤ y
+      mass : x + y = 1
+
+reformulation entropyConic : p := by
+  hypograph u at first as firstBound
+  hypograph v at second as secondBound
+  conic
+
+example : GlobalEquiv p entropyConic := entropyConic.equiv
+example : IsConic entropyConic := entropyConic.isConic
+example : entropyConic.conicForm.data.toProblem = entropyConic :=
+  entropyConic.conicForm.represents
+
+-- The forward map chooses exact entropy values; recovery keeps the probabilities.
+example (z : FeasiblePoint p) :
+    (entropyConic.equiv.forward.map z).val =
+      ((z.val, Fn.entr z.val.1), Fn.entr z.val.2) := rfl
+example (z : FeasiblePoint entropyConic) :
+    (entropyConic.equiv.backward.map z).val = z.val.1.1 := rfl
+
+end BinaryEntropy
+
+namespace BinaryKL
+
+def p :=
+  problem (x y : ℝ)
+    let first := Fn.klDiv x (1 / 3)
+    let second := Fn.klDiv y (2 / 3)
+    minimize first + second
+    subject to
+      firstNonneg : 0 ≤ x
+      secondNonneg : 0 ≤ y
+      mass : x + y = 1
+
+reformulation klConic : p := by
+  epigraph u at first as firstBound
+  epigraph v at second as secondBound
+  conic
+
+example : GlobalEquiv p klConic := klConic.equiv
+example : IsConic klConic := klConic.isConic
+example : klConic.conicForm.data.toProblem = klConic :=
+  klConic.conicForm.represents
+
+example (z : FeasiblePoint p) :
+    (klConic.equiv.forward.map z).val =
+      ((z.val, Fn.klDiv z.val.1 (1 / 3)), Fn.klDiv z.val.2 (2 / 3)) := rfl
+example (z : FeasiblePoint klConic) :
+    (klConic.equiv.backward.map z).val = z.val.1.1 := rfl
+
+end BinaryKL
+
 namespace Margins
 
 def source :=

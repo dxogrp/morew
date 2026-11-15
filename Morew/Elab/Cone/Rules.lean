@@ -54,6 +54,7 @@ attribute [morew_conic]
   Morew.Conic.Exponential.relEntrEpigraph
   Morew.Conic.Exponential.relEntrNativeEpigraph
   Morew.Conic.Exponential.negMulLogHypograph
+  Morew.Conic.Exponential.entrHypograph
   Morew.Conic.Exponential.klDivEpigraph
   Morew.Conic.Power.normEpigraph
   Morew.Conic.Power.geoMeanHypograph

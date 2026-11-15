@@ -115,12 +115,18 @@ def newAtomsMissingDomain :=
     subject to
       margin : 1 ≤ y
       entropy : t ≤ Real.negMulLog x
+      namedEntropy : t ≤ Fn.entr x
       divergence : Fn.klDiv x y ≤ t
 
 #guard_error_fragments ["constraint `entropy`:"] in
 assert_exp_atomic%
 reformulation entropyMissingNonnegativity : newAtomsMissingDomain := by
   conic at entropy
+
+#guard_error_fragments ["constraint `namedEntropy`:"] in
+assert_exp_atomic%
+reformulation entrMissingNonnegativity : newAtomsMissingDomain := by
+  conic at namedEntropy
 
 #guard_error_fragments ["constraint `divergence`:"] in
 assert_exp_atomic%
@@ -174,12 +180,18 @@ def newAtomsReverse :=
       numerator : 0 ≤ x
       denominator : 1 ≤ y
       entropy : Real.negMulLog x ≤ t
+      namedEntropy : Fn.entr x ≤ t
       divergence : t ≤ Fn.klDiv x y
 
 #guard_error_fragments ["constraint `entropy`:"] in
 assert_exp_atomic%
 reformulation reversedEntropy : newAtomsReverse := by
   conic at entropy
+
+#guard_error_fragments ["constraint `namedEntropy`:"] in
+assert_exp_atomic%
+reformulation reversedEntr : newAtomsReverse := by
+  conic at namedEntropy using Morew.Conic.Exponential.entrHypograph
 
 #guard_error_fragments ["constraint `divergence`:"] in
 assert_exp_atomic%
@@ -203,6 +215,29 @@ reformulation nonaffineEntropy : newAtomsNonlinear := by
 assert_exp_atomic%
 reformulation nonaffineKL : newAtomsNonlinear := by
   conic at divergence
+
+def sumMissingDomain :=
+  problem (x : Fin 2 → ℝ) (t : ℝ)
+    maximize t
+    subject to
+      entropy : t ≤ ∑ i, Fn.entr (x i)
+
+#guard_error_fragments ["constraint `entropy`:"] in
+assert_exp_atomic%
+reformulation sumMissingNonnegativity : sumMissingDomain := by
+  conic at entropy using Morew.Conic.Exponential.sumEntrHypograph
+
+def sumNonlinear :=
+  problem (x : Fin 2 → ℝ) (t : ℝ)
+    maximize t
+    subject to
+      domain : ∀ i, 0 ≤ x i ^ 2
+      entropy : t ≤ ∑ i, Fn.entr (x i ^ 2)
+
+#guard_error_fragments ["constraint `entropy`:"] in
+assert_exp_atomic%
+reformulation sumNonaffineCoordinates : sumNonlinear := by
+  conic at entropy using Morew.Conic.Exponential.sumEntrHypograph
 
 def empty :=
   problem (xs : Fin 0 → ℝ) (t : ℝ)
