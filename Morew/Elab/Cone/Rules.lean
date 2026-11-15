@@ -53,6 +53,11 @@ attribute [morew_conic]
   Morew.Conic.Exponential.softplusNativeEpigraph
   Morew.Conic.Exponential.relEntrEpigraph
   Morew.Conic.Exponential.relEntrNativeEpigraph
+  Morew.Conic.Exponential.negMulLogHypograph
+  Morew.Conic.Exponential.entrHypograph
+  Morew.Conic.Exponential.klDivEpigraph
+  Morew.Conic.Exponential.sumEntrHypograph
+  Morew.Conic.Exponential.sumKlDivEpigraph
   Morew.Conic.Power.normEpigraph
   Morew.Conic.Power.geoMeanHypograph
   Morew.Conic.Power.invProdEpigraph

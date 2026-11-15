@@ -10,7 +10,8 @@ open Morew
 /-!
 # Exponential-cone examples
 
-Relative entropy and softplus have exponential-cone representations.
+Relative entropy, softplus, entropy, and KL divergence have exponential-cone
+representations.
 The relative entropy model has scalar variables `a` and `b`:
 
 ```math
@@ -92,5 +93,122 @@ example : IsConic automaticConic := automaticConic.isConic
 
 end
 end Softplus
+
+/-!
+The entropy of a probability vector `x ∈ ℝⁿ` is
+
+```math
+H(x)=-\sum_{i=1}^{n}x_i\log x_i,
+```
+
+with each term defined as zero at `xᵢ = 0`. Consider the problem
+
+```math
+\begin{array}{ll}
+\text{maximize} & H(x) \\
+\text{subject to} & \mathbf{1}^T x=1, \quad x\succeq0.
+\end{array}
+```
+
+Introduce a scalar lower bound `s ≤ H(x)`. The finite-sum hypograph
+representation introduces `t ∈ ℝⁿ` satisfying
+
+```math
+\begin{gathered}
+s\leq\mathbf{1}^T t, \\
+(t_i,x_i,1)\in\mathrm{EXP},\qquad i=1,\ldots,n.
+\end{gathered}
+```
+
+The resulting problem maximizes `s`. Its backward map recovers `x` by discarding
+the bound and auxiliary variables.
+-/
+
+namespace Entropy
+noncomputable section
+
+def p (n : ℕ) :=
+  problem (x : Fin n → ℝ)
+    maximize ∑ i, Fn.entr (x i)
+    subject to
+      domain : 0 ≤ x
+      mass : ∑ i, x i = 1
+
+variable (n : ℕ)
+
+reformulation entropyConic : (p n) := by
+  hypograph s as entropyBound
+  conic
+
+#printp entropyConic
+example : GlobalEquiv (p n) (entropyConic n) := entropyConic.equiv n
+example : IsConic (entropyConic n) := entropyConic.isConic n
+example : (entropyConic.conicForm n).data.toProblem = entropyConic n :=
+  (entropyConic.conicForm n).represents
+
+example (z : FeasiblePoint (entropyConic n)) :
+    ((entropyConic.equiv n).backward.map z).val = z.val.1.1 := rfl
+
+end
+end Entropy
+
+/-!
+For a fixed positive reference vector `q ∈ ℝⁿ₊₊` and `x ∈ ℝⁿ₊`, the generalized
+KL divergence is
+
+```math
+D_{\mathrm{KL}}(x,q)=\sum_{i=1}^{n}\bigl(x_i\log(x_i/q_i)-x_i+q_i\bigr).
+```
+
+A zero entry of `x` contributes `qᵢ`. Fit a probability vector `x` to `q` by solving
+
+```math
+\begin{array}{ll}
+\text{minimize} & D_{\mathrm{KL}}(x,q) \\
+\text{subject to} & \mathbf{1}^T x=1, \quad x\succeq0.
+\end{array}
+```
+
+Introduce a scalar upper bound `D_KL(x,q) ≤ s`. The finite-sum epigraph
+representation introduces `t ∈ ℝⁿ` satisfying
+
+```math
+\begin{gathered}
+\mathbf{1}^T t\leq s, \\
+(q_i-x_i-t_i,x_i,q_i)\in\mathrm{EXP},\qquad i=1,\ldots,n.
+\end{gathered}
+```
+
+The resulting problem minimizes `s`. Its backward map recovers the probability
+vector `x`.
+-/
+
+namespace KullbackLeibler
+noncomputable section
+
+def p (q : Fin n → ℝ) :=
+  problem (x : Fin n → ℝ)
+    minimize ∑ i, Fn.klDiv (x i) (q i)
+    subject to
+      domain : 0 ≤ x
+      mass : ∑ i, x i = 1
+
+variable (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
+
+reformulation klConic : (p q) := by
+  epigraph s as divergenceBound
+  conic
+
+#printp klConic
+example : GlobalEquiv (p q) (klConic q) := klConic.equiv q hq
+example : IsConic (klConic q) := klConic.isConic q
+example : (klConic.conicForm q).data.toProblem = klConic q :=
+  (klConic.conicForm q).represents
+
+example (z : FeasiblePoint (klConic q)) :
+    ((klConic.equiv q hq).backward.map z).val = z.val.1.1 := rfl
+
+end
+end KullbackLeibler
 
 end Examples.Models.Exponential

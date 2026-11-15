@@ -11,8 +11,8 @@ import Morew.Elab.Expr
 # Typed exponential planning and domain certificates
 
 Certificates retain the exact source, decision domain, ordered conjunction, and
-cone rows. Retained margins supply domain facts; finite representations carry
-nonempty-index evidence separately from their coordinates.
+cone rows. Retained margins supply domain facts; finite representations keep
+coordinatewise conditions separate from their affine cone coordinates.
 -/
 
 namespace MorewTest.Conic.ExponentialElab
@@ -46,49 +46,34 @@ private def rowCone (constraint : Expr) : MetaM Expr := do
     (type.getAppArgs ++ #[constraint])
 
 private def checkPlan (source : Expr) (retained : Array Expr := #[])
-    (contextual : Bool := false) (auxiliary : Bool := false) : MetaM Unit := do
+    (contextual : Bool := false) (auxiliary : Bool := false)
+    (rule? : Option Name := none) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
-  let result ← match ← Rewrite.planUnique source retained with
+  let outcome ← match rule? with
+    | some rule => Rewrite.planDeclaration source rule retained
+    | none => Rewrite.planUnique source retained
+  let result ← match outcome with
     | .error error => throwError "expected an exponential plan: {error.reason}"
     | .ok result => pure result
   result.toResult.check source retained
+  unless result.auxiliary?.isSome == auxiliary do throwError "unexpected auxiliary decision space"
+  let expectedRows := if auxiliary then 2 else 1
+  unless result.rowPredicates.size == expectedRows do throwError "unexpected generated row count"
+  let nextDomain ← match result.auxiliary? with
+    | none => pure domain
+    | some auxiliary => mkAppM ``Prod #[domain, auxiliary]
+  unless ← isDefEq result.nextDomain nextDomain do throwError "wrong lifted decision domain"
   match result.certificate with
   | .exact repr =>
       if contextual then throwError "retained domain evidence escaped its contextual certificate"
-      unless result.auxiliary?.isSome == auxiliary do throwError "unexpected auxiliary decision space"
-      let expectedRows := if auxiliary then 2 else 1
-      unless result.rowPredicates.size == expectedRows do throwError "unexpected generated row count"
       discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
       checkWithKernel result.targetIff
       if repr.hasMVar || result.targetIff.hasMVar || repr.hasSorry then
         throwError "incomplete exponential representation"
-      let nextDomain ← match result.auxiliary? with
-        | none => pure domain
-        | some auxiliary => mkAppM ``Prod #[domain, auxiliary]
-      unless ← isDefEq result.nextDomain nextDomain do throwError "wrong lifted decision domain"
-      checkRows result.nextDomain result.rowPredicates result.certifiedRows
-      let some firstRow := result.certifiedRows[0]? | throwError "missing first certified row"
-      if let some auxiliary := result.auxiliary? then
-        let .forallE _ index range _ ← whnf auxiliary
-          | throwError "exponential auxiliary is not a finite real vector"
-        let index ← whnf index
-        unless index.isAppOfArity ``Fin 1 && (← whnf range).isConstOf ``Real do
-          throwError "exponential auxiliary is not Fin n → ℝ"
-        lambdaTelescope result.rowPredicates[0]! fun _ body =>
-          unless body.isForall do throwError "the finite membership row was expanded"
-        let cone ← rowCone firstRow.constraint
-        let expectedCone ← mkAppM ``Morew.Conic.Cone.exponentialProduct #[index.getAppArgs[0]!]
-        unless ← isDefEq cone expectedCone do throwError "family was not certified as a product cone"
-      else
-        let cone ← rowCone firstRow.constraint
-        unless ← isDefEq cone (mkConst ``Morew.Conic.Cone.exponential) do
-          throwError "scalar rewrite was not certified as an exponential cone"
   | .contextual auxiliaryType target conditionalIff =>
-      unless contextual && !auxiliary do throwError "unexpected contextual exponential plan"
-      unless result.auxiliary?.isNone && (← isDefEq auxiliaryType (mkConst ``Unit)) do
-        throwError "same-domain contextual rewrite added an auxiliary"
-      unless ← isDefEq result.nextDomain domain do throwError "contextual rewrite changed the domain"
-      unless result.rowPredicates.size == 1 do throwError "contextual rewrite added extra rows"
+      unless contextual do throwError "unexpected contextual exponential plan"
+      unless ← isDefEq auxiliaryType (result.auxiliary?.getD (mkConst ``Unit)) do
+        throwError "contextual certificate has the wrong auxiliary type"
       let expected ← withLocalDeclD `point domain fun point => do
         let remainder := conjunction (retained.map (mkApp · point))
         let target ← mkAppM ``Exists #[mkApp target point]
@@ -97,7 +82,23 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
       unless ← isDefEq (← inferType conditionalIff) expected do
         throwError "contextual certificate changed the exact source or retained conjunction"
       checkCompleteWithKernel conditionalIff "incomplete contextual exponential certificate"
-      checkRows domain result.rowPredicates result.certifiedRows
+  checkRows result.nextDomain result.rowPredicates result.certifiedRows
+  let some firstRow := result.certifiedRows[0]? | throwError "missing first certified row"
+  if let some auxiliary := result.auxiliary? then
+    let .forallE _ index range _ ← whnf auxiliary
+      | throwError "exponential auxiliary is not a finite real vector"
+    let index ← whnf index
+    unless index.isAppOfArity ``Fin 1 && (← whnf range).isConstOf ``Real do
+      throwError "exponential auxiliary is not Fin n → ℝ"
+    lambdaTelescope result.rowPredicates[0]! fun _ body =>
+      unless body.isForall do throwError "the finite membership row was expanded"
+    let cone ← rowCone firstRow.constraint
+    let expectedCone ← mkAppM ``Morew.Conic.Cone.exponentialProduct #[index.getAppArgs[0]!]
+    unless ← isDefEq cone expectedCone do throwError "family was not certified as a product cone"
+  else
+    let cone ← rowCone firstRow.constraint
+    unless ← isDefEq cone (mkConst ``Morew.Conic.Cone.exponential) do
+      throwError "scalar rewrite was not certified as an exponential cone"
 
 private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
@@ -107,10 +108,10 @@ private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : Strin
     throwError "expected diagnostic containing {fragment}, got {error.reason}"
 
 private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
-    (auxiliary : Bool := false) : TermElabM Unit := do
+    (auxiliary : Bool := false) (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source =>
-    checkPlan source (auxiliary := auxiliary)
+    checkPlan source (auxiliary := auxiliary) (rule? := rule?)
 
 private def expectRejected (stx : TSyntax `term) (fragment : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
@@ -118,7 +119,8 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
   lambdaBoundedTelescope expression parameterCount fun _ source => rejectPlan source #[] fragment
 
 private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
-    (failure? : Option String := none) : TermElabM Unit := do
+    (failure? : Option String := none) (rule? : Option Name := none)
+    (auxiliary : Bool := false) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ pair => do
     let pair ← Morew.Elab.Expr.reduceStructure pair
@@ -126,7 +128,9 @@ private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
     let some retained ← getArrayLit? pair.getAppArgs[3]!
       | throwError "expected a literal array of retained predicates"
     match failure? with
-    | none => checkPlan pair.getAppArgs[2]! retained (contextual := true)
+    | none =>
+        checkPlan pair.getAppArgs[2]! retained (contextual := true)
+          (rule? := rule?) (auxiliary := auxiliary)
     | some fragment => rejectPlan pair.getAppArgs[2]! retained fragment
 
 private noncomputable abbrev nativeLE : LE ℝ := inferInstance
@@ -140,6 +144,21 @@ run_cmd liftTermElabM do
   expectPlan (← `(fun t : ℝ => (1 / 2 : ℝ) * Real.log ((1 / 2) / 2) ≤ t))
   expectPlan (← `(fun (a b : ℝ) (_ : 0 ≤ a) (_ : 0 < b) =>
     fun t : ℝ => Morew.Fn.relEntr a b ≤ t)) 4
+  expectPlan (← `(fun t : ℝ => t ≤ Real.negMulLog 0))
+  expectPlan (← `(fun (a : ℝ) (_ : 0 ≤ a) =>
+    fun t : ℝ => t ≤ Real.negMulLog a)) 2
+  expectPlan (← `(fun t : ℝ => t ≤ Morew.Fn.entr 0))
+  expectPlan (← `(fun (a : ℝ) (_ : 0 ≤ a) =>
+    fun t : ℝ => t ≤ Morew.Fn.entr a)) 2
+  expectPlan (← `(fun t : ℝ => Morew.Fn.klDiv 0 2 ≤ t))
+  expectPlan (← `(fun (a b : ℝ) (_ : 0 ≤ a) (_ : 0 < b) =>
+    fun t : ℝ => Morew.Fn.klDiv a b ≤ t)) 4
+  expectPlan (← `(fun t : ℝ => t ≤ Real.negMulLog 1))
+    (rule? := some ``Morew.Conic.Exponential.negMulLogHypograph)
+  expectPlan (← `(fun t : ℝ => t ≤ Morew.Fn.entr 1))
+    (rule? := some ``Morew.Conic.Exponential.entrHypograph)
+  expectPlan (← `(fun t : ℝ => Morew.Fn.klDiv 1 2 ≤ t))
+    (rule? := some ``Morew.Conic.Exponential.klDivEpigraph)
   expectPlan (← `(fun p : ℝ × ℝ => Morew.Fn.softplus (2 * p.1 - 1) ≤ p.2))
     (auxiliary := true)
   expectPlan (← `(fun p : ℝ × ℝ => Real.log (1 + Real.exp p.1) ≤ p.2))
@@ -158,6 +177,34 @@ run_cmd liftTermElabM do
   -- The logarithm is a constant bound here, so no logarithm-domain hypothesis
   -- may be imposed on a successful upper-exponential representation.
   expectPlan (← `(fun x : ℝ => Real.exp x ≤ Real.log 0))
+
+/-! Finite-sum representations admit empty and symbolic dimensions.
+The grouped cone row is accompanied by an aggregate scalar bound. -/
+
+run_cmd liftTermElabM do
+  for rule? in #[none, some ``Morew.Conic.Exponential.sumEntrHypograph] do
+    expectPlan (← `(fun (n : ℕ) (x : Fin n → ℝ) (_ : ∀ i, 0 ≤ x i) =>
+      fun t : ℝ => t ≤ ∑ i, Morew.Fn.entr (x i))) 3 true rule?
+  for rule? in #[none, some ``Morew.Conic.Exponential.sumKlDivEpigraph] do
+    expectPlan (← `(fun (n : ℕ) (x q : Fin n → ℝ)
+      (_ : ∀ i, 0 ≤ x i) (_ : ∀ i, 0 < q i) =>
+        fun t : ℝ => (∑ i, Morew.Fn.klDiv (x i) (q i)) ≤ t)) 5 true rule?
+  expectPlan (← `(fun t : ℝ => t ≤ ∑ _i : Fin 0, Morew.Fn.entr 0))
+    (auxiliary := true)
+  expectPlan (← `(fun t : ℝ => (∑ _i : Fin 0, Morew.Fn.klDiv 0 1) ≤ t))
+    (auxiliary := true)
+  expectPlan (← `(fun t : ℝ => t ≤ ∑ _i : Fin 1, Morew.Fn.entr 0))
+    (auxiliary := true)
+  expectPlan (← `(fun t : ℝ => (∑ _i : Fin 1, Morew.Fn.klDiv 0 1) ≤ t))
+    (auxiliary := true)
+  contextCase (← `(fun n : ℕ =>
+    ((fun p : (Fin n → ℝ) × ℝ => p.2 ≤ ∑ i, Morew.Fn.entr (p.1 i)),
+      #[fun p : (Fin n → ℝ) × ℝ => ∀ i, 0 ≤ p.1 i]))) 1
+    (auxiliary := true)
+  contextCase (← `(fun (n : ℕ) (q : Fin n → ℝ) (_ : ∀ i, 0 < q i) =>
+    ((fun p : (Fin n → ℝ) × ℝ => (∑ i, Morew.Fn.klDiv (p.1 i) (q i)) ≤ p.2),
+      #[fun p : (Fin n → ℝ) × ℝ => ∀ i, 0 ≤ p.1 i]))) 3
+    (auxiliary := true)
 
 /-! Nonempty dimensions can be certified by an exact local fact or standard
 finite-index evidence. No positive-real domain assumption is needed for LSE. -/
@@ -204,6 +251,28 @@ run_cmd liftTermElabM do
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
     Morew.Fn.relEntr 0 p.1 ≤ p.2)
     #[fun p : ℝ × ℝ => 1 ≤ p.1]))
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
+    p.2 / 2 ≤ Real.negMulLog (2 * p.1 + 1))
+    #[fun p : ℝ × ℝ => 0 ≤ 2 * p.1 + 1]))
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
+    p.2 / 2 ≤ Morew.Fn.entr (2 * p.1 + 1))
+    #[fun p : ℝ × ℝ => 0 ≤ 2 * p.1 + 1]))
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
+    Morew.Fn.entr p.1 ≥ p.2)
+    #[fun p : ℝ × ℝ => p.1 ≥ 0]))
+    (rule? := some ``Morew.Conic.Exponential.entrHypograph)
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ =>
+    Real.negMulLog p.1 ≥ p.2)
+    #[fun p : ℝ × ℝ => p.1 ≥ 0]))
+    (rule? := some ``Morew.Conic.Exponential.negMulLogHypograph)
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ × ℝ =>
+    Morew.Fn.klDiv (2 * p.1 + 1) (p.2.1 + 2) ≤ p.2.2 / 2)
+    #[fun p : ℝ × ℝ × ℝ => 0 ≤ 2 * p.1 + 1,
+      fun p : ℝ × ℝ × ℝ => 1 ≤ p.2.1 + 2]))
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ × ℝ =>
+    p.2.2 ≥ Morew.Fn.klDiv p.1 p.2.1)
+    #[fun p : ℝ × ℝ × ℝ => 0 ≤ p.1, fun p : ℝ × ℝ × ℝ => 1 ≤ p.2.1]))
+    (rule? := some ``Morew.Conic.Exponential.klDivEpigraph)
   contextCase (← `(fun a : ℝ =>
     ((fun p : ℝ × ℝ => p.2 ≤ Real.log p.1),
       #[fun p : ℝ × ℝ => let h : 0 < Real.exp a := Real.exp_pos a; Real.exp a ≤ p.1]))) 1
@@ -241,6 +310,17 @@ run_cmd liftTermElabM do
   expectRejected (← `(fun p : ℝ × ℝ × ℝ =>
     Morew.Fn.relEntr p.1 p.2.1 ≤ p.2.2)) "nonnegative"
   expectRejected (← `(fun t : ℝ => Morew.Fn.relEntr 0 0 ≤ t)) "margin"
+  expectRejected (← `(fun p : ℝ × ℝ => p.2 ≤ Real.negMulLog p.1)) "nonnegative"
+  expectRejected (← `(fun p : ℝ × ℝ => Morew.Fn.klDiv p.1 1 ≤ p.2)) "nonnegative"
+  expectRejected (← `(fun t : ℝ => Morew.Fn.klDiv 0 0 ≤ t)) "margin"
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ => Morew.Fn.klDiv 0 p.1 ≤ p.2)
+    #[fun p : ℝ × ℝ => 0 ≤ p.1])) (failure? := some "margin")
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ => Morew.Fn.klDiv 0 p.1 ≤ p.2)
+    #[fun p : ℝ × ℝ => 0 < p.1])) (failure? := some "margin")
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.negMulLog (p.1 ^ 2))
+    #[fun p : ℝ × ℝ => 0 ≤ p.1 ^ 2])) (failure? := some "affine")
+  contextCase (← `(Prod.mk (fun p : ℝ × ℝ => Morew.Fn.klDiv 0 (p.1 ^ 2 + 1) ≤ p.2)
+    #[fun p : ℝ × ℝ => 1 ≤ p.1 ^ 2 + 1])) (failure? := some "affine")
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)
     #[fun p : ℝ × ℝ => 0 < p.1])) (failure? := some "margin")
   contextCase (← `(Prod.mk (fun p : ℝ × ℝ => p.2 ≤ Real.log p.1)
