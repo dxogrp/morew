@@ -184,6 +184,79 @@ example (c : ℝ) (hc : c ≠ 0) (x : ℝ) :
       (shiftedSquare.divConst c hc).affine x = (x + 3) ^ 2 / c :=
   (shiftedSquare.divConst c hc).correct x
 
+/-! Matrix quadratics keep their normalization and all affine terms. -/
+
+example {n : Nat} (x : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) :
+    Fn.quadForm x Q = x ⬝ᵥ (Q *ᵥ x) := Fn.quadForm_eq_dotProduct_mulVec x Q
+
+example {n : Nat} (x : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) :
+    Fn.quadForm x Q = Q.toQuadraticForm' x := Fn.quadForm_eq_toQuadraticForm x Q
+
+example {n : Nat} (x : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) :
+    Fn.quadForm 0 Q = 0 ∧ Fn.quadForm x 0 = 0 := by simp
+
+example (x : Fin 0 → ℝ) (Q : Matrix (Fin 0) (Fin 0) ℝ) :
+    Fn.quadForm x Q = 0 := by simp
+
+private def nonsymmetric : Matrix (Fin 2) (Fin 2) ℝ := !![1, 2; 0, 3]
+
+example : Fn.quadForm ![1, 2] nonsymmetric = 17 := by
+  norm_num [Fn.quadForm, nonsymmetric, Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+
+example : Fn.quadForm ![1, 0] (Matrix.diagonal ![-1, 1]) = -1 := by
+  norm_num [Fn.quadForm, Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+
+private def shiftedVector : Affine.Certified (fun x : Fin 2 → ℝ => x + ![1, 2]) :=
+  (Affine.Certified.id _).add (Affine.Certified.const _ ![1, 2])
+
+private def shiftedMatrix := CertifiedExpr.quadForm shiftedVector nonsymmetric
+
+example (x : Fin 2 → ℝ) :
+    shiftedMatrix.quadratic x = x 0 ^ 2 + 2 * x 0 * x 1 + 3 * x 1 ^ 2 := by
+  simp [shiftedMatrix, CertifiedExpr.quadForm, shiftedVector, nonsymmetric,
+    Affine.Certified.add, Affine.Certified.id, Affine.Certified.const,
+    Matrix.toQuadraticForm', Matrix.toLinearMap₂'_apply', Matrix.mulVec,
+    dotProduct, Fin.sum_univ_succ]
+  ring
+
+example (x : Fin 2 → ℝ) : shiftedMatrix.affine x = 6 * x 0 + 14 * x 1 + 17 := by
+  simp [shiftedMatrix, CertifiedExpr.quadForm, shiftedVector, nonsymmetric,
+    Affine.Certified.add, Affine.Certified.id, Affine.Certified.const,
+    QuadraticMap.polarBilin_apply_apply, QuadraticMap.polar,
+    Matrix.toQuadraticForm', Matrix.toLinearMap₂'_apply', Matrix.mulVec,
+    dotProduct, Fin.sum_univ_succ]
+  dsimp [Matrix.vecHead, Matrix.vecTail]
+  ring
+
+example {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+    (Q : Matrix (Fin m) (Fin m) ℝ) (x : Fin n → ℝ) :
+    (CertifiedExpr.quadForm (residual A b) Q).quadratic x +
+      (CertifiedExpr.quadForm (residual A b) Q).affine x = Fn.quadForm (A *ᵥ x - b) Q :=
+  (CertifiedExpr.quadForm (residual A b) Q).correct x
+
+example {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
+    (Q : Matrix (Fin m) (Fin m) ℝ) (hQ : Q.PosSemidef) :
+    (CertifiedExpr.quadForm (residual A b) Q).Nonneg :=
+  CertifiedExpr.quadForm_nonneg (residual A b) Q hQ
+
+example {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) :
+    (CertifiedExpr.quadForm (residual A b) 0).Nonneg ∧
+      (CertifiedExpr.quadForm (residual A b) 0).Nonpos :=
+  ⟨CertifiedExpr.quadForm_zero_nonneg _, CertifiedExpr.quadForm_zero_nonpos _⟩
+
+example {n : Nat} (A : Matrix (Fin 0) (Fin n) ℝ) (b : Fin 0 → ℝ)
+    (Q : Matrix (Fin 0) (Fin 0) ℝ) :
+    (CertifiedExpr.quadForm (residual A b) Q).Nonneg ∧
+      (CertifiedExpr.quadForm (residual A b) Q).Nonpos :=
+  ⟨CertifiedExpr.quadForm_empty_nonneg _ Q, CertifiedExpr.quadForm_empty_nonpos _ Q⟩
+
+example {m : Nat} (A : Matrix (Fin m) (Fin 0) ℝ) (b : Fin m → ℝ)
+    (Q : Matrix (Fin m) (Fin m) ℝ) (x : Fin 0 → ℝ) :
+    (CertifiedExpr.quadForm (residual A b) Q).quadratic x +
+      (CertifiedExpr.quadForm (residual A b) Q).affine x = Fn.quadForm (-b) Q := by
+  rw [(CertifiedExpr.quadForm (residual A b) Q).correct]
+  simp
+
 end
 
 end MorewTest.QuadConic.Basic
