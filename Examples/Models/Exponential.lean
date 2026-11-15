@@ -144,19 +144,22 @@ end
 end BinaryEntropy
 
 /-!
-Fit a probability vector `(x,y)` to the fixed vector `q = (1/3,2/3)` by minimizing
-the KL divergence:
+For probability vectors `p = (x,y)` and `q = (1/3,2/3)`, the KL divergence is
 
 ```math
-\begin{array}{ll}
-\text{minimize} & D_{\mathrm{KL}}((x,y),q) \\
-\text{subject to} & x,y\geq0, \quad x+y=1,
-\end{array}
-\qquad
 D_{\mathrm{KL}}(p,q)=\sum_{i=1}^{2}\bigl(p_i\log(p_i/q_i)-p_i+q_i\bigr).
 ```
 
 The entries of `q` are positive, and a zero entry of `p` contributes `qᵢ`.
+Fit `p` to `q` by solving
+
+```math
+\begin{array}{ll}
+\text{minimize} & D_{\mathrm{KL}}((x,y),q) \\
+\text{subject to} & x,y\geq0, \quad x+y=1.
+\end{array}
+```
+
 Introduce an upper bound for each scalar KL term, then rewrite the bounds as
 exponential-cone constraints. The backward map recovers the probability vector.
 -/
