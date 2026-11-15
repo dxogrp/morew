@@ -10,8 +10,9 @@ import Morew.Fn.Norm
 /-!
 # Exact second-order representations
 
-These records represent Euclidean norms, squared norms, and quadratic-over-linear
-expressions. Subtype inputs carry the positive denominator hypotheses.
+These records represent Euclidean norms, squared norms, Huber loss, and
+quadratic-over-linear expressions. Subtype inputs carry the positive denominator
+hypotheses. The Huber threshold is a fixed nonnegative parameter.
 -/
 
 namespace Morew.Conic.SecondOrder
@@ -58,6 +59,23 @@ def squareEpigraph : EpigraphRepr (fun a : ℝ => a ^ 2) where
   Auxiliary := Unit
   target a t _ := (t, 1 / 2, ![a]) ∈ (Cone.rotatedSecondOrder 1).carrier
   source_iff_exists a t := by simpa only [exists_const] using square_le_iff a t
+
+/-- Huber loss represented by one rotated cone and three linear inequalities. -/
+def huberEpigraph (M : ℝ) (hM : 0 ≤ M) : EpigraphRepr (Fn.huber M) where
+  Auxiliary := ℝ × ℝ × ℝ
+  target x t a := (a.2.1, 1 / 2, ![a.1]) ∈ (Cone.rotatedSecondOrder 1).carrier ∧
+    -a.2.2 ≤ x - a.1 ∧ x - a.1 ≤ a.2.2 ∧ a.2.1 + 2 * M * a.2.2 ≤ t
+  source_iff_exists x t := by
+    simpa only [Prod.exists] using huber_le_iff M x t hM
+
+/-- A finite Huber sum represented by one rotated cone and two vector bounds. -/
+def sumHuberEpigraph {n : Nat} (M : ℝ) (hM : 0 ≤ M) :
+    EpigraphRepr (fun v : Fin n → ℝ => ∑ i, Fn.huber M (v i)) where
+  Auxiliary := (Fin n → ℝ) × (Fin n → ℝ)
+  target v t a := (t - 2 * M * (∑ i, a.2 i), 1 / 2, a.1) ∈
+      (Cone.rotatedSecondOrder n).carrier ∧ -a.2 ≤ v - a.1 ∧ v - a.1 ≤ a.2
+  source_iff_exists v t := by
+    simpa only [Prod.exists] using sum_huber_le_iff M v t hM
 
 /-- A positive-denominator squared Euclidean norm represented by a rotated cone. -/
 def normSquareDivEpigraph {n : Nat} :

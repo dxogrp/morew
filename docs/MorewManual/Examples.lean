@@ -67,6 +67,7 @@ tag := "examples-applications"
 
 {includeExample Examples.Applications.Calibration "Multiplicative calibration"}
 {includeExample Examples.Applications.RidgeReg "Ridge regression"}
+{includeExample Examples.Applications.RobustReg "Robust regression"}
 
 # Advanced
 %%%

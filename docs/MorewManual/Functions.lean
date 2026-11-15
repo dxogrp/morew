@@ -64,6 +64,12 @@ positive real numbers, respectively.
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`
 *
+  * [`Fn.huber M x`](api/Morew/Fn/Huber.html#Morew.Fn.huber)
+  * $`\begin{cases}x^2,& |x|\leq M\\2M|x|-M^2,& |x|>M\end{cases}`
+  * $`x\in\mathbf{R}`, fixed $`M\geq0`
+  * {functionSymbol convex}[]
+  * {functionSymbol increasing}[] in $`|x|`
+*
   * `x ^ 2 / y`
   * $`x^2/y`
   * $`x\in\mathbf{R}`, $`y\in\mathbf{R}_{++}`

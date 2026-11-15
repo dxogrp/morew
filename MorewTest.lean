@@ -28,6 +28,7 @@ import MorewTest.Conic.Form
 import MorewTest.Conic.Form.Defined
 import MorewTest.Conic.Form.Support
 import MorewTest.Conic.HelperLimits
+import MorewTest.Conic.Huber
 import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.Negation
 import MorewTest.Conic.Nonneg
@@ -63,6 +64,7 @@ import MorewTest.DiagnosticsSupport
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
+import MorewTest.Fn.Huber
 import MorewTest.Fn.Norm
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
@@ -166,6 +168,7 @@ import MorewTest.Reformulation.ExponentialCustom
 import MorewTest.Reformulation.ExponentialFailures
 import MorewTest.Reformulation.FunctionDecisionRecovery
 import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
+import MorewTest.Reformulation.Huber
 import MorewTest.Reformulation.ImportedDerive
 import MorewTest.Reformulation.ImportedNorm
 import MorewTest.Reformulation.ImportedRemove
