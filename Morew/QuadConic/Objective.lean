@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.QuadConic.Basic
 import Morew.Affine
 import Morew.Fn.Norm
+import Morew.Fn.Matrix
 import Mathlib.Analysis.InnerProductSpace.Basic
 
 /-!
@@ -163,6 +164,27 @@ noncomputable def fnNorm2Sq {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Cert
     CertifiedExpr (fun x => Fn.norm2 (f x) ^ (2 : ℕ)) :=
   normSq a.toEuclidean
 
+/-- Split a matrix quadratic of an affine vector into its homogeneous part
+and the affine polar term, including the constant. No symmetry assumption is needed. -/
+noncomputable def quadForm {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Certified f)
+    (Q : Matrix (Fin n) (Fin n) ℝ) : CertifiedExpr (fun x => Fn.quadForm (f x) Q) where
+  quadratic := Q.toQuadraticForm'.comp a.map.linear
+  affine := ((Q.toQuadraticForm'.polarBilin (a.map 0)).comp a.map.linear).toAffineMap +
+    AffineMap.const ℝ X (Q.toQuadraticForm' (a.map 0))
+  correct x := by
+    have hx : a.map x = a.map.linear x + a.map 0 := congrFun a.map.decomp x
+    change Q.toQuadraticForm' (a.map.linear x) +
+      (Q.toQuadraticForm'.polarBilin (a.map 0) (a.map.linear x) +
+        Q.toQuadraticForm' (a.map 0)) = _
+    calc
+      _ = Q.toQuadraticForm' (a.map x) := by
+        rw [hx, QuadraticMap.map_add (fun v => Q.toQuadraticForm' v),
+          QuadraticMap.polarBilin_apply_apply,
+          QuadraticMap.polar_comm Q.toQuadraticForm' (a.map 0)]
+        ring
+      _ = Fn.quadForm (a.map x) Q := (Fn.quadForm_eq_toQuadraticForm _ Q).symm
+      _ = _ := by rw [a.correct]
+
 /-- Affine objectives have zero quadratic part. -/
 @[simp] theorem ofAffine_quadratic (a : Affine.Certified f) :
     (ofAffine a).quadratic = 0 := rfl
@@ -197,6 +219,42 @@ theorem fnNorm2Sq_empty_nonpos {f : X → Fin 0 → ℝ} (a : Affine.Certified f
   change inner (𝕜 := ℝ) (a.toEuclidean.map.linear x) (a.toEuclidean.map.linear x) ≤ 0
   rw [Subsingleton.elim (a.toEuclidean.map.linear x) 0]
   simp
+
+/-- Positive semidefiniteness certifies the homogeneous part of an affine matrix quadratic. -/
+theorem quadForm_nonneg {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Certified f)
+    (Q : Matrix (Fin n) (Fin n) ℝ) (hQ : Q.PosSemidef) : (quadForm a Q).Nonneg := by
+  intro x
+  change 0 ≤ Q.toQuadraticForm' (a.map.linear x)
+  rw [← Fn.quadForm_eq_toQuadraticForm]
+  exact Fn.quadForm_nonneg _ Q hQ
+
+/-- A zero matrix has zero quadratic curvature in either direction. -/
+theorem quadForm_zero_nonneg {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Certified f) :
+    (quadForm a 0).Nonneg := by
+  intro x
+  change 0 ≤ (0 : Matrix (Fin n) (Fin n) ℝ).toQuadraticForm' (a.map.linear x)
+  rw [← Fn.quadForm_eq_toQuadraticForm, Fn.quadForm_zero_matrix]
+
+/-- A zero matrix has nonpositive quadratic curvature. -/
+theorem quadForm_zero_nonpos {n : Nat} {f : X → Fin n → ℝ} (a : Affine.Certified f) :
+    (quadForm a 0).Nonpos := by
+  intro x
+  change (0 : Matrix (Fin n) (Fin n) ℝ).toQuadraticForm' (a.map.linear x) ≤ 0
+  rw [← Fn.quadForm_eq_toQuadraticForm, Fn.quadForm_zero_matrix]
+
+/-- Empty coordinate vectors have nonnegative quadratic curvature. -/
+theorem quadForm_empty_nonneg {f : X → Fin 0 → ℝ} (a : Affine.Certified f)
+    (Q : Matrix (Fin 0) (Fin 0) ℝ) : (quadForm a Q).Nonneg := by
+  intro x
+  change 0 ≤ Q.toQuadraticForm' (a.map.linear x)
+  rw [← Fn.quadForm_eq_toQuadraticForm, Fn.quadForm_empty]
+
+/-- Empty coordinate vectors have nonpositive quadratic curvature. -/
+theorem quadForm_empty_nonpos {f : X → Fin 0 → ℝ} (a : Affine.Certified f)
+    (Q : Matrix (Fin 0) (Fin 0) ℝ) : (quadForm a Q).Nonpos := by
+  intro x
+  change Q.toQuadraticForm' (a.map.linear x) ≤ 0
+  rw [← Fn.quadForm_eq_toQuadraticForm, Fn.quadForm_empty]
 
 /-- Nonnegative quadratic parts remain nonnegative under addition. -/
 theorem add_nonneg (a : CertifiedExpr f) (b : CertifiedExpr g)

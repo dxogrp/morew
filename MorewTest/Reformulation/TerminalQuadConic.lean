@@ -254,5 +254,105 @@ example :
 
 end Matrices
 
+namespace MatrixForms
+
+def named (Q : Matrix (Fin m) (Fin m) ℝ) (A : Matrix (Fin m) (Fin n) ℝ)
+    (b : Fin m → ℝ) (c : Fin n → ℝ) (d : ℝ) :=
+  problem (x : Fin n → ℝ)
+    let residual := A *ᵥ x + b
+    minimize Fn.quadForm residual Q + c ⬝ᵥ x + d
+    subject to nonneg : x ∈ ℝ₊^n
+
+def native (Q : Matrix (Fin m) (Fin m) ℝ) (A : Matrix (Fin m) (Fin n) ℝ)
+    (b : Fin m → ℝ) (c : Fin n → ℝ) (d : ℝ) :=
+  problem (x : Fin n → ℝ)
+    let residual := A *ᵥ x + b
+    minimize residual ⬝ᵥ (Q *ᵥ residual) + c ⬝ᵥ x + d
+    subject to nonneg : x ∈ ℝ₊^n
+
+def maximum (Q : Matrix (Fin m) (Fin m) ℝ) (A : Matrix (Fin m) (Fin n) ℝ)
+    (b : Fin m → ℝ) (c : Fin n → ℝ) (d : ℝ) :=
+  problem (x : Fin n → ℝ)
+    maximize -Fn.quadForm (A *ᵥ x + b) Q + c ⬝ᵥ x + d
+
+section
+
+variable (Q : Matrix (Fin m) (Fin m) ℝ) (A : Matrix (Fin m) (Fin n) ℝ)
+  (b : Fin m → ℝ) (c : Fin n → ℝ) (d : ℝ) (hQ : Q.PosSemidef)
+
+include hQ in
+reformulation namedTarget : (named Q A b c d) := by qconic
+
+include hQ in
+reformulation nativeTarget : (native Q A b c d) := by qconic
+
+include hQ in
+reformulation maximumTarget : (maximum Q A b c d) := by qconic
+
+example : namedTarget Q A b c d = nativeTarget Q A b c d := rfl
+example : GlobalEquiv (named Q A b c d) (namedTarget Q A b c d) :=
+  namedTarget.equiv Q A b c d
+example : GlobalEquiv (native Q A b c d) (nativeTarget Q A b c d) :=
+  nativeTarget.equiv Q A b c d
+example : IsQuadConic (namedTarget Q A b c d) := namedTarget.isQuadConic Q A b c d hQ
+example : IsQuadConic (nativeTarget Q A b c d) := nativeTarget.isQuadConic Q A b c d hQ
+example : (namedTarget.quadConicForm Q A b c d hQ).data.toProblem = namedTarget Q A b c d :=
+  (namedTarget.quadConicForm Q A b c d hQ).represents
+example (x : Fin n → ℝ) : (namedTarget Q A b c d).objective x =
+    Fn.quadForm (A *ᵥ x + b) Q + c ⬝ᵥ x + d := rfl
+example (x : Fin n → ℝ) : (namedTarget Q A b c d).feasible x ↔ 0 ≤ x := Iff.rfl
+example (p : FeasiblePoint (namedTarget Q A b c d)) :
+    ((namedTarget.equiv Q A b c d).backward.map p).val = p.val := rfl
+example : GlobalEquiv (maximum Q A b c d) (maximumTarget Q A b c d) :=
+  maximumTarget.equiv Q A b c d
+example : IsQuadConic (maximumTarget Q A b c d) := maximumTarget.isQuadConic Q A b c d hQ
+example : (maximumTarget.quadConicForm Q A b c d hQ).data.sense = .maximize := rfl
+example : (maximumTarget.quadConicForm Q A b c d hQ).data.toProblem = maximumTarget Q A b c d :=
+  (maximumTarget.quadConicForm Q A b c d hQ).represents
+
+private def singular : Matrix (Fin 2) (Fin 2) ℝ := Matrix.diagonal ![1, 0]
+private theorem singularPSD : singular.PosSemidef :=
+  Matrix.PosSemidef.diagonal (by intro i; fin_cases i <;> norm_num)
+
+example : IsQuadConic (namedTarget singular 1 ![1, 2] ![3, 4] 5) :=
+  namedTarget.isQuadConic _ _ _ _ _ singularPSD
+example : (namedTarget.quadConicForm singular 1 ![1, 2] ![3, 4] 5 singularPSD).data.toProblem.objective
+    ![2, 3] = 32 := by
+  rw [(namedTarget.quadConicForm singular 1 ![1, 2] ![3, 4] 5 singularPSD).represents]
+  norm_num [namedTarget, Fn.quadForm, singular, Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+
+example : IsQuadConic (namedTarget (0 : Matrix (Fin 0) (Fin 0) ℝ) 0 0 ![2, 3] 7) :=
+  namedTarget.isQuadConic _ _ _ _ _ Matrix.PosSemidef.zero
+example : (namedTarget (0 : Matrix (Fin 0) (Fin 0) ℝ) 0 0 ![2, 3] 7).objective ![1, 2] = 15 := by
+  norm_num [namedTarget, Fn.quadForm, dotProduct, Fin.sum_univ_succ]
+example : (namedTarget singular (0 : Matrix (Fin 2) (Fin 0) ℝ) ![3, 4] 0 5).objective 0 = 14 := by
+  norm_num [namedTarget, Fn.quadForm, singular, Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+
+end
+
+def lifted (P : Matrix (Fin n) (Fin n) ℝ) (c : Fin n → ℝ) :=
+  problem (x : Fin n → ℝ) (t : ℝ)
+    minimize Fn.quadForm x P + t
+    subject to loss : Fn.softplus (c ⬝ᵥ x) ≤ t
+
+variable (P : Matrix (Fin n) (Fin n) ℝ) (c : Fin n → ℝ) (hP : P.PosSemidef)
+
+include hP in
+reformulation liftedTarget : (lifted P c) := by qconic
+
+example : GlobalEquiv (lifted P c) (liftedTarget P c) := liftedTarget.equiv P c
+example : IsQuadConic (liftedTarget P c) := liftedTarget.isQuadConic P c hP
+example : (liftedTarget.quadConicForm P c hP).data.toProblem = liftedTarget P c :=
+  (liftedTarget.quadConicForm P c hP).represents
+example (x : Fin n → ℝ) (t : ℝ) (u : Fin 2 → ℝ) :
+    (liftedTarget P c).objective ((x, t), u) = Fn.quadForm x P + t := rfl
+example (p : FeasiblePoint (liftedTarget P c)) :
+    ((liftedTarget.equiv P c).backward.map p).val = p.val.1 := rfl
+example {p : FeasiblePoint (liftedTarget P c)} (hp : (liftedTarget P c).IsGlobalOptimum p) :
+    (lifted P c).IsGlobalOptimum ((liftedTarget.equiv P c).backward.map p) :=
+  (liftedTarget.equiv P c).map_isGlobalOptimum_backward hp
+
+end MatrixForms
+
 end
 end MorewTest.Reformulation.TerminalQuadConic

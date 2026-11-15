@@ -7,19 +7,49 @@ import Mathlib.Analysis.InnerProductSpace.SingularValues
 import Mathlib.Analysis.Matrix.Hermitian
 import Mathlib.Analysis.Matrix.Spectrum
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+import Mathlib.LinearAlgebra.Matrix.PosDef
 import Mathlib.Data.Real.Basic
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
 # Real matrix modeling functions
 
-Largest eigenvalues, matrix-fractional functions, nuclear norms, and
+Quadratic forms, largest eigenvalues, matrix-fractional functions, nuclear norms, and
 log-determinants. The conic representations use the domains stated below.
 -/
 
 namespace Morew.Fn
 
 open Matrix
+
+/-- The quadratic form `xᵀ Q x`, with no factor of one half.
+The matrix may be arbitrary; a positive semidefinite matrix gives a nonnegative value. -/
+noncomputable def quadForm {n : Nat} (x : Fin n → ℝ)
+    (Q : Matrix (Fin n) (Fin n) ℝ) : ℝ := x ⬝ᵥ (Q *ᵥ x)
+
+/-- The named quadratic form agrees with the native matrix expression. -/
+theorem quadForm_eq_dotProduct_mulVec {n : Nat} (x : Fin n → ℝ)
+    (Q : Matrix (Fin n) (Fin n) ℝ) : quadForm x Q = x ⬝ᵥ (Q *ᵥ x) := rfl
+
+/-- The named quadratic form uses Mathlib's matrix quadratic form convention. -/
+theorem quadForm_eq_toQuadraticForm {n : Nat} (x : Fin n → ℝ)
+    (Q : Matrix (Fin n) (Fin n) ℝ) : quadForm x Q = Q.toQuadraticForm' x := by
+  simp [quadForm, Matrix.toQuadraticForm', Matrix.toLinearMap₂'_apply']
+
+/-- Positive semidefiniteness makes the quadratic form nonnegative. -/
+theorem quadForm_nonneg {n : Nat} (x : Fin n → ℝ)
+    (Q : Matrix (Fin n) (Fin n) ℝ) (hQ : Q.PosSemidef) : 0 ≤ quadForm x Q :=
+  hQ.dotProduct_mulVec_nonneg x
+
+@[simp] theorem quadForm_zero_vector {n : Nat} (Q : Matrix (Fin n) (Fin n) ℝ) :
+    quadForm 0 Q = 0 := by simp [quadForm]
+
+@[simp] theorem quadForm_zero_matrix {n : Nat} (x : Fin n → ℝ) :
+    quadForm x 0 = 0 := by simp [quadForm]
+
+/-- The quadratic form on an empty vector is zero. -/
+@[simp] theorem quadForm_empty (x : Fin 0 → ℝ) (Q : Matrix (Fin 0) (Fin 0) ℝ) :
+    quadForm x Q = 0 := by simp [quadForm, dotProduct]
 
 /-- The log-determinant `Real.log X.det`, using the total real logarithm.
 Its conic representation requires `X.PosDef`. -/

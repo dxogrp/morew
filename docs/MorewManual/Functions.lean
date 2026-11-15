@@ -280,6 +280,12 @@ $`B-A\in\mathbf{S}_+^n`.
   * {functionSymbol convex}[]
   * {functionSymbol notMonotone}[]
 *
+  * [`Fn.quadForm x Q`](api/Morew/Fn/Matrix.html#Morew.Fn.quadForm)
+  * $`x^TQx`
+  * $`x\in\mathbf{R}^n`, fixed $`Q\succeq0`
+  * {functionSymbol convex}[]
+  * {functionSymbol notMonotone}[]
+*
   * [`Fn.matFrac x P`](api/Morew/Fn/Matrix.html#Morew.Fn.matFrac)
   * $`x^T P^{-1}x`
   * $`x\in\mathbf{R}^n`, $`P\in\mathbf{S}_{++}^n`
@@ -296,6 +302,7 @@ $`B-A\in\mathbf{S}_+^n`.
 For the matrix norm, use `open scoped Matrix.Norms.L2Operator`.
 The numbers $`\sigma_i(A)` are the singular values of $`A`.
 `Fn.logDet P` may also be written `Real.log P.det`.
+`Fn.quadForm x Q` is defined for every real square `Q` and is zero on empty vectors.
 
 The constraints `P.PosSemidef` and `P.PosDef` express membership in
 $`\mathbf{S}_+^n` and $`\mathbf{S}_{++}^n`. Both sets are convex; see the
