@@ -65,7 +65,7 @@ positive real numbers, respectively.
   * {functionSymbol increasing}[] in $`|x|`
 *
   * [`Fn.huber M x`](api/Morew/Fn/Huber.html#Morew.Fn.huber)
-  * $`h_M(x)` as defined below
+  * $`\begin{cases}x^2,& |x|\leq M\\2M|x|-M^2,& |x|>M\end{cases}`
   * $`x\in\mathbf{R}`, fixed $`M\geq0`
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] in $`|x|`
@@ -122,29 +122,6 @@ positive real numbers, respectively.
 `Fn.entr x` is defined as `Real.negMulLog x`; both forms are supported.
 Entropy and relative entropy have value zero at $`x=0`. KL divergence has value
 $`y` at $`x=0` and value zero at $`x=y`; its denominator remains positive.
-
-The Huber loss uses the normalization
-
-$$`h_M(x)=\begin{cases}
-x^2,& |x|\leq M,\\
-2M|x|-M^2,& |x|>M.
-\end{cases}`
-
-For fixed $`M\geq0`, its attained representation is
-
-$$`h_M(x)=\min_{z\in\mathbf{R}}\bigl(z^2+2M|x-z|\bigr).`
-
-The minimizing value is $`z=\max(-M,\min(M,x))`. In particular,
-$`h_0(x)=0` for every $`x`. Its epigraph is exactly
-
-$$`h_M(x)\leq t\iff\exists z,s,r\in\mathbf{R},\quad
-(s,\tfrac12,[z])\in\operatorname{RSOC}(1),\quad
--r\leq x-z\leq r,\quad s+2Mr\leq t.`
-
-The rotated cone represents $`z^2\leq s`; the other inequalities are linear.
-The `conic` command accepts affine residuals and requires evidence of $`0\leq M`
-for the fixed parameter. For $`M>0`, the loss is not twice differentiable at
-$`x=\pm M`, so direct smooth-NLP certification is unavailable.
 
 # Powers
 
