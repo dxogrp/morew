@@ -109,6 +109,101 @@ def entropyZeroDenominator :=
 reformulation closedCornerNeedsCustomRule : entropyZeroDenominator := by
   conic at entropy
 
+def newAtomsMissingDomain :=
+  problem (x y t : ℝ)
+    minimize t
+    subject to
+      margin : 1 ≤ y
+      entropy : t ≤ Real.negMulLog x
+      divergence : Fn.klDiv x y ≤ t
+
+#guard_error_fragments ["constraint `entropy`:"] in
+assert_exp_atomic%
+reformulation entropyMissingNonnegativity : newAtomsMissingDomain := by
+  conic at entropy
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation klMissingNonnegativity : newAtomsMissingDomain := by
+  conic at divergence
+
+def klNonnegativeDenominator :=
+  problem (x y t : ℝ)
+    minimize t
+    subject to
+      numerator : 0 ≤ x
+      denominator : 0 ≤ y
+      divergence : Fn.klDiv x y ≤ t
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation klZeroMargin : klNonnegativeDenominator := by
+  conic at divergence
+
+def klStrictDenominator :=
+  problem (x y t : ℝ)
+    minimize t
+    subject to
+      numerator : 0 ≤ x
+      denominator : 0 < y
+      divergence : Fn.klDiv x y ≤ t
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation klNoUniformMargin : klStrictDenominator := by
+  conic at divergence
+
+def newAtomsBoundary :=
+  problem (t : ℝ)
+    minimize t
+    subject to
+      entropy : t ≤ Real.negMulLog 0
+      divergence : Fn.klDiv 0 0 ≤ t
+
+-- A valid entropy rewrite followed by an invalid KL rewrite leaves no declarations.
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation klZeroDenominator : newAtomsBoundary certificate klZeroDenominatorAlias := by
+  conic at entropy
+  conic at divergence
+
+def newAtomsReverse :=
+  problem (x y t : ℝ)
+    minimize t
+    subject to
+      numerator : 0 ≤ x
+      denominator : 1 ≤ y
+      entropy : Real.negMulLog x ≤ t
+      divergence : t ≤ Fn.klDiv x y
+
+#guard_error_fragments ["constraint `entropy`:"] in
+assert_exp_atomic%
+reformulation reversedEntropy : newAtomsReverse := by
+  conic at entropy
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation reversedKL : newAtomsReverse := by
+  conic at divergence using Morew.Conic.Exponential.klDivEpigraph
+
+def newAtomsNonlinear :=
+  problem (x t : ℝ)
+    minimize t
+    subject to
+      numerator : 0 ≤ x ^ 2
+      entropy : t ≤ Real.negMulLog (x ^ 2)
+      divergence : Fn.klDiv (x ^ 2) 1 ≤ t
+
+#guard_error_fragments ["constraint `entropy`:"] in
+assert_exp_atomic%
+reformulation nonaffineEntropy : newAtomsNonlinear := by
+  conic at entropy
+
+#guard_error_fragments ["constraint `divergence`:"] in
+assert_exp_atomic%
+reformulation nonaffineKL : newAtomsNonlinear := by
+  conic at divergence
+
 def empty :=
   problem (xs : Fin 0 → ℝ) (t : ℝ)
     minimize t

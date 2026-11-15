@@ -118,6 +118,63 @@ example (a b t : ℝ) : affineDomainTarget.feasible ((a, b), t) ↔
 
 end Scalar
 
+namespace EntropyAndKL
+
+def source :=
+  problem (x y s t : ℝ)
+    minimize t - s
+    subject to
+      nonneg : 0 ≤ 2 * x + 1
+      margin : 1 ≤ y + 1
+      entropy : s ≤ Real.negMulLog (2 * x + 1)
+      divergence : Fn.klDiv (2 * x + 1) (y + 1) ≤ t / 2
+
+reformulation selected : source := by
+  conic at entropy
+  conic at divergence
+
+reformulation explicit : source := by
+  conic at entropy using Exponential.negMulLogHypograph
+  conic at divergence using Exponential.klDivEpigraph
+
+example : GlobalEquiv source selected := selected.equiv
+example : GlobalEquiv source explicit := explicit.equiv
+
+-- Unit auxiliaries preserve the decision type and retained domain constraints.
+example (x y s t : ℝ) : selected.objective (((x, y), s), t) = t - s := rfl
+
+example (x y s t : ℝ) : selected.feasible (((x, y), s), t) ↔
+    0 ≤ 2 * x + 1 ∧ 1 ≤ y + 1 ∧ (s, 2 * x + 1, 1) ∈ EXP ∧
+      (y + 1 - (2 * x + 1) - t / 2, 2 * x + 1, y + 1) ∈ EXP := Iff.rfl
+
+example : explicit = selected := rfl
+
+reformulation automatic : source := by
+  conic
+
+example : GlobalEquiv source automatic := automatic.equiv
+example : IsConic automatic := automatic.isConic
+example : automatic.conicForm.data.toProblem = automatic :=
+  automatic.conicForm.represents
+
+def boundarySource :=
+  problem (s t : ℝ)
+    minimize t - s
+    subject to
+      entropy : Real.negMulLog 0 ≥ s
+      divergence : t ≥ Fn.klDiv 0 2
+
+reformulation boundaryTarget : boundarySource := by
+  conic at entropy
+  conic at divergence
+
+example : GlobalEquiv boundarySource boundaryTarget := boundaryTarget.equiv
+
+example (s t : ℝ) : boundaryTarget.feasible (s, t) ↔
+    (s, 0, 1) ∈ EXP ∧ (2 - 0 - t, 0, 2) ∈ EXP := Iff.rfl
+
+end EntropyAndKL
+
 namespace Margins
 
 def source :=
