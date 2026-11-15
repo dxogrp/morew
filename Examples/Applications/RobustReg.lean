@@ -41,7 +41,6 @@ Introduce a bound on the total loss, then apply its registered conic representat
 
 variable (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) (M : ℝ) (hM : 0 ≤ M)
 
-include hM in
 reformulation conicRegression : (regression A b M) := by
   epigraph t
   conic
