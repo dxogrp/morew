@@ -16,9 +16,12 @@ noncomputable section
 
 elab "assert_quadConic_atomic% " nested:command : command => do
   let before ← Lean.getEnv
-  let `(command| reformulation $target:ident : $_source:ident
-      $[certificate $_alias:ident]? := by $_steps:reformulationStep*) := nested
-    | Lean.throwError "expected a reformulation command"
+  let target ← match nested with
+    | `(command| reformulation $target:ident : $_source:ident
+        $[certificate $_alias:ident]? := by $_steps:reformulationStep*) => pure target
+    | `(command| reformulation $target:ident : ($_source:term)
+        $[certificate $_alias:ident]? := by $_steps:reformulationStep*) => pure target
+    | _ => Lean.throwError "expected a reformulation command"
   let targetName := (← Lean.getCurrNamespace) ++ target.getId
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed quadratic conversion leaked declaration {name}"
@@ -84,6 +87,52 @@ reformulation unsupportedRowTarget : unsupportedRow := by qconic
 -- Reusing a failed name must succeed, including all generated companions.
 reformulation wrongCurvatureTarget : source := by qconic
 example : IsQuadConic wrongCurvatureTarget := wrongCurvatureTarget.isQuadConic
+
+section MatrixForms
+
+def matrixSource (Q : Matrix (Fin 2) (Fin 2) ℝ) :=
+  problem (x : Fin 2 → ℝ) minimize Fn.quadForm x Q
+
+def matrixMaximum (Q : Matrix (Fin 2) (Fin 2) ℝ) :=
+  problem (x : Fin 2 → ℝ) maximize Fn.quadForm x Q
+
+def feasibleMatrix (Q : Matrix (Fin 2) (Fin 2) ℝ) :=
+  problem (x : Fin 2 → ℝ)
+    minimize Fn.quadForm x Q
+    subject to psd : Q.PosSemidef
+
+def varyingMatrix :=
+  problem (Q : Matrix (Fin 2) (Fin 2) ℝ) (x : Fin 2 → ℝ)
+    minimize Fn.quadForm x Q
+    subject to psd : Q.PosSemidef
+
+variable (Q P : Matrix (Fin 2) (Fin 2) ℝ) (hP : P.PosSemidef)
+
+#guard_error_fragments ["curvature"] in
+assert_quadConic_atomic%
+reformulation missingMatrix : (matrixSource Q) := by qconic
+
+#guard_error_fragments ["curvature"] in
+assert_quadConic_atomic%
+reformulation feasibleMatrixTarget : (feasibleMatrix Q) := by qconic
+
+#guard_error_fragments ["quadratic"] in
+assert_quadConic_atomic%
+reformulation varyingMatrixTarget : varyingMatrix := by qconic
+
+variable (hQ : Q.PosSemidef)
+
+#guard_error_fragments ["curvature"] in
+assert_quadConic_atomic%
+reformulation wrongMatrixDirection : (matrixMaximum Q) := by qconic
+
+-- Reusing the rejected name succeeds once the missing parameter evidence is present.
+include hQ in
+reformulation missingMatrix : (matrixSource Q) := by qconic
+
+example : IsQuadConic (missingMatrix Q) := missingMatrix.isQuadConic Q hQ
+
+end MatrixForms
 
 end
 end MorewTest.Reformulation.TerminalQuadConicFailures

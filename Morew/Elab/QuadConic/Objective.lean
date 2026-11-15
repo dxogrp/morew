@@ -53,6 +53,24 @@ private def rejectIncomplete (expression : Expr) : ReifyM α := do
 
 private noncomputable def canonicalNorm (n : Nat) (x : EuclideanSpace ℝ (Fin n)) : ℝ := ‖x‖
 
+private def zeroMatrix (n : Nat) : Matrix (Fin n) (Fin n) ℝ := 0
+
+private def positiveSemidefinite (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ) : Prop :=
+  Q.PosSemidef
+
+-- Native expressions retain both source enumerations and use the canonical real operations.
+private noncomputable def indexedQuadForm (n : Nat) (outer inner : Fintype (Fin n))
+    (v : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
+  @dotProduct (Fin n) ℝ outer _ _ v (@Matrix.mulVec (Fin n) (Fin n) ℝ _ inner Q v)
+
+private theorem indexedQuadForm_eq (n : Nat) (outer inner : Fintype (Fin n))
+    (v : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) :
+    Morew.Fn.quadForm v Q = indexedQuadForm n outer inner v Q := by
+  have ho : outer = Fin.fintype n := Subsingleton.elim _ _
+  have hi : inner = Fin.fintype n := Subsingleton.elim _ _
+  subst outer inner
+  rfl
+
 private theorem nonnegOfNegatedNonpos {c : ℝ} (h : c ≤ 0) : 0 ≤ -c :=
   neg_nonneg.mpr h
 
@@ -284,6 +302,65 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
       nonpos? := some (← proofApp point ``Morew.QuadConic.CertifiedExpr.ofAffine_nonpos #[affine]) }
   let head := expression.getAppFn.constName?
   let args := expression.getAppArgs
+  if (head == some ``Morew.Fn.quadForm && args.size == 3) ||
+      (head == some ``dotProduct && args.size == 7) then
+    let (n, vector, matrix, native?) ← if head == some ``Morew.Fn.quadForm then
+        pure (args[0]!, args[1]!, args[2]!, (none : Option (Expr × Expr)))
+      else do
+        let index ← whnf args[0]!
+        unless index.isAppOfArity ``Fin 1 do
+          reject expression "matrix quadratic forms require real coordinate vectors indexed by Fin n"
+        let product ← Expr.reduceStructure args[6]!
+        unless product.isAppOfArity ``Matrix.mulVec 7 do
+          reject expression "expected a vector dotted with a fixed matrix times the same vector"
+        let productArgs := product.getAppArgs
+        let n := index.getAppArgs[0]!
+        let vector := args[5]!
+        let matrix := productArgs[5]!
+        for instanceExpr in #[args[2]!, productArgs[4]!] do
+          if ← Expr.depends point instanceExpr then
+            reject instanceExpr "the finite indexing instance depends on an optimization variable"
+        let expected := (mkAppN (← getConstInfo ``indexedQuadForm).value!
+          #[n, args[2]!, productArgs[4]!, vector, matrix]).headBeta
+        checkPrefix expression expected 2
+        checkPrefix product expected.getAppArgs[6]! 2
+        unless ← isDefEq vector productArgs[6]! do
+          reject expression "matrix quadratic forms require the same vector on both sides"
+        pure (n, vector, matrix, some (args[2]!, productArgs[4]!))
+    if ← Expr.depends point matrix then
+      reject matrix "the quadratic coefficient matrix depends on an optimization variable"
+    let affine ← ExceptT.mk (affine? point vector provider indices)
+    let named ← mkAppM ``Morew.Fn.quadForm #[vector, matrix]
+    let certificate ← construct point named ``Morew.QuadConic.CertifiedExpr.quadForm
+      #[affine, matrix]
+    let certificate ← match native? with
+      | none => finish point expression certificate
+      | some (outer, inner) => do
+        let equality ← mkAppM ``indexedQuadForm_eq #[n, outer, inner, vector, matrix]
+        let equality ← mkLambdaFVars #[point] equality
+        let transported ← proofApp point ``Morew.QuadConic.CertifiedExpr.transport
+          #[certificate, equality]
+        finish point expression transported
+    if ← isDefEq n (mkNatLit 0) then
+      return {
+        certificate
+        nonneg? := some (← proofApp point
+          ``Morew.QuadConic.CertifiedExpr.quadForm_empty_nonneg #[affine, matrix])
+        nonpos? := some (← proofApp point
+          ``Morew.QuadConic.CertifiedExpr.quadForm_empty_nonpos #[affine, matrix]) }
+    if ← isDefEq matrix (← mkAppM ``zeroMatrix #[n]) then
+      return {
+        certificate
+        nonneg? := some (← proofApp point
+          ``Morew.QuadConic.CertifiedExpr.quadForm_zero_nonneg #[affine])
+        nonpos? := some (← proofApp point
+          ``Morew.QuadConic.CertifiedExpr.quadForm_zero_nonpos #[affine]) }
+    let positive ← parameterProof? point (← mkAppM ``positiveSemidefinite #[n, matrix]) indices
+    return {
+      certificate
+      nonneg? := ← positive.mapM (fun proof =>
+        proofApp point ``Morew.QuadConic.CertifiedExpr.quadForm_nonneg #[affine, matrix, proof])
+      missing? := some matrix }
   if head == some ``HPow.hPow && args.size == 6 then
     let exponent ← Expr.reduceStructure args[5]!
     unless (← isDefEq (← inferType exponent) q(ℕ)) && (← getNatValue? exponent) == some 2 do
@@ -446,7 +523,9 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
       certificate
       nonneg? := ← sumCurvature? ``Morew.QuadConic.CertifiedExpr.sum_nonneg family.nonneg?
       nonpos? := ← sumCurvature? ``Morew.QuadConic.CertifiedExpr.sum_nonpos family.nonpos? }
-  else reject expression "expected affine terms, squared affine expressions, or signed sums of squares"
+  else
+    reject expression
+      "expected affine terms, squared affine expressions, matrix quadratic forms, or their signed sums"
 
 private def withFiniteInstances (instances : List Expr) (action : ReifyM ObjectiveResult) :
     ReifyM ObjectiveResult := do
@@ -551,7 +630,7 @@ private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
         | .minimize => "nonnegative"
         | .maximize => "nonpositive"
       reject (result.missing?.getD original)
-        m!"quadratic expression recognized, but {sign} quadratic curvature was not established; provide independent coefficient-sign evidence"
+        m!"quadratic expression recognized, but {sign} quadratic curvature was not established; provide independent coefficient-sign or matrix positive-semidefiniteness evidence"
     let certificate ← Affine.Space.withCanonicalSpaces #[domain] do
       completeCertificate result.certificate curvature sense
     validateCertificateCore original sense certificate

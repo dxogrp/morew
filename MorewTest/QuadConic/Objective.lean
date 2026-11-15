@@ -22,9 +22,11 @@ private def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
     (sense : Morew.ObjectiveSense := .minimize) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
+    let before ← getMCtx
     let result ← match ← reifyQuadratic source sense with
       | .ok result => pure result
       | .error error => throwError "quadratic recognition failed for {source}: {error.reason}"
+    MorewTest.assertMVarAllocationStateUnchanged before "quadratic recognition changed caller state"
     for proof in #[result.quadratic, result.affine, result.pointwiseEquality, result.curvature] do
       checkCompleteWithKernel proof "incomplete quadratic certificate"
     let sense := Lean.mkConst <| match sense with
@@ -48,10 +50,12 @@ private def assertRejected (term : TSyntax `term) (parameterCount : Nat := 0)
     (sense : Morew.ObjectiveSense := .minimize) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
+    let before ← getMCtx
     match ← reifyQuadratic source sense with
     | .ok _ => throwError "unexpected quadratic recognition of {source}"
     | .error error =>
       if (← error.reason.toString).isEmpty then throwError "missing quadratic failure diagnostic"
+    MorewTest.assertMVarAllocationStateUnchanged before "failed quadratic recognition changed caller state"
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   assertQuadratic (← `(fun x : ℝ => (x + 3) ^ 2))
@@ -276,5 +280,95 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       curvature := ← mkProjection certificate `curvature }
     let .error _ ← validateObjectiveResult presentation objective
       | throwError "quadratic fields using unrelated vector-space instances were accepted"
+
+/-! Matrix forms share recognition for named and native expressions. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertQuadratic (← `(fun (m n : Nat) (A : Matrix (Fin m) (Fin n) ℝ)
+    (b : Fin m → ℝ) (Q : Matrix (Fin m) (Fin m) ℝ) (c : Fin n → ℝ) (d : ℝ)
+    (_hQ : Q.PosSemidef) => fun x : Fin n → ℝ =>
+      Morew.Fn.quadForm (A *ᵥ x + b) Q + c ⬝ᵥ x + d)) 8
+  assertQuadratic (← `(fun (m n : Nat) (A : Matrix (Fin m) (Fin n) ℝ)
+    (b : Fin m → ℝ) (Q : Matrix (Fin m) (Fin m) ℝ) (c : Fin n → ℝ) (d : ℝ)
+    (_hQ : Q.PosSemidef) => fun x : Fin n → ℝ =>
+      (A *ᵥ x + b) ⬝ᵥ (Q *ᵥ (A *ᵥ x + b)) + c ⬝ᵥ x + d)) 8
+  assertQuadratic (← `(fun (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ)
+    (_hQ : Q.PosSemidef) (w : ℝ) (_hw : 0 ≤ w) => fun x : Fin n → ℝ =>
+      -w * Morew.Fn.quadForm x Q + 7)) 5 .maximize
+  assertQuadratic (← `(fun (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ)
+    (_hQ : Q.PosSemidef) => fun x : Fin n → ℝ => -(x ⬝ᵥ (Q *ᵥ x)))) 3 .maximize
+  assertQuadratic (← `(fun (n : Nat) (s : Finset ℕ)
+    (Q : ℕ → Matrix (Fin n) (Fin n) ℝ) (_hQ : ∀ i ∈ s, (Q i).PosSemidef) =>
+      fun x : Fin n → ℝ => ∑ i ∈ s, Morew.Fn.quadForm (x + fun _ => (i : ℝ)) (Q i))) 4
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef)
+    [AddCommGroup ℝ] [Module ℝ ℝ] => fun x : Fin 2 → ℝ => Morew.Fn.quadForm x Q)) 4
+  for sense in #[Morew.ObjectiveSense.minimize, .maximize] do
+    assertQuadratic (← `(fun (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ) =>
+      fun x : Fin n → ℝ => 0 * Morew.Fn.quadForm x Q + 1)) 2 sense
+    assertQuadratic (← `(fun (n : Nat) => fun x : Fin n → ℝ =>
+      Morew.Fn.quadForm x (0 : Matrix (Fin n) (Fin n) ℝ))) 1 sense
+    assertQuadratic (← `(fun (Q : Matrix (Fin 0) (Fin 0) ℝ) =>
+      fun x : Fin 0 → ℝ => Morew.Fn.quadForm x Q)) 1 sense
+    assertQuadratic (← `(fun (Q : Matrix (Fin 0) (Fin 0) ℝ) =>
+      fun x : Fin 0 → ℝ => x ⬝ᵥ (Q *ᵥ x))) 1 sense
+
+private def shiftedVector (x : Fin 2 → ℝ) : Fin 2 → ℝ := x + ![1, 2]
+private noncomputable def matrixLoss (Q : Matrix (Fin 2) (Fin 2) ℝ)
+    (x : Fin 2 → ℝ) : ℝ := Morew.Fn.quadForm (shiftedVector x) Q + 3
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => matrixLoss Q x)) 2
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => let residual := shiftedVector x; Morew.Fn.quadForm residual Q)) 2
+
+set_option morew.quadConic.maxExpansionDepth 0 in
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => matrixLoss Q x)) 2
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => Morew.Fn.quadForm x Q)) 2
+
+/-! Native matrix forms retain each independent enumeration and check both operations. -/
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ =>
+      @dotProduct (Fin 2) ℝ (Fintype.ofFinite (Fin 2)) _ _ x (Q *ᵥ x))) 2
+  assertQuadratic (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => x ⬝ᵥ
+      (@Matrix.mulVec (Fin 2) (Fin 2) ℝ _ (Fintype.ofFinite (Fin 2)) Q x))) 2
+  assertRejected (← `(fun x : Fin 2 → ℝ =>
+    @dotProduct (Fin 2) ℝ _ ⟨fun _ _ => 0⟩ _ x
+      ((0 : Matrix (Fin 2) (Fin 2) ℝ) *ᵥ x)))
+  assertRejected (← `(fun (ring : NonUnitalNonAssocSemiring ℝ) =>
+    fun x : Fin 2 → ℝ => x ⬝ᵥ
+      (@Matrix.mulVec (Fin 2) (Fin 2) ℝ ring _ 0 x))) 1
+  assertRejected (← `(fun (ring : NonUnitalNonAssocSemiring ℝ) =>
+    fun x : Fin 0 → ℝ => x ⬝ᵥ
+      (@Matrix.mulVec (Fin 0) (Fin 0) ℝ ring _ 0 x))) 1
+  assertRejected (← `(fun x : Fin 2 → ℝ =>
+    @dotProduct (Fin 2) ℝ
+      (if x 0 ≤ 0 then Fintype.ofFinite (Fin 2) else Fin.fintype 2) _ _ x
+      ((0 : Matrix (Fin 2) (Fin 2) ℝ) *ᵥ x)))
+  assertRejected (← `(fun x : Fin 2 → ℝ => x ⬝ᵥ
+    (@Matrix.mulVec (Fin 2) (Fin 2) ℝ _
+      (if x 0 ≤ 0 then Fintype.ofFinite (Fin 2) else Fin.fintype 2) 0 x)))
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  assertRejected (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) =>
+    fun x : Fin 2 → ℝ => Morew.Fn.quadForm x Q)) 1
+  assertRejected (← `(fun (Q P : Matrix (Fin 2) (Fin 2) ℝ) (_hP : P.PosSemidef) =>
+    fun x : Fin 2 → ℝ => Morew.Fn.quadForm x Q)) 3
+  assertRejected (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => Morew.Fn.quadForm x Q)) 2 .maximize
+  assertRejected (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun x : Fin 2 → ℝ => Morew.Fn.quadForm (fun i => x i ^ 2) Q)) 2
+  assertRejected (← `(fun x : Fin 2 → ℝ => Morew.Fn.quadForm x (Matrix.diagonal x)))
+  assertRejected (← `(fun (Q : Matrix (Fin 2) (Fin 2) ℝ) (_hQ : Q.PosSemidef) =>
+    fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) => p.1 ⬝ᵥ (Q *ᵥ p.2))) 2
+  assertRejected (← `(fun (n : Nat) (s t : Finset ℕ)
+    (Q : ℕ → Matrix (Fin n) (Fin n) ℝ) (_hQ : ∀ i ∈ t, (Q i).PosSemidef) =>
+      fun x : Fin n → ℝ => ∑ i ∈ s, Morew.Fn.quadForm x (Q i))) 5
 
 end MorewTest.QuadConic.Objective
