@@ -54,6 +54,11 @@ theorem le_negMulLog_iff (a t : ℝ) (ha : 0 ≤ a) :
     _ ↔ (t, a, 1) ∈ EXP := by
       simpa only [neg_neg] using relEntr_le_iff a 1 (-t) ha zero_lt_one
 
+/-- The entropy atom has an exponential-cone hypograph on nonnegative inputs. -/
+theorem le_entr_iff (a t : ℝ) (ha : 0 ≤ a) :
+    t ≤ Fn.entr a ↔ (t, a, 1) ∈ EXP :=
+  le_negMulLog_iff a t ha
+
 /-- KL divergence has an exponential-cone epigraph for `a ≥ 0` and `b > 0`. -/
 theorem klDiv_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     Fn.klDiv a b ≤ t ↔ (b - a - t, a, b) ∈ EXP := by
@@ -62,6 +67,33 @@ theorem klDiv_le_iff (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     constructor <;> intro h <;> linarith
   have hcoord : -(t + a - b) = b - a - t := by linarith
   rw [hbound, relEntr_le_iff a b (t + a - b) ha hb, hcoord]
+
+/-- A finite entropy sum has a hypograph represented by one exponential cone
+per coordinate and one affine sum bound. The empty sum is allowed. -/
+theorem le_sum_entr_iff {n : Nat} (x : Fin n → ℝ) (t : ℝ)
+    (hx : ∀ i, 0 ≤ x i) :
+    t ≤ ∑ i, Fn.entr (x i) ↔
+      ∃ u : Fin n → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i := by
+  constructor
+  · intro h
+    exact ⟨fun i => Fn.entr (x i), fun i => (le_entr_iff _ _ (hx i)).mp le_rfl, h⟩
+  · rintro ⟨u, hu, hsum⟩
+    exact hsum.trans (Finset.sum_le_sum fun i _ => (le_entr_iff _ _ (hx i)).mpr (hu i))
+
+/-- A finite KL sum has an epigraph represented by one exponential cone per
+coordinate and one affine sum bound. The empty sum is allowed. -/
+theorem sum_klDiv_le_iff {n : Nat} (x q : Fin n → ℝ) (t : ℝ)
+    (hx : ∀ i, 0 ≤ x i) (hq : ∀ i, 0 < q i) :
+    (∑ i, Fn.klDiv (x i) (q i)) ≤ t ↔
+      ∃ u : Fin n → ℝ,
+        (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t := by
+  constructor
+  · intro h
+    exact ⟨fun i => Fn.klDiv (x i) (q i),
+      fun i => (klDiv_le_iff _ _ _ (hx i) (hq i)).mp le_rfl, h⟩
+  · rintro ⟨u, hu, hsum⟩
+    exact (Finset.sum_le_sum fun i _ =>
+      (klDiv_le_iff _ _ _ (hx i) (hq i)).mpr (hu i)).trans hsum
 
 /-- A nonempty finite log-sum-exp bound is represented by a family of
 exponential-cone constraints and one affine sum bound. -/

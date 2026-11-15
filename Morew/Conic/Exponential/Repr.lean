@@ -9,8 +9,9 @@ import Morew.Rewrite.Basic
 /-!
 # Exact exponential-cone representations
 
-The `Fn` functions and their defining formulas have separate representations.
-Input types include the domain hypotheses; log-sum-exp requires a positive dimension.
+The scalar `Fn` functions and their native forms have separate representations.
+Input types include the domain hypotheses. Finite entropy and KL sums allow
+dimension zero; log-sum-exp requires a positive dimension.
 -/
 
 namespace Morew.Conic.Exponential
@@ -74,6 +75,11 @@ def negMulLogHypograph :
   source_iff_exists a t := by
     simpa only [exists_const] using le_negMulLog_iff a.1 t a.2
 
+/-- The entropy atom's hypograph on nonnegative inputs. -/
+def entrHypograph :
+    HypographRepr (fun a : {a : ℝ // 0 ≤ a} => Fn.entr a.1) :=
+  negMulLogHypograph
+
 /-- The KL-divergence epigraph for a nonnegative first and positive second argument. -/
 def klDivEpigraph :
     EpigraphRepr (fun p : {a : ℝ // 0 ≤ a} × {b : ℝ // 0 < b} =>
@@ -82,5 +88,21 @@ def klDivEpigraph :
   target p t _ := (p.2.1 - p.1.1 - t, p.1.1, p.2.1) ∈ EXP
   source_iff_exists p t := by
     simpa only [exists_const] using klDiv_le_iff p.1.1 p.2.1 t p.1.2 p.2.2
+
+/-- The finite entropy sum hypograph on coordinatewise nonnegative inputs. -/
+def sumEntrHypograph {n : Nat} :
+    HypographRepr (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} =>
+      ∑ i, Fn.entr (x.1 i)) where
+  Auxiliary := Fin n → ℝ
+  target x t u := (∀ i, (u i, x.1 i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i
+  source_iff_exists x t := le_sum_entr_iff x.1 t x.2
+
+/-- The finite KL sum epigraph against a fixed positive vector. -/
+def sumKlDivEpigraph {n : Nat} (q : Fin n → ℝ) (hq : ∀ i, 0 < q i) :
+    EpigraphRepr (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} =>
+      ∑ i, Fn.klDiv (x.1 i) (q i)) where
+  Auxiliary := Fin n → ℝ
+  target x t u := (∀ i, (q i - x.1 i - u i, x.1 i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t
+  source_iff_exists x t := sum_klDiv_le_iff x.1 q t x.2 hq
 
 end Morew.Conic.Exponential

@@ -10,8 +10,8 @@ import Mathlib.Tactic.Linarith
 /-!
 # Finite exponential modeling functions
 
-Log-sum-exp, softplus, relative entropy, and KL divergence use the total real
-logarithm and real division. Their conic representations impose the domains
+Log-sum-exp, softplus, entropy, relative entropy, and KL divergence use the total
+real logarithm and real division. Their conic representations impose the domains
 stated below. Entropy uses Mathlib's `Real.negMulLog`.
 -/
 
@@ -25,6 +25,17 @@ noncomputable def logSumExp {n : Nat} (xs : Fin n → ℝ) : ℝ :=
 /-- Softplus, the two-term log-sum-exp of zero and its argument. -/
 noncomputable def softplus (a : ℝ) : ℝ :=
   Real.log (1 + Real.exp a)
+
+/-- The entropy contribution `-a log a`, with value zero at zero. Its conic
+hypograph requires `0 ≤ a`. -/
+noncomputable def entr (a : ℝ) : ℝ :=
+  Real.negMulLog a
+
+/-- The entropy contribution vanishes at zero. -/
+@[simp] theorem entr_zero : entr 0 = 0 := by simp [entr]
+
+/-- The entropy contribution vanishes at one. -/
+@[simp] theorem entr_one : entr 1 = 0 := by simp [entr]
 
 /-- The total real formula for relative entropy. Its conic epigraph requires
 `0 ≤ a` and `0 < b`, including the boundary `a = 0`. The formula evaluates to

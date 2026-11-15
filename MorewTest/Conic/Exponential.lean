@@ -45,6 +45,14 @@ example (a t : ℝ) (ha : 0 ≤ a) :
     t ≤ Real.negMulLog a ↔ (t, a, 1) ∈ EXP :=
   le_negMulLog_iff a t ha
 
+example (a : ℝ) : Fn.entr a = Real.negMulLog a := rfl
+
+example : Fn.entr 0 = 0 ∧ Fn.entr 1 = 0 := by simp
+
+example (a t : ℝ) (ha : 0 ≤ a) :
+    t ≤ Fn.entr a ↔ (t, a, 1) ∈ EXP :=
+  le_entr_iff a t ha
+
 example (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
     Fn.klDiv a b ≤ t ↔ (b - a - t, a, b) ∈ EXP :=
   klDiv_le_iff a b t ha hb
@@ -74,6 +82,49 @@ example : Fn.klDiv 1 0 = -1 := by norm_num [Fn.klDiv, Fn.relEntr]
 example : ¬ ((0 : ℝ) - 1 - (-1), 1, 0) ∈ EXP := by norm_num
 
 /-! Finite representations retain one grouped row and one scalar sum. -/
+
+example {n : Nat} (x : Fin n → ℝ) (t : ℝ) (hx : ∀ i, 0 ≤ x i) :
+    t ≤ ∑ i, Fn.entr (x i) ↔
+      ∃ u : Fin n → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i :=
+  le_sum_entr_iff x t hx
+
+example {n : Nat} (x q : Fin n → ℝ) (t : ℝ)
+    (hx : ∀ i, 0 ≤ x i) (hq : ∀ i, 0 < q i) :
+    (∑ i, Fn.klDiv (x i) (q i)) ≤ t ↔
+      ∃ u : Fin n → ℝ,
+        (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t :=
+  sum_klDiv_le_iff x q t hx hq
+
+example (a t : ℝ) (ha : 0 ≤ a) :
+    (∃ u : Fin 1 → ℝ, (∀ i, (u i, a, 1) ∈ EXP) ∧ t ≤ ∑ i, u i) ↔
+      t ≤ Fn.entr a := by
+  simpa using (le_sum_entr_iff (fun _ : Fin 1 => a) t (fun _ => ha)).symm
+
+example (a b t : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
+    (∃ u : Fin 1 → ℝ, (∀ i, (b - a - u i, a, b) ∈ EXP) ∧ (∑ i, u i) ≤ t) ↔
+      Fn.klDiv a b ≤ t := by
+  simpa using (sum_klDiv_le_iff (fun _ : Fin 1 => a) (fun _ => b) t
+    (fun _ => ha) (fun _ => hb)).symm
+
+example (x : Fin 0 → ℝ) (t : ℝ) :
+    (∃ u : Fin 0 → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i) ↔ t ≤ 0 := by
+  rw [← le_sum_entr_iff x t (fun i => Fin.elim0 i)]
+  simp
+
+example (x q : Fin 0 → ℝ) (t : ℝ) :
+    (∃ u : Fin 0 → ℝ,
+      (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t) ↔ 0 ≤ t := by
+  rw [← sum_klDiv_le_iff x q t (fun i => Fin.elim0 i) (fun i => Fin.elim0 i)]
+  simp
+
+example (x : Fin 0 → ℝ) :
+    ¬ ∃ u : Fin 0 → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ 1 ≤ ∑ i, u i := by
+  simp
+
+example (x q : Fin 0 → ℝ) :
+    ¬ ∃ u : Fin 0 → ℝ,
+      (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ -1 := by
+  simp
 
 example {n : Nat} (xs : Fin n → ℝ) (t : ℝ) (hn : 0 < n) :
     Real.log (∑ i, Real.exp (xs i)) ≤ t ↔
