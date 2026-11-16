@@ -116,6 +116,33 @@ example : (matrixConicAutomatic.quadConicForm P c d hP).data.toProblem =
     matrixConicAutomatic P c d :=
   (matrixConicAutomatic.quadConicForm P c d hP).represents
 
+/-!
+To obtain an affine objective, introduce a bound `xᵀPx ≤ t` and minimize
+`t + cᵀx + d`. The positive semidefinite square root `R` of `P` satisfies
+
+```math
+P=R^T R,\qquad x^T P x=\lVert Rx\rVert_2^2.
+```
+
+Thus the bound is equivalent to `(t, 1/2, Rx) ∈ RSOCₙ`. The factor is determined
+by `P`, including when `P` is singular or zero. The same conversion accepts
+the named expression `Fn.quadForm x P`.
+-/
+
+reformulation matrixEpigraphConic : (matrixProblem P c d) := by
+  epigraph t at (x ⬝ᵥ (P *ᵥ x)) as quadraticBound
+  conic
+
+#printp matrixEpigraphConic
+
+example : GlobalEquiv (matrixProblem P c d) (matrixEpigraphConic P c d) :=
+  matrixEpigraphConic.equiv P c d hP
+example : IsConic (matrixEpigraphConic P c d) :=
+  matrixEpigraphConic.isConic P c d
+example : (matrixEpigraphConic.conicForm P c d).data.toProblem =
+    matrixEpigraphConic P c d :=
+  (matrixEpigraphConic.conicForm P c d).represents
+
 end
 
 /-!
