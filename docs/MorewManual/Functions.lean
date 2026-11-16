@@ -303,10 +303,6 @@ For the matrix norm, use `open scoped Matrix.Norms.L2Operator`.
 The numbers $`\sigma_i(A)` are the singular values of $`A`.
 `Fn.logDet P` may also be written `Real.log P.det`.
 `Fn.quadForm x Q` is defined for every real square `Q` and is zero on empty vectors.
-It may also be written `x ⬝ᵥ (Q *ᵥ x)`. For fixed `Q` with a hypothesis
-`Q.PosSemidef`, both expressions have a rotated second-order cone epigraph,
-including with an affine vector in place of `x`. In dimension zero, the bound
-is $`0\leq t`.
 
 The constraints `P.PosSemidef` and `P.PosDef` express membership in
 $`\mathbf{S}_+^n` and $`\mathbf{S}_{++}^n`. Both sets are convex; see the
