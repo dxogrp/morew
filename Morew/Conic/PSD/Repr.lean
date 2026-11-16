@@ -64,6 +64,15 @@ def lambdaMaxEpigraph {n : Nat} (hn : 0 < n) :
   source_iff_exists A t := by
     simpa only [exists_const] using lambdaMax_le_iff A.1 A.2 hn t
 
+/-- Exact PSD hypograph with explicit symmetry and nonempty dimension. -/
+def lambdaMinHypograph {n : Nat} (hn : 0 < n) :
+    HypographRepr (fun A : {A : Matrix (Fin n) (Fin n) ℝ // A.IsSymm} =>
+      Fn.lambdaMin A.1) where
+  Auxiliary := Unit
+  target A t _ := (A.1 - t • (1 : Matrix (Fin n) (Fin n) ℝ)).PosSemidef
+  source_iff_exists A t := by
+    simpa only [exists_const] using le_lambdaMin_iff A.1 A.2 hn t
+
 /-- A semidefinite representation of the Euclidean operator-norm epigraph. -/
 def spectralNormEpigraph {m n : Nat} :
     EpigraphRepr (fun A : Matrix (Fin m) (Fin n) ℝ => ‖A‖) where
