@@ -59,4 +59,17 @@ run_cmd liftTermElabM do
   check (← `(fun n : Nat => 0 ≤ n)) 0 false
   check (← `(fun (_ : ℝ) => @LE.le Nat ⟨fun _ _ => False⟩ 0 2)) 0 false
 
+private def zeroAlias : Nat := 0
+private def factorialAlias : Nat := Nat.factorial 1000
+
+-- Zero and reflexive bounds do not require evaluating the factorial. Failed
+-- reductions return no evidence and leave caller state unchanged.
+run_cmd liftTermElabM do
+  check (← `(fun (_ : ℝ) => (0 : Nat) ≤ Nat.factorial 1000)) 0 true
+  check (← `(fun (_ : ℝ) => Nat.factorial 1000 ≤ Nat.factorial 1000)) 0 true
+  check (← `(fun (_ : ℝ) => zeroAlias ≤ Nat.factorial 1000)) 0 true
+  check (← `(fun (_ : ℝ) => factorialAlias ≤ Nat.factorial 1000)) 0 true
+  check (← `(fun (_ : ℝ) => Nat.factorial 1000 ≤ factorialAlias)) 0 true
+  check (← `(fun (_ : ℝ) => Nat.factorial 1000 ≤ 0)) 0 false
+
 end MorewTest.Evidence

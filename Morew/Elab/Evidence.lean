@@ -71,26 +71,28 @@ private def proveNatLE? (goal : Expr) : MetaM (Option Expr) := do
   let left : Q(Nat) := args[2]!
   let right : Q(Nat) := args[3]!
   let canonical : Q(Prop) := q($left ≤ $right)
-  unless ← isDefEq goal canonical do return none
-  if ← isDefEq left right then return some q(Nat.le_refl $left)
-  if ← isDefEq left q(0) then return some q(Nat.zero_le $right)
   let context ← readThe Core.Context
   let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
   let limit := if context.maxHeartbeats == 0 then localLimit else min context.maxHeartbeats localLimit
-  try
-    let proof ← mapLetDeclZeta `_parameterNatLE q(LE Nat) q(inferInstance : LE Nat) fun _ => do
-      mapLetDeclZeta `_parameterNatLT q(LT Nat) q(inferInstance : LT Nat) fun _ => do
-      mapLetDeclZeta `_parameterNatPreorder q(Preorder Nat)
-        q(inferInstance : Preorder Nat) fun _ => do
-      mapLetDeclZeta `_parameterNatPartialOrder q(PartialOrder Nat)
-        q(inferInstance : PartialOrder Nat) fun _ => do
-      let ⟨true, proof⟩ ← withTheReader Core.Context
-        (fun context => { context with maxHeartbeats := limit }) <|
-          Mathlib.Meta.NormNum.deriveBool canonical
-        | throwError "independent natural parameter inequality was not established"
-      return proof
-    return some proof
-  catch _ => return none
+  tryCatchRuntimeEx (do
+    withTheReader Core.Context (fun context => { context with maxHeartbeats := limit }) do
+      unless ← isDefEq goal canonical do return none
+      if left == q(0) then return some q(Nat.zero_le $right)
+      if left == right then return some q(Nat.le_refl $left)
+      -- A failed zero reduction must not prevent reflexivity through an alias.
+      let zero ← tryCatchRuntimeEx (isDefEq left q(0)) (fun _ => pure false)
+      if zero then return some q(Nat.zero_le $right)
+      if ← isDefEq left right then return some q(Nat.le_refl $left)
+      let proof ← mapLetDeclZeta `_parameterNatLE q(LE Nat) q(inferInstance : LE Nat) fun _ => do
+        mapLetDeclZeta `_parameterNatLT q(LT Nat) q(inferInstance : LT Nat) fun _ => do
+        mapLetDeclZeta `_parameterNatPreorder q(Preorder Nat)
+          q(inferInstance : Preorder Nat) fun _ => do
+        mapLetDeclZeta `_parameterNatPartialOrder q(PartialOrder Nat)
+          q(inferInstance : PartialOrder Nat) fun _ => do
+        let ⟨true, proof⟩ ← Mathlib.Meta.NormNum.deriveBool canonical
+          | throwError "independent natural parameter inequality was not established"
+        return proof
+      return some proof) (fun _ => pure none)
 
 private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
