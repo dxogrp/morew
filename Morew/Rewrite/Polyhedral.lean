@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Polyhedral.Lemmas
 import Morew.Fn.Norm
+import Morew.Fn.SumLargest
 
 /-!
 # Exact polyhedral representations
@@ -98,5 +99,16 @@ def fnNorm1Epigraph {n : Nat} :
 def fnNormInfEpigraph {n : Nat} :
     EpigraphRepr (fun v : Fin n → ℝ => Fn.normInf v) :=
   normInfEpigraph
+
+/-- The sum of the `k` largest coordinates, with a threshold and excess bounds.
+The coefficient is `k`, so the representation requires `k ≤ n`. -/
+def sumLargestEpigraph {n : Nat} (k : Nat) (hk : k ≤ n) :
+    EpigraphRepr (Fn.sumLargest (n := n) k) where
+  Auxiliary := ℝ × (Fin n → ℝ)
+  target x t a := 0 ≤ a.2 ∧ x - (fun _ => a.1) ≤ a.2 ∧
+    (k : ℝ) * a.1 + (∑ i, a.2 i) ≤ t
+  source_iff_exists x t := by
+    simpa only [Prod.exists, Pi.le_def, Pi.zero_apply, Pi.sub_apply] using
+      Fn.sumLargest_le_iff k x t hk
 
 end Morew.Rewrite
