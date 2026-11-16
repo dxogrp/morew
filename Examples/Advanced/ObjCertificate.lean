@@ -10,7 +10,8 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 # Providing objective certificates
 
 Use `conic using cert` or `qconic using cert` to supply a representation of
-the objective. Constraints are converted automatically.
+the objective. Constraints are converted automatically. For the matrix quadratic,
+we also show automatic certification and a conic epigraph formulation.
 -/
 
 namespace Examples.Advanced.ObjCertificate
@@ -25,17 +26,17 @@ noncomputable section
 Given `f(x) = ax + b`, construct an affine certificate from this equality.
 -/
 
-def affineCertificate (f : ℝ → ℝ) (a b : ℝ) (hf : ∀ x, f x = a * x + b) :
-    Affine.Certified f where
-  map := a • AffineMap.id ℝ ℝ + AffineMap.const ℝ ℝ b
-  correct x := (hf x).symm
-
 def affineProblem (f : ℝ → ℝ) :=
   problem (x : ℝ)
     minimize f x
     subject to
       lower : 0 ≤ x
       upper : x ≤ 1
+
+def affineCertificate (f : ℝ → ℝ) (a b : ℝ) (hf : ∀ x, f x = a * x + b) :
+    Affine.Certified f where
+  map := a • AffineMap.id ℝ ℝ + AffineMap.const ℝ ℝ b
+  correct x := (hf x).symm
 
 section
 
@@ -63,9 +64,6 @@ For a positive semidefinite matrix `P`, consider
 \text{subject to} & x \succeq 0.
 \end{array}
 ```
-
-The homogeneous quadratic part is `Q(x) = x^T P x`; the affine remainder is
-`a(x) = c^T x + d`. Positive semidefiniteness gives `Q(x) ≥ 0` for every `x`.
 -/
 
 def matrixProblem {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
@@ -73,6 +71,14 @@ def matrixProblem {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
   problem (x : Fin n → ℝ)
     minimize x ⬝ᵥ (P *ᵥ x) + c ⬝ᵥ x + d
     subject to nonneg : x ∈ ℝ₊^n
+
+/-!
+### An explicit objective certificate
+
+The homogeneous quadratic part is `Q(x) = x^T P x`; the affine remainder is
+`a(x) = c^T x + d`. Positive semidefiniteness gives `Q(x) ≥ 0` for every `x`.
+These facts define the `QuadConic.CertifiedMin` certificate below.
+-/
 
 def matrixCertificate {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
     (c : Fin n → ℝ) (d : ℝ) (hP : P.PosSemidef) :
@@ -101,7 +107,13 @@ example : (matrixConic.quadConicForm P c d hP).data.toProblem = matrixConic P c 
   (matrixConic.quadConicForm P c d hP).represents
 
 /-!
-In fact, the same hypothesis lets `qconic` construct the objective certificate automatically.
+For maximization, `QuadConic.CertifiedMax f` requires the homogeneous quadratic
+part to satisfy `Q(x) ≤ 0` for every `x`.
+
+### Automatic certification
+
+The hypothesis `P.PosSemidef` also lets `qconic` construct the objective certificate
+automatically.
 The quadratic term may also be written `Fn.quadForm x P`.
 -/
 
@@ -117,6 +129,8 @@ example : (matrixConicAutomatic.quadConicForm P c d hP).data.toProblem =
   (matrixConicAutomatic.quadConicForm P c d hP).represents
 
 /-!
+### A conic epigraph formulation
+
 To obtain an affine objective, introduce a bound `xᵀPx ≤ t` and minimize
 `t + cᵀx + d`. The positive semidefinite square root `R` of `P` satisfies
 
@@ -144,10 +158,5 @@ example : (matrixEpigraphConic.conicForm P c d).data.toProblem =
   (matrixEpigraphConic.conicForm P c d).represents
 
 end
-
-/-!
-For maximization, use `QuadConic.CertifiedMax f` and prove `Q(x) ≤ 0` for every `x`.
--/
-
 end
 end Examples.Advanced.ObjCertificate
