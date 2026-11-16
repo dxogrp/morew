@@ -247,6 +247,104 @@ reformulation rejectedMissingDimension : (symbolicLargest n) := by conic at boun
 #guard_error_fragments ["type mismatch", "ℂ", "ℝ"] in
 example (A : Matrix (Fin 2) (Fin 2) ℂ) : ℝ := Fn.lambdaMax A
 
+def reverseSmallest :=
+  problem (A : SymmetricMatrix 2) (t : ℝ)
+    maximize t
+    subject to bound : Fn.lambdaMin A.toMatrix ≤ t
+
+#guard_error_fragments ["bound", "bound polarity"] in
+assert_spectral_atomic%
+reformulation rejectedReverseSmallest : reverseSmallest := by conic at bound
+
+def equalitySmallest :=
+  problem (A : SymmetricMatrix 2) (t : ℝ)
+    maximize t
+    subject to bound : Fn.lambdaMin A.toMatrix = t
+
+#guard_error_fragments ["bound", "bound polarity"] in
+assert_spectral_atomic%
+reformulation rejectedEqualitySmallest : equalitySmallest := by conic at bound
+
+def missingSmallestSymmetry :=
+  problem (A : Matrix (Fin 2) (Fin 2) ℝ) (t : ℝ)
+    maximize t
+    subject to bound : t ≤ Fn.lambdaMin A
+
+#guard_error_fragments ["bound", "global matrix symmetry"] in
+assert_spectral_atomic%
+reformulation rejectedSmallestSymmetry : missingSmallestSymmetry := by conic at bound
+
+#guard_error_fragments ["bound", "global matrix symmetry"] in
+assert_spectral_atomic%
+reformulation rejectedExplicitSmallestSymmetry : missingSmallestSymmetry := by
+  conic at bound using Conic.Spectral.lambdaMinHypograph
+
+def nonlinearSmallest :=
+  problem (x t : ℝ)
+    maximize t
+    subject to bound : t ≤ Fn.lambdaMin (Matrix.diagonal ![x ^ 2, 1])
+
+#guard_error_fragments ["bound", "power"] in
+assert_spectral_atomic%
+reformulation rejectedNonlinearSmallest : nonlinearSmallest := by conic at bound
+
+def nonlinearSmallestBound :=
+  problem (A : SymmetricMatrix 2) (t : ℝ)
+    maximize t
+    subject to bound : t ^ 2 ≤ Fn.lambdaMin A.toMatrix
+
+#guard_error_fragments ["bound", "power"] in
+assert_spectral_atomic%
+reformulation rejectedNonlinearSmallestBound : nonlinearSmallestBound := by
+  conic at bound using (Conic.Spectral.lambdaMinHypograph (Nat.zero_lt_succ 1))
+
+def symbolicSmallest (n : Nat) :=
+  problem (A : SymmetricMatrix n) (t : ℝ)
+    maximize t
+    subject to bound : t ≤ Fn.lambdaMin A.toMatrix
+
+#guard_error_fragments ["bound", "nonempty dimension"] in
+assert_spectral_atomic%
+reformulation rejectedSmallestDimension : (symbolicSmallest n) := by conic at bound
+
+#guard_error_fragments ["bound", "nonempty dimension"] in
+assert_spectral_atomic%
+reformulation rejectedEmptySmallest : (symbolicSmallest 0) := by conic at bound
+
+def smallestChain :=
+  problem (A : Matrix (Fin 2) (Fin 2) ℝ) (x t : ℝ)
+    maximize t
+    subject to
+      first : x ^ 2 ≤ t
+      bound : t ≤ Fn.lambdaMin A
+
+#guard_error_fragments ["bound", "global matrix symmetry"] in
+assert_spectral_atomic%
+reformulation rejectedSmallestChain : smallestChain certificate rejectedSmallestAlias := by
+  conic at first
+  conic at bound
+
+def missingSmallestObjectiveSymmetry :=
+  problem (A : Matrix (Fin 2) (Fin 2) ℝ)
+    maximize Fn.lambdaMin A
+
+#guard_error_fragments ["hypograph_t", "global matrix symmetry"] in
+assert_spectral_atomic%
+reformulation rejectedSmallestLift : missingSmallestObjectiveSymmetry := by
+  hypograph t
+  conic
+
+run_cmd do
+  let env ← Lean.getEnv
+  for name in #[`rejectedReverseSmallest, `rejectedEqualitySmallest,
+      `rejectedSmallestSymmetry, `rejectedExplicitSmallestSymmetry,
+      `rejectedNonlinearSmallest, `rejectedNonlinearSmallestBound,
+      `rejectedSmallestDimension, `rejectedEmptySmallest,
+      `rejectedSmallestChain, `rejectedSmallestAlias, `rejectedSmallestLift] do
+    let full := `MorewTest.Reformulation.SpectralFailures ++ name
+    if env.contains full || (Syntax.getProblemView? env full).isSome then
+      Lean.throwError "failed smallest-eigenvalue rewrite retained {full}"
+
 assert_not_exists rejectedReverseNorm rejectedEqualityNorm rejectedBilinearNorm
   rejectedNonlinearNormBound rejectedComplexNorm rejectedExplicitComplexNorm
   rejectedStaleLabel rejectedAmbiguousTargeted rejectedAmbiguousTerminal

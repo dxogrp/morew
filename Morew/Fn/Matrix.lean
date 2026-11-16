@@ -14,7 +14,7 @@ import Mathlib.Analysis.SpecialFunctions.Log.Basic
 /-!
 # Real matrix modeling functions
 
-Quadratic forms, largest eigenvalues, matrix-fractional functions, nuclear norms, and
+Quadratic forms, extreme eigenvalues, matrix-fractional functions, nuclear norms, and
 log-determinants. The conic representations use the domains stated below.
 -/
 
@@ -63,6 +63,19 @@ noncomputable def logDet {n : Nat} (X : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
 symmetric matrix of positive dimension. The empty spectrum has supremum zero. -/
 noncomputable def lambdaMax {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
   sSup (spectrum ℝ A)
+
+/-- The infimum of the real spectrum, equal to the smallest eigenvalue for a
+symmetric matrix of positive dimension. The empty spectrum has infimum zero. -/
+noncomputable def lambdaMin {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
+  sInf (spectrum ℝ A)
+
+/-- The smallest spectral value is the negative of the largest value of the negated matrix. -/
+theorem lambdaMin_eq_neg_lambdaMax {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ) :
+    lambdaMin A = -lambdaMax (-A) := by
+  rw [lambdaMin, lambdaMax, ← spectrum.neg_eq, Real.sSup_neg, neg_neg]
+
+@[simp] theorem lambdaMin_empty (A : Matrix (Fin 0) (Fin 0) ℝ) : lambdaMin A = 0 := by
+  simp only [lambdaMin, spectrum.of_subsingleton, Real.sInf_empty]
 
 /-- The matrix-fractional function `xᵀ P⁻¹ x`, using mathlib's total inverse.
 Its Schur-complement representation requires `P.PosDef`. -/

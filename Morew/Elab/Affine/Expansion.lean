@@ -73,7 +73,7 @@ private def operandStart? (name : Name) (arity : Nat) : Option Nat := do
     else if name == `Morew.Conic.fromBlocksFin then some 2
     else if name == `Morew.Conic.SymmetricMatrix.toMatrix then some 1
     else if name == `Morew.Conic.lowerTriangularMatrix then some 1
-    else if ([`Morew.Fn.lambdaMax, `Morew.Fn.matFrac, `Morew.Fn.logDet,
+    else if ([`Morew.Fn.lambdaMax, `Morew.Fn.lambdaMin, `Morew.Fn.matFrac, `Morew.Fn.logDet,
         `Morew.Fn.quadForm].contains name)
       then some 1
     else if name == `Morew.Fn.normNuc then some 2

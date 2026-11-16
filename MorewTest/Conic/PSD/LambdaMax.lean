@@ -9,10 +9,10 @@ import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.FinCases
 
 /-!
-# Largest-eigenvalue certificates
+# Extreme-eigenvalue certificates
 
-Diagonal tests include negative eigenvalues, which distinguish the largest
-eigenvalue from a spectral radius or an operator norm.
+Diagonal tests include negative and mixed-sign eigenvalues, which distinguish
+the extreme eigenvalues from a spectral radius or an operator norm.
 -/
 
 assert_not_exists Morew.Syntax.ProblemView
@@ -59,5 +59,57 @@ example (n : Nat) (hn : 0 < n)
     (A : {A : Matrix (Fin n) (Fin n) ℝ // A.IsSymm}) (t : ℝ) :
     Morew.Fn.lambdaMax A.1 ≤ t ↔ ∃ u, (lambdaMaxEpigraph hn).target A t u :=
   (lambdaMaxEpigraph hn).source_iff_exists A t
+
+example (n : Nat) (hn : 0 < n) (a : Fin n → ℝ) (t : ℝ) :
+    t ≤ Morew.Fn.lambdaMin (Matrix.diagonal a) ↔ ∀ i, t ≤ a i := by
+  rw [le_lambdaMin_iff _ (Matrix.isSymm_diagonal _) hn]
+  have he : Matrix.diagonal a - t • (1 : Matrix (Fin n) (Fin n) ℝ) =
+      Matrix.diagonal (fun i => a i - t) := by
+    rw [Matrix.smul_one_eq_diagonal, ← Matrix.diagonal_sub]
+  simp [he, sub_nonneg]
+
+example : Morew.Fn.lambdaMin (Matrix.diagonal ![-3, -2]) = -3 := by
+  norm_num [Morew.Fn.lambdaMin, spectrum_diagonal, Matrix.range_cons_cons_empty, csInf_pair]
+
+example : Morew.Fn.lambdaMin (Matrix.diagonal ![-3, 2]) = -3 := by
+  norm_num [Morew.Fn.lambdaMin, spectrum_diagonal, Matrix.range_cons_cons_empty, csInf_pair]
+
+example : Morew.Fn.lambdaMin (Matrix.diagonal ![-3, -3]) = -3 := by
+  norm_num [Morew.Fn.lambdaMin, spectrum_diagonal, Matrix.range_cons_cons_empty, csInf_pair]
+
+example (n : Nat) (hn : 0 < n) (c : ℝ) :
+    Morew.Fn.lambdaMin (c • (1 : Matrix (Fin n) (Fin n) ℝ)) = c := by
+  let : NeZero n := ⟨Nat.ne_zero_of_lt hn⟩
+  simp [Morew.Fn.lambdaMin, Matrix.smul_one_eq_diagonal]
+
+example (A : Matrix (Fin n) (Fin n) ℝ) :
+    Morew.Fn.lambdaMin (-A) = -Morew.Fn.lambdaMax A := by
+  rw [Morew.Fn.lambdaMin_eq_neg_lambdaMax, neg_neg]
+
+example (A : Matrix (Fin n) (Fin n) ℝ) (hA : spectrum ℝ A = ∅) :
+    Morew.Fn.lambdaMin A = 0 := by
+  simp [Morew.Fn.lambdaMin, hA]
+
+example (A : Matrix (Fin 0) (Fin 0) ℝ) : Morew.Fn.lambdaMin A = 0 := by simp
+
+-- At dimension zero, a PSD inequality cannot encode a spectral lower bound.
+example (A : Matrix (Fin 0) (Fin 0) ℝ) :
+    (A - (1 : ℝ) • (1 : Matrix (Fin 0) (Fin 0) ℝ)).PosSemidef ∧
+      ¬ (1 ≤ Morew.Fn.lambdaMin A) := by
+  constructor
+  · have h : A - (1 : ℝ) • (1 : Matrix (Fin 0) (Fin 0) ℝ) = 0 := Subsingleton.elim _ _
+    rw [h]
+    exact Matrix.PosSemidef.zero
+  · simp
+
+example (hn : 0 < n) : (lambdaMinHypograph hn).Auxiliary = Unit := rfl
+
+example (hn : 0 < n) (A : {A : Matrix (Fin n) (Fin n) ℝ // A.IsSymm}) (t : ℝ) :
+    (lambdaMinHypograph hn).target A t () ↔
+      (A.1 - t • (1 : Matrix (Fin n) (Fin n) ℝ)).PosSemidef := Iff.rfl
+
+example (hn : 0 < n) (A : {A : Matrix (Fin n) (Fin n) ℝ // A.IsSymm}) (t : ℝ) :
+    t ≤ Morew.Fn.lambdaMin A.1 ↔ ∃ u, (lambdaMinHypograph hn).target A t u :=
+  (lambdaMinHypograph hn).source_iff_exists A t
 
 end MorewTest.Conic.Spectral

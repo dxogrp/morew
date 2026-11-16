@@ -8,10 +8,11 @@ import Morew.Conic.PSD
 import Mathlib.Analysis.Matrix.Order
 
 /-!
-# Exact largest-eigenvalue epigraph
+# Exact eigenvalue bounds
 
-For a symmetric matrix of positive dimension, a largest-eigenvalue bound
-is equivalent to positive semidefiniteness of `t I - A`.
+For a symmetric matrix of positive dimension, an upper bound on its largest
+eigenvalue is equivalent to positive semidefiniteness of `t I - A`. A lower bound
+on its smallest eigenvalue is equivalent to positive semidefiniteness of `A - t I`.
 -/
 
 namespace Morew.Conic.Spectral
@@ -42,5 +43,12 @@ theorem lambdaMax_le_iff {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ)
     exact sub_nonneg.mpr (h x hx)
   · intro h x hx
     exact sub_nonneg.mp (h ⟨x, hx, rfl⟩)
+
+/-- A smallest-eigenvalue lower bound is an exact affine PSD inequality. -/
+theorem le_lambdaMin_iff {n : Nat} (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A.IsSymm) (hn : 0 < n) (t : ℝ) :
+    t ≤ Fn.lambdaMin A ↔ (A - t • (1 : Matrix (Fin n) (Fin n) ℝ)).PosSemidef := by
+  rw [Fn.lambdaMin_eq_neg_lambdaMax, le_neg, lambdaMax_le_iff (-A) hA.neg hn (-t)]
+  simp only [neg_smul, sub_eq_add_neg, neg_neg, add_comm]
 
 end Morew.Conic.Spectral
