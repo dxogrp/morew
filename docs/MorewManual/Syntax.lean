@@ -177,6 +177,18 @@ generates an equivalence certificate `q.equiv`.
 
 `conic` requires an affine objective. For a nonlinear objective, first apply
 `epigraph t` for minimization or `hypograph t` for maximization.
+For an affine vector `v`, an affine bound `t`, and a fixed matrix with a hypothesis
+`Q.PosSemidef`,
+`conic` converts either `Fn.quadForm v Q ≤ t` or `v ⬝ᵥ (Q *ᵥ v) ≤ t`
+to a rotated second-order cone constraint. It uses a factor $`R` determined by
+$`Q` with $`Q=R^T R`, so the cone coordinates are $`(t,1/2,Rv)`.
+Positive semidefiniteness suffices even when $`Q` is singular or zero.
+To select the named or native rule explicitly, use
+`conic at label using (Conic.QuadForm.epigraph Q hQ)` or
+`conic at label using (Conic.QuadForm.nativeEpigraph Q hQ)`, respectively,
+where `hQ : Q.PosSemidef`.
+If both the matrix-fraction and quadratic-form rules apply to `v ⬝ᵥ (P⁻¹ *ᵥ v)`,
+automatic selection uses the matrix-fraction rule.
 
 `qconic` preserves a compatible quadratic objective in the form $`Q(x)+a(x)`,
 where $`Q` is a homogeneous quadratic form and $`a` is affine.
