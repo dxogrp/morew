@@ -12,7 +12,7 @@ attribute scope. Records live in `Type`. Registration checks record types and re
 fixed source heads; certificates are checked on use.
 
 Automatic discovery certifies all matching rules and requires one success, after
-the built-in SOC/power norm preference for conic rules. Ambiguous names are sorted.
+the built-in norm and matrix-fraction preferences for conic rules. Ambiguous names are sorted.
 Explicit `using` selects a single declaration or certificate, registered or otherwise.
 
 Graph and bound matching adapts outer real negations by equivalence while retaining

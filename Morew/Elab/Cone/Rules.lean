@@ -14,7 +14,8 @@ import Morew.Elab.Rewrite.Registry
 
 /-! Install built-in conic rules via `morew_conic`. Local attribute removal excludes a rule.
 Automatic selection prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`
-when both certify; explicit selection bypasses this preference. -/
+and `MatrixFraction.nativeEpigraph` over `QuadForm.nativeEpigraph` when both certify;
+explicit selection bypasses these preferences. -/
 
 attribute [morew_conic]
   Morew.Conic.posDefRepr
@@ -40,6 +41,8 @@ attribute [morew_conic]
   Morew.Conic.SecondOrder.fnNorm2Epigraph
   Morew.Conic.SecondOrder.normSquareEpigraph
   Morew.Conic.SecondOrder.fnNorm2SquareEpigraph
+  Morew.Conic.QuadForm.epigraph
+  Morew.Conic.QuadForm.nativeEpigraph
   Morew.Conic.SecondOrder.sumSquaresEpigraph
   Morew.Conic.SecondOrder.squareEpigraph
   Morew.Conic.SecondOrder.huberEpigraph

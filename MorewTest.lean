@@ -29,6 +29,7 @@ import MorewTest.Conic.Form.Defined
 import MorewTest.Conic.Form.Support
 import MorewTest.Conic.HelperLimits
 import MorewTest.Conic.Huber
+import MorewTest.Conic.MatFracPriority
 import MorewTest.Conic.MatrixDomain
 import MorewTest.Conic.Negation
 import MorewTest.Conic.Nonneg
@@ -50,6 +51,7 @@ import MorewTest.Conic.PowerFamilies
 import MorewTest.Conic.PowerGeometricMean
 import MorewTest.Conic.PowerNorm
 import MorewTest.Conic.PowerRules
+import MorewTest.Conic.QuadForm
 import MorewTest.Conic.Registry
 import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
@@ -239,6 +241,8 @@ import MorewTest.Reformulation.PresentationIndices
 import MorewTest.Reformulation.PresentationUpdates
 import MorewTest.Reformulation.PrintDetails
 import MorewTest.Reformulation.PrintSupport
+import MorewTest.Reformulation.QuadForm
+import MorewTest.Reformulation.QuadFormFailures
 import MorewTest.Reformulation.Registry
 import MorewTest.Reformulation.Registry.Source
 import MorewTest.Reformulation.Remove

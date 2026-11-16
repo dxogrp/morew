@@ -13,14 +13,15 @@ import Morew.Conic.PSD.PosDef
 import Morew.Conic.PSD.SpectralNorm
 import Morew.Conic.Power
 import Morew.Conic.SecondOrder
+import Morew.Conic.SecondOrder.QuadForm
 
 /-!
 # Conic forms
 
 Affine cone programs and representations using polyhedral, second-order,
 exponential, power, and positive-semidefinite cones. Matrix representations
-include Schur complements, spectral and nuclear norms, matrix fractions, and
-positive-definite domains.
+include quadratic-form epigraphs, Schur complements, spectral and nuclear norms,
+matrix fractions, and positive-definite domains.
 
 Import `Morew.Reformulation.Conic` for modeling commands and registered rules.
 -/

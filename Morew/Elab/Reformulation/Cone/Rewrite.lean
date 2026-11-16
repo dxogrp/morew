@@ -9,7 +9,7 @@ import Morew.Elab.Reformulation.Rows
 import Morew.Elab.Expr
 
 /-! Replace the constraint selected by `conic at label` with an exact conic representation.
-Discovery requires one certified `morew_conic` rule after the SOC/power norm preference;
+Discovery requires one certified `morew_conic` rule after the built-in rule preferences;
 `using` selects a single declaration or certificate.
 
 Generated rows require affine coordinates and cone certificates, including global

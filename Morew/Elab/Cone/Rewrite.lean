@@ -14,7 +14,8 @@ import Morew.Elab.State
 
 /-! Select and certify exact conic replacements.
 Automatic selection requires a unique success after preferring the built-in SOC
-norm rule over the power-norm rule. Explicit selection bypasses that preference.
+norm rule over the power-norm rule, and the native matrix-fraction rule over the
+native quadratic-form rule. Explicit selection bypasses these preferences.
 Retained constraints supply rule premises. -/
 
 namespace Morew.Elab.Cone.Rewrite
@@ -194,15 +195,18 @@ private structure CertifiedCandidate where
   result : Plan.Result
   environment : Environment
 
-/-- Prefer the built-in SOC norm rule when both built-in norm rules certify.
-Leave explicit selection and other candidates unchanged. -/
-private def preferSecondOrderNorm (successes : Array CertifiedCandidate) :
-    Array CertifiedCandidate :=
-  if successes.any (·.name == ``Morew.Conic.SecondOrder.normEpigraph) then
-    successes.filter (·.name != ``Morew.Conic.Power.normEpigraph)
-  else successes
+/-- Prefer the built-in SOC norm and native matrix-fraction rules over their
+overlapping built-ins. Leave explicit selection and custom candidates unchanged. -/
+private def preferBuiltInRules (successes : Array CertifiedCandidate) :
+    Array CertifiedCandidate := Id.run do
+  let successes := if successes.any (·.name == ``Morew.Conic.SecondOrder.normEpigraph) then
+      successes.filter (·.name != ``Morew.Conic.Power.normEpigraph)
+    else successes
+  return if successes.any (·.name == ``Morew.Conic.MatrixFraction.nativeEpigraph) then
+      successes.filter (·.name != ``Morew.Conic.QuadForm.nativeEpigraph)
+    else successes
 
-/-- Certify candidates from the same environment, apply the norm preference, and require
+/-- Certify candidates from the same environment, apply built-in preferences, and require
 one success. Retain only the selected candidate's auxiliary declarations. -/
 def planUnique (predicate : Expr) (retained : Array Expr := #[])
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Plan.Result) :=
@@ -222,7 +226,7 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
         | .ok result => successes := successes.push ⟨name, result, ← getEnv⟩
         | .error error => failures := failures.push m!"{name}: {error.reason}"
         setEnv environment
-      successes := preferSecondOrderNorm successes
+      successes := preferBuiltInRules successes
       if let [selected] := successes.toList then
         setEnv selected.environment
         return .ok selected.result
