@@ -7,7 +7,7 @@ import Morew.Elab.Evidence
 import MorewTest.ElabSupport
 import MorewTest.Environment
 
-/-! # Independent exponent evidence and supported proof forms -/
+/-! # Independent parameter evidence and supported proof forms -/
 
 namespace MorewTest.Conic.PowerEvidence
 
@@ -24,7 +24,7 @@ private def check (term : TSyntax `term) (parameters : Nat) (success : Bool) :
       let environment ← getEnv
       let result ← Morew.Elab.Evidence.proveIndependent? points[0]! goal
       unless result.isSome == success do
-        throwError "unexpected independent exponent evidence result for {goal}"
+        throwError "unexpected independent parameter evidence result for {goal}"
       assertMVarCountersUnchanged before "parameter evidence changed caller metavariables"
       if let some proof := result then
         checkWithKernel proof
@@ -45,5 +45,18 @@ run_cmd liftTermElabM do
   check (← `(fun (p : ℝ) (_hp : p < 0) (_ : ℝ) => p < 1)) 2 false
   check (← `(fun (p : ℝ) (_ : ℝ) => 0 < p)) 1 false
   check (← `(fun x : ℝ => 0 < x)) 0 false
+
+/-! Natural shape bounds use canonical order and the same independent proof scope. -/
+run_cmd liftTermElabM do
+  check (← `(fun (_ : ℝ) => (2 : Nat) ≤ 3)) 0 true
+  check (← `(fun (_ : ℝ) => (3 : Nat) ≤ 2)) 0 false
+  check (← `(fun (_ : ℝ) => (0 : Nat) ≤ 0)) 0 true
+  check (← `(fun (n : Nat) (_ : ℝ) => 0 ≤ n)) 1 true
+  check (← `(fun (n : Nat) (_ : ℝ) => n ≤ n)) 1 true
+  check (← `(fun (k n : Nat) (_hk : k ≤ n) (_ : ℝ) => k ≤ n)) 3 true
+  check (← `(fun (k n : Nat) (_hk : True ∧ k ≤ n) (_ : ℝ) => k ≤ n)) 3 true
+  check (← `(fun (k n : Nat) (_ : ℝ) => k ≤ n)) 2 false
+  check (← `(fun n : Nat => 0 ≤ n)) 0 false
+  check (← `(fun (_ : ℝ) => @LE.le Nat ⟨fun _ _ => False⟩ 0 2)) 0 false
 
 end MorewTest.Conic.PowerEvidence
