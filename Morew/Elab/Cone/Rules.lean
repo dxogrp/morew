@@ -22,6 +22,7 @@ attribute [morew_conic]
   Morew.Conic.MatrixFraction.epigraph
   Morew.Conic.MatrixFraction.nativeEpigraph
   Morew.Conic.Spectral.lambdaMaxEpigraph
+  Morew.Conic.Spectral.lambdaMinHypograph
   Morew.Conic.Spectral.spectralNormEpigraph
   Morew.Conic.Spectral.normNucEpigraph
   Morew.Conic.LogDet.hypograph
