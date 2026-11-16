@@ -57,6 +57,7 @@ import MorewTest.Conic.Rewrite
 import MorewTest.Conic.SecondOrder
 import MorewTest.Conic.SecondOrderElab
 import MorewTest.Conic.SecondOrderRows
+import MorewTest.Conic.SumLargest
 import MorewTest.Conic.Terminal
 import MorewTest.ConstraintRepr
 import MorewTest.Core
@@ -68,6 +69,7 @@ import MorewTest.Environment
 import MorewTest.EnvironmentRollback
 import MorewTest.Fn.Huber
 import MorewTest.Fn.Norm
+import MorewTest.Fn.SumLargest
 import MorewTest.ImportCompatibility.AppliedSources
 import MorewTest.ImportCompatibility.AppliedSources.Defined
 import MorewTest.ImportCompatibility.CoercionReplay
@@ -281,6 +283,7 @@ import MorewTest.Reformulation.SubstitutionObjective
 import MorewTest.Reformulation.SubstitutionRuleFailures
 import MorewTest.Reformulation.SubstitutionRules
 import MorewTest.Reformulation.SubstitutionRulesBackends
+import MorewTest.Reformulation.SumLargest
 import MorewTest.Reformulation.TerminalConic
 import MorewTest.Reformulation.TerminalConicCustom
 import MorewTest.Reformulation.TerminalConicFailures
