@@ -10,8 +10,7 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 # Providing objective certificates
 
 Use `conic using cert` or `qconic using cert` to supply a representation of
-the objective. Constraints are converted automatically. For the matrix quadratic,
-we also show automatic certification and a conic epigraph formulation.
+the objective. Constraints are converted automatically.
 -/
 
 namespace Examples.Advanced.ObjCertificate
@@ -73,8 +72,6 @@ def matrixProblem {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
     subject to nonneg : x ∈ ℝ₊^n
 
 /-!
-### An explicit objective certificate
-
 The homogeneous quadratic part is `Q(x) = x^T P x`; the affine remainder is
 `a(x) = c^T x + d`. Positive semidefiniteness gives `Q(x) ≥ 0` for every `x`.
 These facts define the `QuadConic.CertifiedMin` certificate below.
@@ -110,11 +107,8 @@ example : (matrixConic.quadConicForm P c d hP).data.toProblem = matrixConic P c 
 For maximization, `QuadConic.CertifiedMax f` requires the homogeneous quadratic
 part to satisfy `Q(x) ≤ 0` for every `x`.
 
-### Automatic certification
-
-The hypothesis `P.PosSemidef` also lets `qconic` construct the objective certificate
+In fact, the hypothesis `P.PosSemidef` lets `qconic` construct the objective certificate
 automatically.
-The quadratic term may also be written `Fn.quadForm x P`.
 -/
 
 reformulation matrixConicAutomatic : (matrixProblem P c d) := by
@@ -129,8 +123,6 @@ example : (matrixConicAutomatic.quadConicForm P c d hP).data.toProblem =
   (matrixConicAutomatic.quadConicForm P c d hP).represents
 
 /-!
-### A conic epigraph formulation
-
 To obtain an affine objective, introduce a bound `xᵀPx ≤ t` and minimize
 `t + cᵀx + d`. The positive semidefinite square root `R` of `P` satisfies
 
@@ -138,9 +130,7 @@ To obtain an affine objective, introduce a bound `xᵀPx ≤ t` and minimize
 P=R^T R,\qquad x^T P x=\lVert Rx\rVert_2^2.
 ```
 
-Thus the bound is equivalent to `(t, 1/2, Rx) ∈ RSOCₙ`. The factor is determined
-by `P`, including when `P` is singular or zero. The same conversion accepts
-the named expression `Fn.quadForm x P`.
+The bound is therefore equivalent to `(t, 1/2, Rx) ∈ RSOCₙ`.
 -/
 
 reformulation matrixEpigraphConic : (matrixProblem P c d) := by
