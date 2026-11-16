@@ -27,6 +27,7 @@ import Morew.Conic.Power.GeometricMean
 import Morew.Conic.Power.Norm
 import Morew.Conic.Power.Repr
 import Morew.Conic.SecondOrder
+import Morew.Conic.SecondOrder.QuadForm
 import Morew.Conic.SecondOrder.Repr
 import Morew.Core
 import Morew.Elab.Affine

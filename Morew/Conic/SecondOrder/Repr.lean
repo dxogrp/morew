@@ -4,15 +4,17 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.SecondOrder
+import Morew.Conic.SecondOrder.QuadForm
 import Morew.Rewrite.Basic
 import Morew.Fn.Norm
 
 /-!
 # Exact second-order representations
 
-These records represent Euclidean norms, squared norms, Huber loss, and
-quadratic-over-linear expressions. Subtype inputs carry the positive denominator
-hypotheses. The Huber threshold is a fixed nonnegative parameter.
+These records represent Euclidean norms, squared norms, Huber loss, quadratic
+forms, and quadratic-over-linear expressions. Subtype inputs carry the positive
+denominator hypotheses. The Huber threshold is a fixed nonnegative parameter;
+quadratic-form matrices are fixed positive-semidefinite parameters.
 -/
 
 namespace Morew.Conic.SecondOrder
@@ -104,3 +106,23 @@ def squareDivEpigraph :
     simpa only [exists_const] using square_div_le_iff p.1 p.2.1 t p.2.2
 
 end Morew.Conic.SecondOrder
+
+namespace Morew.Conic.QuadForm
+
+open Matrix
+
+/-- A fixed positive-semidefinite quadratic form represented by one rotated cone row. -/
+def epigraph {n : Nat} (Q : Matrix (Fin n) (Fin n) ℝ) (hQ : Q.PosSemidef) :
+    EpigraphRepr (fun x : Fin n → ℝ => Fn.quadForm x Q) where
+  Auxiliary := (SecondOrder.fnNorm2SquareEpigraph (n := n)).Auxiliary
+  target x t u := SecondOrder.fnNorm2SquareEpigraph.target (factor Q *ᵥ x) t u
+  source_iff_exists x t := by
+    rw [quadForm_eq_norm2_sq x Q hQ]
+    exact SecondOrder.fnNorm2SquareEpigraph.source_iff_exists (factor Q *ᵥ x) t
+
+/-- The native matrix quadratic epigraph has the same domain and representation. -/
+def nativeEpigraph {n : Nat} (Q : Matrix (Fin n) (Fin n) ℝ) (hQ : Q.PosSemidef) :
+    EpigraphRepr (fun x : Fin n → ℝ => x ⬝ᵥ (Q *ᵥ x)) :=
+  epigraph Q hQ
+
+end Morew.Conic.QuadForm
