@@ -268,6 +268,12 @@ $`B-A\in\mathbf{S}_+^n`.
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[] under $`\preceq`
 *
+  * [`Fn.lambdaMin A`](api/Morew/Fn/Matrix.html#Morew.Fn.lambdaMin)
+  * $`\lambda_{\min}(A)`
+  * $`A\in\mathbf{S}^n`
+  * {functionSymbol concave}[]
+  * {functionSymbol increasing}[] under $`\preceq`
+*
   * `‖A‖`
   * $`\sup_{\lVert u\rVert_2\leq1}\lVert Au\rVert_2`
   * $`A\in\mathbf{R}^{m\times n}`
