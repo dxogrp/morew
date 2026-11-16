@@ -165,7 +165,7 @@ The cases $`p=0` and $`p=1` give the affine functions $`1` and $`x`.
 # Vector functions
 
 In this table $`x\in\mathbf{R}^n` with $`n>0`.
-The three named norms also accept empty vectors, with value zero.
+The three named norms and `Fn.sumLargest` also accept empty vectors, with value zero.
 
 :::table (tag := "functions-vector") +header
 *
@@ -223,6 +223,12 @@ The three named norms also accept empty vectors, with value zero.
   * {functionSymbol concave}[]
   * {functionSymbol increasing}[]
 *
+  * [`Fn.sumLargest k x`](api/Morew/Fn/SumLargest.html#Morew.Fn.sumLargest)
+  * $`\sum_{i=1}^{\min(k,n)}x_{[i]}`
+  * $`x\in\mathbf{R}^n`, $`k\in\mathbf{N}`
+  * {functionSymbol convex}[]
+  * {functionSymbol increasing}[]
+*
   * [`Fn.logSumExp x`](api/Morew/Fn/Exponential.html#Morew.Fn.logSumExp)
   * $`\log\sum_i e^{x_i}`
   * $`x\in\mathbf{R}^n`
@@ -246,6 +252,9 @@ The native norm of `Fin n → ℝ` is the infinity norm; `EuclideanSpace` uses
 the Euclidean norm. Squared Euclidean norms may also be written `‖x‖ ^ 2`.
 For `WithLp`, `p : ℝ≥0∞`; the formula uses `p.toReal`.
 For finite extrema, `s` is a `Finset` and `hs : s.Nonempty`.
+For `Fn.sumLargest`, $`x_{[1]}\geq\cdots\geq x_{[n]}` are the sorted coordinates;
+$`k=0` gives zero and $`k\geq n` gives the full sum. Its linear epigraph
+representation requires $`k\leq n`.
 
 # Matrix functions
 
