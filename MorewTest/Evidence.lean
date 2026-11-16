@@ -61,6 +61,7 @@ run_cmd liftTermElabM do
 
 private def zeroAlias : Nat := 0
 private def factorialAlias : Nat := Nat.factorial 1000
+private def chooseAlias : Nat := Nat.choose 100 100
 
 -- Zero and reflexive bounds do not require evaluating the factorial. Failed
 -- reductions return no evidence and leave caller state unchanged.
@@ -71,5 +72,11 @@ run_cmd liftTermElabM do
   check (← `(fun (_ : ℝ) => factorialAlias ≤ Nat.factorial 1000)) 0 true
   check (← `(fun (_ : ℝ) => Nat.factorial 1000 ≤ factorialAlias)) 0 true
   check (← `(fun (_ : ℝ) => Nat.factorial 1000 ≤ 0)) 0 false
+
+-- Zero reduction exhausts its local heartbeat allowance for these bounds, but
+-- reflexivity through the alias needs only one unfolding.
+run_cmd liftTermElabM do
+  check (← `(fun (_ : ℝ) => chooseAlias ≤ Nat.choose 100 100)) 0 true
+  check (← `(fun (_ : ℝ) => Nat.choose 100 100 ≤ chooseAlias)) 0 true
 
 end MorewTest.Evidence
