@@ -45,7 +45,6 @@ import MorewTest.Conic.PSD.Triangular
 import MorewTest.Conic.PSDElab
 import MorewTest.Conic.PolyhedralElab
 import MorewTest.Conic.Power
-import MorewTest.Conic.PowerEvidence
 import MorewTest.Conic.PowerFailures
 import MorewTest.Conic.PowerFamilies
 import MorewTest.Conic.PowerGeometricMean
@@ -67,6 +66,7 @@ import MorewTest.DiagnosticsSupport
 import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
+import MorewTest.Evidence
 import MorewTest.Fn.Huber
 import MorewTest.Fn.Norm
 import MorewTest.Fn.SumLargest

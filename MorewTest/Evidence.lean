@@ -9,7 +9,7 @@ import MorewTest.Environment
 
 /-! # Independent parameter evidence and supported proof forms -/
 
-namespace MorewTest.Conic.PowerEvidence
+namespace MorewTest.Evidence
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
@@ -59,4 +59,4 @@ run_cmd liftTermElabM do
   check (← `(fun n : Nat => 0 ≤ n)) 0 false
   check (← `(fun (_ : ℝ) => @LE.le Nat ⟨fun _ _ => False⟩ 0 2)) 0 false
 
-end MorewTest.Conic.PowerEvidence
+end MorewTest.Evidence
