@@ -114,6 +114,7 @@ import Morew.Fn.Huber
 import Morew.Fn.Matrix
 import Morew.Fn.Norm
 import Morew.Fn.Power
+import Morew.Fn.SumLargest
 import Morew.NLP
 import Morew.NLP.Basic
 import Morew.NLP.Domain

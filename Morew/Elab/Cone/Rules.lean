@@ -38,6 +38,7 @@ attribute [morew_conic]
   Morew.Rewrite.normInfToLpEpigraph
   Morew.Rewrite.fnNorm1Epigraph
   Morew.Rewrite.fnNormInfEpigraph
+  Morew.Rewrite.sumLargestEpigraph
   Morew.Conic.SecondOrder.normEpigraph
   Morew.Conic.SecondOrder.fnNorm2Epigraph
   Morew.Conic.SecondOrder.normSquareEpigraph

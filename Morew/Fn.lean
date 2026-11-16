@@ -8,5 +8,6 @@ import Morew.Fn.Huber
 import Morew.Fn.Matrix
 import Morew.Fn.Norm
 import Morew.Fn.Power
+import Morew.Fn.SumLargest
 
 /-! Mathematical functions for optimization models. -/
