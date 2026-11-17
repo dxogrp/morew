@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Rewrite.Basic
 import Morew.Rewrite.Polyhedral.Lemmas
+import Morew.Fn.Cvar
 import Morew.Fn.Norm
 import Morew.Fn.SumLargest
 
@@ -110,5 +111,16 @@ def sumLargestEpigraph {n : Nat} (k : Nat) (hk : k ≤ n) :
   source_iff_exists x t := by
     simpa only [Prod.exists, Pi.le_def, Pi.zero_apply, Pi.sub_apply] using
       Fn.sumLargest_le_iff k x t hk
+
+/-- Empirical CVaR of equally weighted losses, with a threshold and excess bounds. -/
+def cvarEpigraph {n : Nat} (β : ℝ) (hn : 0 < n) (hβ : 0 ≤ β ∧ β < 1) :
+    EpigraphRepr (Fn.cvar (n := n) β) where
+  Auxiliary := ℝ × (Fin n → ℝ)
+  -- Keep the reciprocal as a fixed coefficient for affine certification.
+  target x t a := 0 ≤ a.2 ∧ x - (fun _ => a.1) ≤ a.2 ∧
+    a.1 + (∑ i, a.2 i) * ((n : ℝ) * (1 - β))⁻¹ ≤ t
+  source_iff_exists x t := by
+    simpa only [Prod.exists, Pi.le_def, Pi.zero_apply, Pi.sub_apply, div_eq_mul_inv] using
+      Fn.cvar_le_iff β x t hn hβ
 
 end Morew.Rewrite

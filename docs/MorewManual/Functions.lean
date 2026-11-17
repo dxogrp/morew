@@ -229,6 +229,12 @@ The three named norms and `Fn.sumLargest` also accept empty vectors, with value 
   * {functionSymbol convex}[]
   * {functionSymbol increasing}[]
 *
+  * [`Fn.cvar β x`](api/Morew/Fn/Cvar.html#Morew.Fn.cvar)
+  * $`\operatorname{CVaR}_{\beta}(x)`
+  * $`x\in\mathbf{R}^n`, $`n>0`, $`0\leq\beta<1`
+  * {functionSymbol convex}[]
+  * {functionSymbol increasing}[]
+*
   * [`Fn.logSumExp x`](api/Morew/Fn/Exponential.html#Morew.Fn.logSumExp)
   * $`\log\sum_i e^{x_i}`
   * $`x\in\mathbf{R}^n`

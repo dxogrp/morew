@@ -171,6 +171,32 @@ theorem sumLargest_isLeast_threshold {n : Nat} (k : Nat) (x : Fin n → ℝ)
   rintro _ ⟨s, rfl⟩
   exact sumLargest_le_threshold k x s hk
 
+/-- A sorted coordinate attains the threshold bounds for two adjacent selections. -/
+theorem sumLargest_exists_common_threshold {n : Nat} (k : Nat) (x : Fin n → ℝ)
+    (hk : k < n) :
+    ∃ τ : ℝ,
+      sumLargest k x = (k : ℝ) * τ + ∑ i, max (x i - τ) 0 ∧
+      sumLargest (k + 1) x = ((k + 1 : Nat) : ℝ) * τ + ∑ i, max (x i - τ) 0 := by
+  let σ := Tuple.sort (OrderDual.toDual ∘ x)
+  let y := x ∘ σ
+  have hy : Antitone y := Tuple.monotone_sort (OrderDual.toDual ∘ x)
+  let τ := y ⟨k, hk⟩
+  have hsum : (∑ i, max (y i - τ) 0) = ∑ i, max (x i - τ) 0 :=
+    Equiv.sum_comp σ (fun i => max (x i - τ) 0)
+  refine ⟨τ, ?_, ?_⟩
+  · calc
+      sumLargest k x = (k : ℝ) * τ + ∑ i, max (y i - τ) 0 :=
+        prefix_eq_threshold k y τ hk.le
+          (fun i hi => hy (show i ≤ ⟨k, hk⟩ from hi.le))
+          (fun i hi => hy (show (⟨k, hk⟩ : Fin n) ≤ i from hi))
+      _ = _ := by rw [hsum]
+  · calc
+      sumLargest (k + 1) x = ((k + 1 : Nat) : ℝ) * τ + ∑ i, max (y i - τ) 0 :=
+        prefix_eq_threshold (k + 1) y τ hk
+          (fun i hi => hy (show i ≤ ⟨k, hk⟩ from Nat.le_of_lt_succ hi))
+          (fun i hi => hy (show (⟨k, hk⟩ : Fin n) ≤ i from (Nat.le_succ k).trans hi))
+      _ = _ := by rw [hsum]
+
 /-- An exact linear epigraph with a threshold and nonnegative excess variables. -/
 theorem sumLargest_le_iff {n : Nat} (k : Nat) (x : Fin n → ℝ) (t : ℝ)
     (hk : k ≤ n) :

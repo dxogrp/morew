@@ -19,6 +19,7 @@ import MorewTest.Atom.Unsupported
 import MorewTest.CommandSupport
 import MorewTest.Conic
 import MorewTest.Conic.AffineMembership
+import MorewTest.Conic.Cvar
 import MorewTest.Conic.EuclideanAffine
 import MorewTest.Conic.Exponential
 import MorewTest.Conic.ExponentialCone
@@ -67,6 +68,7 @@ import MorewTest.ElabSupport
 import MorewTest.Environment
 import MorewTest.EnvironmentRollback
 import MorewTest.Evidence
+import MorewTest.Fn.Cvar
 import MorewTest.Fn.Huber
 import MorewTest.Fn.Norm
 import MorewTest.Fn.SumLargest
@@ -158,6 +160,8 @@ import MorewTest.Reformulation.ConeMembership.Defined
 import MorewTest.Reformulation.ConeMembershipAliases
 import MorewTest.Reformulation.ConeMembershipReplay
 import MorewTest.Reformulation.ContextualRewrite
+import MorewTest.Reformulation.Cvar
+import MorewTest.Reformulation.CvarFailures
 import MorewTest.Reformulation.Derive
 import MorewTest.Reformulation.DeriveBackends
 import MorewTest.Reformulation.DeriveFailures

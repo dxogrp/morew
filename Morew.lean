@@ -109,6 +109,7 @@ import Morew.Elab.Substitution.Match
 import Morew.Elab.Substitution.Registry
 import Morew.Elab.Substitution.Rules
 import Morew.Fn
+import Morew.Fn.Cvar
 import Morew.Fn.Exponential
 import Morew.Fn.Huber
 import Morew.Fn.Matrix
