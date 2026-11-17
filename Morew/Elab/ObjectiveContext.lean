@@ -8,8 +8,9 @@ import Morew.Elab.Evidence
 import Morew.Elab.Expr
 import Morew.Elab.State
 
-/-! Transport scalar bounds through standard real arithmetic using independent sign evidence.
-Unrecognized contexts require an explicit certificate. -/
+/-! Transport scalar bounds through real arithmetic, exponentials, maxima, minima, and
+positive parts. Fixed scalar products use independent sign evidence. Unrecognized
+contexts require an explicit certificate. -/
 
 namespace Morew.Elab.ObjectiveContext
 
@@ -21,6 +22,11 @@ private theorem add {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) : a + c ≤ b + 
 private theorem sub {a b c d : ℝ} (h : a ≤ b) (k : d ≤ c) : a - c ≤ b - d :=
   sub_le_sub h k
 private theorem neg {a b : ℝ} (h : b ≤ a) : -a ≤ -b := neg_le_neg h
+private theorem maximum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
+    max a c ≤ max b d := max_le_max h k
+private theorem minimum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
+    min a c ≤ min b d := min_le_min h k
+private theorem positive {a b : ℝ} (h : a ≤ b) : a⁺ ≤ b⁺ := posPart_mono h
 private theorem mulLeft {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : c * a ≤ c * b :=
   mul_le_mul_of_nonneg_left h sign
 private theorem mulRight {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : a * c ≤ b * c :=
@@ -76,7 +82,7 @@ private def canonicalPrefix (source expected : Expr) (operands : Nat) : MetaM Bo
   return (← Expr.operationPrefixMismatch? source expected operands).isNone
 
 private inductive Arithmetic where
-  | add | sub | neg | mul | exp
+  | add | sub | neg | mul | exp | maximum | minimum | pos
   deriving BEq
 
 private def arithmetic? (expression : Expr) : MetaM (Option (Arithmetic × Array Expr)) := do
@@ -95,7 +101,12 @@ private def arithmetic? (expression : Expr) : MetaM (Option (Arithmetic × Array
     let a : Q(ℝ) := args[2]!
     if ← canonicalPrefix expression q(-$a) 1 then return some (.neg, #[a])
   if let some atom ← Atom.recognizeAtom? expression then
-    if atom.kind == .exp then return some (.exp, atom.operands)
+    match atom.kind with
+    | .exp => return some (.exp, atom.operands)
+    | .maximum => return some (.maximum, atom.operands)
+    | .minimum => return some (.minimum, atom.operands)
+    | .pos => return some (.pos, atom.operands)
+    | _ => pure ()
   return none
 
 private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
@@ -160,6 +171,13 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
       ← inequality point rhs[1]! lhs[1]! bound]
   | .neg => return ← mkAppM ``neg #[← inequality point rhs[0]! lhs[0]! bound]
   | .exp => return ← mkAppM ``Real.exp_le_exp_of_le #[← inequality point lhs[0]! rhs[0]! bound]
+  | .maximum =>
+    return ← mkAppM ``maximum #[← inequality point lhs[0]! rhs[0]! bound,
+      ← inequality point lhs[1]! rhs[1]! bound]
+  | .minimum =>
+    return ← mkAppM ``minimum #[← inequality point lhs[0]! rhs[0]! bound,
+      ← inequality point lhs[1]! rhs[1]! bound]
+  | .pos => return ← mkAppM ``positive #[← inequality point lhs[0]! rhs[0]! bound]
   | .mul =>
     for i in [:2] do
       let coefficient := lhs[i]!
@@ -213,7 +231,8 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
       checkWithKernel proof
       return .ok proof
 
-/-- Prove `lower ≤ upper` by transporting the supplied bound through standard arithmetic.
+/-- Prove `lower ≤ upper` by transporting the supplied bound through real arithmetic,
+exponentials, maxima, minima, and positive parts.
 Isolate caller metavariables and failed environment changes. -/
 def proveInequality (point lower upper boundProof : Expr) : MetaM (Except MessageData Expr) := do
   let lower : Q(ℝ) := lower
