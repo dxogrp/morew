@@ -93,7 +93,6 @@ private theorem reverse_fractional :
     ((![3, 1, 0] : Fin 3 → ℝ) ∘ Equiv.swap 0 2) = ![0, 1, 3] := by
   ext i
   fin_cases i <;> norm_num [Equiv.swap_apply_def, Fin.ext_iff, Matrix.cons_val]
-  rfl
 
 private theorem fractional_largest_one : Fn.sumLargest 1 ![0, 1, 3] = 3 := by
   rw [← reverse_fractional, Fn.sumLargest_comp_perm]

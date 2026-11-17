@@ -154,12 +154,13 @@ def vectorData (n : Nat) : Data (Fin n → ℝ) where
   domain := Set.univ
   domain_isOpen := isOpen_univ
   objective := fun x => ∑ i, x i ^ 2
-  objective_smooth := ContDiffOn.sum fun i _ => (contDiffOn_apply ℝ ℝ i _).pow 2
+  objective_smooth := ContDiffOn.sum fun i _ =>
+    (contDiffOn_apply ℝ (fun _ : Fin n => ℝ) i _).pow 2
   rowCount := n
   rows := fun i => {
     residual := fun x => x i
     bounds := Bounds.lowerBound 0
-    smooth := contDiffOn_apply ℝ ℝ i _
+    smooth := contDiffOn_apply ℝ (fun _ : Fin n => ℝ) i _
   }
   feasible_mem_domain := fun _ _ => Set.mem_univ _
 
@@ -231,7 +232,7 @@ def logData : Data ℝ where
   feasible_mem_domain := by
     intro x h
     have hx : 1 ≤ x := by simpa [positiveRow, Row.Holds] using h 0
-    exact lt_of_lt_of_le (by norm_num) hx
+    exact lt_of_lt_of_le (show (0 : ℝ) < 1 by norm_num) hx
 
 def logProblem : Problem ℝ ℝ where
   objective := Real.log
