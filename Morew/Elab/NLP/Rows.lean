@@ -65,8 +65,10 @@ def Result.transport (result : Result) (newFeasible backward : Expr)
     (auxiliary? : Option Expr := none) : MetaM Result := do
   let .forallE _ nextDomain _ _ ← whnf (← inferType newFeasible)
     | throwError "expected the replacement feasibility predicate"
-  let .forallE _ oldDomain _ _ ← whnf (← inferType result.domain)
-    | throwError "expected a cached evaluation domain"
+  let domainType ← whnf (← inferType result.domain)
+  unless domainType.isAppOfArity ``Set 1 do
+    throwError "expected a cached evaluation domain"
+  let oldDomain := domainType.getArg! 0
   let map ← withLocalDeclD `point nextDomain fun point => do
     let value ← if auxiliary?.isSome then mkAppM ``Prod.fst #[point] else pure point
     mkLambdaFVars #[point] value
@@ -310,7 +312,10 @@ private def intersect (left right : RowCertificate) :
   let leftSubset ← mkAppOptM ``Set.inter_subset_left #[none, some left.domain, some right.domain]
   let rightSubset ← mkAppOptM ``Set.inter_subset_right #[none, some left.domain, some right.domain]
   let isOpen ← analytic <| mkAppM ``IsOpen.inter #[left.isOpen, right.isOpen]
-  let included ← mkAppM ``Set.subset_inter #[left.included, right.included]
+  let included ← mkAppOptM ``Set.subset_inter
+    #[some (← read).decision, some left.domain, some right.domain,
+      some (← mkAppM ``Set.ofPred #[(← read).feasible]),
+      some left.included, some right.included]
   return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
@@ -462,8 +467,10 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
       domain
       domainIsOpen := ← Space.withCanonicalSpaces #[decision] <|
         mkAppM ``IsOpen.inter #[result.domainIsOpen, child.isOpen]
-      feasibleMemDomain := ← mkAppM ``Set.subset_inter
-        #[result.feasibleMemDomain, child.included]
+      feasibleMemDomain := ← mkAppOptM ``Set.subset_inter
+        #[some decision, some result.domain, some child.domain,
+          some (← mkAppM ``Set.ofPred #[feasible]),
+          some result.feasibleMemDomain, some child.included]
       rowCertificates := proofs.push proof
       rowBlocks := blocks.push block
     }

@@ -430,7 +430,10 @@ private def combine (point : Expr) (children : Array Certificate) :
       info := {
         domain
         isOpen := ← domainApp point ``IsOpen.inter #[info.isOpen, child.isOpen]
-        included := ← mkAppM ``Set.subset_inter #[info.included, child.included]
+        included := ← mkAppOptM ``Set.subset_inter
+          #[some (← inferType point), some info.domain, some child.domain,
+            some (← mkAppM ``Set.ofPred #[(← read).feasible]),
+            some info.included, some child.included]
       }
   return (info, proofs)
 

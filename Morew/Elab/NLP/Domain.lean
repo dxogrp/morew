@@ -139,8 +139,10 @@ private def certifyCore (feasible : Expr) (sources : Array Expr)
         domainIsOpen := ← Space.withCanonicalSpaces #[decision] <|
           mkAppM ``IsOpen.inter #[result.domainIsOpen, child.isOpen]
         smooth
-        feasibleMemDomain := ← mkAppM ``Set.subset_inter
-          #[result.feasibleMemDomain, child.included]
+        feasibleMemDomain := ← mkAppOptM ``Set.subset_inter
+          #[some decision, some result.domain, some child.domain,
+            some (← mkAppM ``Set.ofPred #[feasible]),
+            some result.feasibleMemDomain, some child.included]
       }
   let expectedOpen ← Space.withCanonicalSpaces #[decision] <|
     mkAppM ``IsOpen #[result.domain]

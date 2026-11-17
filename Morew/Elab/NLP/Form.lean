@@ -124,7 +124,10 @@ private def buildFormCore (presentation : PresentationState)
       mkAppM ``Morew.NLP.Rows.Block.mono #[certificate.rowBlocks[0]!, right])
     opened ← Space.withCanonicalSpaces #[presentation.domainType] <|
       mkAppM ``IsOpen.inter #[opened, certificate.domainIsOpen]
-    included ← mkAppM ``Set.subset_inter #[included, certificate.feasibleMemDomain]
+    included ← mkAppOptM ``Set.subset_inter
+      #[some presentation.domainType, some domain, some certificate.domain,
+        some (← mkAppM ``Set.ofPred #[feasible]),
+        some included, some certificate.feasibleMemDomain]
     domain := next
   let form ← Space.withCanonicalSpaces #[presentation.domainType] do
     let block ← if blocks.isEmpty then

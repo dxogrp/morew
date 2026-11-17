@@ -35,8 +35,9 @@ def positive (s : Set X) (f : X → ℝ) : Set X := s ∩ {x | 0 < f x}
 /-- Positivity defines an open restriction of the current smooth domain. -/
 theorem positive_open [NormedAddCommGroup X] [NormedSpace ℝ X]
     (s : Set X) (f : X → ℝ) (hs : IsOpen s)
-    (hf : ContDiffOn ℝ 2 f s) : IsOpen (positive s f) :=
-  hf.continuousOn.isOpen_inter_preimage hs isOpen_Ioi
+    (hf : ContDiffOn ℝ 2 f s) : IsOpen (positive s f) := by
+  change IsOpen (s ∩ f ⁻¹' Set.Ioi 0)
+  exact hf.continuousOn.isOpen_inter_preimage hs isOpen_Ioi
 
 /-- A positivity restriction is contained in its original domain. -/
 theorem positive_subset (s : Set X) (f : X → ℝ) : positive s f ⊆ s :=
