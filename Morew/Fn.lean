@@ -3,6 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+import Morew.Fn.Cvar
 import Morew.Fn.Exponential
 import Morew.Fn.Huber
 import Morew.Fn.Matrix
