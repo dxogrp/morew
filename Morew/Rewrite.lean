@@ -4,12 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Rewrite.Basic
+import Morew.Rewrite.Sum
 import Morew.Rewrite.Polyhedral
 import Morew.Rewrite.Euclidean
 
 /-!
 # Exact constraint rewrite representations
 
-Constraint, graph, epigraph, and hypograph representation records, with
-polyhedral and Euclidean-norm rules shared by reformulation commands.
+Constraint, graph, epigraph, and hypograph representation records, with finite-sum
+composition, polyhedral rules, and Euclidean-norm rules shared by reformulation commands.
 -/
