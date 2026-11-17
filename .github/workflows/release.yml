@@ -59,24 +59,7 @@ jobs:
         run: python3 -B -m unittest discover -s scripts/tests -v
 
       - name: Verify all project modules with leanchecker
-        env:
-          LEAN_NUM_THREADS: "1"
-        run: |
-          /usr/bin/time -v -o "$RUNNER_TEMP/morew-kernel-time.txt" \
-            make check-kernel
-
-      - name: Summarize kernel-check measurements
-        if: always()
-        run: |
-          if [ -f "$RUNNER_TEMP/morew-kernel-time.txt" ]; then
-            {
-              echo '### Kernel-check measurements'
-              echo
-              echo '```text'
-              cat "$RUNNER_TEMP/morew-kernel-time.txt"
-              echo '```'
-            } | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+        run: make check-kernel
 
       - name: Summarize verified release
         env:
