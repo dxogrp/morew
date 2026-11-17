@@ -9,16 +9,16 @@ inline_extension propertySymbol (label path : String) where
   data := toJson (label, path)
   traverse _ _ _ := pure none
   toTeX := some fun go _ _ content => content.mapM go
-  toHtml := some fun go _ data content => open Verso.Output.Html in do
+  toHtml := some fun go _ data content => do
     let .ok (label, path) := fromJson? (α := String × String) data
       | Verso.reportError "Invalid function symbol"; return .empty
-    let symbol ← if path.isEmpty then Verso.Output.Html.seq <$> content.mapM go else
-      pure {{<svg viewBox="0 0 24 16" aria-hidden="true">
-        <path d={{path}}></path>
-      </svg>}}
-    pure {{<span class="function-symbol" role="img" aria-label={{label}} title={{label}}>
-      {{symbol}}
-    </span>}}
+    let symbol ← if path.isEmpty then Lean.Html.seq <$> content.mapM go else
+      pure html%{<svg viewBox="0 0 24 16" aria-hidden="true">
+        <path d={path}></path>
+      </svg>}
+    pure html%{<span class="function-symbol" role="img" aria-label={label} title={label}>
+      {symbol}
+    </span>}
   extraCss := [r#"
 .function-symbol {
   display: inline-flex;

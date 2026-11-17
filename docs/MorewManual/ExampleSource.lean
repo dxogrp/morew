@@ -108,8 +108,8 @@ private def normalizeModule (source : LitMod) : LitMod := Id.run do
 
 inline_extension sourcePathCaption where
   traverse _ _ _ := pure none
-  toHtml := some fun go _ _ content => open Verso.Output.Html in do
-    pure {{<span class="example-source-path">{{← content.mapM go}}</span>}}
+  toHtml := some fun go _ _ content => do
+    pure html%{<span class="example-source-path">{← content.mapM go}</span>}
   toTeX := some fun go _ _ content => content.mapM go
   extraCss := [r#"
 .example-source-path {
@@ -127,7 +127,6 @@ private def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc 
       { part with content := #[sourceCaption] ++ part.content } }
 
 open Lean Lean.Elab Term Verso.Doc.Elab Verso.ArgParse
-open Lean.Doc.Syntax
 
 private structure ExampleConfig where
   modName : Ident
@@ -136,10 +135,11 @@ private structure ExampleConfig where
 private meta instance [Monad m] [MonadError m] [MonadLiftT CoreM m] : FromArgs ExampleConfig m where
   fromArgs := ExampleConfig.mk <$> .positional' `name <*> .positional' `title
 
-@[part_command Lean.Doc.Syntax.command]
+@[part_command Lean.Doc.Parser.Block.command]
 meta def includeExample : PartCommand
-  | `(block|command{includeExample $args*}) => do
-    let { modName, title } ← parseThe ExampleConfig (← parseArgs args)
+  | .command v => do
+    unless v.name.getId == `includeExample do Lean.Elab.throwUnsupportedSyntax
+    let { modName, title } ← parseThe ExampleConfig (← parseArgs v.args)
     let json ← loadModuleJson "." modName.getId.toString
     let sourcePath := modName.getId.toString.replace "." "/" ++ ".lean"
     let name ← mkFreshUserName (modName.getId ++ `examplePage)
