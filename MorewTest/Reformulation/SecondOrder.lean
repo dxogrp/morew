@@ -63,16 +63,10 @@ example : scalarCopy = scalarTarget := rfl
 
 namespace Vectors
 
--- These fixtures deliberately use concrete local instances.
-set_option linter.concreteInstances false
-
-class Dimension where
-  size : Nat
-
-variable [Dimension]
+variable (n : Nat)
 
 def source :=
-  problem (v : Fin Dimension.size → ℝ) (t : ℝ)
+  problem (v : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       before : (∑ i, Real.exp (v i)) ≤ 100
@@ -81,39 +75,39 @@ def source :=
       squaredNorm : ‖WithLp.toLp 2 v‖ ^ 2 ≤ t
       infinity : ‖v‖ ≤ t
 
-reformulation target : source := by
+reformulation target : (source n) := by
   conic at euclidean
   conic at squares
   conic at squaredNorm
   conic at infinity
 
-example : GlobalEquiv source target := target.equiv
+example : GlobalEquiv (source n) (target n) := target.equiv n
 
-example (v : Fin Dimension.size → ℝ) (t : ℝ) : target.feasible (v, t) ↔
+example (v : Fin n → ℝ) (t : ℝ) : (target n).feasible (v, t) ↔
     (∑ i, Real.exp (v i)) ≤ 100 ∧
-      (t, fun i => v i - 1) ∈ (Cone.secondOrder Dimension.size).carrier ∧
-      (t, 1 / 2, fun i => 2 * v i + 1) ∈ (Cone.rotatedSecondOrder Dimension.size).carrier ∧
-      (t, 1 / 2, v) ∈ (Cone.rotatedSecondOrder Dimension.size).carrier ∧
+      (t, fun i => v i - 1) ∈ (Cone.secondOrder n).carrier ∧
+      (t, 1 / 2, fun i => 2 * v i + 1) ∈ (Cone.rotatedSecondOrder n).carrier ∧
+      (t, 1 / 2, v) ∈ (Cone.rotatedSecondOrder n).carrier ∧
       0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) := Iff.rfl
 
 def nativeSource :=
-  problem (z : EuclideanSpace ℝ (Fin Dimension.size)) (t : ℝ)
+  problem (z : EuclideanSpace ℝ (Fin n)) (t : ℝ)
     maximize t
     subject to
       norm : t ≥ ‖z‖
       squared : ‖(2 : ℝ) • z‖ ^ 2 ≤ t
 
-reformulation nativeTarget : nativeSource := by
+reformulation nativeTarget : (nativeSource n) := by
   conic at norm
   conic at squared
   hypograph value
 
-example : GlobalEquiv nativeSource nativeTarget := nativeTarget.equiv
+example : GlobalEquiv (nativeSource n) (nativeTarget n) := nativeTarget.equiv n
 
-example (z : EuclideanSpace ℝ (Fin Dimension.size)) (t value : ℝ) :
-    nativeTarget.feasible ((z, t), value) ↔
-      (t, WithLp.ofLp z) ∈ (Cone.secondOrder Dimension.size).carrier ∧
-      (t, 1 / 2, WithLp.ofLp ((2 : ℝ) • z)) ∈ (Cone.rotatedSecondOrder Dimension.size).carrier ∧
+example (z : EuclideanSpace ℝ (Fin n)) (t value : ℝ) :
+    (nativeTarget n).feasible ((z, t), value) ↔
+      (t, WithLp.ofLp z) ∈ (Cone.secondOrder n).carrier ∧
+      (t, 1 / 2, WithLp.ofLp ((2 : ℝ) • z)) ∈ (Cone.rotatedSecondOrder n).carrier ∧
       value ≤ t := Iff.rfl
 
 run_cmd do
@@ -125,39 +119,30 @@ run_cmd do
 
 -- The displayed numeral in `2 • z` re-elaborates as natural scaling, which
 -- agrees with the original real scaling by the module laws.
-example : nativeCopy = nativeTarget := by
+example : nativeCopy n = nativeTarget n := by
   simp only [nativeCopy, nativeTarget, ofNat_smul_eq_nsmul]
 
 end Vectors
 
 namespace Matrix
 
--- These fixtures deliberately use concrete local instances.
-set_option linter.concreteInstances false
-
-class Parameter where
-  rows : Nat
-  columns : Nat
-  matrix : Fin rows → Fin columns → ℝ
-  offset : Fin rows → ℝ
-
-variable [Parameter]
+variable (m n : Nat) (A : Fin m → Fin n → ℝ) (b : Fin m → ℝ)
 
 def source :=
-  problem (x : Fin Parameter.columns → ℝ) (t : ℝ)
+  problem (x : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       residual : ‖WithLp.toLp 2
-        (fun i => (∑ j, Parameter.matrix i j * x j) - Parameter.offset i)‖ ≤ t
+        (fun i => (∑ j, A i j * x j) - b i)‖ ≤ t
 
-reformulation target : source := by
+reformulation target : (source m n A b) := by
   conic at residual
 
-example : GlobalEquiv source target := target.equiv
+example : GlobalEquiv (source m n A b) (target m n A b) := target.equiv m n A b
 
-example (x : Fin Parameter.columns → ℝ) (t : ℝ) : target.feasible (x, t) ↔
-    (t, fun i => (∑ j, Parameter.matrix i j * x j) - Parameter.offset i) ∈
-      (Cone.secondOrder Parameter.rows).carrier := Iff.rfl
+example (x : Fin n → ℝ) (t : ℝ) : (target m n A b).feasible (x, t) ↔
+    (t, fun i => (∑ j, A i j * x j) - b i) ∈
+      (Cone.secondOrder m).carrier := Iff.rfl
 
 end Matrix
 
@@ -273,29 +258,23 @@ reformulation constantTarget : constantSource := by
 
 example : GlobalEquiv constantSource constantTarget := constantTarget.equiv
 
-class Parameter where
-  epsilon : ℝ
-
 section
 
--- These fixtures deliberately use concrete local instances.
-set_option linter.concreteInstances false
-
-variable [Parameter] (hε : 0 < Parameter.epsilon)
+variable (ε : ℝ) (hε : 0 < ε)
 
 def symbolicSource :=
   problem (x y t : ℝ)
     minimize t
     subject to
-      margin : Parameter.epsilon ≤ y
+      margin : ε ≤ y
       quotient : x ^ 2 / y ≤ t
 
 include hε in
-reformulation symbolicTarget : symbolicSource := by
+reformulation symbolicTarget : (symbolicSource ε) := by
   conic at quotient
 
-example : GlobalEquiv symbolicSource symbolicTarget :=
-  symbolicTarget.equiv hε
+example : GlobalEquiv (symbolicSource ε) (symbolicTarget ε) :=
+  symbolicTarget.equiv ε hε
 
 end
 

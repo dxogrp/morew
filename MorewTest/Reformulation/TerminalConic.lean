@@ -241,73 +241,69 @@ run_cmd do
 
 namespace FiniteInstances
 
--- These fixtures deliberately use concrete local instances.
-set_option linter.concreteInstances false
-
-class Parameter where
-  Index : Type
-  equiv : Fin 2 ≃ Index
-  coeff : Index → ℝ
-
-variable [Parameter]
+variable (ι : Type) (e : Fin 2 ≃ ι) (c : ι → ℝ)
 
 /- The constraint's dot product supplies the only finite-index evidence.
 Terminal planning retains it when certifying the objective, rewriting the
 nonlinear row, and constructing reusable forms. -/
 def source :=
-  problem (x : Parameter.Index → ℝ)
+  problem (x : ι → ℝ)
     minimize (0 : ℝ)
     subject to
-      bound : |@dotProduct Parameter.Index ℝ
-        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
+      bound : |@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ c x| ≤ 1
 
-reformulation automaticTarget : source := by
+reformulation automaticTarget : (source ι e c) := by
   conic
 
-reformulation selectedTarget : source := by
+reformulation selectedTarget : (source ι e c) := by
   conic at bound
   conic
 
 def auxiliarySource :=
-  problem (x : Parameter.Index → ℝ)
+  problem (x : ι → ℝ)
     minimize (0 : ℝ)
     subject to
-      bound : |@dotProduct Parameter.Index ℝ
-        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
-      loss : Fn.softplus (@dotProduct Parameter.Index ℝ
-        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x) ≤ 2
+      bound : |@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ c x| ≤ 1
+      loss : Fn.softplus (@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ c x) ≤ 2
 
-reformulation auxiliaryTarget : auxiliarySource := by
+reformulation auxiliaryTarget : (auxiliarySource ι e c) := by
   conic
 
-example : GlobalEquiv source automaticTarget := automaticTarget.equiv
-example : GlobalEquiv source selectedTarget := selectedTarget.equiv
-example : GlobalEquiv auxiliarySource auxiliaryTarget := auxiliaryTarget.equiv
+example : GlobalEquiv (source ι e c) (automaticTarget ι e c) :=
+  automaticTarget.equiv ι e c
+example : GlobalEquiv (source ι e c) (selectedTarget ι e c) := selectedTarget.equiv ι e c
+example : GlobalEquiv (auxiliarySource ι e c) (auxiliaryTarget ι e c) :=
+  auxiliaryTarget.equiv ι e c
 
 -- Ordinary certificate use needs only finiteness, without an ambient enumeration.
-local instance : Finite Parameter.Index := by
-  let := Fintype.ofEquiv (Fin 2) Parameter.equiv
-  infer_instance
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    (automaticTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    (selectedTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    (auxiliaryTarget.conicForm ι e c).data.rowCount = 4 := rfl
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    (automaticTarget.conicForm ι e c).data.toProblem = automaticTarget ι e c := by
+  let : Finite ι := Finite.of_equiv (Fin 2) e
+  exact (automaticTarget.conicForm ι e c).represents
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    (selectedTarget.conicForm ι e c).data.toProblem = selectedTarget ι e c := by
+  let : Finite ι := Finite.of_equiv (Fin 2) e
+  exact (selectedTarget.conicForm ι e c).represents
 
-example : automaticTarget.conicForm.data.rowCount = 2 := rfl
-example : selectedTarget.conicForm.data.rowCount = 2 := rfl
-example : auxiliaryTarget.conicForm.data.rowCount = 4 := rfl
-example : automaticTarget.conicForm.data.toProblem = automaticTarget :=
-  automaticTarget.conicForm.represents
-example : selectedTarget.conicForm.data.toProblem = selectedTarget :=
-  selectedTarget.conicForm.represents
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    IsConic (selectedTarget ι e c) := selectedTarget.isConic ι e c
+example : letI : Finite ι := Finite.of_equiv (Fin 2) e
+    IsConic (auxiliaryTarget ι e c) := auxiliaryTarget.isConic ι e c
 
-example : IsConic selectedTarget := selectedTarget.isConic
-example : IsConic auxiliaryTarget := auxiliaryTarget.isConic
-
-example (x : Parameter.Index → ℝ) :
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    automaticTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
-example (x : Parameter.Index → ℝ) :
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    selectedTarget.feasible x ↔
-      1 - Parameter.coeff ⬝ᵥ x ∈ ℝ₊ ∧ 1 + Parameter.coeff ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
+example (x : ι → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) e
+    (automaticTarget ι e c).feasible x ↔
+      1 - c ⬝ᵥ x ∈ ℝ₊ ∧ 1 + c ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
+example (x : ι → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) e
+    (selectedTarget ι e c).feasible x ↔
+      1 - c ⬝ᵥ x ∈ ℝ₊ ∧ 1 + c ⬝ᵥ x ∈ ℝ₊ := Iff.rfl
 
 end FiniteInstances
 

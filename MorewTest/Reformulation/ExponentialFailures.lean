@@ -280,24 +280,19 @@ def empty :=
 reformulation emptyLSE : empty := by
   conic at lse
 
-class Dimension where
-  size : ℕ
-
 section
--- These fixtures deliberately use concrete local instances.
-set_option linter.concreteInstances false
 
-variable [Dimension]
+variable (n : ℕ)
 
 def symbolic :=
-  problem (xs : Fin Dimension.size → ℝ) (t : ℝ)
+  problem (xs : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       lse : Fn.logSumExp xs ≤ t
 
 /-- error: constraint `lse`: -/
 #guard_msgs (substring := true) in
-reformulation unavailableNonempty : symbolic := by
+reformulation unavailableNonempty : (symbolic n) := by
   conic at lse
 
 end
