@@ -329,6 +329,44 @@ example (x : ι → ℝ) (t : ℝ) : (anotherRowTarget ι e c).feasible (x, t) �
 
 end HiddenFinite
 
+namespace ProjectedHiddenFinite
+
+class Parameter where
+  Index : Type
+  equiv : Fin 2 ≃ Index
+  coefficients : Index → ℝ
+
+-- Keep the carrier behind an instance projection while its finite evidence
+-- remains inside the imported helper.
+set_option linter.concreteInstances false
+
+variable [Parameter]
+
+reformulation target :
+    (HiddenFinite.anotherRow Parameter.Index Parameter.equiv Parameter.coefficients) := by
+  conic
+
+example : GlobalEquiv
+    (HiddenFinite.anotherRow Parameter.Index Parameter.equiv Parameter.coefficients) target :=
+  target.equiv
+example (x : Parameter.Index → ℝ) (t : ℝ) :
+    target.objective (x, t) = x (Parameter.equiv 0) := rfl
+example (x : Parameter.Index → ℝ) (t : ℝ) : target.feasible (x, t) ↔
+    t - x (Parameter.equiv 0) ∈ ℝ₊ ∧ t + x (Parameter.equiv 0) ∈ ℝ₊ ∧
+      10 - finiteDot Parameter.equiv Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
+
+section
+
+variable [Finite Parameter.Index]
+
+example : IsConic target := target.isConic
+example : target.conicForm.data.rowCount = 3 := rfl
+example : target.conicForm.data.toProblem = target := target.conicForm.represents
+
+end
+
+end ProjectedHiddenFinite
+
 namespace Boundaries
 
 def wrappedAbs (x : ℝ) := |x|
