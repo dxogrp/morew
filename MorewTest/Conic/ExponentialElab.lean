@@ -181,6 +181,21 @@ run_cmd liftTermElabM do
 /-! Finite-sum representations admit empty and symbolic dimensions.
 The grouped cone row is accompanied by an aggregate scalar bound. -/
 
+example (n : ℕ) :
+    (Morew.Conic.Exponential.sumEntrHypograph (n := n)).Auxiliary = (Fin n → ℝ) := rfl
+
+example {n : ℕ} (x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i}) (t : ℝ) (u : Fin n → ℝ) :
+    Morew.Conic.Exponential.sumEntrHypograph.target x t u ↔
+      (∀ i, (u i, x.1 i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i := Iff.rfl
+
+example {n : ℕ} (q : Fin n → ℝ) (hq : ∀ i, 0 < q i) :
+    (Morew.Conic.Exponential.sumKlDivEpigraph q hq).Auxiliary = (Fin n → ℝ) := rfl
+
+example {n : ℕ} (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
+    (x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i}) (t : ℝ) (u : Fin n → ℝ) :
+    (Morew.Conic.Exponential.sumKlDivEpigraph q hq).target x t u ↔
+      (∀ i, (q i - x.1 i - u i, x.1 i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t := Iff.rfl
+
 run_cmd liftTermElabM do
   for rule? in #[none, some ``Morew.Conic.Exponential.sumEntrHypograph] do
     expectPlan (← `(fun (n : ℕ) (x : Fin n → ℝ) (_ : ∀ i, 0 ≤ x i) =>
