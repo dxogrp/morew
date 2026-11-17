@@ -241,6 +241,9 @@ run_cmd do
 
 namespace FiniteInstances
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 class Parameter where
   Index : Type
   equiv : Fin 2 ≃ Index

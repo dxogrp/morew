@@ -44,6 +44,9 @@ end
 
 namespace Instances
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 set_option linter.overlappingInstances false
 variable [first : Rename.Instances.Parameter] [second : Rename.Instances.Parameter]
 

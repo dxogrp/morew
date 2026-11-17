@@ -144,6 +144,9 @@ info: problem (x t : ℝ)
 
 namespace FiniteExtrema
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 class IndexSet where
   indices : Finset ℕ
   nonempty : indices.Nonempty
@@ -166,6 +169,9 @@ example : GlobalEquiv source target := target.equiv
 end FiniteExtrema
 
 namespace FiniteInstances
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 class Parameter where
   Index : Type
@@ -272,6 +278,9 @@ end
 end SectionParameters
 
 namespace Norms
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 class Dimension where
   size : ℕ

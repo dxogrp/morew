@@ -40,6 +40,9 @@ class NamedParameter where
   value : ℝ
 
 section
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 variable [configuration : NamedParameter]
 
 def namedSource :=

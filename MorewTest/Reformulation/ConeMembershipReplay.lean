@@ -131,6 +131,9 @@ example (x y : ℝ) : modified.feasible (x, y) ↔ True := Iff.rfl
 
 namespace ImportedNamedParameters
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 -- A producer's named instance need not retain its local name in the importing
 -- context. Reconstruct both fields and the retained definition with the caller's
 -- instance, just as applying the imported target does.
@@ -185,6 +188,9 @@ end ImportedNamedParameters
 
 namespace NamedInstances
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 -- Distinct parameters of the same class are intentional in this reconstruction test.
 set_option linter.overlappingInstances false
 
@@ -223,6 +229,9 @@ example (x : ℝ) : (@replayed first second).objective x =
 end NamedInstances
 
 namespace InstanceNameCollision
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 class Coeff where
   c : ℝ
@@ -305,6 +314,9 @@ end Distinct
 end InstanceNameCollision
 
 namespace RenamedInstanceCollision
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 variable [replacement : InstanceNameCollision.Coeff]
 

@@ -189,6 +189,9 @@ end NestedPositivityAliases
 
 namespace AnonymousSectionInstance
 
+-- These fixtures exercise captured concrete section instances.
+set_option linter.concreteInstances false
+
 class Marker where
   marker : Nat
 

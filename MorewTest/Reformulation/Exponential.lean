@@ -320,6 +320,9 @@ class Parameter where
 
 section
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 variable [Parameter] (hε : 0 < Parameter.epsilon)
 
 def symbolicSource :=
@@ -464,6 +467,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 end FiniteLifts
 
 namespace SymbolicDimensions
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 class Dimension where
   size : Nat

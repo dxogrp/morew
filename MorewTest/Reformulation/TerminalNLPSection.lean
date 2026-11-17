@@ -35,6 +35,9 @@ class Evidence where
 opaque coefficient (_ : True) : ℝ := 7
 
 section
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 variable [Evidence]
 
 def objectiveSource :=

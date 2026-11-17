@@ -26,6 +26,9 @@ example : GlobalEquiv (@source X first second f) (@continued X first second f) :
 end
 
 section
+-- These fixtures deliberately shadow the concrete real order.
+set_option linter.concreteInstances false
+
 variable [first : LinearOrder ℝ] [second : LinearOrder ℝ]
 variable (f : LinearOrder ℝ → ℝ → ℝ)
 

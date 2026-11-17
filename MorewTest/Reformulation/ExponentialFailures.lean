@@ -284,6 +284,9 @@ class Dimension where
   size : ℕ
 
 section
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 variable [Dimension]
 
 def symbolic :=

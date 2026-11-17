@@ -49,6 +49,9 @@ example : GlobalEquiv (family offset) (continuedFamily offset) :=
 end
 
 namespace Instances
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 set_option linter.overlappingInstances false
 variable [first : Remove.Instances.Parameter] [second : Remove.Instances.Parameter]
 

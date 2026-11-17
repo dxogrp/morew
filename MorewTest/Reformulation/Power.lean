@@ -286,6 +286,9 @@ end Symbolic
 
 namespace ShadowedMembership
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 def marker : Set (ℝ × ℝ × ℝ) := Set.univ
 
 -- Using the instance in an untouched row retains it in the target's actual

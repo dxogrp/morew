@@ -39,6 +39,9 @@ example (x : ℝ) : continued.feasible x ↔ x ≤ 3 ∧ -x ≤ 3 ∧ x ≤ 5 �
 
 namespace SymbolicDimension
 
+-- These fixtures preserve concrete section instances across imports.
+set_option linter.concreteInstances false
+
 variable [Dimension]
 
 reformulation continued : lowered := by

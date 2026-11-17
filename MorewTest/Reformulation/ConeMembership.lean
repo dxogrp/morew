@@ -316,6 +316,9 @@ example (x y : ℝ) : replayedNegativeAlias.feasible (x, y) ↔
 -- local definition retains a custom instance parameter. Stored presentation
 -- reconstruction must keep those exact instances as well as the readable binding names.
 namespace AmbientZero
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 section
 variable [customZero : Zero ℝ]
 
@@ -348,6 +351,9 @@ end
 end AmbientZero
 
 namespace AmbientSubtraction
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 section
 variable [customSub : HSub ℝ ℝ ℝ]
 
@@ -380,6 +386,9 @@ end
 end AmbientSubtraction
 
 namespace AmbientAddition
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 private abbrev canonicalAddition : HAdd ℝ ℝ ℝ := inferInstance
 

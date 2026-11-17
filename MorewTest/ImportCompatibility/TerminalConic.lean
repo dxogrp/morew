@@ -18,6 +18,9 @@ namespace MorewTest.ImportCompatibility.TerminalConic
 open Morew Morew.Conic
 noncomputable section
 
+-- These fixtures preserve concrete section instances across imports.
+set_option linter.concreteInstances false
+
 variable [Parameter] (hn : 0 < Parameter.size) (hε : 0 < Parameter.epsilon)
 
 def importedMinimumForm : Conic.Form minimumTarget := minimumTarget.conicForm

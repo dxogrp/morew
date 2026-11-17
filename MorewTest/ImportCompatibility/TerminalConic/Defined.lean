@@ -15,6 +15,9 @@ or an unnecessary parameter of the represented target.
 
 namespace MorewTest.ImportCompatibility.TerminalConic
 
+-- These fixtures preserve concrete section instances across imports.
+set_option linter.concreteInstances false
+
 open Morew Morew.Conic
 noncomputable section
 
