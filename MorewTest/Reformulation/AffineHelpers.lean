@@ -307,24 +307,21 @@ example : GlobalEquiv (nativeCoordinate ι e c) (nativeCoordinateTarget ι e c) 
 
 -- Form notation needs only finiteness after the commands have demonstrated
 -- that they recover the helper's evidence themselves.
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (anotherRowTarget ι e c) := anotherRowTarget.isConic ι e c
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (selectedRowTarget ι e c) := selectedRowTarget.isConic ι e c
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (oppositeOperandTarget ι e c) := oppositeOperandTarget.isConic ι e c
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (nativeCoordinateTarget ι e c) := nativeCoordinateTarget.isConic ι e c
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (anotherRowTarget.conicForm ι e c).data.rowCount = 3 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (oppositeOperandTarget.conicForm ι e c).data.rowCount = 2 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (nativeCoordinateTarget.conicForm ι e c).data.rowCount = 2 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (anotherRowTarget.conicForm ι e c).data.toProblem = anotherRowTarget ι e c := by
-  let : Finite ι := Finite.of_equiv (Fin 2) e
-  exact (anotherRowTarget.conicForm ι e c).represents
+section
+
+variable [Finite ι]
+
+example : IsConic (anotherRowTarget ι e c) := anotherRowTarget.isConic ι e c
+example : IsConic (selectedRowTarget ι e c) := selectedRowTarget.isConic ι e c
+example : IsConic (oppositeOperandTarget ι e c) := oppositeOperandTarget.isConic ι e c
+example : IsConic (nativeCoordinateTarget ι e c) := nativeCoordinateTarget.isConic ι e c
+example : (anotherRowTarget.conicForm ι e c).data.rowCount = 3 := rfl
+example : (oppositeOperandTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (nativeCoordinateTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (anotherRowTarget.conicForm ι e c).data.toProblem = anotherRowTarget ι e c :=
+  (anotherRowTarget.conicForm ι e c).represents
+
+end
 
 example (x : ι → ℝ) (t : ℝ) : (anotherRowTarget ι e c).feasible (x, t) ↔
     t - x (e 0) ∈ ℝ₊ ∧ t + x (e 0) ∈ ℝ₊ ∧

@@ -276,25 +276,22 @@ example : GlobalEquiv (auxiliarySource ι e c) (auxiliaryTarget ι e c) :=
   auxiliaryTarget.equiv ι e c
 
 -- Ordinary certificate use needs only finiteness, without an ambient enumeration.
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (automaticTarget.conicForm ι e c).data.rowCount = 2 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (selectedTarget.conicForm ι e c).data.rowCount = 2 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (auxiliaryTarget.conicForm ι e c).data.rowCount = 4 := rfl
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (automaticTarget.conicForm ι e c).data.toProblem = automaticTarget ι e c := by
-  let : Finite ι := Finite.of_equiv (Fin 2) e
-  exact (automaticTarget.conicForm ι e c).represents
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    (selectedTarget.conicForm ι e c).data.toProblem = selectedTarget ι e c := by
-  let : Finite ι := Finite.of_equiv (Fin 2) e
-  exact (selectedTarget.conicForm ι e c).represents
+section
 
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (selectedTarget ι e c) := selectedTarget.isConic ι e c
-example : letI : Finite ι := Finite.of_equiv (Fin 2) e
-    IsConic (auxiliaryTarget ι e c) := auxiliaryTarget.isConic ι e c
+variable [Finite ι]
+
+example : (automaticTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (selectedTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (auxiliaryTarget.conicForm ι e c).data.rowCount = 4 := rfl
+example : (automaticTarget.conicForm ι e c).data.toProblem = automaticTarget ι e c :=
+  (automaticTarget.conicForm ι e c).represents
+example : (selectedTarget.conicForm ι e c).data.toProblem = selectedTarget ι e c :=
+  (selectedTarget.conicForm ι e c).represents
+
+example : IsConic (selectedTarget ι e c) := selectedTarget.isConic ι e c
+example : IsConic (auxiliaryTarget ι e c) := auxiliaryTarget.isConic ι e c
+
+end
 
 example (x : ι → ℝ) :
     letI := Fintype.ofEquiv (Fin 2) e
