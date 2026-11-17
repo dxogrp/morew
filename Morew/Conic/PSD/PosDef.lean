@@ -33,7 +33,7 @@ theorem posDef_of_fromBlocksFin_identity_psd {n : Nat}
       (Matrix.fromBlocks P 1 1 W *ᵥ Sum.elim x 0) = 0 := by
     simpa [Matrix.fromBlocks_mulVec, sumElim_dotProduct_sumElim,
       Function.star_sumElim] using heq.symm
-  have hkernel := hB.dotProduct_mulVec_zero_iff (Sum.elim x (0 : Fin n → ℝ)) |>.mp hzero
+  have hkernel := hB.dotProduct_mulVec_zero_iff.mp hzero
   apply hx
   funext i
   simpa [Matrix.fromBlocks_mulVec] using congrFun hkernel (Sum.inr i)

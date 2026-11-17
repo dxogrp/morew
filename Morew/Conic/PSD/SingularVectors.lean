@@ -38,7 +38,8 @@ theorem gram_rightSingularBasis (i : Fin n) :
     ((lin A).adjoint ∘ₗ lin A) (rightSingularBasis A i) =
       singularValue A i ^ 2 • rightSingularBasis A i := by
   rw [singularValue, (lin A).sq_singularValues_fin dim]
-  exact (lin A).isSymmetric_adjoint_comp_self.apply_eigenvectorBasis dim i
+  rw [rightSingularBasis, LinearMap.IsSymmetric.apply_eigenvectorBasis]
+  rfl
 
 theorem inner_images_rightSingularBasis (i j : Fin n) :
     ⟪lin A (rightSingularBasis A i), lin A (rightSingularBasis A j)⟫ =

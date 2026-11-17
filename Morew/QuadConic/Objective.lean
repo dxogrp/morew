@@ -126,8 +126,7 @@ def sum {ι : Type*} {f : ι → X → ℝ} (s : Finset ι)
     induction s using Finset.induction_on with
     | empty => simp
     | @insert i s hi ih =>
-        simp only [Finset.sum_insert hi, add_apply,
-          AffineMap.coe_add, Pi.add_apply]
+        simp only [Finset.sum_insert hi, add_apply]
         rw [← (a i).correct x, ← ih]
         ring
 

@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Data.Fin.VecNotation
@@ -202,7 +202,7 @@ def sum {ι : Type*} {f : ι → X → Y}
     induction s using Finset.induction_on with
     | empty => rfl
     | @insert i s hi ih =>
-        simp only [Finset.sum_insert hi, AffineMap.coe_add, Pi.add_apply]
+        simp only [Finset.sum_insert hi, FunLike.coe_add, Pi.add_apply]
         exact congrArg₂ (· + ·) ((a i).correct x) ih
 
 /-- Take a dot product with a fixed vector on the left. -/

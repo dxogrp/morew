@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Elab.Expr
 import Morew.Elab.State
-import Mathlib.Data.ENNReal.Inv
+import Mathlib.Basic.ENNReal.Inv
 import Mathlib.Tactic.NormNum
 import Lean.Meta.Check
 

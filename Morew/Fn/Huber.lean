@@ -3,7 +3,7 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -25,12 +25,12 @@ noncomputable def huber (M x : ℝ) : ℝ :=
 
 /-- Huber loss is quadratic between the joining points. -/
 theorem huber_of_abs_le (M x : ℝ) (hx : |x| ≤ M) : huber M x = x ^ 2 := by
-  simp only [huber, if_pos hx]
+  simp only [huber, ite_eq_left hx]
 
 /-- Huber loss is linear in the absolute residual outside the quadratic region. -/
 theorem huber_of_abs_gt (M x : ℝ) (hx : M < |x|) :
     huber M x = 2 * M * |x| - M ^ 2 := by
-  simp only [huber, if_neg hx.not_ge]
+  simp only [huber, ite_eq_right hx.not_ge]
 
 /-- Huber loss is an even function of the residual. -/
 @[simp] theorem huber_neg (M x : ℝ) : huber M (-x) = huber M x := by
