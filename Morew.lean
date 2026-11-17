@@ -133,6 +133,8 @@ import Morew.Rewrite.Basic
 import Morew.Rewrite.Euclidean
 import Morew.Rewrite.Polyhedral
 import Morew.Rewrite.Polyhedral.Lemmas
+import Morew.Rewrite.Sum
+import Morew.Rewrite.Sum.Lemmas
 import Morew.Substitution
 import Morew.Syntax
 import Morew.Syntax.Elab

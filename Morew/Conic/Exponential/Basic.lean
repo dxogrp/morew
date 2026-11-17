@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Morew.Conic.Exponential.Cone
 import Morew.Fn.Exponential
+import Morew.Rewrite.Sum.Lemmas
 import Mathlib.Algebra.BigOperators.Field
 import Mathlib.Tactic.Linarith
 
@@ -73,12 +74,9 @@ per coordinate and one affine sum bound. The empty sum is allowed. -/
 theorem le_sum_entr_iff {n : Nat} (x : Fin n → ℝ) (t : ℝ)
     (hx : ∀ i, 0 ≤ x i) :
     t ≤ ∑ i, Fn.entr (x i) ↔
-      ∃ u : Fin n → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i := by
-  constructor
-  · intro h
-    exact ⟨fun i => Fn.entr (x i), fun i => (le_entr_iff _ _ (hx i)).mp le_rfl, h⟩
-  · rintro ⟨u, hu, hsum⟩
-    exact hsum.trans (Finset.sum_le_sum fun i _ => (le_entr_iff _ _ (hx i)).mpr (hu i))
+      ∃ u : Fin n → ℝ, (∀ i, (u i, x i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i :=
+  Rewrite.Sum.le_sum_iff_exists (fun i => Fn.entr (x i))
+    (fun i s => (s, x i, 1) ∈ EXP) (fun i s => le_entr_iff (x i) s (hx i)) t
 
 /-- A finite KL sum has an epigraph represented by one exponential cone per
 coordinate and one affine sum bound. The empty sum is allowed. -/
@@ -86,14 +84,10 @@ theorem sum_klDiv_le_iff {n : Nat} (x q : Fin n → ℝ) (t : ℝ)
     (hx : ∀ i, 0 ≤ x i) (hq : ∀ i, 0 < q i) :
     (∑ i, Fn.klDiv (x i) (q i)) ≤ t ↔
       ∃ u : Fin n → ℝ,
-        (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t := by
-  constructor
-  · intro h
-    exact ⟨fun i => Fn.klDiv (x i) (q i),
-      fun i => (klDiv_le_iff _ _ _ (hx i) (hq i)).mp le_rfl, h⟩
-  · rintro ⟨u, hu, hsum⟩
-    exact (Finset.sum_le_sum fun i _ =>
-      (klDiv_le_iff _ _ _ (hx i) (hq i)).mpr (hu i)).trans hsum
+        (∀ i, (q i - x i - u i, x i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t :=
+  Rewrite.Sum.sum_le_iff_exists (fun i => Fn.klDiv (x i) (q i))
+    (fun i s => (q i - x i - s, x i, q i) ∈ EXP)
+    (fun i s => klDiv_le_iff (x i) (q i) s (hx i) (hq i)) t
 
 /-- A nonempty finite log-sum-exp bound is represented by a family of
 exponential-cone constraints and one affine sum bound. -/

@@ -175,6 +175,60 @@ example (s t : ℝ) : boundaryTarget.feasible (s, t) ↔
 
 end EntropyAndKL
 
+namespace FiniteSums
+
+def source (q : Fin n → ℝ) :=
+  problem (x : Fin n → ℝ) (s t : ℝ)
+    minimize t - s
+    subject to
+      domain : 0 ≤ x
+      entropy : s ≤ ∑ i, Fn.entr (x i)
+      divergence : (∑ i, Fn.klDiv (x i) (q i)) ≤ t
+
+variable (q : Fin n → ℝ) (hq : ∀ i, 0 < q i)
+
+include hq in
+reformulation automatic : (source q) := by
+  conic
+
+reformulation selected : (source q) := by
+  conic at entropy using Exponential.sumEntrHypograph
+  conic at divergence using (Exponential.sumKlDivEpigraph q hq)
+  conic
+
+example : GlobalEquiv (source q) (automatic q) := automatic.equiv q hq
+example : GlobalEquiv (source q) (selected q) := selected.equiv q hq
+example : automatic q = selected q := rfl
+example : IsConic (automatic q) := automatic.isConic q
+example : (automatic.conicForm q).data.toProblem = automatic q :=
+  (automatic.conicForm q).represents
+example : (automatic.conicForm q).data.rowCount = 5 := rfl
+
+example (x u v : Fin n → ℝ) (s t : ℝ) :
+    (automatic q).objective ((((x, s), t), u), v) = t - s := rfl
+
+example (x u v : Fin n → ℝ) (s t : ℝ) :
+    (automatic q).feasible ((((x, s), t), u), v) ↔
+      x ∈ ℝ₊^n ∧ (∀ i, (u i, x i, 1) ∈ EXP) ∧ (∑ i, u i) - s ∈ ℝ₊ ∧
+        (∀ i, (q i - x i - v i, x i, q i) ∈ EXP) ∧ t - (∑ i, v i) ∈ ℝ₊ := Iff.rfl
+
+example (z : FeasiblePoint (automatic q)) :
+    ((automatic.equiv q hq).backward.map z).val = z.val.1.1 := rfl
+
+example (q : Fin 0 → ℝ) : GlobalEquiv (source q) (automatic q) :=
+  automatic.equiv q (fun i => Fin.elim0 i)
+
+example (q x u v : Fin 0 → ℝ) (s t : ℝ) :
+    (automatic q).feasible ((((x, s), t), u), v) ↔ s ≤ 0 ∧ 0 ≤ t := by
+  change (x ∈ ℝ₊^0 ∧ (∀ i, (u i, x i, 1) ∈ EXP) ∧ (∑ i, u i) - s ∈ ℝ₊ ∧
+    (∀ i, (q i - x i - v i, x i, q i) ∈ EXP) ∧ t - (∑ i, v i) ∈ ℝ₊) ↔ _
+  simp only [Cone.mem_nonneg, Fin.forall_fin_zero, true_and, Finset.univ_eq_empty,
+    Finset.sum_empty, zero_sub, sub_zero]
+  change (0 ≤ -s ∧ 0 ≤ t) ↔ _
+  simp only [neg_nonneg]
+
+end FiniteSums
+
 namespace BinaryEntropy
 
 def p :=

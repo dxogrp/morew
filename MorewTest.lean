@@ -316,6 +316,7 @@ import MorewTest.Rewrite.Registry.Second
 import MorewTest.Rewrite.Registry.Source
 import MorewTest.Rewrite.Registry.Types
 import MorewTest.Rewrite.Replace
+import MorewTest.Rewrite.Sum
 import MorewTest.Substitution.Evidence
 import MorewTest.Substitution.Registry
 import MorewTest.Substitution.Registry.Source

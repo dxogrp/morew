@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Morew.Conic.Exponential
-import Morew.Rewrite.Basic
+import Morew.Rewrite.Sum
 
 /-!
 # Exact exponential-cone representations
@@ -90,19 +90,17 @@ def klDivEpigraph :
     simpa only [exists_const] using klDiv_le_iff p.1.1 p.2.1 t p.1.2 p.2.2
 
 /-- The finite entropy sum hypograph on coordinatewise nonnegative inputs. -/
-def sumEntrHypograph {n : Nat} :
+noncomputable def sumEntrHypograph {n : Nat} :
     HypographRepr (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} =>
-      ∑ i, Fn.entr (x.1 i)) where
-  Auxiliary := Fin n → ℝ
-  target x t u := (∀ i, (u i, x.1 i, 1) ∈ EXP) ∧ t ≤ ∑ i, u i
-  source_iff_exists x t := le_sum_entr_iff x.1 t x.2
+      ∑ i, Fn.entr (x.1 i)) :=
+  HypographRepr.sumOfIff (fun i x s => (s, x.1 i, 1) ∈ EXP)
+    (fun i x s => le_entr_iff (x.1 i) s (x.2 i))
 
 /-- The finite KL sum epigraph against a fixed positive vector. -/
-def sumKlDivEpigraph {n : Nat} (q : Fin n → ℝ) (hq : ∀ i, 0 < q i) :
+noncomputable def sumKlDivEpigraph {n : Nat} (q : Fin n → ℝ) (hq : ∀ i, 0 < q i) :
     EpigraphRepr (fun x : {x : Fin n → ℝ // ∀ i, 0 ≤ x i} =>
-      ∑ i, Fn.klDiv (x.1 i) (q i)) where
-  Auxiliary := Fin n → ℝ
-  target x t u := (∀ i, (q i - x.1 i - u i, x.1 i, q i) ∈ EXP) ∧ (∑ i, u i) ≤ t
-  source_iff_exists x t := sum_klDiv_le_iff x.1 q t x.2 hq
+      ∑ i, Fn.klDiv (x.1 i) (q i)) :=
+  EpigraphRepr.sumOfIff (fun i x s => (q i - x.1 i - s, x.1 i, q i) ∈ EXP)
+    (fun i x s => klDiv_le_iff (x.1 i) (q i) s (x.2 i) (hq i))
 
 end Morew.Conic.Exponential
