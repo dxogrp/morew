@@ -131,7 +131,7 @@ private def nonpos? (point value : Expr) : MetaM (Option Expr) := do
         if ← isDefEq declaration.type q($value < 0) then
           return some (← mkAppM ``nonposOfNegative #[declaration.toExpr])
   if let some proof ← Evidence.constantSign? point q(-$value) false then
-    return some (← mkAppM ``nonposOfNegNonneg #[proof])
+    return some (← mkAppOptM ``nonposOfNegNonneg #[some value, some proof])
   return none
 
 private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
