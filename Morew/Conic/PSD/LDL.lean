@@ -34,10 +34,8 @@ theorem ldl_lowerInv_diag (hX : X.PosDef) (i : Fin n) : LDL.lowerInv hX i i = 1 
   simpa only [LDL.lowerInv, Pi.basisFun_apply, Pi.single_eq_same] using h.symm
 
 /-- The lower factor in the LDL decomposition is lower triangular. -/
-theorem ldl_lower_triangular (hX : X.PosDef) : (LDL.lower hX).IsLowerTriangular := by
-  apply Matrix.blockTriangular_inv_of_blockTriangular
-  intro i j hij
-  exact LDL.isLowerTriangular_lowerInv hX hij
+theorem ldl_lower_triangular (hX : X.PosDef) : (LDL.lower hX).IsLowerTriangular :=
+  LDL.isLowerTriangular_lower hX
 
 /-- The lower factor in the LDL decomposition has unit diagonal. -/
 theorem ldl_lower_diag (hX : X.PosDef) (i : Fin n) : LDL.lower hX i i = 1 := by
