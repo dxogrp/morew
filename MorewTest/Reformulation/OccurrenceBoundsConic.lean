@@ -85,5 +85,42 @@ example : IsConic maximumConverted := maximumConverted.isConic
 example : maximumConverted.conicForm.data.sense = .maximize := rfl
 example : maximumConverted.conicForm.data.rowCount = 5 := rfl
 
+reformulation maxSquareConic : maxSquare := by
+  epigraph u at (x ^ 2) as square_bound
+  epigraph t as max_bound
+  conic
+
+example : GlobalEquiv maxSquare maxSquareConic := maxSquareConic.equiv
+example : IsConic maxSquareConic := maxSquareConic.isConic
+example : maxSquareConic.conicForm.data.toProblem = maxSquareConic :=
+  maxSquareConic.conicForm.represents
+example : maxSquareConic.conicForm.data.rowCount = 3 := rfl
+example (x u t : ℝ) : maxSquareConic.objective ((x, u), t) = t := rfl
+
+example (p : FeasiblePoint maxSquare) :
+    (maxSquareConic.equiv.forward.map p).val =
+      ((p.val, p.val ^ 2), max (p.val ^ 2) 1) := rfl
+example (p : FeasiblePoint maxSquareConic) :
+    (maxSquareConic.equiv.backward.map p).val = p.val.1.1 := rfl
+
+reformulation minLogConic : minLog := by
+  hypograph u at (Real.log x) as log_bound
+  hypograph t as min_bound
+  conic
+
+example : GlobalEquiv minLog minLogConic := minLogConic.equiv
+example : IsConic minLogConic := minLogConic.isConic
+example : minLogConic.conicForm.data.toProblem = minLogConic :=
+  minLogConic.conicForm.represents
+example : minLogConic.conicForm.data.sense = .maximize := rfl
+example : minLogConic.conicForm.data.rowCount = 4 := rfl
+example (x u t : ℝ) : minLogConic.objective ((x, u), t) = t := rfl
+
+example (p : FeasiblePoint minLog) :
+    (minLogConic.equiv.forward.map p).val =
+      ((p.val, Real.log p.val), min (Real.log p.val) 1) := rfl
+example (p : FeasiblePoint minLogConic) :
+    (minLogConic.equiv.backward.map p).val = p.val.1.1 := rfl
+
 end
 end MorewTest.Reformulation.OccurrenceBounds
