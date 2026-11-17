@@ -2,7 +2,8 @@ BLUE := \033[36m
 BOLD := \033[1m
 RESET := \033[0m
 
-LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker Morew MorewTest Examples
+# Fresh replay avoids the Lean 4.36 checker's multi-module crash.
+LEANCHECK := LEAN_NUM_THREADS=1 lake env leanchecker --fresh
 
 .DEFAULT_GOAL := help
 
@@ -43,12 +44,16 @@ lint: build ## build and lint the shipped Morew library
 .PHONY: check-kernel
 check-kernel: build ## build and kernel-check the library, tests, and examples
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
-	@$(LEANCHECK)
+	@$(LEANCHECK) Morew
+	@$(LEANCHECK) MorewTest
+	@$(LEANCHECK) Examples
 
 .PHONY: check
 check: lint ## run the local Lean build, lint, and kernel checks
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
-	@$(LEANCHECK)
+	@$(LEANCHECK) Morew
+	@$(LEANCHECK) MorewTest
+	@$(LEANCHECK) Examples
 
 .PHONY: docs
 docs: ## build the documentation guide, examples, and API reference

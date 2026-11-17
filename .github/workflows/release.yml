@@ -63,7 +63,7 @@ jobs:
           LEAN_NUM_THREADS: "1"
         run: |
           /usr/bin/time -v -o "$RUNNER_TEMP/morew-kernel-time.txt" \
-            lake env leanchecker Morew MorewTest Examples
+            make check-kernel
 
       - name: Summarize kernel-check measurements
         if: always()
