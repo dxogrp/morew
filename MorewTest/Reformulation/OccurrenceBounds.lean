@@ -308,5 +308,86 @@ reformulation naturalSplit : natural := by
 example : GlobalEquiv natural naturalSplit := naturalSplit.equiv
 example (x t : ℕ) : naturalSplit.objective (x, t) = t + 1 := rfl
 
+def maxSquare := problem (x : ℝ) minimize max (x ^ 2) 1
+
+reformulation maxSquareSplit : maxSquare := by
+  epigraph u at (x ^ 2) as square_bound
+
+example : GlobalEquiv maxSquare maxSquareSplit := maxSquareSplit.equiv
+example (x u : ℝ) : maxSquareSplit.objective (x, u) = max u 1 := rfl
+example (x u : ℝ) : maxSquareSplit.feasible (x, u) ↔ x ^ 2 ≤ u := Iff.rfl
+
+theorem maxSquareContext : ObjectiveEpigraphContext maxSquare
+    (fun x => x ^ 2) (fun _ u => max u 1) where
+  atValue _ := rfl
+  backward _ _ _ bound := max_le_max bound le_rfl
+
+reformulation maxSquareUsing : maxSquare := by
+  epigraph u at (x ^ 2) as square_bound using maxSquareContext
+
+example : GlobalEquiv maxSquare maxSquareUsing := maxSquareUsing.equiv
+example : maxSquareSplit = maxSquareUsing := rfl
+
+def minLog :=
+  problem (x : ℝ)
+    maximize (min (Real.log x) 1 : ℝ)
+    subject to positive : 1 ≤ x
+
+example (x : ℝ) : minLog.objective x = (min (Real.log x) 1 : ℝ) := rfl
+
+reformulation minLogSplit : minLog := by
+  hypograph u at (Real.log x) as log_bound
+
+example : GlobalEquiv minLog minLogSplit := minLogSplit.equiv
+example (x u : ℝ) : minLogSplit.objective (x, u) = (min u 1 : ℝ) := rfl
+example (x u : ℝ) : minLogSplit.feasible (x, u) ↔ 1 ≤ x ∧ u ≤ Real.log x := Iff.rfl
+
+def positiveSquare := problem (x : ℝ) minimize (x ^ 2 - 1)⁺
+
+reformulation positiveSquareSplit : positiveSquare := by
+  epigraph u at (x ^ 2)
+
+example : GlobalEquiv positiveSquare positiveSquareSplit := positiveSquareSplit.equiv
+example (x u : ℝ) : positiveSquareSplit.objective (x, u) = (u - 1)⁺ := rfl
+example (x u : ℝ) : positiveSquareSplit.feasible (x, u) ↔ x ^ 2 ≤ u := Iff.rfl
+
+def maxConstraint :=
+  problem (x : ℝ)
+    maximize x
+    subject to bounds : (max (x ^ 2) 1 ≤ 10 ∧ x ≠ 0) ∧ True
+
+reformulation maxConstraintSplit : maxConstraint := by
+  epigraph u at (x ^ 2) in bounds
+
+example : GlobalEquiv maxConstraint maxConstraintSplit := maxConstraintSplit.equiv
+example (x u : ℝ) : maxConstraintSplit.objective (x, u) = x := rfl
+example (x u : ℝ) : maxConstraintSplit.feasible (x, u) ↔
+    ((max u 1 ≤ 10 ∧ x ≠ 0) ∧ True) ∧ x ^ 2 ≤ u := Iff.rfl
+
+def minConstraint :=
+  problem (x : ℝ)
+    minimize x
+    subject to lower : 1 ≤ min (Real.log x) 2
+
+reformulation minConstraintSplit : minConstraint := by
+  hypograph u at (Real.log x) in lower
+
+example : GlobalEquiv minConstraint minConstraintSplit := minConstraintSplit.equiv
+example (x u : ℝ) : minConstraintSplit.objective (x, u) = x := rfl
+example (x u : ℝ) : minConstraintSplit.feasible (x, u) ↔
+    1 ≤ min u 2 ∧ u ≤ Real.log x := Iff.rfl
+
+def positiveConstraint :=
+  problem (x : ℝ)
+    minimize x
+    subject to budget : (x ^ 2 - 1)⁺ ≤ 4
+
+reformulation positiveConstraintSplit : positiveConstraint := by
+  epigraph u at (x ^ 2) in budget
+
+example : GlobalEquiv positiveConstraint positiveConstraintSplit := positiveConstraintSplit.equiv
+example (x u : ℝ) : positiveConstraintSplit.feasible (x, u) ↔
+    (u - 1)⁺ ≤ 4 ∧ x ^ 2 ≤ u := Iff.rfl
+
 end
 end MorewTest.Reformulation.OccurrenceBounds

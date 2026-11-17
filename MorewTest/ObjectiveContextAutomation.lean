@@ -29,14 +29,14 @@ private def checkInequality (stx : TSyntax `term) (success : Bool := true) : Ter
     let bound := args.back!
     let before ← getMCtx
     let result ← proveInequality point operands[2]! operands[3]! bound
-    assertMVarAllocationStateUnchanged before "context recognition leaked scratch metavariables"
+    assertExprMVarStateUnchanged before "context recognition"
     match result with
     | .error reason => if success then throwError "expected context proof: {reason}"
     | .ok proof =>
       unless success do throwError "unexpected context proof for {relation}"
       unless ← isDefEq (← inferType proof) relation do
         throwError "context proof has the wrong type: {← inferType proof}"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete inequality context certificate"
 
 private def checkPredicate (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
   let term ← elaborateUnchecked stx
@@ -44,14 +44,16 @@ private def checkPredicate (stx : TSyntax `term) (success : Bool := true) : Term
     let point := args[args.size - 4]!
     let bound := args[args.size - 2]!
     let sourceProof := args.back!
+    let before ← getMCtx
     let result ← provePredicate point (← inferType sourceProof) target bound sourceProof
+    assertExprMVarStateUnchanged before "predicate context recognition"
     match result with
     | .error reason => if success then throwError "expected constraint context proof: {reason}"
     | .ok proof =>
       unless success do throwError "unexpected predicate proof for {target}"
       unless ← isDefEq (← inferType proof) target do
         throwError "predicate context proof has the wrong type"
-      checkWithKernel proof
+      checkCompleteWithKernel proof "incomplete predicate context certificate"
 
 noncomputable def hiddenMonotone (x : ℝ) : ℝ := Real.exp x
 private def wrappedBound (x t : ℝ) : Prop := x ≤ t
@@ -82,6 +84,29 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   checkInequality (← `(fun (x t : ℝ) (_ : t ≤ x ^ 2) => t + x ≤ x ^ 2 + x))
 
 run_cmd Lean.Elab.Command.liftTermElabM do
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => max (x ^ 2) 1 ≤ max t 1))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => max 1 (x ^ 2) ≤ max 1 t))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    max (x ^ 2) (x ^ 2 + 1) ≤ max t (t + 1)))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => min (x ^ 2) 1 ≤ min t 1))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => min 1 (x ^ 2) ≤ min 1 t))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    min (x ^ 2) (2 * x ^ 2) ≤ min t (2 * t)))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => (x ^ 2)⁺ ≤ t⁺))
+  checkInequality (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) =>
+    min t 1 ≤ min (Real.log x) 1))
+  checkInequality (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) =>
+    max t (t + 1) ≤ max (Real.log x) (Real.log x + 1)))
+  checkInequality (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) => t⁺ ≤ (Real.log x)⁺))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    Real.exp ((max (x ^ 2 - 1) (2 * x ^ 2))⁺ + x) ≤
+      Real.exp ((max (t - 1) (2 * t))⁺ + x)))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    (-2) * (min t 1)⁺ ≤ (-2) * (min (x ^ 2) 1)⁺))
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    max (-t) 1 ≤ max (-(x ^ 2)) 1))
+
+run_cmd Lean.Elab.Command.liftTermElabM do
   checkPredicate (← `(fun (x t : ℝ) (_ : |x| ≤ t) (_ : t + x ^ 2 ≤ 10) =>
     |x| + x ^ 2 ≤ 10))
   checkPredicate (← `(fun (x t : ℝ) (_ : t ≤ x ^ 2) (_ : 1 ≤ t) => 1 ≤ x ^ 2))
@@ -90,6 +115,21 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   checkPredicate (← `(fun (x t : ℝ) (_ : |x| ≤ t)
     (_ : (t + x ^ 2 ≤ 10 ∧ x ≠ 0) ∧ True) =>
     (|x| + x ^ 2 ≤ 10 ∧ x ≠ 0) ∧ True))
+  checkPredicate (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) (_ : max t 1 ≤ 10) =>
+    max (x ^ 2) 1 ≤ 10))
+  checkPredicate (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) (_ : 10 ≥ max 1 t) =>
+    10 ≥ max 1 (x ^ 2)))
+  checkPredicate (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) (_ : 1 ≤ min t 2) =>
+    1 ≤ min (Real.log x) 2))
+  checkPredicate (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) (_ : min 2 t ≥ 1) =>
+    min 2 (Real.log x) ≥ 1))
+  checkPredicate (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) (_ : t⁺ ≤ 10) =>
+    (x ^ 2)⁺ ≤ 10))
+  checkPredicate (← `(fun (x t : ℝ) (_ : t ≤ Real.log x) (_ : 1 ≤ t⁺) =>
+    1 ≤ (Real.log x)⁺))
+  checkPredicate (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t)
+    (_ : (max t 1 ≤ 10 ∧ x ≠ 0) ∧ t⁺ ≤ 12) =>
+    (max (x ^ 2) 1 ≤ 10 ∧ x ≠ 0) ∧ (x ^ 2)⁺ ≤ 12))
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => t ≤ x ^ 2)) false
@@ -108,6 +148,28 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   checkPredicate (← `(fun (x t : ℝ) (_ : x ≤ t)
     (_ : @LE.le ℝ ⟨fun a b => b ≤ a⟩ t 1) =>
     @LE.le ℝ ⟨fun a b => b ≤ a⟩ x 1)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    max t 1 ≤ max (x ^ 2) 1)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    min t 1 ≤ min (x ^ 2) 1)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) => t⁺ ≤ (x ^ 2)⁺)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    max (x ^ 2) (-(x ^ 2)) ≤ max t (-t))) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    min (x ^ 2) (-(x ^ 2)) ≤ min t (-t))) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ≤ t) =>
+    @max ℝ ⟨fun a _ => a⟩ x 1 ≤ @max ℝ ⟨fun a _ => a⟩ t 1)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ≤ t) =>
+    @min ℝ ⟨fun _ b => b⟩ x 1 ≤ @min ℝ ⟨fun _ b => b⟩ t 1)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ≤ t) =>
+    @posPart ℝ ⟨fun _ => 0⟩ x ≤ @posPart ℝ ⟨fun _ => 0⟩ t)) false
+  checkInequality (← `(fun [Max ℝ] (x t : ℝ) (_ : x ≤ t) => max x 1 ≤ max t 1)) false
+  checkInequality (← `(fun [Min ℝ] (x t : ℝ) (_ : x ≤ t) => min x 1 ≤ min t 1)) false
+  checkInequality (← `(fun [PosPart ℝ] (x t : ℝ) (_ : x ≤ t) => x⁺ ≤ t⁺)) false
+  checkInequality (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) =>
+    max |x ^ 2| 1 ≤ max |t| 1)) false
+  checkPredicate (← `(fun (x t : ℝ) (_ : x ^ 2 ≤ t) (_ : 1 ≤ min t 2) =>
+    1 ≤ min (x ^ 2) 2)) false
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let source ← elaborateUnchecked (← `(fun (x t : ℝ) (_ : x ≤ t) => x ≤ t))
@@ -118,7 +180,41 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       | throwError "an unresolved selected value was accepted"
     if ← unknown.mvarId!.isAssigned then
       throwError "context recognition assigned a caller metavariable"
-    assertMVarAllocationStateUnchanged before "failed context recognition leaked scratch metavariables"
+    assertExprMVarStateUnchanged before "failed context recognition"
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  let source ← elaborateUnchecked (← `(fun (x t : ℝ) (_ : x ≤ t) => x ≤ t))
+  lambdaTelescope source fun args _ => do
+    let real := Lean.mkConst ``Real
+    let unknown ← mkFreshExprMVar real
+    for stx in #[← `(fun a : ℝ => max a 1), ← `(fun a : ℝ => min a 1),
+        ← `(fun a : ℝ => a⁺)] do
+      let context ← elaborateUnchecked stx
+      let check (value : Expr) : TermElabM Unit := do
+        let before ← getMCtx
+        let .error _ ← proveInequality args[0]! (mkApp context value)
+            (mkApp context args[1]!) args[2]!
+          | throwError "an unresolved nested context operand was accepted"
+        assertExprMVarStateUnchanged before "unresolved context operand"
+      check unknown
+      withLetDecl `hidden real unknown check
+    let one ← mkNumeral real 1
+    for (head, instanceType, binary) in
+        #[( ``Max.max, ← elaborateUnchecked (← `(Max ℝ)), true),
+          ( ``Min.min, ← elaborateUnchecked (← `(Min ℝ)), true),
+          ( ``PosPart.posPart, ← elaborateUnchecked (← `(PosPart ℝ)), false)] do
+      let missing ← mkFreshExprMVar instanceType
+      let application := fun operation value =>
+        mkAppN (mkConst head [.zero])
+          (#[real, operation, value] ++ if binary then #[one] else #[])
+      let check (operation : Expr) : TermElabM Unit := do
+        let before ← getMCtx
+        let .error _ ← proveInequality args[0]! (application operation args[0]!)
+            (application operation args[1]!) args[2]!
+          | throwError "an unresolved context instance was accepted"
+        assertExprMVarStateUnchanged before "unresolved context instance"
+      check missing
+      withLetDecl `hiddenInstance instanceType missing check
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let value ← elaborateUnchecked (← `((2 : ℝ)))

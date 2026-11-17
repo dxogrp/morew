@@ -45,7 +45,7 @@ def budgeted :=
     let abs_y := |y|
     minimize x ^ 2 + y
     subject to
-      budget : |x| + y ^ 2 ≤ 10
+      budget : max |x| (y ^ 2) ≤ 10
       bound : abs_y ≤ 5
 
 reformulation budgetedConic : budgeted := by

@@ -24,7 +24,9 @@ private def assertAbsent (target aliasName : Lean.Name) :
   for name in #[target, target ++ `equiv, aliasName] do
     if env.contains name then
       Lean.throwError "failed occurrence lift emitted declaration `{name}`"
-  if (Morew.Syntax.getProblemView? env target).isSome then
+  if (Morew.Syntax.getProblemView? env target).isSome ||
+      (Morew.Syntax.getProblemDisplayView? env target).isSome ||
+      (Morew.Syntax.getProblemPrintPresentation? env target).isSome then
     Lean.throwError "failed occurrence lift registered presentation metadata"
 
 elab "assert_occurrence_atomic% " nested:command : command =>
@@ -188,12 +190,49 @@ def dependentSource :=
 reformulation dependent : dependentSource certificate dependentAlias := by
   epigraph t at ((⟨0, Nat.zero_lt_succ n⟩ : Fin (n + 1)))
 
+def repeatedMaxSource := problem (x : ℝ) minimize max (x ^ 2) (x ^ 2)
+
+/-- error: ambiguous occurrence selector: found 2 occurrences in the selected location -/
+#guard_msgs in
+assert_occurrence_atomic%
+reformulation repeatedMax : repeatedMaxSource certificate repeatedMaxAlias := by
+  epigraph u at (x ^ 2)
+
+def maxSource := problem (x : ℝ) minimize max (x ^ 2) 1
+
+/-- error: cannot certify bound context -/
+#guard_msgs (substring := true) in
+assert_occurrence_atomic%
+reformulation maxWrongSense : maxSource certificate maxWrongSenseAlias := by
+  hypograph u at (x ^ 2)
+
+def minConstraintSource :=
+  problem (x : ℝ)
+    minimize x
+    subject to bound : min (x ^ 2) 1 ≤ 10
+
+/-- error: cannot certify bound context -/
+#guard_msgs (substring := true) in
+assert_occurrence_atomic%
+reformulation minWrongPolarity : minConstraintSource certificate minWrongPolarityAlias := by
+  hypograph u at (x ^ 2) in bound
+
+def maxLateSource := problem (x : ℝ) minimize max (x ^ 2) 1 + |x|
+
+/-- error: constraint name `shared` already exists -/
+#guard_msgs in
+assert_occurrence_atomic%
+reformulation maxLate : maxLateSource certificate maxLateAlias := by
+  epigraph u at (x ^ 2) as shared
+  epigraph v at (|x|) as shared
+
 run_cmd do
   for suffix in #["unknown", "decisionName", "constraintName", "unknownRow",
       "noExpression", "wrongLocation", "indirect", "repeated", "repeatedExpression",
       "wrongSense", "wrongPolarity", "equality", "nonmonotone", "binderCollision",
       "definitionCollision", "labelCollision", "invalidEvidence", "lateFailure",
-      "mismatchedEvidence", "defaultLabelCollision", "missingOrder", "dependent"] do
+      "mismatchedEvidence", "defaultLabelCollision", "missingOrder", "dependent",
+      "repeatedMax", "maxWrongSense", "minWrongPolarity", "maxLate"] do
     let ns := `MorewTest.Reformulation.OccurrenceFailures
     assertAbsent (ns ++ Lean.Name.mkSimple suffix) (ns ++ Lean.Name.mkSimple (suffix ++ "Alias"))
 
@@ -212,6 +251,14 @@ reformulation lateFailure : source certificate lateFailureAlias := by
   epigraph s at penalty as recovered
 
 example : GlobalEquiv source lateFailure := lateFailureAlias
+
+reformulation maxLate : maxLateSource certificate maxLateAlias := by
+  epigraph u at (x ^ 2) as shared
+  epigraph v at (|x|) as recovered
+
+example : GlobalEquiv maxLateSource maxLate := maxLateAlias
+example (x u v : ℝ) : maxLate.objective ((x, u), v) = max u 1 + v := rfl
+example (x u v : ℝ) : maxLate.feasible ((x, u), v) ↔ x ^ 2 ≤ u ∧ |x| ≤ v := Iff.rfl
 
 end
 end MorewTest.Reformulation.OccurrenceFailures
