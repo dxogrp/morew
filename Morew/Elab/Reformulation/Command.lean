@@ -22,7 +22,7 @@ open Morew.Elab.Reformulation
 private def outputDeclName (ident : TSyntax `ident) : CommandElabM Name := do
   let scope ← getScope
   let modifiers : Modifiers := {
-    visibility := if scope.isPublic then .public else .private }
+    visibility := if scope.isPublic then .public else .regular }
   return (← withRef ident <| mkDeclName (← getCurrNamespace) modifiers ident.getId).1
 
 private def rootIdentFrom (ref : Syntax) (name : Name) : TSyntax `ident :=
@@ -68,7 +68,7 @@ private def emitDefinitionWithParameters (target : TSyntax `ident)
     def $target : $(← Term.exprToSyntax type) := $(← Term.exprToSyntax value))
   Term.elabMutualDef sectionVars scope #[
     Command.mkDefViewOfDef {
-      visibility := if scope.isPublic then .public else .private
+      visibility := if scope.isPublic then .public else .regular
       computeKind := .noncomputable } definition]
   let name ← resolveGlobalConstNoOverload target
   -- Retain checked universe names and section parameters during generalization.
@@ -256,7 +256,7 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
           propertyScope := { propertyScope with omittedVars := propertyScope.omittedVars.insert name }
       Term.elabMutualDef sectionVars propertyScope
         #[Command.mkDefViewOfTheorem {
-          visibility := if propertyScope.isPublic then .public else .private } propertyDefinition]
+          visibility := if propertyScope.isPublic then .public else .regular } propertyDefinition]
 
 private def elabReformulationCore : CommandElab := fun stx => do
   let (targetName, inputTerm, instantiatedSource, aliasName, steps) ← match stx with
@@ -437,7 +437,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
             let aliasDefinition ← `(Parser.Command.abbrev|
               abbrev $aliasDeclIdent : $relation := $appliedCertificate)
             Term.elabMutualDef sectionVars scope #[Command.mkDefViewOfAbbrev {
-              visibility := if scope.isPublic then .public else .private
+              visibility := if scope.isPublic then .public else .regular
               computeKind := .noncomputable } aliasDefinition]
 
       let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do

@@ -1,4 +1,4 @@
-"""Integration test for regenerating the project's native aggregate modules."""
+"""Integration tests for aggregate modules and downstream imports."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -54,6 +55,66 @@ class ModuleBuildTests(unittest.TestCase):
             "module\n\nimport Morew\n\nexample : fixtureValue = 3 := rfl\n"
         ))
         self.assertFalse((self.root / "KernelCheck.lean").exists())
+
+
+@unittest.skipUnless(shutil.which("lake") and
+                     (ROOT / ".lake/build/lib/lean/Morew/Reformulation/Conic.olean").is_file(),
+                     "requires the pinned Lean toolchain and built Morew library")
+class ReformulationImportTests(unittest.TestCase):
+    def test_non_module_declarations_follow_native_visibility(self):
+        # Real compilation/import tests the serialized declarations and metadata.
+        producer = """\
+            import Morew.Reformulation.Conic
+            open Morew
+            namespace Downstream
+
+            def source := problem (x : Nat) minimize x subject to lower : 0 ≤ x
+            reformulation renamed : source certificate renamedCertificate := by
+              rename lower to nonnegative
+
+            noncomputable def realSource (offset : ℝ) :=
+              problem (x : ℝ) minimize x subject to lower : offset ≤ x
+            variable (offset : ℝ)
+            reformulation conicTarget : (realSource offset) certificate conicCertificate := by
+              conic
+            end Downstream
+            """
+        consumer = """\
+            import Producer
+            open Morew Downstream
+            noncomputable section
+
+            example : GlobalEquiv source renamed := renamed.equiv
+            example : GlobalEquiv source renamed := renamedCertificate
+            example : renamed.objective 2 = 2 := rfl
+
+            variable (offset : ℝ)
+            example : GlobalEquiv (realSource offset) (conicTarget offset) := conicCertificate offset
+            example : Conic.Form (conicTarget offset) := conicTarget.conicForm offset
+            example : IsConic (conicTarget offset) := conicTarget.isConic offset
+            example (point : FeasiblePoint (realSource offset)) :
+                ((conicTarget.equiv offset).forward.map point).val = point.val := rfl
+            example (point : FeasiblePoint (conicTarget offset)) :
+                ((conicTarget.equiv offset).backward.map point).val = point.val := rfl
+
+            reformulation continued : renamed := by
+              rename nonnegative to lower
+            example : GlobalEquiv source continued := renamedCertificate.trans continued.equiv
+            end
+            """
+        with tempfile.TemporaryDirectory(prefix="morew-consumer-") as directory:
+            root = Path(directory)
+            lean_path = os.pathsep.join(filter(None, (directory, os.environ.get("LEAN_PATH"))))
+            env = dict(os.environ, LEAN_PATH=lean_path)
+            for name, source in (("Producer", producer), ("Consumer", consumer)):
+                path = root / f"{name}.lean"
+                path.write_text(textwrap.dedent(source), encoding="utf-8")
+                result = subprocess.run(
+                    ["lake", "env", "lean", "-DwarningAsError=true", "--root", directory,
+                     "-o", str(root / f"{name}.olean"), str(path)],
+                    cwd=ROOT, env=env, text=True, capture_output=True, timeout=120,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
