@@ -7,7 +7,7 @@ module
 
 public meta import Qq
 public import Morew.Conic.Power.Cone
-public import Morew.Syntax.PowerChainView
+public meta import Morew.Syntax.PowerChainView
 public import Mathlib.Tactic.NormNum
 public meta import Lean.Elab.Term
 

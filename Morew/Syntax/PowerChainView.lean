@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public meta import Lean.CoreM
+public import Lean.CoreM
 
 /-!
 # Displaying finite power-cone representations
@@ -14,7 +14,7 @@ Format geometric-mean and inverse-product constraints using names from the check
 presentation.
 -/
 
-public meta section
+public section
 
 namespace Morew.Syntax
 

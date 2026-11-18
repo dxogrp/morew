@@ -9,6 +9,7 @@ public import Morew.Core
 public meta import Morew.Core
 public import Morew.Syntax.Grammar
 public import Morew.Syntax.PowerChainView
+public meta import Morew.Syntax.PowerChainView
 public meta import Lean.Elab.Term
 
 /-!

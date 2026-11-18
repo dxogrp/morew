@@ -11,6 +11,10 @@ import Morew.Syntax
 
 namespace MorewTest.ModuleSystem.SyntaxRuntime
 
+def displayRow : Lean.CoreM Lean.Format :=
+  (.nonneg .missing .missing false : Morew.Syntax.PowerChainRow).format
+    (fun _ => pure "x")
+
 def source : Morew.Problem Nat Nat :=
   problem (x : Nat) minimize x + 1 subject to upper : x ≤ 7
 
