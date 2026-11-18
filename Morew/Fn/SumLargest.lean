@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Data.Fin.Tuple.Sort
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -119,8 +119,8 @@ private theorem prefix_eq_threshold {n : Nat} (k : Nat) (x : Fin n → ℝ) (τ 
     apply sum_congr rfl
     intro i _
     by_cases hi : i.val < k
-    · rw [if_pos hi, max_eq_left (sub_nonneg.mpr (hl i hi))]
-    · rw [if_neg hi, max_eq_right (sub_nonpos.mpr (hu i (Nat.le_of_not_gt hi)))]
+    · rw [ite_eq_left hi, max_eq_left (sub_nonneg.mpr (hl i hi))]
+    · rw [ite_eq_right hi, max_eq_right (sub_nonpos.mpr (hu i (Nat.le_of_not_gt hi)))]
   rw [hsum, sum_sub_distrib, sum_const, card_prefix k hk, nsmul_eq_mul]
   ring
 

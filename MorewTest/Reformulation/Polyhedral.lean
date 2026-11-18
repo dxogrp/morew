@@ -144,90 +144,79 @@ info: problem (x t : ℝ)
 
 namespace FiniteExtrema
 
-class IndexSet where
-  indices : Finset ℕ
-  nonempty : indices.Nonempty
-
-variable [IndexSet]
+variable (s : Finset ℕ) (hs : s.Nonempty)
 
 def source :=
   problem (x : ℝ)
     minimize x
     subject to
-      upper : IndexSet.indices.sup' IndexSet.nonempty (fun i => (i : ℝ) * x) ≤ 5
-      lower : -5 ≤ IndexSet.indices.inf' IndexSet.nonempty (fun i => (i : ℝ) * x)
+      upper : s.sup' hs (fun i => (i : ℝ) * x) ≤ 5
+      lower : -5 ≤ s.inf' hs (fun i => (i : ℝ) * x)
 
-reformulation target : source := by
+reformulation target : (source s hs) := by
   conic at upper
   conic at lower
 
-example : GlobalEquiv source target := target.equiv
+example : GlobalEquiv (source s hs) (target s) := target.equiv s hs
 
 end FiniteExtrema
 
 namespace FiniteInstances
 
-class Parameter where
-  Index : Type
-  equiv : Fin 2 ≃ Index
-  coeff : Index → ℝ
-
 section
 
-variable [Parameter]
+variable (ι : Type) (e : Fin 2 ≃ ι) (c : ι → ℝ)
 
 /- The index type has no ambient `Fintype` instance. Generated rows must retain
 the source's explicit instance through declaration emission and later reuse. -/
 def source :=
-  problem (x : Parameter.Index → ℝ)
+  problem (x : ι → ℝ)
     minimize (0 : ℝ)
     subject to
-      bound : |@dotProduct Parameter.Index ℝ
-        (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1
+      bound : |@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ c x| ≤ 1
 
-reformulation automaticTarget : source := by
+reformulation automaticTarget : (source ι e c) := by
   conic at bound
 
-example : GlobalEquiv source automaticTarget := automaticTarget.equiv
+example : GlobalEquiv (source ι e c) (automaticTarget ι e c) :=
+  automaticTarget.equiv ι e c
 
-example (x : Parameter.Index → ℝ) :
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    automaticTarget.feasible x ↔
-      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+example (x : ι → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) e
+    (automaticTarget ι e c).feasible x ↔ c ⬝ᵥ x ≤ 1 ∧ -(c ⬝ᵥ x) ≤ 1 := Iff.rfl
 
-def exactRepr : ConstraintRepr (fun x : Parameter.Index → ℝ =>
-    |@dotProduct Parameter.Index ℝ
-      (Fintype.ofEquiv (Fin 2) Parameter.equiv) _ _ Parameter.coeff x| ≤ 1) :=
+def exactRepr : ConstraintRepr (fun x : ι → ℝ =>
+    |@dotProduct ι ℝ (Fintype.ofEquiv (Fin 2) e) _ _ c x| ≤ 1) :=
   ConstraintRepr.ofIff (fun x =>
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1)
+    letI := Fintype.ofEquiv (Fin 2) e
+    c ⬝ᵥ x ≤ 1 ∧ -(c ⬝ᵥ x) ≤ 1)
     (fun _ => abs_le')
 
-reformulation customTarget : source := by
-  conic at bound using exactRepr
+reformulation customTarget : (source ι e c) := by
+  conic at bound using (exactRepr ι e c)
 
-example : GlobalEquiv source customTarget := customTarget.equiv
+example : GlobalEquiv (source ι e c) (customTarget ι e c) :=
+  customTarget.equiv ι e c
 
-example (x : Parameter.Index → ℝ) :
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    customTarget.feasible x ↔
-      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 := Iff.rfl
+example (x : ι → ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) e
+    (customTarget ι e c).feasible x ↔ c ⬝ᵥ x ≤ 1 ∧ -(c ⬝ᵥ x) ≤ 1 := Iff.rfl
 
 end
 
 section
 
-variable [Parameter]
+variable (ι : Type) (e : Fin 2 ≃ ι) (c : ι → ℝ)
 
-reformulation continued : automaticTarget := by
+reformulation continued : (automaticTarget ι e c) := by
   epigraph t
 
-example : GlobalEquiv automaticTarget continued := continued.equiv
+example : GlobalEquiv (automaticTarget ι e c) (continued ι e c) :=
+  continued.equiv ι e c
 
-example (x : Parameter.Index → ℝ) (t : ℝ) :
-    letI := Fintype.ofEquiv (Fin 2) Parameter.equiv
-    continued.feasible (x, t) ↔
-      Parameter.coeff ⬝ᵥ x ≤ 1 ∧ -(Parameter.coeff ⬝ᵥ x) ≤ 1 ∧ 0 ≤ t := Iff.rfl
+example (x : ι → ℝ) (t : ℝ) :
+    letI := Fintype.ofEquiv (Fin 2) e
+    (continued ι e c).feasible (x, t) ↔ c ⬝ᵥ x ≤ 1 ∧ -(c ⬝ᵥ x) ≤ 1 ∧ 0 ≤ t := Iff.rfl
 
 end
 
@@ -273,31 +262,28 @@ end SectionParameters
 
 namespace Norms
 
-class Dimension where
-  size : ℕ
-
-variable [Dimension]
+variable (n : ℕ)
 
 def source :=
-  problem (v : Fin Dimension.size → ℝ) (t : ℝ)
+  problem (v : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       infinity : ‖v‖ ≤ t
       explicitInfinity : ‖WithLp.toLp ∞ v‖ ≤ t
       one : ‖WithLp.toLp 1 v‖ ≤ t
 
-reformulation target : source := by
+reformulation target : (source n) := by
   conic at infinity
   conic at explicitInfinity
   conic at one
 
-example : GlobalEquiv source target := target.equiv
+example : GlobalEquiv (source n) (target n) := target.equiv n
 
-example (v u : Fin Dimension.size → ℝ) (t : ℝ) :
-    target.objective ((v, t), u) = t := rfl
+example (v u : Fin n → ℝ) (t : ℝ) :
+    (target n).objective ((v, t), u) = t := rfl
 
-example (v u : Fin Dimension.size → ℝ) (t : ℝ) :
-    target.feasible ((v, t), u) ↔
+example (v u : Fin n → ℝ) (t : ℝ) :
+    (target n).feasible ((v, t), u) ↔
       (0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) ∧
         0 ≤ t ∧ v ≤ (fun _ => t) ∧ -v ≤ (fun _ => t) ∧
         v ≤ u ∧ -v ≤ u ∧ (∑ i, u i) ≤ t) := Iff.rfl

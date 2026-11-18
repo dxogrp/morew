@@ -90,6 +90,9 @@ end RetainedTrueConstraint
 
 namespace SectionParameterResolution
 
+-- These fixtures exercise captured concrete section instances.
+set_option linter.concreteInstances false
+
 class Score where
   score : Nat → Nat
 

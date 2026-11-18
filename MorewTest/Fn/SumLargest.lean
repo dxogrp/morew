@@ -31,7 +31,6 @@ example : Fn.sumLargest 2 ![-2, 3, 3] = 6 := by
   have h : (![3, 3, -2] : Fin 3 → ℝ) ∘ Equiv.swap 0 2 = ![-2, 3, 3] := by
     ext i
     fin_cases i <;> norm_num [Equiv.swap_apply_def, Fin.ext_iff, Matrix.cons_val]
-    rfl
   rw [← h, Fn.sumLargest_comp_perm]
   exact tied_value
 

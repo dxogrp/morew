@@ -28,16 +28,14 @@ theorem ldl_lowerInv_diag (hX : X.PosDef) (i : Fin n) : LDL.lowerInv hX i i = 1 
   have hz : ∀ j ∈ Finset.Iio i,
       gramSchmidt ℝ (Pi.basisFun ℝ (Fin n)) j i = 0 := by
     intro j hj
-    exact LDL.lowerInv_triangular hX (Finset.mem_Iio.mp hj)
+    exact LDL.isLowerTriangular_lowerInv hX (show j < i from Finset.mem_Iio.mp hj)
   simp only [Pi.add_apply, Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at h
   rw [Finset.sum_eq_zero (fun j hj => by rw [hz j hj, mul_zero]), add_zero] at h
   simpa only [LDL.lowerInv, Pi.basisFun_apply, Pi.single_eq_same] using h.symm
 
 /-- The lower factor in the LDL decomposition is lower triangular. -/
-theorem ldl_lower_triangular (hX : X.PosDef) : (LDL.lower hX).IsLowerTriangular := by
-  apply Matrix.blockTriangular_inv_of_blockTriangular
-  intro i j hij
-  exact LDL.lowerInv_triangular hX hij
+theorem ldl_lower_triangular (hX : X.PosDef) : (LDL.lower hX).IsLowerTriangular :=
+  LDL.isLowerTriangular_lower hX
 
 /-- The lower factor in the LDL decomposition has unit diagonal. -/
 theorem ldl_lower_diag (hX : X.PosDef) (i : Fin n) : LDL.lower hX i i = 1 := by
@@ -49,7 +47,7 @@ theorem ldl_lower_diag (hX : X.PosDef) (i : Fin n) : LDL.lower hX i i = 1 := by
   · simpa only [ldl_lowerInv_diag, mul_one] using h
   · intro j _ hji
     rcases lt_or_gt_of_ne hji with hj | hj
-    · rw [LDL.lowerInv_triangular hX hj, mul_zero]
+    · rw [LDL.isLowerTriangular_lowerInv hX hj, mul_zero]
     · rw [ldl_lower_triangular hX hj, zero_mul]
   · simp
 

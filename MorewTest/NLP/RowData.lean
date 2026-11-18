@@ -55,7 +55,7 @@ def coordinateRows (n : Nat) (limits : Fin n → ℝ) :
     Block (Set.univ : Set (Fin n → ℝ)) (fun x => ∀ i, x i ≤ limits i) :=
   Block.family (fun i (x : Fin n → ℝ) => x i ≤ limits i) fun i =>
     Block.le Set.univ (fun x : Fin n → ℝ => x i) (fun _ => limits i)
-      ((contDiffOn_apply ℝ ℝ i _).sub contDiffOn_const)
+      ((contDiffOn_apply ℝ (fun _ : Fin n => ℝ) i _).sub contDiffOn_const)
 
 example (n : Nat) (limits : Fin n → ℝ) : (coordinateRows n limits).rowCount = n := by
   simp [coordinateRows, Block.family, Block.le]
@@ -65,7 +65,7 @@ example (n : Nat) (limits : Fin n → ℝ) (i : Fin n) :
   exact congrArg Row.residual (Block.family_rows
     (fun j (x : Fin n → ℝ) => x j ≤ limits j)
     (fun j => Block.le Set.univ (fun x : Fin n → ℝ => x j) (fun _ => limits j)
-      ((contDiffOn_apply ℝ ℝ j _).sub contDiffOn_const)) i (0 : Fin 1))
+      ((contDiffOn_apply ℝ (fun _ : Fin n => ℝ) j _).sub contDiffOn_const)) i (0 : Fin 1))
 example (limits : Fin 0 → ℝ) : (coordinateRows 0 limits).rowCount = 0 := by
   simp [coordinateRows, Block.family]
 example (limits x : Fin 0 → ℝ) : ∀ j, ((coordinateRows 0 limits).rows j).Holds x :=

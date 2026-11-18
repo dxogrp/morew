@@ -32,6 +32,9 @@ example : GlobalEquiv source lowered := lowered.equiv
 
 namespace SymbolicDimension
 
+-- These fixtures preserve concrete section instances across imports.
+set_option linter.concreteInstances false
+
 class Dimension where
   size : ℕ
 

@@ -253,83 +253,119 @@ end TypedPlans
 
 namespace HiddenFinite
 
+variable (ι : Type) (e : Fin 2 ≃ ι) (c : ι → ℝ)
+
+-- No ambient Finite or Fintype instance is installed. The only evidence lies
+-- inside the imported helper in a different row from the objective and abs.
+def anotherRow :=
+  problem (x : ι → ℝ) (t : ℝ)
+    minimize x (e 0)
+    subject to
+      absolute : |x (e 0)| ≤ t
+      witness : finiteDot e c x ≤ 10
+
+reformulation anotherRowTarget : (anotherRow ι e c) := by
+  conic
+
+reformulation selectedRowTarget : (anotherRow ι e c) := by
+  conic at absolute
+  conic
+
+example : GlobalEquiv (anotherRow ι e c) (anotherRowTarget ι e c) :=
+  anotherRowTarget.equiv ι e c
+example : GlobalEquiv (anotherRow ι e c) (selectedRowTarget ι e c) :=
+  selectedRowTarget.equiv ι e c
+
+-- The left operand also needs finiteness before the helper on the right is
+-- independently certified; discovery must inspect the complete source row.
+def oppositeOperand :=
+  problem (x : ι → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      absolute : |x (e 0)| ≤ finiteDot e c x
+
+reformulation oppositeOperandTarget : (oppositeOperand ι e c) := by
+  conic at absolute
+  conic
+
+example : GlobalEquiv (oppositeOperand ι e c) (oppositeOperandTarget ι e c) :=
+  oppositeOperandTarget.equiv ι e c
+
+-- Native nonlinear heads remain recognition boundaries, but evidence discovery
+-- must still reach the affine coordinate stored underneath the absolute value.
+def nativeCoordinate :=
+  problem (x : ι → ℝ)
+    minimize (0 : ℝ)
+    subject to
+      absolute : |finiteDot e c x| ≤ 1
+
+reformulation nativeCoordinateTarget : (nativeCoordinate ι e c) := by
+  conic
+
+example : GlobalEquiv (nativeCoordinate ι e c) (nativeCoordinateTarget ι e c) :=
+  nativeCoordinateTarget.equiv ι e c
+
+-- Form notation needs only finiteness after the commands have demonstrated
+-- that they recover the helper's evidence themselves.
+section
+
+variable [Finite ι]
+
+example : IsConic (anotherRowTarget ι e c) := anotherRowTarget.isConic ι e c
+example : IsConic (selectedRowTarget ι e c) := selectedRowTarget.isConic ι e c
+example : IsConic (oppositeOperandTarget ι e c) := oppositeOperandTarget.isConic ι e c
+example : IsConic (nativeCoordinateTarget ι e c) := nativeCoordinateTarget.isConic ι e c
+example : (anotherRowTarget.conicForm ι e c).data.rowCount = 3 := rfl
+example : (oppositeOperandTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (nativeCoordinateTarget.conicForm ι e c).data.rowCount = 2 := rfl
+example : (anotherRowTarget.conicForm ι e c).data.toProblem = anotherRowTarget ι e c :=
+  (anotherRowTarget.conicForm ι e c).represents
+
+end
+
+example (x : ι → ℝ) (t : ℝ) : (anotherRowTarget ι e c).feasible (x, t) ↔
+    t - x (e 0) ∈ ℝ₊ ∧ t + x (e 0) ∈ ℝ₊ ∧
+      10 - finiteDot e c x ∈ ℝ₊ := Iff.rfl
+
+end HiddenFinite
+
+namespace ProjectedHiddenFinite
+
 class Parameter where
   Index : Type
   equiv : Fin 2 ≃ Index
   coefficients : Index → ℝ
 
+-- Keep the carrier behind an instance projection while its finite evidence
+-- remains inside the imported helper.
+set_option linter.concreteInstances false
+
 variable [Parameter]
 
--- No ambient Finite or Fintype instance is installed. The only evidence lies
--- inside the imported helper in a different row from the objective and abs.
-def anotherRow :=
-  problem (x : Parameter.Index → ℝ) (t : ℝ)
-    minimize x (Parameter.equiv 0)
-    subject to
-      absolute : |x (Parameter.equiv 0)| ≤ t
-      witness : finiteDot Parameter.equiv Parameter.coefficients x ≤ 10
-
-reformulation anotherRowTarget : anotherRow := by
+reformulation target :
+    (HiddenFinite.anotherRow Parameter.Index Parameter.equiv Parameter.coefficients) := by
   conic
 
-reformulation selectedRowTarget : anotherRow := by
-  conic at absolute
-  conic
-
-example : GlobalEquiv anotherRow anotherRowTarget := anotherRowTarget.equiv
-example : GlobalEquiv anotherRow selectedRowTarget := selectedRowTarget.equiv
-
--- The left operand also needs finiteness before the helper on the right is
--- independently certified; discovery must inspect the complete source row.
-def oppositeOperand :=
-  problem (x : Parameter.Index → ℝ)
-    minimize (0 : ℝ)
-    subject to
-      absolute : |x (Parameter.equiv 0)| ≤
-        finiteDot Parameter.equiv Parameter.coefficients x
-
-reformulation oppositeOperandTarget : oppositeOperand := by
-  conic at absolute
-  conic
-
-example : GlobalEquiv oppositeOperand oppositeOperandTarget :=
-  oppositeOperandTarget.equiv
-
--- Native nonlinear heads remain recognition boundaries, but evidence discovery
--- must still reach the affine coordinate stored underneath the absolute value.
-def nativeCoordinate :=
-  problem (x : Parameter.Index → ℝ)
-    minimize (0 : ℝ)
-    subject to
-      absolute : |finiteDot Parameter.equiv Parameter.coefficients x| ≤ 1
-
-reformulation nativeCoordinateTarget : nativeCoordinate := by
-  conic
-
-example : GlobalEquiv nativeCoordinate nativeCoordinateTarget :=
-  nativeCoordinateTarget.equiv
-
--- Form notation needs only finiteness after the commands have demonstrated
--- that they recover the helper's evidence themselves.
-local instance : Finite Parameter.Index := by
-  let := Fintype.ofEquiv (Fin 2) Parameter.equiv
-  infer_instance
-
-example : IsConic anotherRowTarget := anotherRowTarget.isConic
-example : IsConic selectedRowTarget := selectedRowTarget.isConic
-example : IsConic oppositeOperandTarget := oppositeOperandTarget.isConic
-example : IsConic nativeCoordinateTarget := nativeCoordinateTarget.isConic
-example : anotherRowTarget.conicForm.data.rowCount = 3 := rfl
-example : oppositeOperandTarget.conicForm.data.rowCount = 2 := rfl
-example : nativeCoordinateTarget.conicForm.data.rowCount = 2 := rfl
-example : anotherRowTarget.conicForm.data.toProblem = anotherRowTarget :=
-  anotherRowTarget.conicForm.represents
-
-example (x : Parameter.Index → ℝ) (t : ℝ) : anotherRowTarget.feasible (x, t) ↔
+example : GlobalEquiv
+    (HiddenFinite.anotherRow Parameter.Index Parameter.equiv Parameter.coefficients) target :=
+  target.equiv
+example (x : Parameter.Index → ℝ) (t : ℝ) :
+    target.objective (x, t) = x (Parameter.equiv 0) := rfl
+example (x : Parameter.Index → ℝ) (t : ℝ) : target.feasible (x, t) ↔
     t - x (Parameter.equiv 0) ∈ ℝ₊ ∧ t + x (Parameter.equiv 0) ∈ ℝ₊ ∧
       10 - finiteDot Parameter.equiv Parameter.coefficients x ∈ ℝ₊ := Iff.rfl
 
-end HiddenFinite
+section
+
+variable [Finite Parameter.Index]
+
+example : IsConic target := target.isConic
+example : target.conicForm.data.rowCount = 3 := rfl
+example : target.conicForm.data.toProblem = target := target.conicForm.represents
+
+end
+
+end ProjectedHiddenFinite
 
 namespace Boundaries
 

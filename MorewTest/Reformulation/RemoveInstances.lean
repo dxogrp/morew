@@ -62,6 +62,9 @@ def squareOperandSource (order : LinearOrder ℝ) (f : LinearOrder ℝ → ℝ �
       tag : True
 
 section
+-- This fixture deliberately shadows the concrete real order.
+set_option linter.concreteInstances false
+
 variable [shadow : LinearOrder ℝ] (f : LinearOrder ℝ → ℝ → ℝ)
 
 reformulation squareRemoved : squareSource := by

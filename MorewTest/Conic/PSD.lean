@@ -127,7 +127,8 @@ example : SymmetricMatrix.fromBlocks (scalar 5) !![1, 2] (identity 2) ∈ PSD 3 
     fin_cases i
     fin_cases j
     norm_num [identity, scalar, SymmetricMatrix.toMatrix, SymmetricMatrix.ofMatrix,
-      Matrix.mul_apply, Matrix.vecMul, Fin.sum_univ_succ]
+      Matrix.mul_apply, Matrix.vecMul, Matrix.vecHead, Matrix.vecTail, Function.swap,
+      Fin.sum_univ_succ]
   rw [h]
   exact Matrix.PosSemidef.zero
 

@@ -196,6 +196,9 @@ def source (evidence : True) :=
     minimize coefficient evidence + x
 
 section
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 variable [Evidence]
 
 reformulation target : (source Evidence.witness) := by
@@ -435,6 +438,9 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 end FunctionParameter
 
 namespace OuterInstance
+
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
 
 set_option linter.overlappingInstances false
 

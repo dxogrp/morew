@@ -187,6 +187,9 @@ example (v w : Fin 2 → ℝ) (t s : ℝ) : generatedVectors.feasible (((v, w), 
 
 namespace InstanceApplications
 
+-- These fixtures deliberately use concrete local instances.
+set_option linter.concreteInstances false
+
 class Weight where
   coefficient : ℝ
 

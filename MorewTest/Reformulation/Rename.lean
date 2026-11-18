@@ -258,6 +258,8 @@ end
 namespace Instances
 
 set_option linter.overlappingInstances false
+-- These fixtures deliberately retain concrete local instances.
+set_option linter.concreteInstances false
 
 class Parameter where
   value : ℝ

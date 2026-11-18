@@ -17,6 +17,9 @@ namespace MorewTest.ImportCompatibility.SecondOrder
 open Morew Morew.Conic
 noncomputable section
 
+-- These fixtures preserve concrete section instances across imports.
+set_option linter.concreteInstances false
+
 class Parameter where
   size : Nat
   offset : ℝ

@@ -315,12 +315,9 @@ example (a b t : ℝ) : target.feasible ((a, b), t) ↔
       (Real.exp (a ^ 2) ≤ 100 ∧ (0 ≤ b ∧ (1 / 3 ≤ b ∧ a ≥ 0))) ∧
       (-t, a, b) ∈ EXP ∧ 1 ≤ b := Iff.rfl
 
-class Parameter where
-  epsilon : ℝ
-
 section
 
-variable [Parameter] (hε : 0 < Parameter.epsilon)
+variable (ε : ℝ) (hε : 0 < ε)
 
 def symbolicSource :=
   problem (a b t : ℝ)
@@ -328,13 +325,13 @@ def symbolicSource :=
     subject to
       entropy : Fn.relEntr a b ≤ t
       nonneg : 0 ≤ a
-      denominator : Parameter.epsilon ≤ b
+      denominator : ε ≤ b
 
 include hε in
-reformulation symbolicTarget : symbolicSource := by
+reformulation symbolicTarget : (symbolicSource ε) := by
   conic at entropy
 
-example : GlobalEquiv symbolicSource symbolicTarget := symbolicTarget.equiv hε
+example : GlobalEquiv (symbolicSource ε) (symbolicTarget ε) := symbolicTarget.equiv ε hε
 
 end
 
@@ -465,50 +462,47 @@ end FiniteLifts
 
 namespace SymbolicDimensions
 
-class Dimension where
-  size : Nat
-
 section
 
-variable [Dimension] (hn : 0 < Dimension.size)
+variable (n : Nat) (hn : 0 < n)
 
 def source :=
-  problem (xs : Fin Dimension.size → ℝ) (t : ℝ)
+  problem (xs : Fin n → ℝ) (t : ℝ)
     minimize t
     subject to
       lse : Fn.logSumExp xs ≤ t
 
 include hn in
-reformulation positiveTarget : source := by
+reformulation positiveTarget : (source n) := by
   conic at lse
 
-example : GlobalEquiv source positiveTarget := positiveTarget.equiv hn
+example : GlobalEquiv (source n) (positiveTarget n) := positiveTarget.equiv n hn
 
-example (xs u : Fin Dimension.size → ℝ) (t : ℝ) :
-    positiveTarget.feasible ((xs, t), u) ↔
+example (xs u : Fin n → ℝ) (t : ℝ) :
+    (positiveTarget n).feasible ((xs, t), u) ↔
       (∀ i, (xs i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 := Iff.rfl
 
 end
 
 section
 
-variable [Dimension] [NeZero Dimension.size]
+variable (n : Nat) [NeZero n]
 
-reformulation neZeroTarget : source := by
+reformulation neZeroTarget : (source n) := by
   conic at lse
 
-example : GlobalEquiv source neZeroTarget := neZeroTarget.equiv
+example : GlobalEquiv (source n) (neZeroTarget n) := neZeroTarget.equiv n
 
 end
 
 section
 
-variable [Dimension] [Nonempty (Fin Dimension.size)]
+variable (n : Nat) [Nonempty (Fin n)]
 
-reformulation nonemptyTarget : source := by
+reformulation nonemptyTarget : (source n) := by
   conic at lse
 
-example : GlobalEquiv source nonemptyTarget := nonemptyTarget.equiv
+example : GlobalEquiv (source n) (nonemptyTarget n) := nonemptyTarget.equiv n
 
 end
 

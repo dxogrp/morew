@@ -22,7 +22,7 @@ def restrictSymmetricMatrix
   linear := f.linear.codRestrict (symmetricMatrixSubmodule n) fun v => by
     change (f.linear v).IsSymm
     have hv : f.linear v = f v - f 0 := by
-      simpa using f.linearMap_vsub v 0
+      simpa using f.linear_apply_vsub v 0
     rw [hv]
     exact (h v).sub (h 0)
   map_vadd' p v := by

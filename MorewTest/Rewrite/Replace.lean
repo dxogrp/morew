@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import MorewTest.ElabSupport
 import Morew.Elab.Reformulation.Replace
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 
 /-!
 # Exact ordered constraint rewrites

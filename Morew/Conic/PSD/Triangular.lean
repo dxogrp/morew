@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 import Mathlib.LinearAlgebra.Matrix.Block
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 
 /-!
 # Lower-triangular matrix coordinates
