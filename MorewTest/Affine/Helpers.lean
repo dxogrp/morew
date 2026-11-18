@@ -7,7 +7,7 @@ module
 
 import MorewTest.Affine.RowSupport
 import MorewTest.Affine.HelperFixtures
-import Morew.Elab.Atom
+meta import Morew.Elab.Atom
 
 /-!
 # Affine certificates through imported helper definitions

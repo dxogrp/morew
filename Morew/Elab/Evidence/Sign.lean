@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Evidence
 public import Morew.Elab.Cone.Nonneg
 public import Morew.Elab.Rewrite.Decomposition
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Prove signs from independent constants or retained non-strict lower bounds.
 Project finite vector bounds or specialize retained finite families in presentation

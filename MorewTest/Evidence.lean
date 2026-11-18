@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
+import Mathlib.Data.Nat.Choose.Basic
 import Morew.Elab.Evidence
 import MorewTest.ElabSupport
 import MorewTest.Environment

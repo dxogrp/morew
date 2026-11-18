@@ -8,7 +8,7 @@ public import Morew.Elab.Cone.Rewrite
 public import Morew.Elab.Rewrite.Decomposition
 public import Morew.Elab.Cone.Normalize
 public import Morew.Elab.Reformulation.Replace
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Plan exact cone constraint replacements and retain their equivalence proofs.

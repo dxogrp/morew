@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Cone.Constraint
 public import Morew.Elab.Cone.Finite
 public import Morew.Elab.Rewrite.Plan
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Adapt exact representations, split ordered target rows, and certify each row. -/

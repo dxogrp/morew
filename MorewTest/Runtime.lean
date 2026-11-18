@@ -9,8 +9,14 @@ import Morew.Affine
 import Morew.Substitution
 import Morew.Rewrite.Polyhedral
 import Morew.Fn.Norm
+import Morew.Elab.Atom
+import Morew.Elab.Expr
+import Morew.Elab.Expansion
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.State
+meta import Morew.Elab.Atom
+meta import Morew.Elab.Expr
+meta import Morew.Elab.Expansion
 meta import Morew.Elab.Reformulation.Names
 
 /-! Ordinary runtime consumers of mathematical constructors, recovery maps, and reusable helpers. -/
@@ -61,5 +67,36 @@ def withExpressionInstances (instances : List Lean.Expr) (action : Lean.MetaM Le
 #guard match allocateNames with
   | .ok names => names.findName? 0 == some `value_1 && names.findName? 1 == some `value
   | .error _ => false
+
+-- Atom recognition, structural reduction, and expansion budgets are reusable outside elaborators.
+def recognizeOperation (expression : Lean.Expr) :
+    Lean.MetaM (Option Elab.Atom.AtomApplication) :=
+  Elab.Atom.recognizeAtom? expression
+
+def hoistProjection (expression : Lean.Expr) : Lean.Expr :=
+  Elab.Expr.hoistProjectionLets expression
+
+def canExpand (depth steps nodes : Nat) : Bool :=
+  Elab.Expansion.enabled {
+    depth, steps, nodes
+    depthOption := `depth, stepsOption := `steps, nodesOption := `nodes
+    label := "runtime"
+  }
+
+#guard hoistProjection (.proj ``Prod 0 (.letE `pair (.sort .zero)
+    (.bvar 0) (.bvar 0) false)) ==
+  .letE `pair (.sort .zero) (.bvar 0) (.proj ``Prod 0 (.bvar 0)) false
+
+#guard canExpand 1 1 1 && !canExpand 0 1 1 && !canExpand 1 0 1 && !canExpand 1 1 0
+
+#eval show Lean.MetaM Unit from do
+  Lean.Meta.withLocalDeclD `x (Lean.mkConst ``Real) fun x => do
+    let expression := Lean.mkApp (Lean.mkConst ``Real.exp) x
+    let some atom ← recognizeOperation expression
+      | throwError "failed to recognize the real exponential"
+    unless atom.kind == .exp && atom.original == expression && atom.operands == #[x] do
+      throwError "recognition changed the operation or its operand"
+  if (← recognizeOperation (.sort .zero)).isSome then
+    throwError "unexpectedly recognized a sort as a real operation"
 
 end MorewTest.Runtime

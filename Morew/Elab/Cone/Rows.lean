@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.Cone.Constraint
 public import Morew.Elab.Rewrite.Plan
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Assemble checked affine cone rows and their exact feasibility certificate. -/

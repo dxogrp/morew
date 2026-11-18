@@ -6,7 +6,7 @@ module
 
 public import Morew.Rewrite.Basic
 public import Morew.Elab.Evidence
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public import Morew.Elab.Rewrite.Decomposition
 
 /-! Shared exact replacement data, scoped evidence, and ordered target equivalence.

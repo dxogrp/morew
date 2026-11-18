@@ -9,7 +9,7 @@ public import Morew.Elab.Rewrite.Match
 public import Morew.Elab.NLP.Rules
 public import Morew.Elab.Rewrite.Plan
 public import Morew.Elab.NLP.Rows
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Plan exact replacements of selected predicates, then certify generated residuals

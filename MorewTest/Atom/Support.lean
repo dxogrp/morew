@@ -5,8 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Algebra.Order.Group.PosPart
 public import MorewTest.ElabSupport
-public import Morew.Elab.Atom
+public meta import Morew.Elab.Atom
 public import Lean.Elab.Command
 
 /-!

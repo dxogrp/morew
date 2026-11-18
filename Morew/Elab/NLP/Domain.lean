@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Elab.NLP.Smooth
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Certify C² smoothness on a common open domain containing the feasible set.

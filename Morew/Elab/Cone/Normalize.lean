@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Rewrite.Decomposition
 public meta import Morew.Elab.State
 public import Morew.Elab.Cone.Space
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Prove equivalence between scalar or finite-vector comparisons and cone membership.
 Preserve conjunctions, local lets, and operands; simplify literal zero and negation.

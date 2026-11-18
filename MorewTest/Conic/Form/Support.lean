@@ -7,7 +7,7 @@ module
 
 public import Morew.Elab.Conic.Form
 public import MorewTest.ElabSupport
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! # Helpers for checking complete conic forms without importing test cases -/
 

@@ -10,7 +10,7 @@ public import Morew.Elab.Cone.Plan
 public import Morew.Elab.Cone.MatrixDomain
 public import Morew.Elab.Evidence
 public import Morew.Elab.Rewrite.Match
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Select and certify exact conic replacements.

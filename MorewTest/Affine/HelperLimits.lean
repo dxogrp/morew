@@ -7,7 +7,7 @@ module
 
 import MorewTest.Affine.Support
 import MorewTest.Affine.HelperFixtures
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 
 /-!
 # Deterministic helper expansion limits

@@ -8,7 +8,7 @@ module
 public import Morew.Elab.Reformulation.Registry
 public import Morew.Elab.Cone.Rewrite
 public import Morew.Elab.Reformulation.Rows
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Replace the constraint selected by `conic at label` with an exact conic representation.
 Discovery requires one certified `morew_conic` rule after the built-in rule preferences;

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
+import Morew.Core
 import MorewTest.NLP.SmoothSupport
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.SpecialFunctions.Sqrt

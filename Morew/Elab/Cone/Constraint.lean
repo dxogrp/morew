@@ -17,7 +17,7 @@ public import Morew.Elab.Cone.Normalize
 public import Morew.Elab.Cone.Symmetry
 public import Morew.Conic.Power.Cone
 public import Morew.Elab.Reformulation.Presentation
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Certify affine scalar and vector comparisons and standard cone memberships, including
 PSD predicates with global symmetry. Finite exponential and power families use

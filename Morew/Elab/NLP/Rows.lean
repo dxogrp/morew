@@ -6,7 +6,7 @@ module
 
 public import Morew.NLP.Rows
 public import Morew.Elab.NLP.Domain
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Certify generated residuals after the caller proves replacement exactness.

@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.Affine
 public import Morew.Elab.Objective
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 public import Morew.Elab.Evidence
 

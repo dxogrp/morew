@@ -15,7 +15,7 @@ public import Qq
 /-! Inspect dependencies, unresolved terms, presentation structure, and real-space shapes.
 Structural reduction preserves arithmetic and user-function heads. -/
 
-public meta section
+public section
 
 namespace Morew.Elab.Expr
 

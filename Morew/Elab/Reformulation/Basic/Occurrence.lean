@@ -11,7 +11,7 @@ public import Morew.Elab.Rewrite.Plan
 public import Morew.Elab.Reformulation.Syntax
 public meta import Morew.Transform.Context
 public import Morew.Elab.ObjectiveContext
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Select occurrences before reducing model-local definitions. Named selectors use
 binding identity; expression selectors compare rigid typed terms. Check the selected

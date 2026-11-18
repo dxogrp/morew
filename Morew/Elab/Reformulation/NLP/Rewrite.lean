@@ -8,7 +8,7 @@ module
 public import Morew.Elab.Reformulation.Registry
 public import Morew.Elab.NLP.Rewrite
 public import Morew.Elab.Reformulation.Rows
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Replace a selected bound with equivalent smooth constraints. Discovery requires
 one certified `morew_nlp` rule; `using` selects a single declaration or certificate.

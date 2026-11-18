@@ -8,7 +8,7 @@ module
 public meta import Qq
 public import Morew.Elab.Reformulation.View
 public import Morew.Elab.Cone.Terminal
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public import Morew.Elab.Rewrite.Reduction
 
 /-! Normalize retained and direct cone presentations while preserving model-local bindings

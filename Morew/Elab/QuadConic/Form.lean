@@ -7,7 +7,7 @@ module
 public import Morew.Elab.QuadConic.Objective
 public import Morew.Elab.Cone.Rows
 public import Morew.Elab.Cone.Finite
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Construct `QuadConic.Form` with exact objective equality and feasibility equivalence.

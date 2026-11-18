@@ -7,7 +7,7 @@ module
 public import Morew.Affine
 public import Morew.Affine.Matrix
 public import Morew.Affine.SymmetricMatrix
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public import Morew.Elab.Evidence
 public import Morew.Elab.Affine.Space
 public meta import Morew.Elab.State

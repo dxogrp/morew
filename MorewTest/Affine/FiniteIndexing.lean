@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import MorewTest.Affine.RowSupport
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.LinearAlgebra.Matrix.ToLin
 

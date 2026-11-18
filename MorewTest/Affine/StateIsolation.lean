@@ -7,7 +7,7 @@ module
 
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Conic.Objective
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 import MorewTest.ElabSupport
 import Lean.Meta.Tactic.AuxLemma
 

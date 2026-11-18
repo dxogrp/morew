@@ -6,8 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Elab.Reformulation.Registry
-public import Morew.Elab.Atom
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Atom
+public meta import Morew.Elab.Expr
 public import Morew.Elab.Substitution.Coordinates
 public import Morew.Elab.Substitution.Match
 public import Morew.Elab.Substitution.Rules

@@ -13,7 +13,7 @@ public import MorewTest.Affine.HelperFixtures
 public import MorewTest.Affine.Support
 public import MorewTest.Reformulation.AffineHelperSource
 public import MorewTest.CommandSupport
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-!
 # Affine helper certification in conic reformulations

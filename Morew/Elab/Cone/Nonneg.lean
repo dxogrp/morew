@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Conic.Cone
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Recognize scalar and finite-vector nonnegative-cone coordinates for sign evidence. -/

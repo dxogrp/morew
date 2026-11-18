@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Affine
-public import Morew.Elab.Expr
+public import Morew.Conic.PSD
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 public import Lean.Meta.Basic
 public import Lean.Meta.Transform

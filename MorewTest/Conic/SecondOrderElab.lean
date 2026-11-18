@@ -7,7 +7,7 @@ module
 
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!

@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.Rewrite.Registry
 public import Morew.Elab.Rewrite.Plan
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Match exact representations while preserving mathematical operation heads.

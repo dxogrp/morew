@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Elab.Affine.Expansion
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Bounded unfolding of transparent helpers in quadratic objectives. -/
 

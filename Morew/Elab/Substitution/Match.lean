@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.Substitution.Registry
 public import Morew.Elab.Substitution.Evidence
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Match complete coordinate maps while keeping retained and new binders fixed.

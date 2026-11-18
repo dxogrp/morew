@@ -6,7 +6,7 @@ module
 
 public import Morew.Conic.Basic
 public import Morew.Elab.Affine.Space
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public import Lean.Meta.Basic
 public import Qq
 

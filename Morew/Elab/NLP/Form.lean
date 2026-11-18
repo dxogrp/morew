@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.NLP.Rows
 public import Morew.Elab.Reformulation.Presentation
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
 
 /-! Certify the objective and all rows on a common open domain.

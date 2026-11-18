@@ -7,10 +7,10 @@ module
 public import Morew.NLP.Domain
 public import Morew.Elab.NLP.Domain.Evidence
 public import Morew.Elab.NLP.Space
-public import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 public meta import Morew.Elab.State
-public import Morew.Elab.Expansion
-public import Morew.Elab.Atom
+public meta import Morew.Elab.Expansion
+public meta import Morew.Elab.Atom
 public import Lean.Meta.Check
 
 /-! Certify global C² smoothness for elaborated functions `X → ℝ` on real scalars,
