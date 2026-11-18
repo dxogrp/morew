@@ -12,7 +12,7 @@ import Mathlib.Tactic.Ring
 
 /-! # Exact epigraph of the Euclidean matrix operator norm -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.Spectral
 

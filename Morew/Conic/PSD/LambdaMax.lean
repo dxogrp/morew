@@ -17,7 +17,7 @@ eigenvalue is equivalent to positive semidefiniteness of `t I - A`. A lower boun
 on its smallest eigenvalue is equivalent to positive semidefiniteness of `A - t I`.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.Spectral
 

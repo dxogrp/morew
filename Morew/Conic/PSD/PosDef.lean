@@ -15,7 +15,7 @@ Positive definiteness is equivalent to the existence of a positive-semidefinite
 block completion with identity off-diagonal blocks.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic
 

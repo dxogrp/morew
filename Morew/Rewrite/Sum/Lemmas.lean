@@ -17,7 +17,7 @@ A bound on a finite sum is equivalent to bounds on its summands and one
 inequality on the sum of the bounds. The index type may be empty.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Rewrite.Sum
 

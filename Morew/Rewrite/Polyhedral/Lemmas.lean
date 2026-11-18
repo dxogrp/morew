@@ -16,7 +16,7 @@ Scalar and coordinatewise inequalities for absolute values, extrema, and vector
 norms. The norm bounds retain their scalar condition in dimension zero.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Rewrite.Polyhedral
 

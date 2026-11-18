@@ -18,7 +18,7 @@ Exponential, logarithm, entropy, relative-entropy, KL-divergence, log-sum-exp,
 and softplus bounds represented by exponential cone constraints.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.Exponential
 

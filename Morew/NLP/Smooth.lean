@@ -21,7 +21,7 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 Closure rules for $C^2$ functions on domains in real normed spaces.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.NLP.Smooth
 

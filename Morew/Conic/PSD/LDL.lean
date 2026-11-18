@@ -15,7 +15,7 @@ The lower triangular factor in mathlib's LDL decomposition has unit diagonal.
 This constructs auxiliary matrices attaining the log-determinant bound.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.LogDet
 

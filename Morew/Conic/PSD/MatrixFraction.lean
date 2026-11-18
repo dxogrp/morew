@@ -15,7 +15,7 @@ On the positive-definite domain, a Schur complement gives a semidefinite
 representation of the matrix-fractional epigraph.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.MatrixFraction
 

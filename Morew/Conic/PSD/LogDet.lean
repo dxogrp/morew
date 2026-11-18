@@ -20,7 +20,7 @@ Lower triangular factors give a semidefinite/exponential cone representation
 of the log-determinant hypograph on positive-definite matrices.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.LogDet
 

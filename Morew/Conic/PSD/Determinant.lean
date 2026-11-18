@@ -17,7 +17,7 @@ The determinant is monotone under positive-semidefinite perturbations of a
 positive-definite real matrix.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.LogDet
 

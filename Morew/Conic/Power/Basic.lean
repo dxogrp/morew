@@ -18,7 +18,7 @@ nonnegative inputs. Their auxiliary nonnegative scalar preserves negative
 lower bounds.
 -/
 
-@[expose] public section
+public section
 
 namespace Morew.Conic.Power
 
