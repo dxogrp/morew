@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Conic.PSD.MatrixFraction
 import Morew.Conic.PSD.Repr
 import Morew.Conic.PSD.PosDef

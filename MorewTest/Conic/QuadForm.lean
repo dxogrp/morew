@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -66,7 +68,7 @@ example : ¬ ∃ u, (Conic.QuadForm.nativeEpigraph singular singularPSD).target 
   rw [← (Conic.QuadForm.nativeEpigraph singular singularPSD).source_iff_exists]
   norm_num [singular, Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
 
-private def check (source expected : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private meta def check (source expected : Expr) (rule? : Option Name := none) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let outcome ← match rule? with
@@ -90,7 +92,7 @@ private def check (source expected : Expr) (rule? : Option Name := none) : MetaM
       result.certifiedRows.flatMap (fun row => #[row.constraint, row.pointwiseIff]) do
     checkCompleteWithKernel proof "incomplete matrix-quadratic certificate"
 
-private def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private meta def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
   let before ← getMCtx
   let environment ← getEnv
@@ -105,7 +107,7 @@ private def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit :=
     throwError "failed matrix-quadratic planning changed local declarations"
 
 -- Use symbolic dimensions and rectangular affine residuals for both source heads.
-private def checkFamily (native : Bool) (rule? : Option Name := none)
+private meta def checkFamily (native : Bool) (rule? : Option Name := none)
     (rejected : Bool := false) : TermElabM Unit := do
   let expression ← elaborate (← `(fun (m n : Nat) (Q : Matrix (Fin m) (Fin m) ℝ)
     (_hQ : Q.PosSemidef) (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) =>

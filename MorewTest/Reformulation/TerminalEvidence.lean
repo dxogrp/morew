@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-! Command adapters reject malformed evidence before committing any declarations. -/
 
@@ -30,47 +33,47 @@ reformulation alienQuadConic : alien := by qconic
 
 -- Test-only syntax alters a proposed reformulation while retaining its checked primitive
 -- certificate, names, and presentation.
-syntax (name := faultyConic) "test_conic_form " term : reformulationStep
-syntax (name := faultyNLP) "test_nlp_form " term : reformulationStep
-syntax (name := nonterminalConic) "test_conic_nonterminal" : reformulationStep
-syntax (name := nonterminalNLP) "test_nlp_nonterminal" : reformulationStep
-syntax (name := faultyRetarget) "test_conic_retarget" : reformulationStep
-syntax (name := faultyProperty) "test_nlp_property" : reformulationStep
-syntax (name := faultyQuadConic) "test_quadConic_form " term : reformulationStep
-syntax (name := nonterminalQuadConic) "test_quadConic_nonterminal" : reformulationStep
-syntax (name := faultyQuadConicRetarget) "test_quadConic_retarget" : reformulationStep
-syntax (name := faultyQuadConicRetargetSense) "test_quadConic_retarget_sense" : reformulationStep
+local syntax (name := faultyConic) "test_conic_form " term : reformulationStep
+local syntax (name := faultyNLP) "test_nlp_form " term : reformulationStep
+local syntax (name := nonterminalConic) "test_conic_nonterminal" : reformulationStep
+local syntax (name := nonterminalNLP) "test_nlp_nonterminal" : reformulationStep
+local syntax (name := faultyRetarget) "test_conic_retarget" : reformulationStep
+local syntax (name := faultyProperty) "test_nlp_property" : reformulationStep
+local syntax (name := faultyQuadConic) "test_quadConic_form " term : reformulationStep
+local syntax (name := nonterminalQuadConic) "test_quadConic_nonterminal" : reformulationStep
+local syntax (name := faultyQuadConicRetarget) "test_quadConic_retarget" : reformulationStep
+local syntax (name := faultyQuadConicRetargetSense) "test_quadConic_retarget_sense" : reformulationStep
 
-private def withForm (draft : SurfaceStepDraft) (form : TSyntax `term) : SurfaceStepDraft :=
+private meta def withForm (draft : SurfaceStepDraft) (form : TSyntax `term) : SurfaceStepDraft :=
   { draft with materialize := fun allocation => do
       let result ← draft.materialize allocation
       let some (adapter, _) := result.terminalForm?
         | throwError "expected a terminal form in the backend draft"
       return { result with terminalForm? := some (adapter, form) } }
 
-@[morew_reformulation_step faultyConic]
-private def conicForm : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyConic]
+private meta def conicForm : StepHandler := fun state step => do
   let `(reformulationStep| test_conic_form $form:term) := step | throwUnsupportedSyntax
   return withForm (← prepareTerminalConic state step) form
 
-@[morew_reformulation_step faultyNLP]
-private def nlpForm : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyNLP]
+private meta def nlpForm : StepHandler := fun state step => do
   let `(reformulationStep| test_nlp_form $form:term) := step | throwUnsupportedSyntax
   return withForm (← prepareTerminalNLP state step) form
 
-@[morew_reformulation_step faultyQuadConic]
-private def quadConicForm : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyQuadConic]
+private meta def quadConicForm : StepHandler := fun state step => do
   let `(reformulationStep| test_quadConic_form $form:term) := step | throwUnsupportedSyntax
   return withForm (← prepareTerminalQuadConic state step) form
 
-@[morew_reformulation_step nonterminalQuadConic]
-private def continuingQuadConicForm : StepHandler := fun state step => do
+@[local morew_reformulation_step nonterminalQuadConic]
+private meta def continuingQuadConicForm : StepHandler := fun state step => do
   let draft ← prepareTerminalQuadConic state step
   return { draft with materialize := fun allocation => do
     return { (← draft.materialize allocation) with status := .continue } }
 
-@[morew_reformulation_step faultyQuadConicRetarget]
-private def retargetedQuadConicForm : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyQuadConicRetarget]
+private meta def retargetedQuadConicForm : StepHandler := fun state step => do
   let draft ← prepareTerminalQuadConic state step
   return { draft with materialize := fun allocation => do
     let result ← draft.materialize allocation
@@ -80,8 +83,8 @@ private def retargetedQuadConicForm : StepHandler := fun state step => do
       retarget := fun _ _ _ => pure (mkConst ``alienQuadConic.quadConicForm) }
     return { result with terminalForm? := some (adapter, form) } }
 
-@[morew_reformulation_step faultyQuadConicRetargetSense]
-private def retargetedQuadConicSense : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyQuadConicRetargetSense]
+private meta def retargetedQuadConicSense : StepHandler := fun state step => do
   let draft ← prepareTerminalQuadConic state step
   return { draft with materialize := fun allocation => do
     let result ← draft.materialize allocation
@@ -91,20 +94,20 @@ private def retargetedQuadConicSense : StepHandler := fun state step => do
       retarget := fun _ _ _ => pure (mkConst ``goodQuadConic.quadConicForm) }
     return { result with terminalForm? := some (adapter, form) } }
 
-@[morew_reformulation_step nonterminalConic]
-private def continuingForm : StepHandler := fun state step => do
+@[local morew_reformulation_step nonterminalConic]
+private meta def continuingForm : StepHandler := fun state step => do
   let draft ← prepareTerminalConic state step
   return { draft with materialize := fun allocation => do
     return { (← draft.materialize allocation) with status := .continue } }
 
-@[morew_reformulation_step nonterminalNLP]
-private def continuingNLPForm : StepHandler := fun state step => do
+@[local morew_reformulation_step nonterminalNLP]
+private meta def continuingNLPForm : StepHandler := fun state step => do
   let draft ← prepareTerminalNLP state step
   return { draft with materialize := fun allocation => do
     return { (← draft.materialize allocation) with status := .continue } }
 
-@[morew_reformulation_step faultyRetarget]
-private def retargetedForm : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyRetarget]
+private meta def retargetedForm : StepHandler := fun state step => do
   let draft ← prepareTerminalConic state step
   return { draft with materialize := fun allocation => do
     let result ← draft.materialize allocation
@@ -114,16 +117,17 @@ private def retargetedForm : StepHandler := fun state step => do
       retarget := fun _ _ _ => pure (mkConst ``alienConic.conicForm) }
     return { result with terminalForm? := some (adapter, form) } }
 
-@[morew_reformulation_step faultyProperty]
-private def failedProperty : StepHandler := fun state step => do
+@[local morew_reformulation_step faultyProperty]
+private meta def failedProperty : StepHandler := fun state step => do
   let draft ← prepareTerminalNLP state step
   return { draft with materialize := fun allocation => do
     let result ← draft.materialize allocation
     let some (adapter, form) := result.terminalForm?
       | throwError "expected a terminal form in the NLP draft"
     let adapter := { adapter with property := fun _ => do
-      unless (← getEnv).contains
-          `MorewTest.Reformulation.TerminalEvidence.lateProperty.nlpForm do
+      let env ← getEnv
+      let name := `MorewTest.Reformulation.TerminalEvidence.lateProperty.nlpForm
+      unless #[name, Lean.mkPrivateName env name].any env.contains do
         throwError "property callback ran before form declaration"
       throwError "injected terminal adapter property failure" }
     return { result with terminalForm? := some (adapter, form) } }
@@ -138,11 +142,12 @@ elab "assert_evidence_atomic% " target:ident " in " nested:command : command => 
   for suffix in #[Name.anonymous, `equiv, `conicForm, `isConic, `quadConicForm, `isQuadConic,
       `nlpForm, `isSmoothNLP] do
     let name := targetName ++ suffix
-    if after.contains name then throwError "malformed terminal evidence emitted {name}"
-    if (Syntax.getProblemView? after name).isSome ||
-        (Syntax.getProblemDisplayView? after name).isSome ||
-        (Syntax.getProblemPrintPresentation? after name).isSome then
-      throwError "malformed terminal evidence registered presentation metadata"
+    for name in #[name, Lean.mkPrivateName after name] do
+      if after.contains name then throwError "malformed terminal evidence emitted {name}"
+      if (Syntax.getProblemView? after name).isSome ||
+          (Syntax.getProblemDisplayView? after name).isSome ||
+          (Syntax.getProblemPrintPresentation? after name).isSome then
+        throwError "malformed terminal evidence registered presentation metadata"
 
 #guard_error_fragments ["terminal evidence is not a Conic.Form"] in
 assert_evidence_atomic% wrongConicType in

@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
 
 /-!
 # Exact conic bounds through real negation
@@ -13,6 +15,8 @@ import MorewTest.DiagnosticsSupport
 The source keeps its spelling while existing epigraph and hypograph records
 certify the reversed bound. Domains and ambiguity remain checked at each use.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Negation
 

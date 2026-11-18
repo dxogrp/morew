@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.MatrixDomain
 import MorewTest.ElabSupport
 
@@ -19,7 +21,7 @@ namespace MorewTest.Conic.MatrixDomain
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Conic MorewTest.Affine
 
-private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
+private meta def checkUnchanged (before : MetavarContext) : MetaM Unit := do
   let after ← getMCtx
   assertExprMVarStateUnchanged before "matrix domain recognition"
   for (id, value) in before.lAssignment.toList do
@@ -29,7 +31,7 @@ private def checkUnchanged (before : MetavarContext) : MetaM Unit := do
     unless before.lAssignment.contains id || !(after.lAssignment.contains id) do
       throwError "matrix domain recognition assigned a caller universe metavariable"
 
-private def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Expr)
+private meta def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Expr)
     (accepted : Bool) : MetaM Unit := do
   let unrelated ← mkFreshExprMVar (mkConst ``Nat)
   let assigned ← mkFreshExprMVar (mkConst ``Nat)
@@ -50,7 +52,7 @@ private def checkDomain (point goal : Expr) (retained : Array Expr) (proof : Exp
   unless (← instantiateMVars assigned) == mkNatLit 7 do
     throwError "discarded an unrelated caller assignment"
 
-private def assertDomain (stx : TSyntax `term) (parameters : Nat := 0)
+private meta def assertDomain (stx : TSyntax `term) (parameters : Nat := 0)
     (accepted : Bool := true) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameters fun _ source => do

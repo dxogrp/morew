@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax.Elab
+module
+
+public import Morew.Syntax.Elab
 
 /-!
 # Imported problem declarations
@@ -11,6 +13,8 @@ import Morew.Syntax.Elab
 Compile source presentations without the printer. The consumer checks that their
 metadata and pre-resolved names survive the compiled-module boundary.
 -/
+
+@[expose] public section
 
 assert_not_exists Morew.elabPrintProblem
 

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Fn.Norm
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.NormNum

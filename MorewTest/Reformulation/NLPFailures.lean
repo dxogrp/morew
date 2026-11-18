@@ -3,11 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-! # Targeted NLP diagnostics and transactional failure -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.NLPFailures
 
@@ -155,13 +160,16 @@ run_cmd do
       `missingDomain, `noIdentity, `ambiguous, `wrongRecord, `wrongPredicate,
       `unresolvedRule, `invalidGeneratedDomain, `strict, `afterAuxiliary] do
     let name := `MorewTest.Reformulation.NLPFailures ++ target
-    for declaration in #[name, name ++ `equiv] do
-      if env.contains declaration then
-        Lean.throwError "failed NLP reformulation emitted {declaration}"
-    if (Morew.Syntax.getProblemView? env name).isSome then
-      Lean.throwError "failed NLP reformulation registered presentation metadata"
-  if env.contains `MorewTest.Reformulation.NLPFailures.failedAlias then
-    Lean.throwError "failed NLP reformulation emitted its certificate alias"
+    for name in #[name, Lean.mkPrivateName env name] do
+      for declaration in #[name, name ++ `equiv] do
+        if env.contains declaration then
+          Lean.throwError "failed NLP reformulation emitted {declaration}"
+      if (Morew.Syntax.getProblemView? env name).isSome then
+        Lean.throwError "failed NLP reformulation registered presentation metadata"
+  let aliasName := `MorewTest.Reformulation.NLPFailures.failedAlias
+  for name in #[aliasName, Lean.mkPrivateName env aliasName] do
+    if env.contains name then
+      Lean.throwError "failed NLP reformulation emitted its certificate alias"
 
 end
 end MorewTest.Reformulation.NLPFailures

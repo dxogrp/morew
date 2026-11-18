@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Reformulation.Cone.Rewrite
 import Morew.Elab.Reformulation.Cone.Terminal
 import Morew.Elab.Reformulation.Cone.View

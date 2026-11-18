@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.NLP
 import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 
@@ -331,6 +333,10 @@ error: Type mismatch: After simplification, term
   0 ≤ x
 but is expected to have type
   0 < x
+
+Note: The following definitions were not unfolded because their definition is not exposed:
+  Real.instLT ↦ 2
+  Real.instLE ↦ 2
 -/
 #guard_msgs in
 example : Data ℝ := { logData with

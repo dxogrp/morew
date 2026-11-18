@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Exported second-order reformulations
@@ -11,6 +13,8 @@ import Morew.Reformulation.Conic
 The producer retains section dimensions and coefficients, positive-margin
 constraints, and generated cone-row labels for a later module.
 -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.SecondOrder
 

@@ -3,11 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.PSD.Fixtures
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
-import MorewTest.Reformulation.PrintSupport
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.PSD.Fixtures
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
+public import MorewTest.Reformulation.PrintSupport
 
 /-!
 # PSD memberships through exact reformulation workflows
@@ -16,12 +18,14 @@ Native predicates become actual symmetric-cone memberships. Schur certificates
 use the ordinary explicit and locally registered exact-rule interfaces.
 -/
 
+@[expose] public section
+
 namespace MorewTest.Reformulation.PSD
 
 open Morew Morew.Conic
 
 /-- PSD compact output hides the carrier conversion; detailed output recovers it. -/
-def checkPSDDetails (declaration : Lean.Name) (proofName : String)
+meta def checkPSDDetails (declaration : Lean.Name) (proofName : String)
     (required : Array String := #[]) : Lean.Elab.Command.CommandElabM Unit := do
   let compact ← PrintDetails.printed declaration false
   let detailed ← PrintDetails.printed declaration true
@@ -88,7 +92,7 @@ info: problem (x : ℝ)
   let matrix := Matrix.diagonal ![x, 1]
   minimize x
   subject to
-    semidefinite : SymmetricMatrix.ofMatrix matrix (diagonalTarget._proof_1 x) ∈ PSD 2
+    semidefinite : SymmetricMatrix.ofMatrix matrix (diagonalTarget._proof_14 x) ∈ PSD 2
     upper : 3 - x ∈ ℝ₊
 -/
 #guard_msgs in

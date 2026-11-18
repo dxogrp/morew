@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.NLP.Terminal
 import MorewTest.NLP.DomainSupport
 import MorewTest.Environment
@@ -23,7 +25,7 @@ open Morew.Elab.NLP
 open MorewTest.Affine (elaborate)
 open scoped ENNReal
 
-private def presentation (objective : TSyntax `term)
+private meta def presentation (objective : TSyntax `term)
     (rows : Array (Name × TSyntax `term)) : TermElabM PresentationState := do
   let objective ← elaborate objective
   let .forallE _ domain value _ ← whnf (← inferType objective)
@@ -34,7 +36,7 @@ private def presentation (objective : TSyntax `term)
     sense := .minimize, domainType := domain, valueType := value
     objective, constraints, binders := #[{ name := `point, type := domain }] }
 
-private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal.Result := do
+private meta def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal.Result := do
   let before ← getMCtx
   let result ← match ← Morew.Elab.NLP.Terminal.plan source with
     | .ok result => pure result
@@ -52,7 +54,7 @@ private def checked (source : PresentationState) : MetaM Morew.Elab.NLP.Terminal
     checkCompleteWithKernel proof "terminal certificate is incomplete"
   return result
 
-private def count (result : Morew.Elab.NLP.Terminal.Result) (expected : Nat) : MetaM Unit := do
+private meta def count (result : Morew.Elab.NLP.Terminal.Result) (expected : Nat) : MetaM Unit := do
   let data ← mkProjection result.form `data
   unless ← isDefEq (← mkProjection data `rowCount) (mkNatLit expected) do
     throwError "terminal form has the wrong scalar row count"
@@ -177,7 +179,7 @@ run_cmd liftTermElabM do
     if closed.hasFVar || closed.hasMVar then throwError "source proof scope escaped the form"
     checkWithKernel closed
 
-private def reject (source : PresentationState) (fragment : String) : MetaM Unit := do
+private meta def reject (source : PresentationState) (fragment : String) : MetaM Unit := do
   let environment ← getEnv
   let context ← getMCtx
   let .error error ← Morew.Elab.NLP.Terminal.plan source

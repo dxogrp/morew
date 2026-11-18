@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Evidence.Sign
 import Morew.Elab.Cone.Constraint
@@ -26,7 +28,10 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   row : Morew.Conic.Constraint X
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
-elab "certified_membership% " source:term : term => do
+local syntax "certified_membership% " term : term
+
+local elab_rules : term
+| `(certified_membership% $source:term) => do
   let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an affine membership: {error.reason}"
@@ -84,7 +89,7 @@ example (x : Fin 0 → ℝ) : (vectorZero 0).row.Holds x := by
   rw [(vectorZero 0).equivalent, Set.mem_singleton_iff]
   exact funext fun i => Fin.elim0 i
 
-private def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
+private meta def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
   let predicate ← elaborateUnchecked source
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `affine_member)
     | throwError "unsupported affine membership was accepted"
@@ -138,7 +143,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       if ← hole.mvarId!.isAssigned then
         throwError "singleton recognition assigned a caller metavariable"
 
-private def expectSign (source : TSyntax `term) (strict accepted : Bool) : TermElabM Unit := do
+private meta def expectSign (source : TSyntax `term) (strict accepted : Bool) : TermElabM Unit := do
   let predicate ← elaborateUnchecked source
   lambdaTelescope predicate fun points body => do
     withLocalDeclD `retained body fun evidence => do

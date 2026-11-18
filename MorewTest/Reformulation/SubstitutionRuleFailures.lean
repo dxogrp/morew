@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.Substitution.Registry.Source
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.Substitution.Registry.Source
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-!
 # Coordinate substitution rejection and atomicity
@@ -30,7 +33,8 @@ elab "assert_substitution_atomic% " target:ident aliasName:ident " in " nested:c
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed substitution changed declarations or coverage helpers"
-  for name in #[target, target ++ `equiv, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name then Lean.throwError m!"failed substitution emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome then
       Lean.throwError m!"failed substitution registered presentation metadata for {name}"

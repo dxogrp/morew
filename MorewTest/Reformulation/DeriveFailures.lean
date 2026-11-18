@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-!
 # Derived-constraint rejection and atomicity
@@ -29,12 +32,13 @@ elab "assert_derive_atomic% " target:ident aliasName:ident " in " nested:command
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed derivation changed declarations or certificate helpers"
-  for name in #[target, target ++ `equiv, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name then Lean.throwError m!"failed derivation emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome then
       Lean.throwError m!"failed derivation registered presentation metadata for {name}"
 
-def unrestricted := problem (x : ℝ) minimize x
+@[expose] public def unrestricted := problem (x : ℝ) minimize x
 
 def bounded :=
   problem (x : ℝ)
@@ -43,7 +47,7 @@ def bounded :=
       lower : -1 ≤ x
       upper : x ≤ 1
 
-theorem selfBound : ∀ point, unrestricted.feasible point → point ≤ point := by
+public theorem selfBound : ∀ point, unrestricted.feasible point → point ≤ point := by
   intro point _
   exact le_refl point
 
@@ -253,7 +257,8 @@ elab "assert_derive_isolated% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "rejected incomplete derivation changed declarations"
-  for name in #[target, target ++ `equiv] do
+  for name in #[target, target ++ `equiv].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       throwError "rejected incomplete derivation retained an output or its metadata"
 

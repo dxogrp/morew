@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Basic
 import MorewTest.DiagnosticsSupport
 
@@ -17,18 +19,20 @@ namespace MorewTest.Reformulation.SubstitutionFailures
 open Morew
 noncomputable section
 
-private def assertNoReformulationOutput (target aliasName : Lean.Name) :
+private meta def assertNoReformulationOutput (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
-  let certificateName := target ++ `equiv
-  if env.contains target then
-    Lean.throwError "failed reformulation emitted target `{target}`"
-  if env.contains certificateName then
-    Lean.throwError "failed reformulation emitted certificate `{certificateName}`"
-  if env.contains aliasName then
-    Lean.throwError "failed reformulation emitted alias `{aliasName}`"
-  if (Morew.Syntax.getProblemView? env target).isSome then
-    Lean.throwError "failed reformulation registered presentation metadata for `{target}`"
+  for target in #[target, Lean.mkPrivateName env target] do
+    let certificateName := target ++ `equiv
+    if env.contains target then
+      Lean.throwError "failed reformulation emitted target `{target}`"
+    if env.contains certificateName then
+      Lean.throwError "failed reformulation emitted certificate `{certificateName}`"
+    if (Morew.Syntax.getProblemView? env target).isSome then
+      Lean.throwError "failed reformulation registered presentation metadata for `{target}`"
+  for aliasName in #[aliasName, Lean.mkPrivateName env aliasName] do
+    if env.contains aliasName then
+      Lean.throwError "failed reformulation emitted alias `{aliasName}`"
 
 def positiveSource :=
   problem (x : ℝ)

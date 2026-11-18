@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Reformulation.Presentation
 
 /-!
@@ -19,7 +21,7 @@ namespace MorewTest.ImportCompatibility.TypedPresentation
 open Lean Lean.Meta
 open Morew.Elab.Reformulation
 
-def naturalPresentation : PresentationState where
+meta def naturalPresentation : PresentationState where
   sense := Morew.ObjectiveSense.minimize
   domainType := mkConst ``Nat
   valueType := mkConst ``Nat

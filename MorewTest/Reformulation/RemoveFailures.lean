@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-! # Removal never uses the selected row, historical rows, or general search -/
 
@@ -26,7 +29,8 @@ elab "assert_remove_atomic% " target:ident aliasName:ident " in " nested:command
     Lean.throwError "failed removal changed declarations or certificate helpers"
   for name in #[target, target ++ `equiv, aliasName,
       target ++ `conicForm, target ++ `isConic,
-      target ++ `nlpForm, target ++ `isSmoothNLP] do
+      target ++ `nlpForm, target ++ `isSmoothNLP].flatMap
+        (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name then Lean.throwError m!"failed removal emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome ||
         (Morew.Syntax.getProblemDisplayView? after name).isSome ||
@@ -41,7 +45,7 @@ def bounded :=
       upper : x ≤ 1
       relaxed : x ≤ 3
 
-def duplicate :=
+@[expose] public def duplicate :=
   problem (x : ℝ)
     minimize x
     subject to
@@ -285,7 +289,8 @@ elab "assert_remove_isolated% " target:ident " in " nested:command : command => 
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "rejected incomplete removal changed declarations"
-  for name in #[target, target ++ `equiv] do
+  for name in #[target, target ++ `equiv].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       throwError "rejected incomplete removal retained an output or its metadata"
 
@@ -339,14 +344,14 @@ def TestRelation.transitivity {left middle right : Problem Nat Nat}
 def TestRelation.ofEquiv {left right : Problem Nat Nat}
     (witness : GlobalEquiv left right) : TestRelation left right := ⟨witness⟩
 
-private def testRunner : CertificateRunner := {
+private meta def testRunner : CertificateRunner := {
   relation := ``TestRelation
   refl := ``TestRelation.reflexivity
   trans := ``TestRelation.transitivity
   liftEquiv? := some ``TestRelation.ofEquiv
 }
 
-private def initialState : CommandElabM ReformState := do
+private meta def initialState : CommandElabM ReformState := do
   let (typed, sectionFVars, view, semantic) ← runTermElabM fun sectionFVars => do
     let some view := Syntax.getProblemView? (← getEnv) ``source
       | throwError "missing source presentation"

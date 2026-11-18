@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-! # Certified selection of feasible representatives -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Restrict
 

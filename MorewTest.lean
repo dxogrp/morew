@@ -1,338 +1,346 @@
-import MorewTest.Affine.CanonicalInstances
-import MorewTest.Affine.ConstraintNormalization
-import MorewTest.Affine.FiniteIndexing
-import MorewTest.Affine.HelperFixtures
-import MorewTest.Affine.HelperLimits
-import MorewTest.Affine.Helpers
-import MorewTest.Affine.LocalContext
-import MorewTest.Affine.Matrix
-import MorewTest.Affine.RealPower
-import MorewTest.Affine.Reification
-import MorewTest.Affine.RowSupport
-import MorewTest.Affine.StateIsolation
-import MorewTest.Affine.Support
-import MorewTest.Affine.TypedPresentation
-import MorewTest.Affine.Unsupported
-import MorewTest.Atom.Recognition
-import MorewTest.Atom.Support
-import MorewTest.Atom.Unsupported
-import MorewTest.CommandSupport
-import MorewTest.Conic
-import MorewTest.Conic.AffineMembership
-import MorewTest.Conic.Cvar
-import MorewTest.Conic.EuclideanAffine
-import MorewTest.Conic.Exponential
-import MorewTest.Conic.ExponentialCone
-import MorewTest.Conic.ExponentialElab
-import MorewTest.Conic.ExponentialRows
-import MorewTest.Conic.Form
-import MorewTest.Conic.Form.Defined
-import MorewTest.Conic.Form.Support
-import MorewTest.Conic.HelperLimits
-import MorewTest.Conic.Huber
-import MorewTest.Conic.MatFracPriority
-import MorewTest.Conic.MatrixDomain
-import MorewTest.Conic.Negation
-import MorewTest.Conic.Nonneg
-import MorewTest.Conic.NormPreference
-import MorewTest.Conic.Normalize
-import MorewTest.Conic.PSD
-import MorewTest.Conic.PSD.LambdaMax
-import MorewTest.Conic.PSD.LogDet
-import MorewTest.Conic.PSD.MatrixFraction
-import MorewTest.Conic.PSD.NuclearNorm
-import MorewTest.Conic.PSD.SpectralNorm
-import MorewTest.Conic.PSD.Triangular
-import MorewTest.Conic.PSDElab
-import MorewTest.Conic.PolyhedralElab
-import MorewTest.Conic.Power
-import MorewTest.Conic.PowerFailures
-import MorewTest.Conic.PowerFamilies
-import MorewTest.Conic.PowerGeometricMean
-import MorewTest.Conic.PowerNorm
-import MorewTest.Conic.PowerRules
-import MorewTest.Conic.QuadForm
-import MorewTest.Conic.Registry
-import MorewTest.Conic.Rewrite
-import MorewTest.Conic.SecondOrder
-import MorewTest.Conic.SecondOrderElab
-import MorewTest.Conic.SecondOrderRows
-import MorewTest.Conic.SumLargest
-import MorewTest.Conic.Terminal
-import MorewTest.ConstraintRepr
-import MorewTest.Core
-import MorewTest.DerivedConstraint
-import MorewTest.Diagnostics
-import MorewTest.DiagnosticsSupport
-import MorewTest.ElabSupport
-import MorewTest.Environment
-import MorewTest.EnvironmentRollback
-import MorewTest.Evidence
-import MorewTest.Fn.Cvar
-import MorewTest.Fn.Huber
-import MorewTest.Fn.Norm
-import MorewTest.Fn.SumLargest
-import MorewTest.ImportCompatibility.AppliedSources
-import MorewTest.ImportCompatibility.AppliedSources.Defined
-import MorewTest.ImportCompatibility.CoercionReplay
-import MorewTest.ImportCompatibility.CoercionReplay.Defined
-import MorewTest.ImportCompatibility.DirectNormalization
-import MorewTest.ImportCompatibility.EuclideanPrintingConic
-import MorewTest.ImportCompatibility.EuclideanPrintingNLP
-import MorewTest.ImportCompatibility.Exponential
-import MorewTest.ImportCompatibility.Exponential.Defined
-import MorewTest.ImportCompatibility.LocalDefinitions
-import MorewTest.ImportCompatibility.LocalDefinitions.Defined
-import MorewTest.ImportCompatibility.LogDet
-import MorewTest.ImportCompatibility.NegatedOccurrence
-import MorewTest.ImportCompatibility.Negation
-import MorewTest.ImportCompatibility.NegationNLP
-import MorewTest.ImportCompatibility.ObjectiveCertificates
-import MorewTest.ImportCompatibility.OccurrenceBounds
-import MorewTest.ImportCompatibility.PSD
-import MorewTest.ImportCompatibility.Polyhedral
-import MorewTest.ImportCompatibility.Polyhedral.Defined
-import MorewTest.ImportCompatibility.PowerChainPrinting
-import MorewTest.ImportCompatibility.PowerChainPrinting.Defined
-import MorewTest.ImportCompatibility.PowerFamilies
-import MorewTest.ImportCompatibility.PowerFamilies.Defined
-import MorewTest.ImportCompatibility.PrintDetails
-import MorewTest.ImportCompatibility.PrintDetails.Defined
-import MorewTest.ImportCompatibility.ProblemPresentation
-import MorewTest.ImportCompatibility.ProblemPresentation.Defined
-import MorewTest.ImportCompatibility.ProblemPresentation.Registered
-import MorewTest.ImportCompatibility.SecondOrder
-import MorewTest.ImportCompatibility.SecondOrder.Defined
-import MorewTest.ImportCompatibility.Spectral
-import MorewTest.ImportCompatibility.Substitution
-import MorewTest.ImportCompatibility.TerminalConic
-import MorewTest.ImportCompatibility.TerminalConic.Defined
-import MorewTest.ImportCompatibility.TerminalQuadConic
-import MorewTest.ImportCompatibility.TerminalQuadConic.Defined
-import MorewTest.ImportCompatibility.TypedPresentation
-import MorewTest.Imports.Basic
-import MorewTest.Imports.BasicSuites
-import MorewTest.Imports.ConeRows
-import MorewTest.Imports.ConeTerminal
-import MorewTest.Imports.Conic
-import MorewTest.Imports.ConicBackend
-import MorewTest.Imports.ConicNLP
-import MorewTest.Imports.ConicSuites
-import MorewTest.Imports.Library
-import MorewTest.Imports.NLP
-import MorewTest.Imports.NLPConic
-import MorewTest.Imports.NLPSuites
-import MorewTest.Imports.QuadConicBackend
-import MorewTest.Imports.Reformulation
-import MorewTest.Imports.Repr
-import MorewTest.Imports.Semantic
-import MorewTest.NLP
-import MorewTest.NLP.Domain
-import MorewTest.NLP.DomainFailures
-import MorewTest.NLP.DomainLemmas
-import MorewTest.NLP.DomainState
-import MorewTest.NLP.DomainSupport
-import MorewTest.NLP.Euclidean
-import MorewTest.NLP.Form
-import MorewTest.NLP.HelperFixtures
-import MorewTest.NLP.HelperLimits
-import MorewTest.NLP.Helpers
-import MorewTest.NLP.Registry
-import MorewTest.NLP.Rewrite
-import MorewTest.NLP.RowData
-import MorewTest.NLP.Rows
-import MorewTest.NLP.Smooth
-import MorewTest.NLP.SmoothFailures
-import MorewTest.NLP.SmoothLemmas
-import MorewTest.NLP.SmoothState
-import MorewTest.NLP.SmoothSupport
-import MorewTest.NLP.Terminal
-import MorewTest.ObjectiveContext
-import MorewTest.ObjectiveContextAutomation
-import MorewTest.QuadConic.Basic
-import MorewTest.QuadConic.Objective
-import MorewTest.Reformulation.AffineHelperSource
-import MorewTest.Reformulation.AffineHelpers
-import MorewTest.Reformulation.CanonicalCheckpoint
-import MorewTest.Reformulation.Composition
-import MorewTest.Reformulation.ConeMembership
-import MorewTest.Reformulation.ConeMembership.Defined
-import MorewTest.Reformulation.ConeMembershipAliases
-import MorewTest.Reformulation.ConeMembershipReplay
-import MorewTest.Reformulation.ContextualRewrite
-import MorewTest.Reformulation.Cvar
-import MorewTest.Reformulation.CvarFailures
-import MorewTest.Reformulation.Derive
-import MorewTest.Reformulation.DeriveBackends
-import MorewTest.Reformulation.DeriveFailures
-import MorewTest.Reformulation.DeriveFailuresBackends
-import MorewTest.Reformulation.DirectNormalization
-import MorewTest.Reformulation.Dispatch
-import MorewTest.Reformulation.EuclideanPrintingConic
-import MorewTest.Reformulation.EuclideanPrintingNLP
-import MorewTest.Reformulation.EuclideanPrintingSupport
-import MorewTest.Reformulation.Exponential
-import MorewTest.Reformulation.ExponentialCustom
-import MorewTest.Reformulation.ExponentialFailures
-import MorewTest.Reformulation.FunctionDecisionRecovery
-import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
-import MorewTest.Reformulation.Huber
-import MorewTest.Reformulation.ImportedDerive
-import MorewTest.Reformulation.ImportedNorm
-import MorewTest.Reformulation.ImportedRemove
-import MorewTest.Reformulation.ImportedRemoveInstances
-import MorewTest.Reformulation.ImportedRename
-import MorewTest.Reformulation.ImportedRestrict
-import MorewTest.Reformulation.IndexNames
-import MorewTest.Reformulation.LocalDefinitionRecovery
-import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
-import MorewTest.Reformulation.LocalDefinitionSubstitution
-import MorewTest.Reformulation.LocalDefinitionSubstitutionConic
-import MorewTest.Reformulation.LogDet
-import MorewTest.Reformulation.LogDet.Defined
-import MorewTest.Reformulation.LogDet.Domains
-import MorewTest.Reformulation.LogDet.Objectives
-import MorewTest.Reformulation.LogDet.Ordering
-import MorewTest.Reformulation.LogDet.Printing
-import MorewTest.Reformulation.LogDet.Sources
-import MorewTest.Reformulation.LogDetFailures
-import MorewTest.Reformulation.MatrixFraction
-import MorewTest.Reformulation.MatrixFraction.Defined
-import MorewTest.Reformulation.MatrixFractionFailures
-import MorewTest.Reformulation.NLP
-import MorewTest.Reformulation.NLPBackends
-import MorewTest.Reformulation.NLPCustom
-import MorewTest.Reformulation.NLPFailures
-import MorewTest.Reformulation.NLPFailuresBackends
-import MorewTest.Reformulation.NLPImported
-import MorewTest.Reformulation.NLPImportedSource
-import MorewTest.Reformulation.NameAllocation
-import MorewTest.Reformulation.NegatedOccurrence
-import MorewTest.Reformulation.NegatedOccurrenceConic
-import MorewTest.Reformulation.Negation
-import MorewTest.Reformulation.NegationNLP
-import MorewTest.Reformulation.NegationNLPInstances
-import MorewTest.Reformulation.Norm
-import MorewTest.Reformulation.NormFailures
-import MorewTest.Reformulation.ObjectiveBoundLabels
-import MorewTest.Reformulation.ObjectiveCertificateFailures
-import MorewTest.Reformulation.ObjectiveCertificates
-import MorewTest.Reformulation.OccurrenceBounds
-import MorewTest.Reformulation.OccurrenceBoundsConic
-import MorewTest.Reformulation.OccurrenceFailures
-import MorewTest.Reformulation.OccurrenceFailuresConic
-import MorewTest.Reformulation.OccurrenceGeneratedNames
-import MorewTest.Reformulation.OccurrenceGeneric
-import MorewTest.Reformulation.OccurrencePredicateContainers
-import MorewTest.Reformulation.OccurrenceStructure
-import MorewTest.Reformulation.OccurrenceStructure.Defined
-import MorewTest.Reformulation.OccurrenceStructureDefaults
-import MorewTest.Reformulation.OccurrenceStructureProducts
-import MorewTest.Reformulation.OccurrenceTraversal
-import MorewTest.Reformulation.PSD
-import MorewTest.Reformulation.PSD.Fixtures
-import MorewTest.Reformulation.PSDFailures
-import MorewTest.Reformulation.Polyhedral
-import MorewTest.Reformulation.PolyhedralFailures
-import MorewTest.Reformulation.Power
-import MorewTest.Reformulation.PowerChainPrinting
-import MorewTest.Reformulation.PowerChainRecognition
-import MorewTest.Reformulation.PowerFamilies
-import MorewTest.Reformulation.PowerFamilyFailures
-import MorewTest.Reformulation.PowerNormFamilies
-import MorewTest.Reformulation.PowerPrinting
-import MorewTest.Reformulation.PowerSource
-import MorewTest.Reformulation.PowerWorkflow
-import MorewTest.Reformulation.PresentationIndices
-import MorewTest.Reformulation.PresentationUpdates
-import MorewTest.Reformulation.PrintDetails
-import MorewTest.Reformulation.PrintSupport
-import MorewTest.Reformulation.QuadForm
-import MorewTest.Reformulation.QuadFormFailures
-import MorewTest.Reformulation.Registry
-import MorewTest.Reformulation.Registry.Source
-import MorewTest.Reformulation.Remove
-import MorewTest.Reformulation.RemoveBackends
-import MorewTest.Reformulation.RemoveFailures
-import MorewTest.Reformulation.RemoveFailuresBackends
-import MorewTest.Reformulation.RemoveInstances
-import MorewTest.Reformulation.Rename
-import MorewTest.Reformulation.RenameBackends
-import MorewTest.Reformulation.RenameFailures
-import MorewTest.Reformulation.RenameFailuresBackends
-import MorewTest.Reformulation.RenameIsolation
-import MorewTest.Reformulation.Replace
-import MorewTest.Reformulation.ReplaySupport
-import MorewTest.Reformulation.Restrict
-import MorewTest.Reformulation.RestrictBackends
-import MorewTest.Reformulation.RestrictFailures
-import MorewTest.Reformulation.RestrictFailuresBackends
-import MorewTest.Reformulation.RunnerState
-import MorewTest.Reformulation.SecondOrder
-import MorewTest.Reformulation.SecondOrderCustom
-import MorewTest.Reformulation.SecondOrderCustom.Fixtures
-import MorewTest.Reformulation.SecondOrderFailures
-import MorewTest.Reformulation.SingletonReplay
-import MorewTest.Reformulation.SmoothHelpers
-import MorewTest.Reformulation.Spectral
-import MorewTest.Reformulation.Spectral.Defined
-import MorewTest.Reformulation.SpectralFailures
-import MorewTest.Reformulation.SpectralPrinting
-import MorewTest.Reformulation.SubstitutionBindingIdentity
-import MorewTest.Reformulation.SubstitutionContext
-import MorewTest.Reformulation.SubstitutionContextConic
-import MorewTest.Reformulation.SubstitutionFailures
-import MorewTest.Reformulation.SubstitutionGeneratedNames
-import MorewTest.Reformulation.SubstitutionObjective
-import MorewTest.Reformulation.SubstitutionRuleFailures
-import MorewTest.Reformulation.SubstitutionRules
-import MorewTest.Reformulation.SubstitutionRulesBackends
-import MorewTest.Reformulation.SumLargest
-import MorewTest.Reformulation.TerminalConic
-import MorewTest.Reformulation.TerminalConicCustom
-import MorewTest.Reformulation.TerminalConicFailures
-import MorewTest.Reformulation.TerminalConicSection
-import MorewTest.Reformulation.TerminalEvidence
-import MorewTest.Reformulation.TerminalNLP
-import MorewTest.Reformulation.TerminalNLPEvidence
-import MorewTest.Reformulation.TerminalNLPFailures
-import MorewTest.Reformulation.TerminalNLPFailuresBackends
-import MorewTest.Reformulation.TerminalNLPFamilies
-import MorewTest.Reformulation.TerminalNLPSection
-import MorewTest.Reformulation.TerminalQuadConic
-import MorewTest.Reformulation.TerminalQuadConicFailures
-import MorewTest.Reformulation.VectorDomains
-import MorewTest.RemovedConstraint
-import MorewTest.Restriction
-import MorewTest.Rewrite
-import MorewTest.Rewrite.Negation
-import MorewTest.Rewrite.Plan
-import MorewTest.Rewrite.Polyhedral
-import MorewTest.Rewrite.Registry
-import MorewTest.Rewrite.Registry.First
-import MorewTest.Rewrite.Registry.OrderAB
-import MorewTest.Rewrite.Registry.OrderBA
-import MorewTest.Rewrite.Registry.Second
-import MorewTest.Rewrite.Registry.Source
-import MorewTest.Rewrite.Registry.Types
-import MorewTest.Rewrite.Replace
-import MorewTest.Rewrite.Sum
-import MorewTest.Substitution.Evidence
-import MorewTest.Substitution.Registry
-import MorewTest.Substitution.Registry.Source
-import MorewTest.Surface.Affine
-import MorewTest.Surface.AppliedSourceDimensions
-import MorewTest.Surface.AppliedSources
-import MorewTest.Surface.Atom
-import MorewTest.Surface.Conic
-import MorewTest.Surface.Diagnostics
-import MorewTest.Surface.ElaborationContext
-import MorewTest.Surface.Fixtures
-import MorewTest.Surface.LocalDefinitionInference
-import MorewTest.Surface.LocalDefinitions
-import MorewTest.Surface.NameResolution
-import MorewTest.Surface.Reformulation
-import MorewTest.Syntax.PresentationValidation
-import MorewTest.Syntax.Printing
-import MorewTest.Transform
-import MorewTest.Transform.Parameterization
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import MorewTest.Affine.CanonicalInstances
+public import MorewTest.Affine.ConstraintNormalization
+public import MorewTest.Affine.FiniteIndexing
+public import MorewTest.Affine.HelperFixtures
+public import MorewTest.Affine.HelperLimits
+public import MorewTest.Affine.Helpers
+public import MorewTest.Affine.LocalContext
+public import MorewTest.Affine.Matrix
+public import MorewTest.Affine.RealPower
+public import MorewTest.Affine.Reification
+public import MorewTest.Affine.RowSupport
+public import MorewTest.Affine.StateIsolation
+public import MorewTest.Affine.Support
+public import MorewTest.Affine.TypedPresentation
+public import MorewTest.Affine.Unsupported
+public import MorewTest.Atom.Recognition
+public import MorewTest.Atom.Support
+public import MorewTest.Atom.Unsupported
+public import MorewTest.CommandSupport
+public import MorewTest.Conic
+public import MorewTest.Conic.AffineMembership
+public import MorewTest.Conic.Cvar
+public import MorewTest.Conic.EuclideanAffine
+public import MorewTest.Conic.Exponential
+public import MorewTest.Conic.ExponentialCone
+public import MorewTest.Conic.ExponentialElab
+public import MorewTest.Conic.ExponentialRows
+public import MorewTest.Conic.Form
+public import MorewTest.Conic.Form.Defined
+public import MorewTest.Conic.Form.Support
+public import MorewTest.Conic.HelperLimits
+public import MorewTest.Conic.Huber
+public import MorewTest.Conic.MatFracPriority
+public import MorewTest.Conic.MatrixDomain
+public import MorewTest.Conic.Negation
+public import MorewTest.Conic.Nonneg
+public import MorewTest.Conic.NormPreference
+public import MorewTest.Conic.Normalize
+public import MorewTest.Conic.PSD
+public import MorewTest.Conic.PSD.LambdaMax
+public import MorewTest.Conic.PSD.LogDet
+public import MorewTest.Conic.PSD.MatrixFraction
+public import MorewTest.Conic.PSD.NuclearNorm
+public import MorewTest.Conic.PSD.SpectralNorm
+public import MorewTest.Conic.PSD.Triangular
+public import MorewTest.Conic.PSDElab
+public import MorewTest.Conic.PolyhedralElab
+public import MorewTest.Conic.Power
+public import MorewTest.Conic.PowerFailures
+public import MorewTest.Conic.PowerFamilies
+public import MorewTest.Conic.PowerGeometricMean
+public import MorewTest.Conic.PowerNorm
+public import MorewTest.Conic.PowerRules
+public import MorewTest.Conic.QuadForm
+public import MorewTest.Conic.Registry
+public import MorewTest.Conic.Rewrite
+public import MorewTest.Conic.SecondOrder
+public import MorewTest.Conic.SecondOrderElab
+public import MorewTest.Conic.SecondOrderRows
+public import MorewTest.Conic.SumLargest
+public import MorewTest.Conic.Terminal
+public import MorewTest.ConstraintRepr
+public import MorewTest.Core
+public import MorewTest.DerivedConstraint
+public import MorewTest.Diagnostics
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.ElabSupport
+public import MorewTest.Environment
+public import MorewTest.EnvironmentRollback
+public import MorewTest.Evidence
+public import MorewTest.Fn.Cvar
+public import MorewTest.Fn.Huber
+public import MorewTest.Fn.Norm
+public import MorewTest.Fn.SumLargest
+public import MorewTest.ImportCompatibility.AppliedSources
+public import MorewTest.ImportCompatibility.AppliedSources.Defined
+public import MorewTest.ImportCompatibility.CoercionReplay
+public import MorewTest.ImportCompatibility.CoercionReplay.Defined
+public import MorewTest.ImportCompatibility.DirectNormalization
+public import MorewTest.ImportCompatibility.EuclideanPrintingConic
+public import MorewTest.ImportCompatibility.EuclideanPrintingNLP
+public import MorewTest.ImportCompatibility.Exponential
+public import MorewTest.ImportCompatibility.Exponential.Defined
+public import MorewTest.ImportCompatibility.LocalDefinitions
+public import MorewTest.ImportCompatibility.LocalDefinitions.Defined
+public import MorewTest.ImportCompatibility.LogDet
+public import MorewTest.ImportCompatibility.NegatedOccurrence
+public import MorewTest.ImportCompatibility.Negation
+public import MorewTest.ImportCompatibility.NegationNLP
+public import MorewTest.ImportCompatibility.ObjectiveCertificates
+public import MorewTest.ImportCompatibility.OccurrenceBounds
+public import MorewTest.ImportCompatibility.PSD
+public import MorewTest.ImportCompatibility.Polyhedral
+public import MorewTest.ImportCompatibility.Polyhedral.Defined
+public import MorewTest.ImportCompatibility.PowerChainPrinting
+public import MorewTest.ImportCompatibility.PowerChainPrinting.Defined
+public import MorewTest.ImportCompatibility.PowerFamilies
+public import MorewTest.ImportCompatibility.PowerFamilies.Defined
+public import MorewTest.ImportCompatibility.PrintDetails
+public import MorewTest.ImportCompatibility.PrintDetails.Defined
+public import MorewTest.ImportCompatibility.ProblemPresentation
+public import MorewTest.ImportCompatibility.ProblemPresentation.Defined
+public import MorewTest.ImportCompatibility.ProblemPresentation.Registered
+public import MorewTest.ImportCompatibility.SecondOrder
+public import MorewTest.ImportCompatibility.SecondOrder.Defined
+public import MorewTest.ImportCompatibility.Spectral
+public import MorewTest.ImportCompatibility.Substitution
+public import MorewTest.ImportCompatibility.TerminalConic
+public import MorewTest.ImportCompatibility.TerminalConic.Defined
+public import MorewTest.ImportCompatibility.TerminalQuadConic
+public import MorewTest.ImportCompatibility.TerminalQuadConic.Defined
+public import MorewTest.ImportCompatibility.TypedPresentation
+public import MorewTest.Imports.Basic
+public import MorewTest.Imports.BasicSuites
+public import MorewTest.Imports.ConeRows
+public import MorewTest.Imports.ConeTerminal
+public import MorewTest.Imports.Conic
+public import MorewTest.Imports.ConicBackend
+public import MorewTest.Imports.ConicNLP
+public import MorewTest.Imports.ConicSuites
+public import MorewTest.Imports.Library
+public import MorewTest.Imports.NLP
+public import MorewTest.Imports.NLPConic
+public import MorewTest.Imports.NLPSuites
+public import MorewTest.Imports.QuadConicBackend
+public import MorewTest.Imports.Reformulation
+public import MorewTest.Imports.Repr
+public import MorewTest.Imports.Semantic
+public import MorewTest.ModuleSystem.Commands
+public import MorewTest.ModuleSystem.Defined
+public import MorewTest.ModuleSystem.Registry
+public import MorewTest.ModuleSystem.Registry.Defined
+public import MorewTest.ModuleSystem.SyntaxRuntime
+public import MorewTest.NLP
+public import MorewTest.NLP.Domain
+public import MorewTest.NLP.DomainFailures
+public import MorewTest.NLP.DomainLemmas
+public import MorewTest.NLP.DomainState
+public import MorewTest.NLP.DomainSupport
+public import MorewTest.NLP.Euclidean
+public import MorewTest.NLP.Form
+public import MorewTest.NLP.HelperFixtures
+public import MorewTest.NLP.HelperLimits
+public import MorewTest.NLP.Helpers
+public import MorewTest.NLP.Registry
+public import MorewTest.NLP.Rewrite
+public import MorewTest.NLP.RowData
+public import MorewTest.NLP.Rows
+public import MorewTest.NLP.Smooth
+public import MorewTest.NLP.SmoothFailures
+public import MorewTest.NLP.SmoothLemmas
+public import MorewTest.NLP.SmoothState
+public import MorewTest.NLP.SmoothSupport
+public import MorewTest.NLP.Terminal
+public import MorewTest.ObjectiveContext
+public import MorewTest.ObjectiveContextAutomation
+public import MorewTest.QuadConic.Basic
+public import MorewTest.QuadConic.Objective
+public import MorewTest.Reformulation.AffineHelperSource
+public import MorewTest.Reformulation.AffineHelpers
+public import MorewTest.Reformulation.CanonicalCheckpoint
+public import MorewTest.Reformulation.Composition
+public import MorewTest.Reformulation.ConeMembership
+public import MorewTest.Reformulation.ConeMembership.Defined
+public import MorewTest.Reformulation.ConeMembershipAliases
+public import MorewTest.Reformulation.ConeMembershipReplay
+public import MorewTest.Reformulation.ContextualRewrite
+public import MorewTest.Reformulation.Cvar
+public import MorewTest.Reformulation.CvarFailures
+public import MorewTest.Reformulation.Derive
+public import MorewTest.Reformulation.DeriveBackends
+public import MorewTest.Reformulation.DeriveFailures
+public import MorewTest.Reformulation.DeriveFailuresBackends
+public import MorewTest.Reformulation.DirectNormalization
+public import MorewTest.Reformulation.Dispatch
+public import MorewTest.Reformulation.EuclideanPrintingConic
+public import MorewTest.Reformulation.EuclideanPrintingNLP
+public import MorewTest.Reformulation.EuclideanPrintingSupport
+public import MorewTest.Reformulation.Exponential
+public import MorewTest.Reformulation.ExponentialCustom
+public import MorewTest.Reformulation.ExponentialFailures
+public import MorewTest.Reformulation.FunctionDecisionRecovery
+public import MorewTest.Reformulation.FunctionDecisionRecovery.Defined
+public import MorewTest.Reformulation.Huber
+public import MorewTest.Reformulation.ImportedDerive
+public import MorewTest.Reformulation.ImportedNorm
+public import MorewTest.Reformulation.ImportedRemove
+public import MorewTest.Reformulation.ImportedRemoveInstances
+public import MorewTest.Reformulation.ImportedRename
+public import MorewTest.Reformulation.ImportedRestrict
+public import MorewTest.Reformulation.IndexNames
+public import MorewTest.Reformulation.LocalDefinitionRecovery
+public import MorewTest.Reformulation.LocalDefinitionRecovery.Defined
+public import MorewTest.Reformulation.LocalDefinitionSubstitution
+public import MorewTest.Reformulation.LocalDefinitionSubstitutionConic
+public import MorewTest.Reformulation.LogDet
+public import MorewTest.Reformulation.LogDet.Defined
+public import MorewTest.Reformulation.LogDet.Domains
+public import MorewTest.Reformulation.LogDet.Objectives
+public import MorewTest.Reformulation.LogDet.Ordering
+public import MorewTest.Reformulation.LogDet.Printing
+public import MorewTest.Reformulation.LogDet.Sources
+public import MorewTest.Reformulation.LogDetFailures
+public import MorewTest.Reformulation.MatrixFraction
+public import MorewTest.Reformulation.MatrixFraction.Defined
+public import MorewTest.Reformulation.MatrixFractionFailures
+public import MorewTest.Reformulation.NLP
+public import MorewTest.Reformulation.NLPBackends
+public import MorewTest.Reformulation.NLPCustom
+public import MorewTest.Reformulation.NLPFailures
+public import MorewTest.Reformulation.NLPFailuresBackends
+public import MorewTest.Reformulation.NLPImported
+public import MorewTest.Reformulation.NLPImportedSource
+public import MorewTest.Reformulation.NameAllocation
+public import MorewTest.Reformulation.NegatedOccurrence
+public import MorewTest.Reformulation.NegatedOccurrenceConic
+public import MorewTest.Reformulation.Negation
+public import MorewTest.Reformulation.NegationNLP
+public import MorewTest.Reformulation.NegationNLPInstances
+public import MorewTest.Reformulation.Norm
+public import MorewTest.Reformulation.NormFailures
+public import MorewTest.Reformulation.ObjectiveBoundLabels
+public import MorewTest.Reformulation.ObjectiveCertificateFailures
+public import MorewTest.Reformulation.ObjectiveCertificates
+public import MorewTest.Reformulation.OccurrenceBounds
+public import MorewTest.Reformulation.OccurrenceBoundsConic
+public import MorewTest.Reformulation.OccurrenceFailures
+public import MorewTest.Reformulation.OccurrenceFailuresConic
+public import MorewTest.Reformulation.OccurrenceGeneratedNames
+public import MorewTest.Reformulation.OccurrenceGeneric
+public import MorewTest.Reformulation.OccurrencePredicateContainers
+public import MorewTest.Reformulation.OccurrenceStructure
+public import MorewTest.Reformulation.OccurrenceStructure.Defined
+public import MorewTest.Reformulation.OccurrenceStructureDefaults
+public import MorewTest.Reformulation.OccurrenceStructureProducts
+public import MorewTest.Reformulation.OccurrenceTraversal
+public import MorewTest.Reformulation.PSD
+public import MorewTest.Reformulation.PSD.Fixtures
+public import MorewTest.Reformulation.PSDFailures
+public import MorewTest.Reformulation.Polyhedral
+public import MorewTest.Reformulation.PolyhedralFailures
+public import MorewTest.Reformulation.Power
+public import MorewTest.Reformulation.PowerChainPrinting
+public import MorewTest.Reformulation.PowerChainRecognition
+public import MorewTest.Reformulation.PowerFamilies
+public import MorewTest.Reformulation.PowerFamilyFailures
+public import MorewTest.Reformulation.PowerNormFamilies
+public import MorewTest.Reformulation.PowerPrinting
+public import MorewTest.Reformulation.PowerSource
+public import MorewTest.Reformulation.PowerWorkflow
+public import MorewTest.Reformulation.PresentationIndices
+public import MorewTest.Reformulation.PresentationUpdates
+public import MorewTest.Reformulation.PrintDetails
+public import MorewTest.Reformulation.PrintSupport
+public import MorewTest.Reformulation.QuadForm
+public import MorewTest.Reformulation.QuadFormFailures
+public import MorewTest.Reformulation.Registry
+public import MorewTest.Reformulation.Registry.Source
+public import MorewTest.Reformulation.Remove
+public import MorewTest.Reformulation.RemoveBackends
+public import MorewTest.Reformulation.RemoveFailures
+public import MorewTest.Reformulation.RemoveFailuresBackends
+public import MorewTest.Reformulation.RemoveInstances
+public import MorewTest.Reformulation.Rename
+public import MorewTest.Reformulation.RenameBackends
+public import MorewTest.Reformulation.RenameFailures
+public import MorewTest.Reformulation.RenameFailuresBackends
+public import MorewTest.Reformulation.RenameIsolation
+public import MorewTest.Reformulation.Replace
+public import MorewTest.Reformulation.ReplaySupport
+public import MorewTest.Reformulation.Restrict
+public import MorewTest.Reformulation.RestrictBackends
+public import MorewTest.Reformulation.RestrictFailures
+public import MorewTest.Reformulation.RestrictFailuresBackends
+public import MorewTest.Reformulation.RunnerState
+public import MorewTest.Reformulation.SecondOrder
+public import MorewTest.Reformulation.SecondOrderCustom
+public import MorewTest.Reformulation.SecondOrderCustom.Fixtures
+public import MorewTest.Reformulation.SecondOrderFailures
+public import MorewTest.Reformulation.SingletonReplay
+public import MorewTest.Reformulation.SmoothHelpers
+public import MorewTest.Reformulation.Spectral
+public import MorewTest.Reformulation.Spectral.Defined
+public import MorewTest.Reformulation.SpectralFailures
+public import MorewTest.Reformulation.SpectralPrinting
+public import MorewTest.Reformulation.SubstitutionBindingIdentity
+public import MorewTest.Reformulation.SubstitutionContext
+public import MorewTest.Reformulation.SubstitutionContextConic
+public import MorewTest.Reformulation.SubstitutionFailures
+public import MorewTest.Reformulation.SubstitutionGeneratedNames
+public import MorewTest.Reformulation.SubstitutionObjective
+public import MorewTest.Reformulation.SubstitutionRuleFailures
+public import MorewTest.Reformulation.SubstitutionRules
+public import MorewTest.Reformulation.SubstitutionRulesBackends
+public import MorewTest.Reformulation.SumLargest
+public import MorewTest.Reformulation.TerminalConic
+public import MorewTest.Reformulation.TerminalConicCustom
+public import MorewTest.Reformulation.TerminalConicFailures
+public import MorewTest.Reformulation.TerminalConicSection
+public import MorewTest.Reformulation.TerminalEvidence
+public import MorewTest.Reformulation.TerminalNLP
+public import MorewTest.Reformulation.TerminalNLPEvidence
+public import MorewTest.Reformulation.TerminalNLPFailures
+public import MorewTest.Reformulation.TerminalNLPFailuresBackends
+public import MorewTest.Reformulation.TerminalNLPFamilies
+public import MorewTest.Reformulation.TerminalNLPSection
+public import MorewTest.Reformulation.TerminalQuadConic
+public import MorewTest.Reformulation.TerminalQuadConicFailures
+public import MorewTest.Reformulation.VectorDomains
+public import MorewTest.RemovedConstraint
+public import MorewTest.Restriction
+public import MorewTest.Rewrite
+public import MorewTest.Rewrite.Negation
+public import MorewTest.Rewrite.Plan
+public import MorewTest.Rewrite.Polyhedral
+public import MorewTest.Rewrite.Registry
+public import MorewTest.Rewrite.Registry.First
+public import MorewTest.Rewrite.Registry.OrderAB
+public import MorewTest.Rewrite.Registry.OrderBA
+public import MorewTest.Rewrite.Registry.Second
+public import MorewTest.Rewrite.Registry.Source
+public import MorewTest.Rewrite.Registry.Types
+public import MorewTest.Rewrite.Replace
+public import MorewTest.Rewrite.Sum
+public import MorewTest.Runtime
+public import MorewTest.Substitution.Evidence
+public import MorewTest.Substitution.Registry
+public import MorewTest.Substitution.Registry.Source
+public import MorewTest.Surface.Affine
+public import MorewTest.Surface.AppliedSourceDimensions
+public import MorewTest.Surface.AppliedSources
+public import MorewTest.Surface.Atom
+public import MorewTest.Surface.Conic
+public import MorewTest.Surface.Diagnostics
+public import MorewTest.Surface.ElaborationContext
+public import MorewTest.Surface.Fixtures
+public import MorewTest.Surface.LocalDefinitionInference
+public import MorewTest.Surface.LocalDefinitions
+public import MorewTest.Surface.NameResolution
+public import MorewTest.Surface.Reformulation
+public import MorewTest.Syntax.PresentationValidation
+public import MorewTest.Syntax.Printing
+public import MorewTest.Transform
+public import MorewTest.Transform.Parameterization

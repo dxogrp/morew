@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ImportCompatibility.TerminalQuadConic.Defined
 
 /-! Imported quadratic certificates retain the correct direction and proof parameters. -/

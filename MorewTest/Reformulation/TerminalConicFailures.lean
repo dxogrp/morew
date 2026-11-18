@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-!
 # Terminal conic failure and declaration atomicity
@@ -29,9 +32,10 @@ elab "assert_terminal_atomic% " nested:command : command => do
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed terminal conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed terminal conversion leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed terminal conversion leaked presentation metadata"
 
 def affineSource :=
   problem (x : ℝ)
@@ -450,9 +454,10 @@ section LateCompanionFailure
 -- Inject an elaboration failure only after the named form has been published
 -- inside the transaction. This tests rollback beyond planning and preflight.
 @[local term_elab Lean.Parser.Term.app]
-private def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
-  if (← Lean.getEnv).contains
-      `MorewTest.Reformulation.TerminalConicFailures.lateFailure.conicForm then
+private meta def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
+  let env ← Lean.getEnv
+  let name := `MorewTest.Reformulation.TerminalConicFailures.lateFailure.conicForm
+  if #[name, Lean.mkPrivateName env name].any env.contains then
     Lean.throwError "injected terminal property emission failure"
   Lean.Elab.throwUnsupportedSyntax
 

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import Lean.Meta.Tactic.AuxLemma
@@ -21,7 +23,7 @@ namespace MorewTest.Conic.Rewrite
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew.Elab.Cone MorewTest.Affine
 
-private def checkPrepared (source : Expr) (result : Plan.Result)
+private meta def checkPrepared (source : Expr) (result : Plan.Result)
     (retained : Array Expr := #[]) : MetaM Nat := do
   result.toResult.check source retained
   let predicates := result.rowPredicates
@@ -32,7 +34,7 @@ private def checkPrepared (source : Expr) (result : Plan.Result)
       checkCompleteWithKernel expression "incomplete automatic certificate"
   return rows.size
 
-private def expectUnique (stx : TSyntax `term) (count : Nat)
+private meta def expectUnique (stx : TSyntax `term) (count : Nat)
     (retained : Array Expr := #[]) : TermElabM Unit := do
   let source ← elaborate stx
   let before ← getMCtx
@@ -44,7 +46,7 @@ private def expectUnique (stx : TSyntax `term) (count : Nat)
   unless (← checkPrepared source result retained) == count do
     throwError "unexpected automatic row count"
 
-private def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
+private meta def expectAmbiguous (stx : TSyntax `term) (names : Array String) :
     TermElabM Unit := do
   let source ← elaborate stx
   -- These overlaps are valid affine rows and should be bypassed by terminal
@@ -111,7 +113,7 @@ run_cmd liftTermElabM do
   if ← hole.mvarId!.isAssigned then throwError "automatic selection assigned a caller hole"
 
 /-- Evidence-generated auxiliary declarations survive only an accepted plan. -/
-private def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
+private meta def checkEvidenceLifetime (stx : TSyntax `term) (success : Bool) :
     TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression 2 fun parameters source => do

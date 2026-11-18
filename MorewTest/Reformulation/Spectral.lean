@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.ElabSupport
-import MorewTest.Reformulation.Spectral.Defined
-import MorewTest.Reformulation.PrintSupport
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.ElabSupport
+public import MorewTest.Reformulation.Spectral.Defined
+public import MorewTest.Reformulation.PrintSupport
 
 /-! Exact spectral rows preserve eigenvalue bounds, source norms, and matrix dimensions. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Spectral
 

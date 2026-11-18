@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax
-import Morew.Conic.PSD
-import Morew.Rewrite.Basic
+module
+
+public import Morew.Syntax
+public import Morew.Conic.PSD
+public import Morew.Rewrite.Basic
 
 /-! # Shared PSD sources and Schur certificate for success and failure tests -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.PSD
 

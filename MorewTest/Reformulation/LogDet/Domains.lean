@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.LogDet.Sources
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.LogDet.Sources
 
 /-! Log-det rewriting uses domain conditions from grouped constraints, positive
 margins, auxiliary matrices, and fixed or affine arguments. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.LogDet
 

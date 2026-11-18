@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.NLP.SmoothSupport
 import Morew.NLP
 
@@ -96,7 +98,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 /-! Ambient scalar fields cannot change a certificate's native analytic instances. -/
 
-private def checkAmbientScalarField (term : TSyntax `term)
+private meta def checkAmbientScalarField (term : TSyntax `term)
     (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
@@ -134,7 +136,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 /-! A test-only term elaborator inserts the ordinary proof returned by the API. -/
 
-elab "test_global_smooth" : term <= expected => do
+local syntax "test_global_smooth" : term
+
+local elab_rules : term <= expected
+| `(test_global_smooth) => do
   synthesizeSyntheticMVarsNoPostponing
   let expected ← instantiateMVars expected
   unless expected.isAppOfArity ``ContDiffOn 11 do

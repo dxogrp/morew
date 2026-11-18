@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.NLP
 
 /-!
 # Complete smooth-NLP reformulations
@@ -12,6 +14,8 @@ Terminal validation stores concrete scalar rows while preserving the comparison
 presentation, objective values, and model-local binding identities. The examples
 also exercise nonconvex objectives and continuation from a certified target.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.TerminalNLP
 

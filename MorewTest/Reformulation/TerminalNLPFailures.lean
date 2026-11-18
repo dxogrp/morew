@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-!
 # Terminal smooth-NLP rejection and complete rollback
@@ -13,6 +16,8 @@ import MorewTest.CommandSupport
 Failures in certification, companion-name preflight, and late property emission
 must leave no public declarations, auxiliary declarations, or presentation data.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.TerminalNLPFailures
 
@@ -28,9 +33,10 @@ elab "assert_nlp_terminal_atomic% " nested:command : command => do
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed terminal NLP conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed terminal NLP conversion leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed terminal NLP conversion leaked presentation metadata"
 
 def smoothSource := problem (x : ℝ) minimize x ^ 2 subject to bound : 0 ≤ x
 
@@ -143,9 +149,10 @@ reformulation rollbackInsideTerminal : lateObjectiveFailure := by
 
 section LateCompanionFailure
 @[local term_elab Lean.Parser.Term.app]
-private def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
-  if (← Lean.getEnv).contains
-      `MorewTest.Reformulation.TerminalNLPFailures.lateFailure.nlpForm then
+private meta def rejectTerminalProperty : Lean.Elab.Term.TermElab := fun _ _ => do
+  let env ← Lean.getEnv
+  let name := `MorewTest.Reformulation.TerminalNLPFailures.lateFailure.nlpForm
+  if #[name, Lean.mkPrivateName env name].any env.contains then
     Lean.throwError "injected terminal NLP property emission failure"
   Lean.Elab.throwUnsupportedSyntax
 

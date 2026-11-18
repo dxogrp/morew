@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.CommandSupport
-import MorewTest.DiagnosticsSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.CommandSupport
+public import MorewTest.DiagnosticsSupport
 
 /-! Unsupported matrix-quadratic bounds leave no generated declarations or presentations. -/
 
@@ -117,8 +120,9 @@ run_cmd do
   for name in #[`missing, `missing.equiv, `missingAlias, `nativeMissing, `wrongMatrix,
       `failedLift, `reversed, `equal, `nonlinearTarget, `nonlinearBoundTarget, `variableTarget] do
     let full := `MorewTest.Reformulation.QuadFormFailures ++ name
-    if env.contains full || (Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed matrix-quadratic rewrite retained {full}"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed matrix-quadratic rewrite retained {full}"
 
 -- The failed declaration and certificate names remain available after rollback.
 include hQ in

@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Finite power-cone chains and exact presentation reconstruction
@@ -12,6 +14,8 @@ Exact reconstruction retains checked references under conflicting declarations.
 Mathematical views preserve dimensions and arithmetic while omitting canonical
 casts and index proofs. They remain separate from stored reconstruction views.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.PowerPrinting
 
@@ -202,7 +206,7 @@ run_cmd do
       let copied := stem.appendAfter (if replay then "Exact" else "Display")
       let name := Lean.mkIdent copied
       Lean.Elab.Command.elabCommand (← `(def $name := $term))
-      let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copied)
+      let declaration ← Lean.getConstInfo (← Lean.resolveGlobalConstNoOverload name)
       if declaration.type.hasMVar || declaration.type.hasSorry ||
           declaration.value!.hasMVar || declaration.value!.hasSorry then
         Lean.throwError m!"finite-chain replay contains unresolved terms or placeholders: {copied}"

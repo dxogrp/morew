@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.NLP.Domain
-import MorewTest.NLP.SmoothSupport
+module
+
+public import Morew.Elab.NLP.Domain
+public import MorewTest.NLP.SmoothSupport
 
 /-!
 # Assertions for inferred evaluation domains
@@ -13,6 +15,8 @@ Success checks every proof against the original predicate and source array.
 Failure assertions inspect structured diagnostics after full term elaboration.
 -/
 
+public section
+
 namespace MorewTest.NLP.Domain
 
 open Lean Lean.Meta Lean.Elab.Term
@@ -20,11 +24,13 @@ open Morew.Elab.NLP.Domain Morew.Elab.NLP.Smooth
 open MorewTest.Affine (elaborate)
 
 -- Imported fixtures expose admitted closed rows through actual model fields.
-noncomputable def lowerBoundLogProblem (lower : ℝ) : Morew.Problem ℝ ℝ where
+@[expose] noncomputable def lowerBoundLogProblem (lower : ℝ) : Morew.Problem ℝ ℝ where
   objective := Real.log
   feasible x := lower ≤ x
 
-noncomputable def closedLogProblem : Morew.Problem ℝ ℝ := lowerBoundLogProblem 1
+@[expose] noncomputable def closedLogProblem : Morew.Problem ℝ ℝ := lowerBoundLogProblem 1
+
+meta section
 
 def checkResult (feasible : Expr) (sources : Array Expr) (result : DomainResult) :
     MetaM Unit := do
@@ -115,5 +121,7 @@ def assertDomainRejected (term : TSyntax `term) (kind : SmoothFailureKind)
     (rowIndex? : Option Nat := none) (expectedHead? : Option Name := none) : TermElabM Unit :=
   withInput term parameterCount fun feasible sources =>
     discard <| checkFailure feasible sources kind sourceIndex? rowIndex? expectedHead?
+
+end
 
 end MorewTest.NLP.Domain

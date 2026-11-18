@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
-import MorewTest.ElabSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
+public import MorewTest.ElabSupport
 
 /-!
 # Smooth helper certification across reformulation commands
@@ -133,9 +136,10 @@ elab "assert_smooth_helper_atomic% " nested:command : command => do
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed smooth helper conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed smooth helper conversion leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed smooth helper conversion leaked presentation metadata"
 
 def lateFailure :=
   problem (x t : ℝ)

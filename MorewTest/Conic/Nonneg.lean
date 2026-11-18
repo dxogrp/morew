@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Evidence.Sign
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -22,7 +24,7 @@ namespace MorewTest.Conic.Nonneg
 
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command Morew
 
-private def check (term : TSyntax `term) (accepted : Bool) (parameters : Nat := 0) :
+private meta def check (term : TSyntax `term) (accepted : Bool) (parameters : Nat := 0) :
     TermElabM Unit := do
   let source ← MorewTest.Affine.elaborate term
   lambdaBoundedTelescope source parameters fun _ source =>

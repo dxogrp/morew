@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Cone.Plan
 import MorewTest.Environment
@@ -51,7 +53,10 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   row : Morew.Conic.Constraint X
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
-elab "certified_power_family% " source:term : term => do
+local syntax "certified_power_family% " term : term
+
+local elab_rules : term
+| `(certified_power_family% $source:term) => do
   let predicate ← elaborateUnchecked source
   let .ok result ← Morew.Elab.Cone.normalizeRow predicate
     | throwError "expected a checked finite power family"
@@ -138,7 +143,7 @@ def localRange (n : Nat) (q : Fin n → ℝ) (hq : ∀ i, 1 < q i) :
     let coordinate := x i + 1
     (coordinate, 1, x i) ∈ POW exponent)
 
-private def reject (predicate : Expr) (fragment : String) : MetaM Unit := do
+private meta def reject (predicate : Expr) (fragment : String) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `power_family)
@@ -199,7 +204,7 @@ run_cmd liftTermElabM do
     withLetDecl `hiddenRange obligation (← mkSorry obligation true) fun proof =>
       reject (mkAppN bundled #[exponent, proof]) "placeholders"
 
-private def checkEvidence (source : TSyntax `term) (parameters : Nat)
+private meta def checkEvidence (source : TSyntax `term) (parameters : Nat)
     (indexed accepted : Bool) : TermElabM Unit := do
   let expression ← elaborateUnchecked source
   lambdaBoundedTelescope expression parameters fun _ source =>
@@ -265,7 +270,7 @@ def extendedFamilyRepr (p : ℝ≥0∞) (hp : 1 < p.toReal) :
     (x, 1, x) ∈ (Cone.power (1 / p.toReal) (inverseRange p.toReal hp)).carrier
   source_iff_exists x := by simp only [exists_const]; rfl
 
-private def checkExtendedPlan (parameter evidence expected : TSyntax `term)
+private meta def checkExtendedPlan (parameter evidence expected : TSyntax `term)
     (retainedName? : Option Name := none) : TermElabM Unit := do
   let source ← elaborateUnchecked (← `(fun x : ℝ =>
     ∀ _i : Fin 2, (x, 1, x) ∈ POW (1 / ($parameter : ℝ≥0∞).toReal)))

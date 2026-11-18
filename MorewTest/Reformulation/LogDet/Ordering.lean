@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.LogDet.Sources
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.LogDet.Sources
 
 /-! Exact log-determinant bounds support both rewrite orders and explicit rule selection. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.LogDet
 

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 
@@ -19,7 +21,7 @@ namespace MorewTest.Conic.PowerRules
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew MorewTest.Affine
 
-private def check (term : TSyntax `term) (rows : Nat) (parameters : Nat := 0)
+private meta def check (term : TSyntax `term) (rows : Nat) (parameters : Nat := 0)
     (name? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ pair => do
@@ -110,7 +112,7 @@ run_cmd liftTermElabM do
     (fun _ : ℝ × ℝ => True)))) 1
 
 -- Explicit selection reports the exact unsatisfied exponent condition.
-private def checkMissingRange (term : TSyntax `term) (rule : Name) (required : String) :
+private meta def checkMissingRange (term : TSyntax `term) (rule : Name) (required : String) :
     TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression 1 fun _ source => do

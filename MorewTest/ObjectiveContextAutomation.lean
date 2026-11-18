@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.ObjectiveContext
 import Morew.Transform.Context
@@ -21,7 +23,7 @@ namespace MorewTest.ObjectiveContextAutomation
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.ObjectiveContext
 
-private def checkInequality (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
+private meta def checkInequality (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
   let term ← elaborateUnchecked stx
   lambdaTelescope term fun args relation => do
     let operands := relation.getAppArgs
@@ -38,7 +40,7 @@ private def checkInequality (stx : TSyntax `term) (success : Bool := true) : Ter
         throwError "context proof has the wrong type: {← inferType proof}"
       checkCompleteWithKernel proof "incomplete inequality context certificate"
 
-private def checkPredicate (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
+private meta def checkPredicate (stx : TSyntax `term) (success : Bool := true) : TermElabM Unit := do
   let term ← elaborateUnchecked stx
   lambdaTelescope term fun args target => do
     let point := args[args.size - 4]!

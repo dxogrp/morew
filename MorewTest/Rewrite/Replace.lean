@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Reformulation.Replace
 import Mathlib.Basic.Real.Basic
@@ -48,7 +50,7 @@ def unusedAuxiliaryRepr : ConstraintRepr (fun _ : ℝ => True) where
   target _ _ := True
   source_iff_exists _ := ⟨fun _ => ⟨0, trivial⟩, fun _ => trivial⟩
 
-private def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
+private meta def checkRewrite (oldRows : Array (TSyntax `term)) (index : Nat)
     (reprSyntax : TSyntax `term) (auxiliarySyntax? : Option (TSyntax `term))
     (newRows : Array (TSyntax `term)) (targetIffSyntax expectedSyntax : TSyntax `term)
     (sense : ObjectiveSense := .minimize) : TermElabM Unit := do

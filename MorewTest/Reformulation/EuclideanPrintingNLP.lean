@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
-import MorewTest.Reformulation.EuclideanPrintingSupport
+module
+
+public import Morew.Reformulation.NLP
+public import MorewTest.Reformulation.EuclideanPrintingSupport
 
 /-!
 # Euclidean coordinates in generated NLP problem presentations
@@ -13,6 +15,8 @@ Print-only coordinate notation must leave source spelling, unapplied projections
 and both stored reconstruction views intact.
 -/
 
+@[expose] public section
+
 namespace MorewTest.Reformulation.EuclideanPrintingNLP
 
 open Lean Lean.Elab.Command Morew
@@ -20,7 +24,7 @@ open MorewTest.Reformulation.PrintDetails (printed)
 open MorewTest.Reformulation.EuclideanPrintingSupport (checkStoredProjections replayStored)
 
 /-- Both print modes hide coordinate projections without changing the rows. -/
-def checkReadable (declaration : Name) : CommandElabM Unit := do
+meta def checkReadable (declaration : Name) : CommandElabM Unit := do
   let compact ← printed declaration false
   let detailed ← printed declaration true
   unless compact == (← printed declaration false) do

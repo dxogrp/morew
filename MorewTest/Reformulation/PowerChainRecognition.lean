@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Reformulation.Cone.PowerChain
 import Morew.Conic.Power.GeometricMean
@@ -64,15 +66,15 @@ private def dependentFamily (n : ℕ) (hn : 0 < n) (x : Fin n → ℝ)
   0 ≤ u ⟨n - 1, by omega⟩ ⟨0, by omega⟩ ∧
     t ≤ u ⟨n - 1, by omega⟩ ⟨0, by omega⟩
 
-private partial def splitRows (body : Expr) : Array Expr :=
+private meta partial def splitRows (body : Expr) : Array Expr :=
   if body.isAppOfArity ``And 2 then
     #[body.getAppArgs[0]!] ++ splitRows body.getAppArgs[1]!
   else #[body]
 
-private def renderLeaf (expression : Expr) : TermElabM Syntax := do
+private meta def renderLeaf (expression : Expr) : TermElabM Syntax := do
   return (← PrettyPrinter.delab expression).raw
 
-private def role : Option Syntax.PowerChainRow → String
+private meta def role : Option Syntax.PowerChainRow → String
   | none => "ordinary"
   | some (.first _ _ membership) => if membership then "first cone" else "first"
   | some (.step ..) => "step"
@@ -80,7 +82,7 @@ private def role : Option Syntax.PowerChainRow → String
   | some (.bound _ _ _ membership) => if membership then "bound cone" else "bound"
   | some (.inverse ..) => "inverse"
 
-private def checkRows (rows : Array Expr) (expected : Array String)
+private meta def checkRows (rows : Array Expr) (expected : Array String)
     (renderer : Expr → TermElabM Syntax := renderLeaf) : TermElabM Unit := do
   let hole ← mkFreshExprMVar (mkConst ``Nat)
   let assigned ← mkFreshExprMVar (mkConst ``Nat)
@@ -97,15 +99,15 @@ private def checkRows (rows : Array Expr) (expected : Array String)
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "power-chain printing changed declarations"
 
-private def withRows (name : Name)
+private meta def withRows (name : Name)
     (action : Array Expr → Array Expr → TermElabM Unit) : TermElabM Unit := do
   lambdaTelescope (← getConstInfo name).value! fun parameters body =>
     action parameters (splitRows body)
 
-private def geometricRoles := #["first", "step", "sign", "bound"]
-private def ordinary (rows : Array Expr) := Array.replicate rows.size "ordinary"
+private meta def geometricRoles := #["first", "step", "sign", "bound"]
+private meta def ordinary (rows : Array Expr) := Array.replicate rows.size "ordinary"
 
-private def wrapMembership (row : Expr) (depth : Nat) : Expr :=
+private meta def wrapMembership (row : Expr) (depth : Nat) : Expr :=
   let identity := mkLambda `proposition .default (mkSort .zero) (mkBVar 0)
   match row with
   | .forallE name type body info =>
@@ -268,7 +270,7 @@ run_cmd liftTermElabM do
     -- Failed recognition must not affect the original complete rows.
     checkRows rows geometricRoles
 
-private partial def containsIdentifier (stx : Lean.Syntax) (name : Name) : Bool :=
+private meta partial def containsIdentifier (stx : Lean.Syntax) (name : Name) : Bool :=
   (stx.isIdent && stx.getId.eraseMacroScopes == name) ||
     stx.getArgs.any (fun child => containsIdentifier child name)
 

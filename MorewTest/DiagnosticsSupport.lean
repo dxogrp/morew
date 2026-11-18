@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Elab.GuardMsgs
+module
+
+public meta import Lean.Elab.GuardMsgs
 
 /-!
 # Diagnostic fragment assertions
@@ -17,6 +19,8 @@ Use it when intervening diagnostic details are outside a test's purpose; keep
 The command preserves environment changes so it cannot hide a failed rollback
 assertion. Only the captured messages are consumed.
 -/
+
+public meta section
 
 namespace MorewTest.Diagnostics
 

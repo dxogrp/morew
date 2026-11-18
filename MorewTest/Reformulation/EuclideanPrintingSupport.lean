@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Reformulation.PrintSupport
-import MorewTest.Reformulation.ReplaySupport
+module
+
+public import MorewTest.Reformulation.PrintSupport
+public import MorewTest.Reformulation.ReplaySupport
 
 /-! Shared checks for Euclidean presentation reconstruction. -/
+
+public meta section
 
 namespace MorewTest.Reformulation.EuclideanPrintingSupport
 

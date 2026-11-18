@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax.Presentation
-import Lean.Elab.Command
+module
+
+public import Morew.Syntax.Presentation
+public meta import Lean.Elab.Command
 
 /-! Shared checks for complete declarations reconstructed from stored problem views. -/
+
+public meta section
 
 namespace MorewTest.Reformulation
 
@@ -17,7 +21,7 @@ def replayView (view : Morew.Syntax.ProblemView) (name : Name)
     (incompleteMessage : String) : CommandElabM Unit := do
   let term ← Lean.Elab.liftMacroM view.toTermSyntax
   elabCommand (← `(noncomputable def $(mkIdent name) := $term))
-  let declaration ← getConstInfo ((← getCurrNamespace) ++ name)
+  let declaration ← getConstInfo (← resolveGlobalConstNoOverload (mkIdent name))
   if declaration.type.hasMVar || declaration.type.hasSorry ||
       declaration.value!.hasMVar || declaration.value!.hasSorry then
     throwError "{incompleteMessage}"

@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-! # Exported finite-coordinate presentations with recoverable proof detail -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.PrintDetails.Defined
 

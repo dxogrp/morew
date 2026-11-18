@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Syntax
 
 /-!
@@ -41,7 +43,7 @@ def malformedProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.malformedProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.malformedProblem {
     sense := .minimize
     binders := #[]
     objective := Lean.Syntax.mkNumLit "0"
@@ -56,7 +58,7 @@ def duplicateBinderProblem : Problem (Nat × Nat) Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.duplicateBinderProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.duplicateBinderProblem {
     sense := .minimize
     binders := #[
       { name := `x, typeSyntax := Lean.mkIdent `Nat },
@@ -74,7 +76,7 @@ def duplicateConstraintProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.duplicateConstraintProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.duplicateConstraintProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent `x
@@ -93,7 +95,7 @@ def unprintableProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.unprintableProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.unprintableProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := .missing
@@ -108,7 +110,7 @@ def anonymousBinderProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.anonymousBinderProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.anonymousBinderProblem {
     sense := .minimize
     binders := #[{ name := .anonymous, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.Syntax.mkNumLit "0"
@@ -125,7 +127,7 @@ def anonymousConstraintProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.anonymousConstraintProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.anonymousConstraintProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent `x
@@ -143,7 +145,7 @@ def anonymousTermProblem : Problem Nat Nat where
   feasible := fun _ => True
 
 run_cmd do
-  Morew.Syntax.registerProblemView `MorewTest.Syntax.PresentationValidation.anonymousTermProblem {
+  Morew.Syntax.registerProblemView ``MorewTest.Syntax.PresentationValidation.anonymousTermProblem {
     sense := .minimize
     binders := #[{ name := `x, typeSyntax := Lean.mkIdent `Nat }]
     objective := Lean.mkIdent .anonymous

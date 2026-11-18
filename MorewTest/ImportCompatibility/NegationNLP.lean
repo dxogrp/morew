@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.NegationNLP
 import MorewTest.Reformulation.ReplaySupport

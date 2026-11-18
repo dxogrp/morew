@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import Morew.Elab.Expr
@@ -21,11 +23,11 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
 open Morew.Elab.Cone
 
-private def conjunction (rows : Array Expr) : Expr :=
+private meta def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
 
-private def checkRows (domain : Expr) (rows : Array Expr) (certificates : Array RowResult) :
+private meta def checkRows (domain : Expr) (rows : Array Expr) (certificates : Array RowResult) :
     MetaM Unit := do
   unless rows.size == certificates.size do throwError "missing certified exponential row"
   for row in rows, certificate in certificates do
@@ -40,12 +42,12 @@ private def checkRows (domain : Expr) (rows : Array Expr) (certificates : Array 
     for expression in #[certificate.constraint, certificate.pointwiseIff] do
       checkCompleteWithKernel expression "incomplete cone certificate"
 
-private def rowCone (constraint : Expr) : MetaM Expr := do
+private meta def rowCone (constraint : Expr) : MetaM Expr := do
   let type ← whnf (← inferType constraint)
   return mkAppN (mkConst ``Morew.Conic.Constraint.cone type.getAppFn.constLevels!)
     (type.getAppArgs ++ #[constraint])
 
-private def checkPlan (source : Expr) (retained : Array Expr := #[])
+private meta def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) (auxiliary : Bool := false)
     (rule? : Option Name := none) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
@@ -100,25 +102,25 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
     unless ← isDefEq cone (mkConst ``Morew.Conic.Cone.exponential) do
       throwError "scalar rewrite was not certified as an exponential cone"
 
-private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
+private meta def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
   let .error error ← Rewrite.planUnique source retained
     | throwError "unsupported exponential predicate was accepted: {source}; retained: {retained}"
   unless (← error.reason.toString).contains fragment do
     throwError "expected diagnostic containing {fragment}, got {error.reason}"
 
-private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
+private meta def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
     (auxiliary : Bool := false) (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source =>
     checkPlan source (auxiliary := auxiliary) (rule? := rule?)
 
-private def expectRejected (stx : TSyntax `term) (fragment : String)
+private meta def expectRejected (stx : TSyntax `term) (fragment : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => rejectPlan source #[] fragment
 
-private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
+private meta def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
     (failure? : Option String := none) (rule? : Option Name := none)
     (auxiliary : Bool := false) : TermElabM Unit := do
   let expression ← elaborate stx
@@ -387,7 +389,7 @@ run_cmd liftTermElabM do
 /-! The shared contextual adapter must retain row conjunctions beyond the
 singleton shape used by second-order rewrites. -/
 
-private def independentPlan (source proof : Expr) : MetaM Plan.Result := do
+private meta def independentPlan (source proof : Expr) : MetaM Plan.Result := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
   let certificate ← withLocalDeclD `point domain fun point => do
     withLocalDeclD `retained (mkConst ``True) fun retained => do

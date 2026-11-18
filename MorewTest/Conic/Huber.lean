@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -33,7 +35,7 @@ example (x t : ℝ) :
   simpa only [Fn.huber_zero_left] using
     (SecondOrder.huberEpigraph 0 (le_refl 0)).source_iff_exists x t |>.symm
 
-private def check (source : Expr) (rule? : Option Name := none)
+private meta def check (source : Expr) (rule? : Option Name := none)
     (rows : Nat := 4) : MetaM Unit := do
   let before ← getMCtx
   let outcome ← match rule? with
@@ -64,12 +66,12 @@ private def check (source : Expr) (rule? : Option Name := none)
     unless ← isDefEq (← inferType row.pointwiseIff) expected do
       throwError "Huber row certificate does not match its predicate"
 
-private def expect (term : TSyntax `term) (parameters : Nat := 0)
+private meta def expect (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Name := none) (rows : Nat := 4) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => check source rule? rows
 
-private def reject (source : Expr) (retained : Array Expr := #[])
+private meta def reject (source : Expr) (retained : Array Expr := #[])
     (rule? : Option Name := none) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
@@ -81,7 +83,7 @@ private def reject (source : Expr) (retained : Array Expr := #[])
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed Huber planning changed declarations"
 
-private def rejected (term : TSyntax `term) (parameters : Nat := 0)
+private meta def rejected (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => reject source #[] rule?

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Rewrite.Plan
 
@@ -44,7 +46,7 @@ private def auxiliary : Morew.ConstraintRepr (fun x : ℝ => x ≤ 1) where
   target x a := a = 0 ∧ x ≤ 1
   source_iff_exists _ := by simp
 
-private def adapts (source rule : TSyntax `term) : TermElabM Unit := do
+private meta def adapts (source rule : TSyntax `term) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let rule ← elaborateUnchecked rule
   let repr ← customRepr source (← predicateDomain source) rule
@@ -57,7 +59,7 @@ run_elab do
   adapts (← `(fun p : ℝ × ℝ => p.1 + 1 ≤ p.2)) (← `(epigraph))
   adapts (← `(fun p : ℝ × ℝ => p.2 ≤ p.1 + 1)) (← `(hypograph))
 
-private def expectRejected (action : MetaM Unit) : MetaM Unit := do
+private meta def expectRejected (action : MetaM Unit) : MetaM Unit := do
   let rejected ← try action; pure false catch _ => pure true
   unless rejected do throwError "an incorrect exact replacement passed validation"
 

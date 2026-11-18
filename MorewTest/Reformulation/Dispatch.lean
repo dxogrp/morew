@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-! Internal syntax dispatch rejects duplicate handlers without invoking either one. -/
 
@@ -26,7 +29,7 @@ elab "assert_dispatch_atomic% " nested:command : command => do
 section Duplicate
 
 @[local morew_reformulation_step Morew.epigraphStep]
-private def duplicate : StepHandler := fun _ _ =>
+private meta def duplicate : StepHandler := fun _ _ =>
   throwError "a duplicate handler must never run"
 
 #guard_error_fragments ["multiple internal handlers registered", "Morew.epigraphStep"] in
@@ -40,10 +43,11 @@ assert_not_exists target target.equiv aliasProof
 run_cmd do
   let env ← getEnv
   let name := `MorewTest.Reformulation.Dispatch.target
-  if (Syntax.getProblemView? env name).isSome ||
-      (Syntax.getProblemDisplayView? env name).isSome ||
-      (Syntax.getProblemPrintPresentation? env name).isSome then
-    throwError "dispatch failure leaked presentation metadata"
+  for name in #[name, Lean.mkPrivateName env name] do
+    if (Syntax.getProblemView? env name).isSome ||
+        (Syntax.getProblemDisplayView? env name).isSome ||
+        (Syntax.getProblemPrintPresentation? env name).isSome then
+      throwError "dispatch failure leaked presentation metadata"
 
 end Duplicate
 

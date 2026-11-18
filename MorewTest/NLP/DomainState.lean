@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.NLP.DomainSupport
 import MorewTest.Environment
 
@@ -22,7 +24,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP
 open MorewTest.Affine (elaborate)
 
-private def isolatedSuccess (feasible : Expr) (sources : Array Expr) :
+private meta def isolatedSuccess (feasible : Expr) (sources : Array Expr) :
     MetaM Domain.DomainResult := do
   let before ← getMCtx
   let result ← Domain.certify feasible sources
@@ -33,7 +35,7 @@ private def isolatedSuccess (feasible : Expr) (sources : Array Expr) :
   checkResult feasible sources result
   return result
 
-private def isolatedFailure (feasible : Expr) (sources : Array Expr)
+private meta def isolatedFailure (feasible : Expr) (sources : Array Expr)
     (kind : Smooth.SmoothFailureKind) : MetaM Domain.DomainError := do
   let before ← getMCtx
   let result ← Domain.certify feasible sources

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Rewrite.Polyhedral
 import Morew.Conic.SecondOrder.Repr
 import Morew.Elab.Rewrite.Registry

@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-! # Visible, theorem-backed constraints over the current problem -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Derive
 

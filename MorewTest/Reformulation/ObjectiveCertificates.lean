@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Mathlib.LinearAlgebra.Matrix.PosDef
+module
+
+public import Morew.Reformulation.Conic
+public import Mathlib.LinearAlgebra.Matrix.PosDef
 
 /-! Supplied objective certificates preserve exact objectives, directions, and recovery. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.ObjectiveCertificates
 

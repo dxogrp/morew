@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-!
 # Objective occurrence bounds in decreasing contexts
@@ -14,6 +17,8 @@ The selected function's bound direction follows its surrounding checked context.
 Negation, subtraction, and fixed negative coefficients can therefore use a
 hypograph inside minimization or an epigraph inside maximization.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.NegatedOccurrence
 
@@ -178,8 +183,9 @@ run_cmd do
   for name in #[`wrongLogDirection, `wrongAbsDirection, `missingCoefficientSign,
       `opaqueWithoutEvidence, `wrongBareLog, `wrongBareAbs, `failedChain] do
     let name := `MorewTest.Reformulation.NegatedOccurrence ++ name
-    if env.contains name || (Morew.Syntax.getProblemView? env name).isSome then
-      Lean.throwError "failed negated occurrence lift retained its declaration or presentation"
+    for name in #[name, Lean.mkPrivateName env name] do
+      if env.contains name || (Morew.Syntax.getProblemView? env name).isSome then
+        Lean.throwError "failed negated occurrence lift retained its declaration or presentation"
 
 end
 end MorewTest.Reformulation.NegatedOccurrence

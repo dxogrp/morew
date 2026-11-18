@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Affine.Support
-import Morew.Elab.Cone.Constraint
+module
+
+public import MorewTest.Affine.Support
+public import Morew.Elab.Cone.Constraint
 
 /-! Shared exact row-certificate assertions. -/
+
+public meta section
 
 namespace MorewTest.Affine
 

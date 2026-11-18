@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.NLP.Smooth
-import MorewTest.ElabSupport
-import Lean.Meta.Check
+module
+
+public import Morew.Elab.NLP.Smooth
+public import MorewTest.ElabSupport
+public import Lean.Meta.Check
 
 /-!
 # Assertions for global smoothness certificates
@@ -13,6 +15,8 @@ import Lean.Meta.Check
 Successful proofs are kernel-checked against the original function on the
 whole domain. Rejections check the structured diagnostic.
 -/
+
+public meta section
 
 namespace MorewTest.NLP.Smooth
 

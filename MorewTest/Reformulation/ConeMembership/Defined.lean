@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-! Applied affine families with distinct aliases crossing a module boundary. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.ConeMembership.Defined
 

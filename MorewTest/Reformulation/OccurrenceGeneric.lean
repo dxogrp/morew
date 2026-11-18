@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Basic
 import Mathlib.Data.Int.Cast.Lemmas
 
@@ -127,8 +129,9 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`dependentTypeTarget, `capturedIndex] do
     let full := `MorewTest.Reformulation.OccurrenceGeneric ++ name
-    if env.contains full || (Morew.Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed generic occurrence lift committed a declaration"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Morew.Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed generic occurrence lift committed a declaration"
 
 end
 end MorewTest.Reformulation.OccurrenceGeneric

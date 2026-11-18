@@ -3,14 +3,17 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import Morew.Elab.Cone.Rewrite
-import MorewTest.Affine.HelperFixtures
-import MorewTest.Affine.Support
-import MorewTest.Reformulation.AffineHelperSource
-import MorewTest.CommandSupport
-import Morew.Elab.Expr
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import Morew.Elab.Cone.Rewrite
+public import MorewTest.Affine.HelperFixtures
+public import MorewTest.Affine.Support
+public import MorewTest.Reformulation.AffineHelperSource
+public import MorewTest.CommandSupport
+public import Morew.Elab.Expr
 
 /-!
 # Affine helper certification in conic reformulations
@@ -157,7 +160,7 @@ namespace TypedPlans
 
 open Lean Lean.Meta
 
-private def checkExact (source : Expr) (result : Morew.Elab.Cone.Plan.Result) : MetaM Unit := do
+private meta def checkExact (source : Expr) (result : Morew.Elab.Cone.Plan.Result) : MetaM Unit := do
   let .exact repr := result.certificate
     | throwError "finite evidence made an unconditional representation contextual"
   discard <| Morew.Elab.Rewrite.Plan.checkRepr source repr
@@ -383,9 +386,10 @@ elab "assert_helper_atomic% " nested:command : command => do
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed helper certification leaked declaration {name}"
   let after ← Lean.getEnv
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed helper certification leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed helper certification leaked presentation metadata"
 
 def absoluteSource :=
   problem (x t : ℝ)

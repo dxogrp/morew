@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.NLPImportedSource
 
@@ -60,8 +62,9 @@ run_cmd do
   for target in #[`target, `continued] do
     for artifact in #[`nlpForm, `isSmoothNLP] do
       let name := `MorewTest.Reformulation.NLPImported ++ target ++ artifact
-      if environment.contains name then
-        Lean.throwError "targeted rewriting emitted a whole-model NLP artifact {name}"
+      for name in #[name, Lean.mkPrivateName environment name] do
+        if environment.contains name then
+          Lean.throwError "targeted rewriting emitted a whole-model NLP artifact {name}"
 
 end
 end MorewTest.Reformulation.NLPImported

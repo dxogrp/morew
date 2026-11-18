@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Evidence
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -14,7 +16,7 @@ namespace MorewTest.Evidence
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
 
-private def check (term : TSyntax `term) (parameters : Nat) (success : Bool) :
+private meta def check (term : TSyntax `term) (parameters : Nat) (success : Bool) :
     TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => do

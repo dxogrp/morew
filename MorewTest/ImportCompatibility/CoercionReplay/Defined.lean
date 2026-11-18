@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-! Problems whose coercion functions must survive imported presentation reconstruction. -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.CoercionReplay.Defined
 

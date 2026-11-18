@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Conic.Objective
 import Morew.Elab.Expr
@@ -24,13 +26,13 @@ open Morew.Elab
 
 private noncomputable def quotientHelper (c x : ℝ) : ℝ := x / c
 
-private inductive EntryPoint where
+private meta inductive EntryPoint where
   | affine
   | row
   | objective
   deriving Repr
 
-private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.EvidenceProvider) :
+private meta def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Morew.Elab.Expr.Error (Array Expr)) := do
   match entry with
   | .affine =>
@@ -51,7 +53,7 @@ private def recognize (entry : EntryPoint) (source : Expr) (provider : Affine.Ev
     return (← Conic.reifyObjective presentation provider).map fun result =>
       #[result.map, result.pointwiseEquality]
 
-private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
+private meta def withAuxEvidence (term : TSyntax `term) (cache : Bool)
     (action : Expr → Affine.EvidenceProvider → IO.Ref (Array Name) → TermElabM Unit) :
     TermElabM Unit := do
   let expression ← MorewTest.Affine.elaborate term
@@ -73,7 +75,7 @@ private def withAuxEvidence (term : TSyntax `term) (cache : Bool)
     }
     action source provider generated
 
-private def expectStateChange (before : MetavarContext) (change : MetaM Unit) : MetaM Unit :=
+private meta def expectStateChange (before : MetavarContext) (change : MetaM Unit) : MetaM Unit :=
   withoutModifyingMCtx do
     change
     let rejected ← try
@@ -100,7 +102,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   unless rejected do throwError "state assertion accepted a changed metavariable depth"
   assertExprMVarStateUnchanged before "restored state control"
 
-private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
+private meta def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     (cache : Bool := true) : TermElabM Unit :=
   withAuxEvidence term cache fun source provider generated => do
     let unresolved ← mkFreshExprMVar (Lean.mkConst ``Nat)
@@ -129,7 +131,7 @@ private def checkSuccess (entry : EntryPoint) (term : TSyntax `term)
     if !cache && names.toList.eraseDups.length != 3 then
       throwError "uncached auxiliary declarations reused a generated name"
 
-private def checkFailure (entry : EntryPoint) (term : TSyntax `term)
+private meta def checkFailure (entry : EntryPoint) (term : TSyntax `term)
     (cache : Bool := true) : TermElabM Unit :=
   withAuxEvidence term cache fun source provider generated => do
     let unresolved ← mkFreshExprMVar (Lean.mkConst ``Nat)

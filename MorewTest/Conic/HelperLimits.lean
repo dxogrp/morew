@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.Affine.HelperFixtures
 import MorewTest.Affine.RowSupport
@@ -32,7 +34,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
       (finiteDot e a x, (1 : ℝ), finiteDot e b x) ∈
         Morew.Conic.Cone.exponential.carrier)) 4
 
-private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
+private meta def checkFailure (term : TSyntax `term) : TermElabM Unit := do
   let expression ← MorewTest.Affine.elaborate term
   lambdaBoundedTelescope expression 2 fun parameters source => do
     let generated ← IO.mkRef (#[] : Array Name)
@@ -62,7 +64,7 @@ private def checkFailure (term : TSyntax `term) : TermElabM Unit := do
     if (← generated.get).isEmpty then
       throwError "conic rewriting did not exercise evidence creation before failure"
 
-private def checkSuccess (term : TSyntax `term) : TermElabM Unit := do
+private meta def checkSuccess (term : TSyntax `term) : TermElabM Unit := do
   let source ← MorewTest.Affine.elaborate term
   match ← Cone.Rewrite.planUnique source with
   | .ok _ => pure ()

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Basic
 
 /-!
@@ -161,7 +163,7 @@ example (u t : ℝ) :
 run_cmd do
   let env ← Lean.getEnv
   match Morew.Syntax.getProblemView? env
-      `MorewTest.Reformulation.Composition.TrueRemovalAndLabelReuse.target with
+      ``MorewTest.Reformulation.Composition.TrueRemovalAndLabelReuse.target with
   | none =>
       Lean.throwError "the reformulation target has no presentation metadata"
   | some view =>
@@ -196,7 +198,7 @@ example (u : ℝ) : target.feasible u ↔ True := Iff.rfl
 run_cmd do
   let env ← Lean.getEnv
   let some view := Morew.Syntax.getProblemView? env
-      `MorewTest.Reformulation.Composition.ElaboratedRecognition.target
+      ``MorewTest.Reformulation.Composition.ElaboratedRecognition.target
     | Lean.throwError "the alias-recognition target has no metadata"
   unless view.constraints.isEmpty do
     Lean.throwError "typed-equivalent positivity was not removed"

@@ -3,14 +3,18 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Elab.Term
-import Lean.Elab.SyntheticMVars
+module
+
+public meta import Lean.Elab.Term
+public meta import Lean.Elab.SyntheticMVars
 
 /-!
 # Test elaboration and metavariable state checks
 
 Shared elaboration checks independent of affine and conic certification.
 -/
+
+public meta section
 
 namespace MorewTest
 

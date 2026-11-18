@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -21,7 +23,7 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Conic MorewTest.Affine
 open scoped Matrix
 
-private def check (source expected : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private meta def check (source expected : Expr) (rule? : Option Name := none) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let outcome ← match rule? with
@@ -44,7 +46,7 @@ private def check (source expected : Expr) (rule? : Option Name := none) : MetaM
       row.constraint, row.pointwiseIff] do
     checkCompleteWithKernel proof "incomplete native matrix representation certificate"
 
-private def rejectAmbiguous (source : Expr) : MetaM Unit := do
+private meta def rejectAmbiguous (source : Expr) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let .error _ ← Morew.Elab.Cone.Rewrite.planUnique source
@@ -58,7 +60,7 @@ def customNativeEpigraph {n : Nat} (Q : Matrix (Fin n) (Fin n) ℝ) (hQ : Q.PosS
     EpigraphRepr (fun x : Fin n → ℝ => x ⬝ᵥ (Q *ᵥ x)) :=
   Conic.QuadForm.nativeEpigraph Q hQ
 
-private def checkBoth (ambiguous : Bool := false) : TermElabM Unit := do
+private meta def checkBoth (ambiguous : Bool := false) : TermElabM Unit := do
   let expression ← elaborate (← `(fun (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ)
     (_hP : P.PosDef) (_hQ : (P⁻¹).PosSemidef) =>
     ((fun p : (Fin n → ℝ) × ℝ => p.1 ⬝ᵥ (P⁻¹ *ᵥ p.1) ≤ p.2),

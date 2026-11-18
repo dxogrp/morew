@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax.Presentation
+module
+
+public import Morew.Syntax.Presentation
 
 /-!
 # Independently registered problem metadata
@@ -12,6 +14,8 @@ Register a semantic problem's presentation without the problem elaborator or
 printer. Importing this module alongside the DSL producer must retain both sets
 of registry entries.
 -/
+
+@[expose] public section
 
 assert_not_exists Morew.elabProblem Morew.elabPrintProblem
 

@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Reformulation.Presentation
-import Lean.Elab.BuiltinEvalCommand
+meta import Lean.Elab.BuiltinEvalCommand
 
 /-!
 # Atomic reformulation presentation updates
@@ -12,6 +14,8 @@ import Lean.Elab.BuiltinEvalCommand
 Constraint removal, replacement, and addition preserve their specified order.
 Malformed replacement batches are rejected before updating the presentation.
 -/
+
+meta section
 
 namespace MorewTest.Reformulation.PresentationUpdates
 

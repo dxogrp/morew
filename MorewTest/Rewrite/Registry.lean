@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import MorewTest.Rewrite.Registry.Source
 import Morew.Elab.Rewrite.Match
@@ -22,7 +24,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Rewrite
 open MorewTest.Rewrite.Registry.Source
 
-private def selected (target : Registry.Target) (source : TSyntax `term)
+private meta def selected (target : Registry.Target) (source : TSyntax `term)
     (expected : Array Name) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let actual ← Registry.candidates target source
@@ -60,7 +62,7 @@ run_elab do
   selected .nlp (← `(fun p : ℝ × ℝ => p.2 = shifted 3 p.1)) #[``shiftedGraph]
   selected .nlp (← `(fun p : ℝ × ℝ => shifted 3 p.1 ≤ p.2)) #[]
 
-private def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := do
+private meta def matched (source : TSyntax `term) (name : Name) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
@@ -76,7 +78,7 @@ section HelperOpacity
 
 open Source.HelperOpacity
 
-private def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Unit := do
+private meta def rejectedMatch (source : TSyntax `term) (name : Name) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let domain ← Plan.predicateDomain source
   withLocalDeclD `point domain fun point => do
@@ -189,7 +191,7 @@ private noncomputable def exactNestedSubtypeRule : Morew.ConstraintRepr
 
 -- Explicit exact records may wrap the whole decision in checked subtypes.
 -- They must not inherit declaration matching's arbitrary input maps.
-private def explicitExactMatch (source rule retained : TSyntax `term)
+private meta def explicitExactMatch (source rule retained : TSyntax `term)
     (expected? : Option (Array Nat)) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let rule ← elaborateUnchecked rule
@@ -368,7 +370,7 @@ end
 
 -- Graph orientation retries include the consumer's certification work. Failed
 -- proof dependencies are discarded before retry, while accepted ones survive.
-private def graphRetry (source expected : TSyntax `term) (name : Name) : TermElabM Unit := do
+private meta def graphRetry (source expected : TSyntax `term) (name : Name) : TermElabM Unit := do
   let source ← elaborateUnchecked source
   let expected ← elaborateUnchecked expected
   let domain ← Plan.predicateDomain source
