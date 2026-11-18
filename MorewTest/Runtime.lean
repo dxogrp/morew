@@ -9,7 +9,9 @@ import Morew.Affine
 import Morew.Substitution
 import Morew.Rewrite.Polyhedral
 import Morew.Fn.Norm
+import Morew.Elab.Reformulation.Names
 import Morew.Elab.State
+meta import Morew.Elab.Reformulation.Names
 
 /-! Ordinary runtime consumers of mathematical constructors, recovery maps, and reusable helpers. -/
 
@@ -41,7 +43,13 @@ def distanceInf {n : Nat} (x y : Fin n → ℝ) : ℝ :=
 example {n : Nat} (x y : Fin n → ℝ) : 0 ≤ distanceInf x y :=
   Fn.normInf_nonneg (x - y)
 
--- Reusable expression-state helpers also compile in ordinary consumers.
+-- Reusable name and expression-state helpers also compile in ordinary consumers.
+def allocateNames : Except Elab.Reformulation.NamePreflightError
+    Elab.Reformulation.NameAllocation :=
+  Elab.Reformulation.preflightNameRequests {} #[
+    { id := 0, kind := .generatedBinderFamily, requested := `value },
+    { id := 1, kind := .explicitDecisionBinder, requested := `value }]
+
 def isolateExpressions (action : Lean.MetaM (Except String Lean.Expr)) :
     Lean.MetaM (Except String Lean.Expr) :=
   Elab.State.withIsolatedMVars action
@@ -49,5 +57,9 @@ def isolateExpressions (action : Lean.MetaM (Except String Lean.Expr)) :
 def withExpressionInstances (instances : List Lean.Expr) (action : Lean.MetaM Lean.Expr) :
     Lean.MetaM Lean.Expr :=
   Elab.State.withInstances `instance instances action
+
+#guard match allocateNames with
+  | .ok names => names.findName? 0 == some `value_1 && names.findName? 1 == some `value
+  | .error _ => false
 
 end MorewTest.Runtime

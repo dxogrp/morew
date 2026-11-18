@@ -5,11 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public meta import Lean.Meta.Basic
+public import Lean.Meta.Basic
 
 /-! Allocate visible names and check exact global declaration names. -/
 
-public meta section
+public section
 
 namespace Morew.Elab.Reformulation
 

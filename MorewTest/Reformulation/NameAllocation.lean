@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-import Morew.Elab.Reformulation.Names
+meta import Morew.Elab.Reformulation.Names
 meta import Lean.Elab.BuiltinEvalCommand
 
 /-!

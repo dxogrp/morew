@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Morew.Core
-public import Morew.Elab.Reformulation.Names
+public meta import Morew.Elab.Reformulation.Names
 
 /-! Typed problem descriptions, ordered edits, validation, and changes of variable context. -/
 
