@@ -7,7 +7,7 @@ module
 public import Morew.NLP.Rows
 public import Morew.Elab.NLP.Domain
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Certify generated residuals after the caller proves replacement exactness.
 Domain inclusion uses admitted retained and generated rows; unsupported predicates

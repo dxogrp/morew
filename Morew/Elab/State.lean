@@ -4,12 +4,12 @@ SPDX-License-Identifier: Apache-2.0
 -/
 module
 
-public meta import Lean.Meta.Basic
+public import Lean.Meta.Basic
 
 /-! Scope temporary instances and isolate caller metavariables while retaining
 successful certificates' auxiliary declarations. -/
 
-public meta section
+public section
 
 namespace Morew.Elab.State
 

@@ -9,7 +9,7 @@ public import Morew.Conic.SecondOrder
 public import Morew.Conic.Exponential.Cone
 public import Morew.Conic.PSD
 public import Morew.Elab.Affine
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Morew.Elab.Cone.Space
 public import Morew.Elab.Evidence
 public import Morew.Elab.Cone.Nonneg

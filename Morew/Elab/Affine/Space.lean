@@ -6,7 +6,7 @@ module
 
 public import Morew.Affine
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Lean.Meta.Basic
 public import Lean.Meta.Transform
 public import Qq

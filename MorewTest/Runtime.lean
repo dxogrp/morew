@@ -9,8 +9,9 @@ import Morew.Affine
 import Morew.Substitution
 import Morew.Rewrite.Polyhedral
 import Morew.Fn.Norm
+import Morew.Elab.State
 
-/-! Ordinary runtime consumers of mathematical constructors and recovery maps. -/
+/-! Ordinary runtime consumers of mathematical constructors, recovery maps, and reusable helpers. -/
 
 namespace MorewTest.Runtime
 
@@ -39,5 +40,14 @@ def distanceInf {n : Nat} (x y : Fin n → ℝ) : ℝ :=
 
 example {n : Nat} (x y : Fin n → ℝ) : 0 ≤ distanceInf x y :=
   Fn.normInf_nonneg (x - y)
+
+-- Reusable expression-state helpers also compile in ordinary consumers.
+def isolateExpressions (action : Lean.MetaM (Except String Lean.Expr)) :
+    Lean.MetaM (Except String Lean.Expr) :=
+  Elab.State.withIsolatedMVars action
+
+def withExpressionInstances (instances : List Lean.Expr) (action : Lean.MetaM Lean.Expr) :
+    Lean.MetaM Lean.Expr :=
+  Elab.State.withInstances `instance instances action
 
 end MorewTest.Runtime

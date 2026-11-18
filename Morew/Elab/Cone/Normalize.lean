@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Elab.Rewrite.Decomposition
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Morew.Elab.Cone.Space
 public import Morew.Elab.Expr
 

@@ -10,7 +10,7 @@ public import Morew.NLP.Domain
 public import Mathlib.Tactic.Linarith
 public import Mathlib.Tactic.Positivity
 public import Lean.Meta.Check
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Domain evidence from standard real equalities and non-strict inequalities,
 conjunctions, `True`, established operand domains, and independent hypotheses.

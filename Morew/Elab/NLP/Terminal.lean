@@ -10,7 +10,7 @@ public import Morew.Elab.Reformulation.Replace
 public import Morew.Elab.Rewrite.Decomposition
 public import Morew.Elab.Rewrite.Reduction
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Certify smooth rows before trying exact bound rewrites. Retain accepted row data
 through auxiliary insertions and certify the objective against final feasibility.

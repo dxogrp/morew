@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Affine
 public import Morew.Elab.Rewrite.Plan
 public import Morew.Elab.Reformulation.Presentation
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Retain finite-index evidence from source expressions during cone certification. -/
 

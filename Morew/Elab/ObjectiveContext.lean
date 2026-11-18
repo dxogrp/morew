@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Atom
 public import Morew.Elab.Evidence
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Transport scalar bounds through real arithmetic, exponentials, maxima, minima, and
 positive parts. Fixed scalar products use independent sign evidence. Unrecognized

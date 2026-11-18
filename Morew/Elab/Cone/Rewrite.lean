@@ -11,7 +11,7 @@ public import Morew.Elab.Cone.MatrixDomain
 public import Morew.Elab.Evidence
 public import Morew.Elab.Rewrite.Match
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Select and certify exact conic replacements.
 Automatic selection requires a unique success after preferring the built-in SOC

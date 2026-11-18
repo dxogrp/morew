@@ -8,7 +8,7 @@ public import Morew.Elab.QuadConic.Objective
 public import Morew.Elab.Cone.Rows
 public import Morew.Elab.Cone.Finite
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Construct `QuadConic.Form` with exact objective equality and feasibility equivalence.
 Function spaces with abstract indices require `Finite` evidence for the index type. -/

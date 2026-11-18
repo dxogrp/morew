@@ -10,7 +10,7 @@ public import Morew.Affine.SymmetricMatrix
 public import Morew.Elab.Expr
 public import Morew.Elab.Evidence
 public import Morew.Elab.Affine.Space
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Morew.Elab.Affine.Expansion
 public import Morew.Core
 public import Mathlib.Tactic.NormNum

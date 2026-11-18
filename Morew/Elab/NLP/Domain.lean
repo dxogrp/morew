@@ -6,7 +6,7 @@ module
 
 public import Morew.Elab.NLP.Smooth
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Certify C² smoothness on a common open domain containing the feasible set.
 Feasibility admits standard real equalities and non-strict inequalities, conjunctions,

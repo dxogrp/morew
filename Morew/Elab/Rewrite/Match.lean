@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Rewrite.Registry
 public import Morew.Elab.Rewrite.Plan
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Match exact representations while preserving mathematical operation heads.
 Reconstruct product and subtype inputs from operands, using caller evidence for subtype conditions. -/

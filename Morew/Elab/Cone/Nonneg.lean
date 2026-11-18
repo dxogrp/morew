@@ -6,7 +6,7 @@ module
 
 public import Morew.Conic.Cone
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 
 /-! Recognize scalar and finite-vector nonnegative-cone coordinates for sign evidence. -/
 

@@ -8,7 +8,7 @@ public import Morew.NLP.Domain
 public import Morew.Elab.NLP.Domain.Evidence
 public import Morew.Elab.NLP.Space
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Morew.Elab.Expansion
 public import Morew.Elab.Atom
 public import Lean.Meta.Check

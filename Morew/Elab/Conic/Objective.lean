@@ -7,7 +7,7 @@ module
 public import Morew.Elab.Affine
 public import Morew.Elab.Objective
 public import Morew.Elab.Expr
-public import Morew.Elab.State
+public meta import Morew.Elab.State
 public import Morew.Elab.Evidence
 
 /-! Certify affine real objectives while retaining the declared optimization sense. -/
