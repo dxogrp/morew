@@ -35,7 +35,9 @@ run_cmd do
     unless (Syntax.getProblemDisplayView? env name).isSome do
       Lean.throwError m!"a public opaque model lost its display: {name}"
   for name in #[``exposedSource, ``exposedTarget, ``exposedTarget.equiv,
-      ``exposedTarget.conicForm, ``exposedCertificate, ``opaqueCertificate] do
+      ``exposedTarget.conicForm, ``exposedCertificate, ``opaqueCertificate,
+      ``exposedFromOpaque, ``exposedFromOpaque.equiv, ``exposedFromOpaque.conicForm,
+      ``exposedFromOpaqueCertificate] do
     unless (env.find? name).any (·.hasValue (allowOpaque := true)) do
       Lean.throwError m!"an exposed command artifact lost its body: {name}"
   let first := Lean.addMacroScope `MorewTest `generated 13
@@ -68,6 +70,17 @@ info: problem (x : ℝ)
 example : GlobalEquiv opaqueSource opaqueTarget := opaqueCertificate
 example : Conic.Form opaqueTarget := opaqueTarget.conicForm
 example : IsConic opaqueTarget := opaqueTarget.isConic
+
+example : GlobalEquiv opaqueSource exposedFromOpaque := exposedFromOpaqueCertificate
+example : IsConic exposedFromOpaque := exposedFromOpaque.isConic
+example (x : ℝ) : exposedFromOpaque.objective x = x := rfl
+example (x : ℝ) : exposedFromOpaque.feasible x ↔ 0 ≤ x := Iff.rfl
+
+example (point : FeasiblePoint opaqueSource) :
+    (exposedFromOpaque.equiv.forward.map point).val = point.val := rfl
+
+example (point : FeasiblePoint exposedFromOpaque) :
+    (exposedFromOpaque.equiv.backward.map point).val = point.val := rfl
 
 variable (offset : ℝ)
 

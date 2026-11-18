@@ -313,7 +313,8 @@ private def elabReformulationCore : CommandElab := fun stx => do
             usedSourceParameterNames := usedSourceParameterNames.push name
       let canonical ← canonicalTargetExpressionFromExpressions sourceName source source
         template {} source false
-      let sourceView ← problemViewFromExpression source template (instantiateBinderTypes := true)
+      let sourceView ← withoutExporting <|
+        problemViewFromExpression source template (instantiateBinderTypes := true)
       let presentation ← typedPresentationFromExpression canonical sourceView
       let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
       let accumulatedCertificate ← runner.reflexivity source

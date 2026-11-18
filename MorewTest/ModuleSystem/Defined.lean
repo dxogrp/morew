@@ -54,6 +54,11 @@ end
 
 @[expose] public section
 
+-- Local source bodies remain available for planning an exposed reformulation.
+reformulation exposedFromOpaque : opaqueSource certificate exposedFromOpaqueCertificate := by
+  rename lower to nonnegative
+  conic
+
 def exposedSource (offset : ℝ) := problem (x : ℝ) minimize |x - offset|
 
 def normSource (offset : ℝ) :=

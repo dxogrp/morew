@@ -349,11 +349,12 @@ private partial def protectCheckpoint (expression checkpoint replacement : Expr)
   pure <| mkAppN expression.getAppFn (arguments.set! 3 base)
 
 /-- Construct the canonical target while preserving the stored source constraints.
-Use `sourceName` only to unfold the original problem container. -/
+Use `sourceName` only to unfold the original problem container. Source inspection can
+use local definition bodies; native declaration elaboration checks the emitted target. -/
 def canonicalTargetExpressionFromExpressions (sourceName : Name)
     (source semanticAnchor : Expr) (sourceView : Morew.Syntax.ProblemView)
     (removedCheckpointRows : Std.HashSet Nat) (semanticExpression : Expr)
-    (simplifyExpLogTerms : Bool) : TermElabM Expr := do
+    (simplifyExpLogTerms : Bool) : TermElabM Expr := withoutExporting do
   let (domain, objective, constraints) ←
     sourceProblemParts sourceName source sourceView.constraints.size
   let objectiveType ← inferType objective
