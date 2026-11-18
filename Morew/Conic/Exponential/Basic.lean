@@ -7,8 +7,8 @@ module
 
 public import Morew.Conic.Exponential.Cone
 public import Morew.Fn.Exponential
-public import Morew.Rewrite.Sum.Lemmas
-public import Mathlib.Algebra.BigOperators.Field
+import Morew.Rewrite.Sum.Lemmas
+import Mathlib.Algebra.BigOperators.Field
 import Mathlib.Tactic.Linarith
 
 /-!

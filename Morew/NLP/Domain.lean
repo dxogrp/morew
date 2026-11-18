@@ -6,9 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.NLP.Smooth
-public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
-public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
-public import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.Analysis.SpecialFunctions.Log.Deriv
+import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 
 /-!
 # Open evaluation domains for smooth nonlinear expressions

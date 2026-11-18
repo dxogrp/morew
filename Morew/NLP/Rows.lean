@@ -8,6 +8,7 @@ module
 public import Morew.NLP.Basic
 public import Morew.NLP.Domain
 public import Mathlib.Algebra.BigOperators.Fin
+public import Mathlib.Analysis.Calculus.ContDiff.Comp
 
 /-!
 # Smoothness evidence for generated constraint rows

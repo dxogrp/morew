@@ -6,9 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Conic.Cone
-public import Mathlib.Analysis.MeanInequalities
-public import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
-public import Mathlib.Algebra.BigOperators.Fin
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+
+import Mathlib.Analysis.MeanInequalities
+import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
+import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 

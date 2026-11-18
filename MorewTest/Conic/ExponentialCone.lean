@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import Morew.Conic.Exponential.Cone
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Tactic.NormNum
 
 /-!

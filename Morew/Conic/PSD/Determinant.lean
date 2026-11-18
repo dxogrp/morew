@@ -5,8 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public import Mathlib.Analysis.Matrix.Order
-public import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
+public import Mathlib.LinearAlgebra.Matrix.PosDef
+
+import Mathlib.Analysis.Matrix.Order
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 
 /-!
 # Determinant bounds for positive-definite matrices

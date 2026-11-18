@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Conic.PSD
-public import Mathlib.Analysis.Matrix.Order
+import Mathlib.Analysis.Matrix.Order
 
 /-!
 # A semidefinite representation of positive definiteness

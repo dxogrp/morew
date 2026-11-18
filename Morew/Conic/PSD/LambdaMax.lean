@@ -7,7 +7,7 @@ module
 
 public import Morew.Fn.Matrix
 public import Morew.Conic.PSD
-public import Mathlib.Analysis.Matrix.Order
+import Mathlib.Analysis.Matrix.Order
 
 /-!
 # Exact eigenvalue bounds

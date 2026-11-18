@@ -5,8 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public import Mathlib.Algebra.Order.BigOperators.Group.Finset
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 public import Mathlib.Basic.Real.Basic
+
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
 /-!
 # Exact finite-sum bounds

@@ -6,11 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Conic.PSD
-public import Morew.Conic.PSD.LDL
-public import Morew.Conic.PSD.Determinant
 public import Morew.Conic.PSD.Triangular
 public import Morew.Conic.Exponential
 public import Morew.Fn.Matrix
+
+import Morew.Conic.PSD.LDL
+import Morew.Conic.PSD.Determinant
 
 /-!
 # Exact log-determinant hypographs

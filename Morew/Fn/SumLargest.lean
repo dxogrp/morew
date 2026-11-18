@@ -5,9 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public import Mathlib.Algebra.Order.BigOperators.Group.Finset
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 public import Mathlib.Data.Fin.Tuple.Sort
 public import Mathlib.Basic.Real.Basic
+
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Order.Interval.Finset.Fin
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring

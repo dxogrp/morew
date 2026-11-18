@@ -5,8 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.Algebra.BigOperators.Fin
+
+import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 
 /-!
 # Finite geometric means and inverse products

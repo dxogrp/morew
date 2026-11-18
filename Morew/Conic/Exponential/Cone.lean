@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 public import Morew.Conic.Cone
-public import Mathlib.Analysis.SpecialFunctions.Log.Basic
-public import Mathlib.Topology.Order.OrderClosed
+public import Mathlib.Analysis.SpecialFunctions.Exp
+
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Topology.Order.OrderClosed
 import Mathlib.Tactic.FieldSimp
 import Mathlib.Tactic.FunProp
 import Mathlib.Tactic.Linarith

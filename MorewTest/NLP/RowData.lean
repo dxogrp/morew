@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import Morew.NLP.Rows
+import Mathlib.Analysis.Calculus.ContDiff.Operations
 
 /-!
 # Concrete smooth row data

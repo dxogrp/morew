@@ -7,6 +7,7 @@ module
 
 public import Morew.Fn.SumLargest
 public import Mathlib.Algebra.Order.Archimedean.Real.Basic
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.FieldSimp
 
 /-!
