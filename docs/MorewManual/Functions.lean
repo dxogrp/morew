@@ -1,4 +1,10 @@
-import MorewManual.FunctionSymbols
+module
+
+public import MorewManual.FunctionSymbols
+
+public meta import VersoManual
+
+public section
 
 open Verso.Genre Manual
 open MorewManual.FunctionSymbols

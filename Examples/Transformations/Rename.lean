@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Naming constraints during a reformulation
@@ -11,6 +13,8 @@ import Morew.Reformulation.Conic
 `rename old to new` changes a constraint's label. Later steps use the new label;
 the constraint and its position are unchanged.
 -/
+
+@[expose] public section
 
 namespace Examples.Transformations.Rename
 

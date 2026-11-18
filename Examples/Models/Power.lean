@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 open Morew
 
@@ -14,6 +16,8 @@ Scalar powers, weighted and geometric means, and inverse products have
 power-cone formulations. Base domains come from the constraints; symbolic
 exponents require a proof of `0 < α ∧ α < 1`.
 -/
+
+@[expose] public section
 
 namespace Examples.Models.Power
 

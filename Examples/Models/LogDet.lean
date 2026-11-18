@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Log-determinant optimization
@@ -20,6 +22,8 @@ We maximize the log-determinant over symmetric 2 × 2 matrices `X`:
 
 The reformulation uses positive semidefinite and exponential cones.
 -/
+
+@[expose] public section
 
 namespace Examples.Models.LogDet
 

@@ -1,4 +1,10 @@
-import VersoManual
+module
+
+public import VersoManual
+
+public meta import VersoManual
+
+public section
 
 open Verso.Genre Manual
 
@@ -41,6 +47,8 @@ make build  # Build the library, tests, and examples.
 Run `make help` to see all available commands.
 
 # Imports
+
+Begin each Lean source file with `module`, before its imports.
 
 To import the whole package:
 
@@ -87,6 +95,10 @@ import Morew.NLP
 ```
 
 These cover problems and equivalence, transformations, and target forms.
+
+Use `public` declarations for definitions shared with another module.
+For shared models and reformulations whose definitions must unfold downstream,
+place them in an `@[expose] public section` and use `public import` for their dependencies.
 
 Register custom rules for automatic selection with `@[morew_conic]` or
 `@[morew_nlp]`; see {ref "custom-rules"}[Custom rules].

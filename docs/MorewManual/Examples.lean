@@ -1,4 +1,10 @@
-import MorewManual.ExampleSource
+module
+
+public import MorewManual.ExampleSource
+
+public meta import VersoManual
+
+public section
 
 open Verso.Genre Manual
 open scoped MorewManual.ExampleSource

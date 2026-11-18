@@ -29,6 +29,8 @@ Then run `lake update`.
 Reformulate nonnegative least squares as a second-order cone program:
 
 ```lean
+module
+
 import Morew
 
 open Morew

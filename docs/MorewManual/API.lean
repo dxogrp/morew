@@ -1,4 +1,10 @@
-import VersoManual
+module
+
+public import VersoManual
+
+public meta import VersoManual
+
+public section
 
 open Verso.Genre Manual
 

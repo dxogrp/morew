@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-!
 # Problems, epigraphs, and optimality certificates
@@ -22,6 +24,8 @@ between the two. We begin with the scalar problem:
 
 open Morew
 open Real
+
+@[expose] public section
 
 namespace Examples.GettingStarted.Basic
 

@@ -1,5 +1,9 @@
-import VersoManual
-import MorewManual
+module
+
+public import VersoManual
+public import MorewManual
+
+public section
 
 open Verso.Genre Manual
 

@@ -4,7 +4,9 @@ SPDX-License-Identifier: Apache-2.0
 -/
 
 -- ANCHOR: nonnegLSSetup
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 open Morew
 open scoped Matrix
 -- ANCHOR_END: nonnegLSSetup
@@ -24,6 +26,8 @@ in norm form is
 
 with variable `x ∈ ℝⁿ` and componentwise inequality.
 -/
+
+@[expose] public section
 
 namespace Examples.Models.SecondOrder
 

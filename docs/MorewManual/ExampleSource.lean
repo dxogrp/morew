@@ -1,4 +1,10 @@
-import VersoManual.Literate
+module
+
+public import VersoManual.Literate
+public meta import VersoManual.Literate
+import Verso.Code.External.Code
+
+public section
 
 open Verso.Genre Manual VersoLiterate Verso.Code.External
 
@@ -12,6 +18,7 @@ private def omitAnchorMarkers (hl : SubVerso.Highlighting.Highlighted) :
     if (SubVerso.Highlighting.anchor? line.toString).isOk then result else result ++ line
 
 /-- Render source examples with their printed results. -/
+@[no_expose]
 scoped instance : LoadLiterate Manual :=
   { (inferInstance : LoadLiterate Manual) with
     block := fun _goI goB => fun
@@ -119,7 +126,8 @@ inline_extension sourcePathCaption where
 }
 "#]
 
-private def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc Manual :=
+/-- Construct the example page referenced by an expanded `includeExample` command. -/
+def renderExample (json title sourcePath : String) : Verso.Doc.VersoDoc Manual :=
   let doc := modToPage! (normalizeModule (loadJsonString! json)) #[.text title] title none
   { doc with construct := fun context =>
       let part := doc.construct context

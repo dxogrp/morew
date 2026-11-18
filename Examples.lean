@@ -1,23 +1,25 @@
-import Examples.Advanced.CustomRules
-import Examples.Advanced.ObjCertificate
-import Examples.Advanced.Restrict
-import Examples.Advanced.Schur
-import Examples.Applications.Calibration
-import Examples.Applications.RidgeReg
-import Examples.Applications.RobustReg
-import Examples.GettingStarted.Basic
-import Examples.GettingStarted.Conic
-import Examples.GettingStarted.GraphImpl
-import Examples.GettingStarted.NLP
-import Examples.Models.Exponential
-import Examples.Models.LogDet
-import Examples.Models.Norms
-import Examples.Models.PSD
-import Examples.Models.Power
-import Examples.Models.SecondOrder
-import Examples.Models.Spectral
-import Examples.Transformations.Derive
-import Examples.Transformations.Remove
-import Examples.Transformations.Rename
-import Examples.Transformations.Subexpressions
-import Examples.Transformations.Substitution
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import Examples.Advanced.CustomRules
+public import Examples.Advanced.ObjCertificate
+public import Examples.Advanced.Restrict
+public import Examples.Advanced.Schur
+public import Examples.Applications.Calibration
+public import Examples.Applications.RidgeReg
+public import Examples.Applications.RobustReg
+public import Examples.GettingStarted.Basic
+public import Examples.GettingStarted.Conic
+public import Examples.GettingStarted.GraphImpl
+public import Examples.GettingStarted.NLP
+public import Examples.Models.Exponential
+public import Examples.Models.LogDet
+public import Examples.Models.Norms
+public import Examples.Models.PSD
+public import Examples.Models.Power
+public import Examples.Models.SecondOrder
+public import Examples.Models.Spectral
+public import Examples.Transformations.Derive
+public import Examples.Transformations.Remove
+public import Examples.Transformations.Rename
+public import Examples.Transformations.Subexpressions
+public import Examples.Transformations.Substitution

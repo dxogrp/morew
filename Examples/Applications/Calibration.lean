@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Multiplicative calibration
@@ -32,6 +34,8 @@ which is linear in `u` and `v`. Let `t` bound the sum of squares:
 Morew writes this quadratic inequality as a rotated second-order cone constraint.
 The original variables are recovered as `x = exp u` and `y = exp v`.
 -/
+
+@[expose] public section
 
 namespace Examples.Applications.Calibration
 
