@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-! # Named norms retain target certification, ambiguity, and transaction boundaries -/
 

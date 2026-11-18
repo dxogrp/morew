@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.EuclideanPrintingSupport
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.EuclideanPrintingSupport
 
 /-!
 # Euclidean coordinates in generated conic problem presentations
@@ -13,6 +15,8 @@ Scalar coordinate shorthand and the unapplied SOC vector projection must retain
 their meaning in both stored views, including under a conflicting coercion.
 -/
 
+@[expose] public section
+
 namespace MorewTest.Reformulation.EuclideanPrintingConic
 
 open Lean Lean.Elab.Command Morew
@@ -20,7 +24,7 @@ open MorewTest.Reformulation.PrintDetails (printed)
 open MorewTest.Reformulation.EuclideanPrintingSupport (checkStoredProjections replayStored)
 
 /-- Scalar coordinates are readable while the cone's full vector remains explicit. -/
-def checkReadable (declaration : Name) : CommandElabM Unit := do
+meta def checkReadable (declaration : Name) : CommandElabM Unit := do
   let compact ← printed declaration false
   let detailed ← printed declaration true
   unless compact == (← printed declaration false) do

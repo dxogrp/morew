@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.Affine.RowSupport
 import Morew.Elab.Affine.Space
 
@@ -23,13 +25,13 @@ private noncomputable abbrev canonicalScalarLE : LE ℝ := inferInstance
 private noncomputable abbrev canonicalVectorLE (n : ℕ) : LE (Fin n → ℝ) := inferInstance
 private abbrev GroupedAlias := (Matrix (Fin 2) (Fin 3) ℝ × ℝ) × ℝ
 
-private partial def completeInstances (term : Expr) : MetaM Expr := do
+private meta partial def completeInstances (term : Expr) : MetaM Expr := do
   let type ← whnf (← inferType term)
   if let .forallE _ domain _ .instImplicit := type then
     completeInstances (mkApp term (← synthInstance domain))
   else
     pure term
-private def canonicalIdentity (type : Expr) : MetaM Expr :=
+private meta def canonicalIdentity (type : Expr) : MetaM Expr :=
   withCanonicalSpaces #[type] do
     completeInstances (← mkAppM ``Morew.Affine.Certified.id #[type])
 

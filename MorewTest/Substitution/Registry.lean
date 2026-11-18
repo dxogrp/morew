@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import MorewTest.Substitution.Registry.Source
 import Morew.Elab.Substitution.Match
@@ -21,7 +23,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.Substitution
 open Source
 
-private def selected (map : TSyntax `term) (expected : Array Name) : TermElabM Unit := do
+private meta def selected (map : TSyntax `term) (expected : Array Name) : TermElabM Unit := do
   let actual ← Registry.candidates (← elaborateUnchecked map)
   unless actual == expected do throwError "unexpected coordinate candidates {actual}"
 
@@ -53,7 +55,7 @@ run_elab do
   selected (← `(fun (r : ℝ) (u : ℝ) => shift r u)) #[``shiftRule]
   selected (← `(fun (_ : ℝ) (u : ℝ) => u ^ 2)) #[``Morew.Substitution.square]
 
-private def withSource {α : Type} (map feasible : TSyntax `term)
+private meta def withSource {α : Type} (map feasible : TSyntax `term)
     (action : Expr → Expr → Expr → Expr → Expr → TermElabM α) : TermElabM α := do
   let map ← elaborateUnchecked map
   let feasible ← elaborateUnchecked feasible
@@ -63,7 +65,7 @@ private def withSource {α : Type} (map feasible : TSyntax `term)
     withLocalDeclD `feasible (mkApp feasible point) fun evidence =>
       action map point (.proj ``Prod 0 point) (.proj ``Prod 1 point) evidence
 
-private def matched (map feasible : TSyntax `term) (name? : Option Name := none) :
+private meta def matched (map feasible : TSyntax `term) (name? : Option Name := none) :
     TermElabM Unit := withSource map feasible fun map point retained selected evidence => do
   let before ← getMCtx
   let result ← match name? with
@@ -73,7 +75,7 @@ private def matched (map feasible : TSyntax `term) (name? : Option Name := none)
   checkWithKernel result.rangeProof
   assertMVarCountersUnchanged before "successful matching leaked scratch metavariables"
 
-private def rejected (map feasible : TSyntax `term) (fragment : String)
+private meta def rejected (map feasible : TSyntax `term) (fragment : String)
     (name? : Option Name := none) : TermElabM Unit :=
   withSource map feasible fun map point retained selected evidence => do
     let before ← getMCtx

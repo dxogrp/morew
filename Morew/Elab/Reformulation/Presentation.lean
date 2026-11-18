@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Core
-import Morew.Elab.Reformulation.Names
+module
+
+public meta import Morew.Core
+public meta import Morew.Elab.Reformulation.Names
 
 /-! Typed problem descriptions, ordered edits, validation, and changes of variable context. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 

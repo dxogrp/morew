@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Vector norm models
@@ -24,6 +26,8 @@ has variable `x ∈ ℝⁿ`:
 The remaining models compare second-order cone, power-cone, and smooth
 representations of norm bounds.
 -/
+
+@[expose] public section
 
 namespace Examples.Models.Norms
 

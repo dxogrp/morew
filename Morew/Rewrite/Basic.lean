@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Basic.Logic.Basic
+module
+
+public import Mathlib.Basic.Logic.Basic
 
 /-!
 # Exact constraint representations
@@ -11,6 +13,8 @@ import Mathlib.Basic.Logic.Basic
 Predicate, graph, epigraph, and hypograph representations by existential
 equivalences, shared by conic and smooth NLP reformulations.
 -/
+
+@[expose] public section
 
 namespace Morew
 

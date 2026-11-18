@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Rewrite.Basic
-import Morew.Elab.Evidence
-import Morew.Elab.Expr
-import Morew.Elab.Rewrite.Decomposition
+public import Morew.Rewrite.Basic
+public import Morew.Elab.Evidence
+public meta import Morew.Elab.Expr
+public import Morew.Elab.Rewrite.Decomposition
 
 /-! Shared exact replacement data, scoped evidence, and ordered target equivalence.
 Conic and NLP planners provide target reduction, space checks, and row certification. -/
+
+public meta section
 
 namespace Morew.Elab.Rewrite.Plan
 

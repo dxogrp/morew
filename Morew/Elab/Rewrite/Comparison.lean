@@ -2,20 +2,23 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Mathlib.Basic.Real.Basic
-import Lean
-import Qq
+public import Mathlib.Basic.Real.Basic
+public import Lean
+public import Qq
 
 /-! Build equivalent real comparison views by adapting outer negations.
 Use the caller's structural reducer and preserve named function heads. -/
+
+public section
 
 namespace Morew.Elab.Rewrite.Comparison
 
 open Lean Lean.Meta Qq
 
 /-- An alternative predicate with exactness from the original selected row. -/
-structure View where
+meta structure View where
   /-- The predicate inspected by discovery and matching. -/
   predicate : Expr
   /-- A kernel-checked proof of `original ↔ predicate`. -/
@@ -23,7 +26,7 @@ structure View where
   deriving Inhabited
 
 /-- Normalize comparison direction without changing its order instance. -/
-def normalize (expression : Expr) (reduce : Expr → MetaM Expr) : MetaM Expr := do
+meta def normalize (expression : Expr) (reduce : Expr → MetaM Expr) : MetaM Expr := do
   let expression ← reduce expression
   if expression.isAppOfArity ``GE.ge 4 then
     let args := expression.getAppArgs
@@ -31,53 +34,53 @@ def normalize (expression : Expr) (reduce : Expr → MetaM Expr) : MetaM Expr :=
       #[args[0]!, args[1]!, args[3]!, args[2]!]
   return expression
 
-private theorem realNegLeft (a b : ℝ) : (-a ≤ b) ↔ (-b ≤ a) := neg_le
+theorem realNegLeft (a b : ℝ) : (-a ≤ b) ↔ (-b ≤ a) := neg_le
 
-private theorem realNegRight (a b : ℝ) : (a ≤ -b) ↔ (b ≤ -a) := le_neg
+theorem realNegRight (a b : ℝ) : (a ≤ -b) ↔ (b ≤ -a) := le_neg
 
-private theorem realDoubleNeg (a : ℝ) : - -a = a := neg_neg a
+theorem realDoubleNeg (a : ℝ) : - -a = a := neg_neg a
 
-private theorem realLeCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
+theorem realLeCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
     (a ≤ b) ↔ (a' ≤ b') := by
   rw [ha, hb]
 
-private theorem realEqNegLeft (a b : ℝ) : (-a = b) ↔ (-b = a) :=
+theorem realEqNegLeft (a b : ℝ) : (-a = b) ↔ (-b = a) :=
   neg_eq_iff_eq_neg.trans eq_comm
 
-private theorem realEqNegRight (a b : ℝ) : (a = -b) ↔ (b = -a) :=
+theorem realEqNegRight (a b : ℝ) : (a = -b) ↔ (b = -a) :=
   eq_comm.trans neg_eq_iff_eq_neg
 
-private theorem realEqCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
+theorem realEqCongr (a a' b b' : ℝ) (ha : a = a') (hb : b = b') :
     (a = b) ↔ (a' = b') := by
   rw [ha, hb]
 
-private inductive Relation where
+private meta inductive Relation where
   | le | eq
 
-private def Relation.predicate (relation : Relation) (a b : Expr) : Expr :=
+private meta def Relation.predicate (relation : Relation) (a b : Expr) : Expr :=
   let a : Q(ℝ) := a
   let b : Q(ℝ) := b
   match relation with
   | .le => q($a ≤ $b)
   | .eq => q($a = $b)
 
-private def Relation.congr : Relation → Name
+private meta def Relation.congr : Relation → Name
   | .le => ``realLeCongr
   | .eq => ``realEqCongr
 
-private def Relation.negLeft : Relation → Name
+private meta def Relation.negLeft : Relation → Name
   | .le => ``realNegLeft
   | .eq => ``realEqNegLeft
 
-private def Relation.negRight : Relation → Name
+private meta def Relation.negRight : Relation → Name
   | .le => ``realNegRight
   | .eq => ``realEqNegRight
 
 -- Keep caller instance metavariables fixed during comparison checks.
-private def same (first second : Expr) : MetaM Bool :=
+private meta def same (first second : Expr) : MetaM Bool :=
   withNewMCtxDepth <| isDefEq first second
 
-private def realNeg? (expression : Expr) (reduce : Expr → MetaM Expr) :
+private meta def realNeg? (expression : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (Option Expr) := do
   let expression ← reduce expression
   unless expression.isAppOfArity ``Neg.neg 3 do return none
@@ -88,12 +91,12 @@ private def realNeg? (expression : Expr) (reduce : Expr → MetaM Expr) :
   unless ← same args[1]! canonical.getAppArgs[1]! do return none
   return some (← reduce value)
 
-private structure Endpoint where
+private meta structure Endpoint where
   value : Expr
   equality : Expr
 
 -- Consume original negation pairs without changing sign.
-private partial def endpoints (expression : Expr) (reduce : Expr → MetaM Expr) :
+private meta partial def endpoints (expression : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (Array Endpoint) := do
   let value ← reduce expression
   let mut result := #[{ value, equality := ← mkEqRefl value : Endpoint }]
@@ -109,14 +112,14 @@ private partial def endpoints (expression : Expr) (reduce : Expr → MetaM Expr)
   return result
 
 -- Simplify only newly introduced double negations.
-private def introducedNeg (expression : Expr) (reduce : Expr → MetaM Expr) :
+private meta def introducedNeg (expression : Expr) (reduce : Expr → MetaM Expr) :
     MetaM Endpoint := do
   let value : Q(ℝ) := expression
   if let some inner ← realNeg? expression reduce then
     return { value := inner, equality := ← mkAppM ``realDoubleNeg #[inner] }
   return { value := q(-$value), equality := ← mkEqRefl q(-$value) }
 
-private def checked (source predicate proof : Expr) : MetaM View := do
+private meta def checked (source predicate proof : Expr) : MetaM View := do
   let proof ← instantiateMVars proof
   unless ← same (← inferType proof) (mkApp2 (mkConst ``Iff) source predicate) do
     throwError "comparison view proves the wrong equivalence"
@@ -124,7 +127,7 @@ private def checked (source predicate proof : Expr) : MetaM View := do
   return { predicate, sourceIff := proof }
 
 -- Deduplicate introduced comparison and negation syntax; preserve distinct named heads.
-private partial def sameSpelling (first second : Expr) (reduce : Expr → MetaM Expr) :
+private meta partial def sameSpelling (first second : Expr) (reduce : Expr → MetaM Expr) :
     MetaM Bool := do
   let first ← reduce first
   let second ← reduce second
@@ -146,7 +149,7 @@ private partial def sameSpelling (first second : Expr) (reduce : Expr → MetaM 
   if !comparison then return true
   return ← sameSpelling firstArgs[3]! secondArgs[3]! reduce
 
-private def pushView (views : Array View) (source predicate proof : Expr)
+private meta def pushView (views : Array View) (source predicate proof : Expr)
     (reduce : Expr → MetaM Expr) :
     MetaM (Array View) := do
   for view in views do
@@ -155,7 +158,7 @@ private def pushView (views : Array View) (source predicate proof : Expr)
 
 /-- Enumerate equivalent sign views, starting with the original predicate.
 Consume only original endpoint negations and retain intermediate negative heads. -/
-def signedViews (source : Expr) (reduce : Expr → MetaM Expr) : MetaM (Array View) := do
+meta def signedViews (source : Expr) (reduce : Expr → MetaM Expr) : MetaM (Array View) := do
   let body ← normalize source reduce
   let directProof ← mkAppM ``Iff.refl #[body]
   let mut views := #[← checked source body directProof]

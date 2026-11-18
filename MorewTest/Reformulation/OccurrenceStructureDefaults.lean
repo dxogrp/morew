@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Basic
 
 /-!
@@ -64,8 +66,11 @@ reformulation repeatedLift : repeated := by
   epigraph t at loss
 
 run_cmd do
-  if (← Lean.getEnv).contains `MorewTest.Reformulation.OccurrenceStructureDefaults.repeatedLift then
-    Lean.throwError "ambiguous structure-field selection emitted a declaration"
+  let env ← Lean.getEnv
+  let name := `MorewTest.Reformulation.OccurrenceStructureDefaults.repeatedLift
+  for name in #[name, Lean.mkPrivateName env name] do
+    if env.contains name then
+      Lean.throwError "ambiguous structure-field selection emitted a declaration"
 
 end
 end MorewTest.Reformulation.OccurrenceStructureDefaults

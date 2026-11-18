@@ -2,18 +2,21 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Mathlib.Analysis.Normed.Module.FiniteDimension
-import Morew.Elab.Expr
-import Morew.Elab.State
-import Lean.Meta.Basic
+public import Mathlib.Analysis.Normed.Module.FiniteDimension
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
+public import Lean.Meta.Basic
 
 /-! Canonical normed structures and finite-dimensionality for real, Euclidean,
 product, and finite-function spaces. -/
 
+public section
+
 namespace Morew.Elab.NLP.Space
 
-open Lean Lean.Meta
+open Lean Lean.Meta Qq
 
 universe u v
 
@@ -57,14 +60,11 @@ noncomputable abbrev pi (n : Nat) {Y : Type u} (target : Structure Y) :
 
 end Structure
 
--- Fix the scalar field to the standard real field.
-private noncomputable abbrev realField : NontriviallyNormedField ℝ := inferInstance
-
-private structure BuiltSpace where
+private meta structure BuiltSpace where
   data : Expr
   instances : Array Expr
 
-private def finishSpace (type data : Expr) (components : Array Expr := #[]) :
+private meta def finishSpace (type data : Expr) (components : Array Expr := #[]) :
     MetaM BuiltSpace := do
   -- Preserve aliases in local instance types for typeclass matching.
   let dataType ← mkAppM ``Structure #[type]
@@ -74,7 +74,7 @@ private def finishSpace (type data : Expr) (components : Array Expr := #[]) :
   let finite ← mkAppM ``Structure.finite #[data]
   return { data, instances := components ++ #[group, space, finite] }
 
-private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
+private meta partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
     finishSpace type (mkConst ``Structure.real)
@@ -107,8 +107,8 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
 
 /-- Use canonical analytic structures on supplied spaces, their components, and `ℝ`.
 Use the matching `Fin` enumeration and substitute temporary instances into the result. -/
-def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
-  let mut instances := #[mkConst ``realField]
+meta def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
+  let mut instances := #[q(inferInstance : NontriviallyNormedField ℝ)]
   for type in #[mkConst ``Real] ++ types do
     let result ← buildSpace type
     for inst in result.instances do

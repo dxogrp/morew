@@ -3,14 +3,18 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.LinearAlgebra.Matrix.Block
-import Mathlib.Basic.Real.Basic
+module
+
+public import Mathlib.LinearAlgebra.Matrix.Block
+public import Mathlib.Basic.Real.Basic
 
 /-!
 # Lower-triangular matrix coordinates
 
 Independent coordinates on and below the diagonal, with a linear matrix embedding.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic
 

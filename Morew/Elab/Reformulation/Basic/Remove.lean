@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Remove
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Remove
+public import Morew.Elab.Reformulation.Rows
 
 /-! Remove an implied constraint and retain the resulting problem for normalization. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -64,8 +68,9 @@ def prepareRemove (state : ReformState) (selector : TSyntax `ident)
     materialize := materializeRemove state selector index provided?
   }
 
+/-- Elaborate a `remove` step with evidence that the selected constraint is redundant. -/
 @[morew_reformulation_step Morew.removeStep]
-private def elabRemove : StepHandler := fun state step => do
+def elabRemove : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| remove at $selector:ident $[using $provided:term]?) =>
       prepareRemove state selector provided

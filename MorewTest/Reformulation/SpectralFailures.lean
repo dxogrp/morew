@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-!
 # Spectral atom boundaries and typed norm selection
@@ -342,8 +345,9 @@ run_cmd do
       `rejectedSmallestDimension, `rejectedEmptySmallest,
       `rejectedSmallestChain, `rejectedSmallestAlias, `rejectedSmallestLift] do
     let full := `MorewTest.Reformulation.SpectralFailures ++ name
-    if env.contains full || (Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed smallest-eigenvalue rewrite retained {full}"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed smallest-eigenvalue rewrite retained {full}"
 
 assert_not_exists rejectedReverseNorm rejectedEqualityNorm rejectedBilinearNorm
   rejectedNonlinearNormBound rejectedComplexNorm rejectedExplicitComplexNorm

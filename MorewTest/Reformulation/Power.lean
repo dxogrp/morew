@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
-import MorewTest.Reformulation.PowerSource
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
+public import MorewTest.Reformulation.PowerSource
 
 /-!
 # Power-cone command integration
@@ -318,7 +321,7 @@ run_cmd do
     let term ← Lean.Elab.liftMacroM view.toTermSyntax
     let name := Lean.mkIdent copy
     Lean.Elab.Command.elabCommand (← `(def $name := $term))
-    let declaration ← Lean.getConstInfo ((← Lean.getCurrNamespace) ++ copy)
+    let declaration ← Lean.getConstInfo (← Lean.resolveGlobalConstNoOverload name)
     if declaration.type.hasMVar || declaration.type.hasSorry ||
         declaration.value!.hasMVar || declaration.value!.hasSorry then
       Lean.throwError "power membership replay contains unresolved terms or placeholders"
@@ -382,9 +385,10 @@ elab "assert_power_atomic% " nested:command : command => do
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed power rewrite changed local declarations"
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed power rewrite leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed power rewrite leaked presentation metadata"
 
 def lateSource :=
   problem (x t : ℝ)

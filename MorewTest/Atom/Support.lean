@@ -3,9 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.ElabSupport
-import Morew.Elab.Atom
-import Lean.Elab.Command
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Algebra.Order.Group.PosPart
+public import MorewTest.ElabSupport
+public meta import Morew.Elab.Atom
+public import Lean.Elab.Command
 
 /-!
 # Shared atom test assertions
@@ -15,12 +20,14 @@ operands, or metadata. This module also supplies the named-helper fixture shared
 by recognition-boundary and command tests.
 -/
 
+public section
+
 namespace MorewTest.Atom
 
 open Lean Lean.Meta Lean.Elab.Term
 open Morew Morew.Elab.Atom
 
-def assertAtom (term : TSyntax `term) (kind : AtomKind)
+meta def assertAtom (term : TSyntax `term) (kind : AtomKind)
     (operandIndices : Array Nat) : TermElabM Unit := do
   let expression ← elaborateUnchecked term
   lambdaTelescope expression fun binders body => do
@@ -33,7 +40,7 @@ def assertAtom (term : TSyntax `term) (kind : AtomKind)
     unless atom.operands == operandIndices.map (binders[·]!) do
       throwError "recognition changed the operands or their order in {body}"
 
-def assertUnsupported (term : TSyntax `term) : TermElabM Unit := do
+meta def assertUnsupported (term : TSyntax `term) : TermElabM Unit := do
   let expression ← elaborateUnchecked term
   lambdaTelescope expression fun _ body => do
     if (← recognizeAtom? body).isSome then

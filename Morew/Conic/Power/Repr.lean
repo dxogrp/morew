@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Power.Basic
-import Morew.Rewrite.Basic
+module
+
+public import Morew.Conic.Power.Basic
+public import Morew.Rewrite.Basic
 
 /-!
 # Exact scalar-power representations
@@ -13,6 +15,8 @@ Input types include the base-domain hypotheses. Hypographs use a nonnegative
 auxiliary variable above the bound. `Real.rpow x p` and `x ^ p` have separate
 representations; exponents zero and one require no sign condition on the base.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Power
 

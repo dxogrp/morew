@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
 import MorewTest.Environment
@@ -27,7 +29,7 @@ open scoped ENNReal
 private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop)) :=
   (source, retained)
 
-private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex : Nat)
+private meta def checkResult (source : Expr) (retained : Array Expr) (insertionIndex : Nat)
     (result : Rewrite.Result) : MetaM Unit := do
   result.toResult.check source retained
   unless result.rowPredicates.size == result.certified.rowCertificates.size do
@@ -54,7 +56,7 @@ private def checkResult (source : Expr) (retained : Array Expr) (insertionIndex 
     unless ← isDefEq (← inferType result.certified.rowCertificates[i]!) expected do
       throwError "NLP plan certified a different generated row"
 
-private def expect (term : TSyntax `term) (rowCount : Nat)
+private meta def expect (term : TSyntax `term) (rowCount : Nat)
     (auxiliary : Bool := false) (parameters : Nat := 0)
     (insertionIndex : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
@@ -67,7 +69,7 @@ private def expect (term : TSyntax `term) (rowCount : Nat)
       throwError "unexpected generated rows or auxiliary space"
     checkResult source retained insertionIndex result
 
-private def rejected (term : TSyntax `term) (message : String)
+private meta def rejected (term : TSyntax `term) (message : String)
     (parameters : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
     let environment ← getEnv
@@ -85,7 +87,7 @@ private def rejected (term : TSyntax `term) (message : String)
     if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
       throwError "failed planning leaked declaration {name}"
 
-private def expectUsing (term rule : TSyntax `term) (rowCount : Nat)
+private meta def expectUsing (term rule : TSyntax `term) (rowCount : Nat)
     (auxiliary : Bool := false) (parameters : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
     let rule ← elaborate rule

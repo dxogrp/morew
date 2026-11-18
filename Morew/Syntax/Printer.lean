@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax.Presentation
-import Lean.Elab.Command
-import Lean.PrettyPrinter
+module
+
+public import Morew.Syntax.Presentation
+public meta import Lean.Elab.Command
+public meta import Lean.PrettyPrinter
 
 /-!
 # Problem printing
@@ -17,6 +19,8 @@ Reformulations carry compact and detailed display views.
 Recognized power-cone representations use a marked mathematical display by default;
 `pp.proofs true` selects ordinary Lean syntax with proof details at print time.
 -/
+
+public meta section
 
 namespace Morew
 
@@ -143,7 +147,7 @@ def elabPrintProblem : CommandElab := fun stx => do
   let declName ← resolveGlobalConstNoOverload name
   let env ← getEnv
   let some view := Morew.Syntax.getProblemDisplayView? env declName
-    | throwErrorAt name "declaration `{declName}` has no registered problem presentation"
+    | throwErrorAt name "declaration `{privateToUserName declName}` has no registered problem presentation"
   let detailed := getPPProofs (← getOptions)
   let (view, mathematicalRows) := match Morew.Syntax.getProblemPrintPresentation? env declName with
     | none => (view, #[])
@@ -159,7 +163,7 @@ def elabPrintProblem : CommandElab := fun stx => do
       (whnfType := true)
   unless isProblem do
     throwErrorAt name
-      "declaration `{declName}` has problem presentation metadata but is not a `Morew.Problem`"
+      "declaration `{privateToUserName declName}` has problem presentation metadata but is not a `Morew.Problem`"
   logInfoAt stx (← liftCoreM <| formatProblemView view mathematicalRows)
 
 end Morew

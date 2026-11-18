@@ -2,10 +2,11 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.NLP.Smooth
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.NLP.Smooth
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
 
 /-! Certify C² smoothness on a common open domain containing the feasible set.
 Feasibility admits standard real equalities and non-strict inequalities, conjunctions,
@@ -21,6 +22,8 @@ Named predicates and independent helper bodies remain unexpanded.
 Finite sums retain their support. Domain inclusion uses admitted constraints,
 independent hypotheses, and operand domains. Results follow input order; the form builder
 checks objective and residual coverage. -/
+
+public meta section
 
 namespace Morew.Elab.NLP.Domain
 

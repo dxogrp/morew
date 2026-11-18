@@ -2,16 +2,19 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.NLP.Rows
-import Morew.Elab.Reformulation.Presentation
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.NLP.Rows
+public import Morew.Elab.Reformulation.Presentation
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
 
 /-! Certify the objective and all rows on a common open domain.
 Stored data uses scalar residuals; presentation groups remain intact. Finite families
 retain symbolic counts and increasing coordinate order. Validate cached blocks against
 the current predicates and feasibility, including auxiliary variables. -/
+
+public meta section
 
 namespace Morew.Elab.NLP
 

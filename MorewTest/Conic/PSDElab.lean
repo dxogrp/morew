@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.Affine.RowSupport
 import Morew.Elab.Cone.Symmetry
 
@@ -20,7 +22,7 @@ namespace MorewTest.Conic.PSDElab
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Conic MorewTest.Affine
 
-private def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
+private meta def assertSymmetry (term : TSyntax `term) (parameters : Nat := 0)
     (accepted : Bool := true) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => do

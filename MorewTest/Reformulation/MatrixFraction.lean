@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.MatrixFraction.Defined
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.MatrixFraction.Defined
 
 /-! Matrix-fraction domains survive either targeted or terminal rewrite order. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.MatrixFraction
 

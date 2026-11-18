@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.Reformulation.Derive
-import MorewTest.Reformulation.SecondOrderCustom.Fixtures
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.Reformulation.Derive
+public import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 
 /-! Integration cases sharing the generic suite's declarations. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Derive
 

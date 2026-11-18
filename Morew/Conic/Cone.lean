@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Algebra.Order.Pi
-import Mathlib.Analysis.Normed.Module.Basic
-import Mathlib.Geometry.Convex.Cone.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+module
+
+public import Mathlib.Algebra.Order.Pi
+public import Mathlib.Analysis.Normed.Module.Basic
+public import Mathlib.Geometry.Convex.Cone.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 
 /-!
 # Convex cones and their ambient spaces
@@ -15,6 +17,8 @@ Each cone carries a finite-dimensional normed real vector space and a mathlib
 `ConvexCone`, closed under addition and positive scaling. Mathlib's convention
 allows empty cones and cones excluding zero; closedness is not required.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic
 

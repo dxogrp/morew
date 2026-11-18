@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Affine
-import Morew.Elab.Objective
-import Morew.Elab.Expr
-import Morew.Elab.State
-import Morew.Elab.Evidence
+public import Morew.Elab.Affine
+public import Morew.Elab.Objective
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
+public import Morew.Elab.Evidence
 
 /-! Certify affine real objectives while retaining the declared optimization sense. -/
+
+public meta section
 
 namespace Morew.Elab.Conic
 

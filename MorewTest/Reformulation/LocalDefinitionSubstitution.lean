@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-!
 # Substitution through model-local definitions
@@ -11,6 +13,8 @@ import Morew.Reformulation.Basic
 Definition values and annotations follow renamed decisions, while replacement
 inference distinguishes existing aliases from the one new optimization variable.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.LocalDefinitionSubstitution
 
@@ -84,7 +88,7 @@ example (u y : ℝ) : shifted.objective (u, y) = (u + (y + 1)) ^ 2 := rfl
 run_cmd do
   let env ← Lean.getEnv
   let some view := Morew.Syntax.getProblemView? env
-      `MorewTest.Reformulation.LocalDefinitionSubstitution.shifted
+      ``MorewTest.Reformulation.LocalDefinitionSubstitution.shifted
     | Lean.throwError "substitution lost the target presentation"
   unless view.definitions.map (·.name.eraseMacroScopes) == #[`loss, `offset, `shift] do
     Lean.throwError "substitution lost or reordered model-local definitions"
@@ -290,8 +294,9 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`dependentReplacement, `collidingBinder] do
     let full := `MorewTest.Reformulation.LocalDefinitionSubstitution ++ name
-    if env.contains full || (Morew.Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed model-local substitution committed a declaration"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Morew.Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed model-local substitution committed a declaration"
 
 end
 end MorewTest.Reformulation.LocalDefinitionSubstitution

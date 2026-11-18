@@ -2,12 +2,15 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Evidence.Sign
+public import Morew.Elab.Evidence.Sign
 
 /-! Prove coverage from complete source feasibility. Declaration premises use only independent
 ambient facts preceding the source point. Search typed facts, conjunctions, sign weakening,
 independent lower margins, and bounded numerical evidence. -/
+
+public section
 
 namespace Morew.Elab.Substitution.Evidence
 
@@ -15,7 +18,7 @@ open Lean Lean.Meta Qq
 open Morew.Elab.Evidence (complete)
 
 /-- Expose bounded predicate aliases and record fields while preserving comparison and membership heads. -/
-def predicateView (type : Expr) : Nat → MetaM Expr
+meta def predicateView (type : Expr) : Nat → MetaM Expr
   | 0 => pure type
   | fuel + 1 => do
     let type ← Expr.reduceStructure type
@@ -28,7 +31,7 @@ def predicateView (type : Expr) : Nat → MetaM Expr
       return ← predicateView expanded fuel
     return type
 
-private partial def projection? (proof goal : Expr) : MetaM (Option Expr) := do
+private meta partial def projection? (proof goal : Expr) : MetaM (Option Expr) := do
   let type ← predicateView (← inferType proof) 32
   if ← isDefEq type goal then return some proof
   if type.isAppOfArity ``And 2 then
@@ -37,7 +40,7 @@ private partial def projection? (proof goal : Expr) : MetaM (Option Expr) := do
     return ← projection? (← mkAppM ``And.right #[proof]) goal
   return none
 
-private partial def leaves (proof : Expr) : MetaM (Array Expr) := do
+private meta partial def leaves (proof : Expr) : MetaM (Array Expr) := do
   let type ← predicateView (← inferType proof) 32
   if type.isAppOfArity ``And 2 then
     return (← leaves (← mkAppM ``And.left #[proof])) ++
@@ -45,7 +48,7 @@ private partial def leaves (proof : Expr) : MetaM (Array Expr) := do
   return #[proof]
 
 /-- Hide source facts and project independent ambient conjunctions for sign search. -/
-private def withAmbientEvidence (point : Expr) (action : MetaM (Option Expr)) :
+private meta def withAmbientEvidence (point : Expr) (action : MetaM (Option Expr)) :
     MetaM (Option Expr) := do
   let original ← getLCtx
   let mut context := original
@@ -68,7 +71,7 @@ private def withAmbientEvidence (point : Expr) (action : MetaM (Option Expr)) :
         result.mapM fun result => mkLetFVars #[fact] result
   withLCtx' context (expose facts.toList)
 
-private def direct? (point goal : Expr) (feasible? : Option Expr) : MetaM (Option Expr) := do
+private meta def direct? (point goal : Expr) (feasible? : Option Expr) : MetaM (Option Expr) := do
   if let some feasible := feasible? then
     if let some proof ← projection? feasible goal then return some proof
   for declaration in ← getLCtx do
@@ -79,16 +82,16 @@ private def direct? (point goal : Expr) (feasible? : Option Expr) : MetaM (Optio
     if let some proof ← projection? proof goal then return some proof
   return none
 
-private theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
+theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
   le_of_lt h
 
-private theorem nonzeroOfPositive {value : ℝ} (h : 0 < value) : value ≠ 0 :=
+theorem nonzeroOfPositive {value : ℝ} (h : 0 < value) : value ≠ 0 :=
   ne_of_gt h
 
-private theorem nonzeroOfNegative {value : ℝ} (h : value < 0) : value ≠ 0 :=
+theorem nonzeroOfNegative {value : ℝ} (h : value < 0) : value ≠ 0 :=
   ne_of_lt h
 
-private def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr) :
+private meta def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr) :
     MetaM (Option Expr) := do
   let value : Q(ℝ) ← Expr.reduceStructure value
   let goal : Q(Prop) := if strict then q(0 < $value) else q(0 ≤ $value)
@@ -103,7 +106,7 @@ private def sign? (point value : Expr) (strict : Bool) (feasible? : Option Expr)
           #[← predicateView (← inferType proof) 32] proof strict then return some result
   return none
 
-private def realComparison? (goal : Expr) : MetaM (Option (Bool × Expr × Expr)) := do
+private meta def realComparison? (goal : Expr) : MetaM (Option (Bool × Expr × Expr)) := do
   let strict := goal.isAppOfArity ``LT.lt 4 || goal.isAppOfArity ``GT.gt 4
   let reversed := goal.isAppOfArity ``GE.ge 4 || goal.isAppOfArity ``GT.gt 4
   unless strict || reversed || goal.isAppOfArity ``LE.le 4 do return none
@@ -115,7 +118,7 @@ private def realComparison? (goal : Expr) : MetaM (Option (Bool × Expr × Expr)
   unless ← isDefEq goal canonical do return none
   return some (strict, left, right)
 
-private def nonzeroValue? (goal : Expr) : MetaM (Option (Expr × Bool)) := do
+private meta def nonzeroValue? (goal : Expr) : MetaM (Option (Expr × Bool)) := do
   let args ← if goal.isAppOfArity ``Ne 3 then pure goal.getAppArgs
     else if goal.isAppOfArity ``Not 1 then do
       let equality := goal.getAppArgs[0]!
@@ -134,7 +137,7 @@ private def nonzeroValue? (goal : Expr) : MetaM (Option (Expr × Bool)) := do
     return some (← Expr.reduceStructure right, true)
   return none
 
-private partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
+private meta partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
     MetaM (Option Expr) := do
   if let some proof ← direct? point goal feasible? then return some proof
   let goal ← predicateView goal 32
@@ -164,7 +167,7 @@ private partial def proveCore? (point goal : Expr) (feasible? : Option Expr) :
       if reverse then mkAppM ``Ne.symm #[proof] else pure proof
   return none
 
-private def checked? (point goal : Expr) (feasible? : Option Expr) : MetaM (Option Expr) := do
+private meta def checked? (point goal : Expr) (feasible? : Option Expr) : MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     try
       unless point.isFVar && (← complete goal) do return .error ()
@@ -184,13 +187,13 @@ private def checked? (point goal : Expr) (feasible? : Option Expr) : MetaM (Opti
 /-- Prove parameterization range from source feasibility and independent ambient facts.
 The fresh source point follows ambient declarations. Kernel-check the result and
 preserve caller metavariables; restore declarations on failure. -/
-def proveRange? (point goal feasibleEvidence : Expr) : MetaM (Option Expr) :=
+meta def proveRange? (point goal feasibleEvidence : Expr) : MetaM (Option Expr) :=
   checked? point goal (some feasibleEvidence)
 
 /-- Prove a declaration premise without source feasibility. Only independent
 ambient facts preceding the fresh point, their conjunction projections, checked
 real sign consequences, and bounded numerical evidence are available. -/
-def proveIndependent? (point goal : Expr) : MetaM (Option Expr) :=
+meta def proveIndependent? (point goal : Expr) : MetaM (Option Expr) :=
   checked? point goal none
 
 end Morew.Elab.Substitution.Evidence

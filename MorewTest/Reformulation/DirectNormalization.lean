@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
 
 /-!
 # Direct certification of reducible operations in problem expressions
@@ -13,6 +15,8 @@ import MorewTest.DiagnosticsSupport
 Constructor-backed operations can expose complete affine or smooth expressions.
 Unsuccessful reductions must retain their instances for registered matching.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.DirectNormalization
 

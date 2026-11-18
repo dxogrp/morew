@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.View
+module
+
+public import Morew.Elab.Reformulation.View
 
 /-! Validate constructed steps before updating the problem syntax and certificates. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 

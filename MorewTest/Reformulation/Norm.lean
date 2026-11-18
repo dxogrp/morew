@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.Reformulation.PrintSupport
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.Reformulation.PrintSupport
 
 /-! # Named vector norms reuse exact conic and smooth-NLP representations -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.Norm
 

@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Exponential
-import Morew.Rewrite.Sum
+module
+
+public import Morew.Conic.Exponential
+public import Morew.Rewrite.Sum
 
 /-!
 # Exact exponential-cone representations
@@ -13,6 +15,8 @@ The scalar `Fn` functions and their native forms have separate representations.
 Input types include the domain hypotheses. Finite entropy and KL sums allow
 dimension zero; log-sum-exp requires a positive dimension.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Exponential
 

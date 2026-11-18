@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Environment
+module
+
+public meta import Lean.Environment
 
 /-!
 # Local declaration rollback checks
@@ -12,6 +14,8 @@ Compare declaration names within one module and fixed imports.
 `Environment.constants` waits for kernel checking. Metavariables, presentation
 metadata, and other state require separate assertions.
 -/
+
+public meta section
 
 namespace MorewTest
 

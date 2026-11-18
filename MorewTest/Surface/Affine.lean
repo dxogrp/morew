@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Conic.Objective
@@ -53,7 +55,7 @@ def customObjective : Problem ℝ ℝ :=
     subject to
       upper : x ≤ 4
 
-private def checkSource (name : Name) (sense : ObjectiveSense)
+private meta def checkSource (name : Name) (sense : ObjectiveSense)
     (acceptedObjective : Bool) : TermElabM Unit := do
   let source := Lean.mkConst name
   let some view := Morew.Syntax.getProblemView? (← getEnv) name

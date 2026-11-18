@@ -2,16 +2,20 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Affine
-import Morew.Elab.Expr
-import Morew.Elab.State
-import Lean.Meta.Basic
-import Lean.Meta.Transform
-import Qq
+public import Morew.Affine
+public import Morew.Conic.PSD
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
+public import Lean.Meta.Basic
+public import Lean.Meta.Transform
+public import Qq
 
 /-! Canonical algebra for real, Euclidean, product, and function spaces.
 Callers check any finite-index requirements. -/
+
+public section
 
 namespace Morew.Elab.Affine.Space
 
@@ -59,11 +63,11 @@ abbrev pi (ι : Type*) {Y : Type*} (a : Structure Y) :
 
 end Structure
 
-private structure BuiltSpace where
+private meta structure BuiltSpace where
   data : Expr
   instances : Array Expr
 
-private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
+private meta def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
     MetaM BuiltSpace := do
   -- Preserve aliases such as `Matrix` in local instance types for typeclass matching.
   let dataType ← mkAppM ``Structure #[type]
@@ -72,7 +76,7 @@ private def finishSpace (type data : Expr) (instances : Array Expr := #[]) :
   let module ← mkAppM ``Structure.module #[data]
   pure { data, instances := instances ++ #[group, module] }
 
-private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
+private meta partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← finishSpace type (← mkAppM ``Structure.symmetricMatrix #[n])
   -- Reduce type aliases to expose product and function structure.
@@ -98,14 +102,14 @@ private partial def buildSpace (type : Expr) : MetaM BuiltSpace := do
 
 /-- Construct canonical `AddCommGroup` and `Module ℝ` instances for real, Euclidean,
 product, and nondependent function spaces. Callers check finite-index requirements. -/
-def canonicalSpace (type : Expr) : MetaM (Expr × Expr) := do
+meta def canonicalSpace (type : Expr) : MetaM (Expr × Expr) := do
   let result ← buildSpace type
   pure (← mkAppM ``Structure.group #[result.data],
     ← mkAppM ``Structure.module #[result.data])
 
 /-- Use canonical instances for the supplied spaces, their components, and `ℝ`.
 Keep other local instances available and substitute temporary bindings into the result. -/
-def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
+meta def withCanonicalSpaces (types : Array Expr) (action : MetaM Expr) : MetaM Expr := do
   let mut instances := #[]
   for type in #[mkConst ``Real] ++ types do
     let result ← buildSpace type

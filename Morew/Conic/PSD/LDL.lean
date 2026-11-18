@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.Matrix.LDL
-import Mathlib.LinearAlgebra.Matrix.Block
+module
+
+public import Mathlib.Analysis.Matrix.LDL
+public import Mathlib.LinearAlgebra.Matrix.Block
 
 /-!
 # Normalized real LDL factorization
@@ -12,6 +14,8 @@ import Mathlib.LinearAlgebra.Matrix.Block
 The lower triangular factor in mathlib's LDL decomposition has unit diagonal.
 This constructs auxiliary matrices attaining the log-determinant bound.
 -/
+
+public section
 
 namespace Morew.Conic.LogDet
 

@@ -2,18 +2,21 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Expr
-import Morew.Elab.NLP.Space
-import Morew.NLP.Domain
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Positivity
-import Lean.Meta.Check
-import Morew.Elab.State
+public meta import Morew.Elab.Expr
+public import Morew.Elab.NLP.Space
+public import Morew.NLP.Domain
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Positivity
+public import Lean.Meta.Check
+public meta import Morew.Elab.State
 
 /-! Domain evidence from standard real equalities and non-strict inequalities,
 conjunctions, `True`, established operand domains, and independent hypotheses.
 Hide other proofs from tactics. -/
+
+public meta section
 
 namespace Morew.Elab.NLP.Domain.Evidence
 

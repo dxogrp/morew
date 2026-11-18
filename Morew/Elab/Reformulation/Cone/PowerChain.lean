@@ -3,29 +3,34 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Power.Cone
-import Morew.Syntax.PowerChainView
-import Mathlib.Tactic.NormNum
-import Lean.Elab.Term
+module
+
+public meta import Qq
+public import Morew.Conic.Power.Cone
+public meta import Morew.Syntax.PowerChainView
+public import Mathlib.Tactic.NormNum
+public meta import Lean.Elab.Term
 
 /-! Construct mathematical notation for complete chains of power cone constraints.
 Incomplete or ambiguous chains use ordinary presentation. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation.Cone
 
 open Lean Lean.Meta Lean.Elab.Term Qq
 open Morew.Conic
 
-private def nativePowerMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
-  value ∈ Cone.powerSet α
+private def nativePowerMembership (α : Q(ℝ)) (value : Q(ℝ × ℝ × ℝ)) : Q(Prop) :=
+  q($value ∈ Cone.powerSet $α)
 
-private def nativeBundledPowerMembership (α : ℝ) (hα : 0 < α ∧ α < 1)
-    (value : ℝ × ℝ × ℝ) : Prop := value ∈ (Cone.power α hα).carrier
+private def nativeBundledPowerMembership (α : Q(ℝ)) (hα : Q(0 < $α ∧ $α < 1))
+    (value : Q(ℝ × ℝ × ℝ)) : Q(Prop) := q($value ∈ (Cone.power $α $hα).carrier)
 
-private def nativeZeroMembership (value : ℝ) : Prop := value ∈ ({0} : Set ℝ)
+private def nativeZeroMembership (value : Q(ℝ)) : Q(Prop) := q($value ∈ ({0} : Set ℝ))
 
-private def nativeNonnegMembership (value : ℝ) : Prop :=
-  value ∈ Cone.nonnegScalar.carrier
+private def nativeNonnegMembership (value : Q(ℝ)) : Q(Prop) :=
+  q($value ∈ Cone.nonnegScalar.carrier)
 
 -- Check operation instances independently of their operands.
 private def nativePrefix (value canonical : Expr) (operands : Nat) : MetaM Bool := do
@@ -141,28 +146,26 @@ private def powerMembership? (row : Expr) : MetaM (Option (Expr × Expr × Expr 
   let carrier := args[3]!.consumeMData
   let (exponent, canonical) ← if carrier.isAppOfArity ``Cone.powerSet 1 then do
       let exponent := carrier.getAppArgs[0]!
-      let canonical := (mkAppN (← getConstInfo ``nativePowerMembership).value!
-        #[exponent, args[4]!]).headBeta
+      let canonical := nativePowerMembership exponent args[4]!
       pure (exponent, canonical)
     else do
       unless carrier.isAppOfArity ``Cone.carrier 1 do return none
       let cone := carrier.getAppArgs[0]!.consumeMData
       unless cone.isAppOfArity ``Cone.power 2 do return none
       let exponent := cone.getAppArgs[0]!
-      let canonical := (mkAppN (← getConstInfo ``nativeBundledPowerMembership).value!
-        #[exponent, cone.getAppArgs[1]!, args[4]!]).headBeta
+      let canonical := nativeBundledPowerMembership exponent cone.getAppArgs[1]! args[4]!
       pure (exponent, canonical)
   unless (← nativePrefix row canonical 2) && (← isDefEq row canonical) do return none
   let some (x, y, z) := tuple? args[4]! | return none
   return some (exponent, x, y, z)
 
-private def nativeMembershipValue? (row : Expr) (template : Name) : MetaM (Option Expr) := do
+private def nativeMembershipValue? (row : Expr) (zero : Bool) : MetaM (Option Expr) := do
   let row := row.consumeMData
   unless row.isAppOfArity ``Membership.mem 5 do return none
   let value := row.getAppArgs[4]!
-  let canonical := (mkApp (← getConstInfo template).value! value).headBeta
+  let canonical := if zero then nativeZeroMembership value else nativeNonnegMembership value
   let carrier := row.getAppArgs[3]!.consumeMData
-  if template == ``nativeZeroMembership then
+  if zero then
     let canonicalCarrier := canonical.getAppArgs[3]!.consumeMData
     unless ← nativePrefix carrier canonicalCarrier 1 do return none
     unless ← realLiteral carrier.getAppArgs.back! 0 do return none
@@ -242,7 +245,7 @@ private def first? (chain : Chain) (row : Expr) : MetaM (Option Bool) := do
   let (left, right, membership) ← if let some (left, right) ← realComparison? row true then
       pure (left, right, false)
     else do
-      let some value ← nativeMembershipValue? row ``nativeZeroMembership | return none
+      let some value ← nativeMembershipValue? row true | return none
       let some (left, right) ← nativeRealBinary? value ``HSub.hSub | return none
       pure (left, right, true)
   let some left ← coordinate? left | return none
@@ -258,7 +261,7 @@ private def nonneg? (chain : Chain) (row : Expr) : MetaM (Option Bool) := do
     unless (← realLiteral left 0) &&
         (← isCoordinate right chain.auxiliary chain.dimension chain.size) do return none
     return some false
-  let some value ← nativeMembershipValue? row ``nativeNonnegMembership | return none
+  let some value ← nativeMembershipValue? row false | return none
   unless ← isCoordinate value chain.auxiliary chain.dimension chain.size do return none
   return some true
 
@@ -266,7 +269,7 @@ private def bound? (chain : Chain) (row : Expr) : MetaM (Option (Expr × Bool)) 
   if let some (left, right) ← realComparison? row false then
     unless ← isCoordinate right chain.auxiliary chain.dimension chain.size do return none
     return some (left, false)
-  let some value ← nativeMembershipValue? row ``nativeNonnegMembership | return none
+  let some value ← nativeMembershipValue? row false | return none
   let some (left, right) ← nativeRealBinary? value ``HSub.hSub | return none
   unless ← isCoordinate left chain.auxiliary chain.dimension chain.size do return none
   return some (right, true)

@@ -2,15 +2,16 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.NLP.Domain
-import Morew.Elab.NLP.Domain.Evidence
-import Morew.Elab.NLP.Space
-import Morew.Elab.Expr
-import Morew.Elab.State
-import Morew.Elab.Expansion
-import Morew.Elab.Atom
-import Lean.Meta.Check
+public import Morew.NLP.Domain
+public import Morew.Elab.NLP.Domain.Evidence
+public import Morew.Elab.NLP.Space
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
+public meta import Morew.Elab.Expansion
+public meta import Morew.Elab.Atom
+public import Lean.Meta.Check
 
 /-! Certify global C² smoothness for elaborated functions `X → ℝ` on real scalars,
 finite Euclidean spaces, products, and finite vectors.
@@ -26,6 +27,8 @@ zero disables expansion. Named `Problem` definitions and predicates remain unexp
 `Morew.Elab.NLP.Domain` shares this traversal with additional domain checks for
 restricted operations, including constants. Proofs use canonical analytic structures
 and refer to the original function. -/
+
+public meta section
 
 /-- Maximum nested helper expansions during smooth certification. -/
 register_option morew.smooth.maxExpansionDepth : Nat := {
@@ -277,54 +280,48 @@ private def checkPrefix (source expected : Expr) (operands : Nat) : CertifyM Uni
   | some .argument => reject source .invalidInstance "expected canonical real arithmetic instances"
 
 -- Check canonical operation instances and operand domains for fixed product/vector coefficients.
-private structure PointwiseArithmetic (X : Type*) where
-  mul : Mul X
-  pow : Pow X ℕ
-
-private abbrev PointwiseArithmetic.real : PointwiseArithmetic ℝ :=
-  ⟨inferInstance, inferInstance⟩
-
-private abbrev PointwiseArithmetic.prod {X Y : Type*}
-    (left : PointwiseArithmetic X) (right : PointwiseArithmetic Y) :
-    PointwiseArithmetic (X × Y) := by
-  letI := left.mul
-  letI := left.pow
-  letI := right.mul
-  letI := right.pow
-  exact ⟨inferInstance, inferInstance⟩
-
-private abbrev PointwiseArithmetic.pi (n : Nat) {Y : Type*}
-    (target : PointwiseArithmetic Y) : PointwiseArithmetic (Fin n → Y) := by
-  letI := target.mul
-  letI := target.pow
-  exact ⟨inferInstance, inferInstance⟩
-
-private partial def pointwiseArithmetic (type : Expr) : MetaM Expr := do
+private partial def pointwiseArithmetic (type : Expr) : MetaM (Expr × Expr) := do
   let shape ← whnf type
   if shape.isConstOf ``Real then
-    return mkConst ``PointwiseArithmetic.real
+    return (q(inferInstance : Mul ℝ), q(inferInstance : Pow ℝ ℕ))
   if shape.isAppOfArity ``Prod 2 then
-    return ← mkAppM ``PointwiseArithmetic.prod
-      #[← pointwiseArithmetic shape.getAppArgs[0]!,
-        ← pointwiseArithmetic shape.getAppArgs[1]!]
+    let left ← pointwiseArithmetic shape.getAppArgs[0]!
+    let right ← pointwiseArithmetic shape.getAppArgs[1]!
+    let mul := q(fun {X Y : Type} (left : Mul X) (right : Mul Y) =>
+      letI := left
+      letI := right
+      (inferInstance : Mul (X × Y)))
+    let pow := q(fun {X Y : Type} (left : Pow X ℕ) (right : Pow Y ℕ) =>
+      letI := left
+      letI := right
+      (inferInstance : Pow (X × Y) ℕ))
+    return ((← mkAppM' mul #[left.1, right.1]).headBeta,
+      (← mkAppM' pow #[left.2, right.2]).headBeta)
   if let .forallE name index body info := shape then
     let indexShape ← whnf index
     if indexShape.isAppOfArity ``Fin 1 then
       return ← withLocalDecl name info index fun i => do
         let target ← pointwiseArithmetic (body.instantiate1 i)
-        mkAppM ``PointwiseArithmetic.pi #[indexShape.getAppArgs[0]!, target]
+        let mul := q(fun (n : Nat) {Y : Type} (target : Mul Y) =>
+          letI := target
+          (inferInstance : Mul (Fin n → Y)))
+        let pow := q(fun (n : Nat) {Y : Type} (target : Pow Y ℕ) =>
+          letI := target
+          (inferInstance : Pow (Fin n → Y) ℕ))
+        return ((← mkAppM' mul #[indexShape.getAppArgs[0]!, target.1]).headBeta,
+          (← mkAppM' pow #[indexShape.getAppArgs[0]!, target.2]).headBeta)
   throwError "unsupported pointwise arithmetic space {type}"
 
 private def checkPointwisePrefix (expression type : Expr) (power : Bool) : CertifyM Unit := do
   let data ← pointwiseArithmetic type
   let args := expression.getAppArgs
   let expected ← if power then do
-      let pow ← mkAppM ``PointwiseArithmetic.pow #[data]
+      let pow := data.2
       let inst ← mkAppOptM ``instHPow #[some type, some (mkConst ``Nat), some pow]
       pure <| mkAppN expression.getAppFn
         #[type, mkConst ``Nat, type, inst, args[4]!, args[5]!]
     else do
-      let mul ← mkAppM ``PointwiseArithmetic.mul #[data]
+      let mul := data.1
       let inst ← mkAppOptM ``instHMul #[some type, some mul]
       pure <| mkAppN expression.getAppFn
         #[type, type, type, inst, args[4]!, args[5]!]

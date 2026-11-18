@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-! Rejected quadratic terminal commands leave no declarations or presentation metadata. -/
 
@@ -26,9 +29,10 @@ elab "assert_quadConic_atomic% " nested:command : command => do
   MorewTest.elabNoNewDeclarations nested fun name =>
     m!"failed quadratic conversion leaked declaration {name}"
   let after ← Lean.getEnv
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed quadratic conversion leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed quadratic conversion leaked presentation metadata"
 
 def source := problem (x : ℝ) minimize x ^ 2 subject to upper : x ≤ 2
 

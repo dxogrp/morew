@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Rewrite.Match
 import Morew.Elab.Cone.Rewrite
 import Morew.Elab.NLP.Rewrite
@@ -17,7 +19,7 @@ namespace MorewTest.Rewrite.Negation
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew MorewTest.Affine
 
-private def hasView (term expected : TSyntax `term) : TermElabM Unit := do
+private meta def hasView (term expected : TSyntax `term) : TermElabM Unit := do
   let source ← elaborate term
   let expected ← elaborate expected
   lambdaTelescope source fun points body => do
@@ -89,7 +91,7 @@ noncomputable def parameterAbsEpigraph (parameters : Parameters) :
     EpigraphRepr (parameterAbs parameters) :=
   indexedAbsEpigraph (parameters.count + if parameters.flag then 0 else 1)
 
-private def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
+private meta def checkApplied (term conicRule nlpRule : TSyntax `term) (rows : Nat) :
     TermElabM Unit := do
   let source ← elaborate term
   let conic ← Morew.Elab.Cone.Rewrite.planExplicit source (← elaborate conicRule)

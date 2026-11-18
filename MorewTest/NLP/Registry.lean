@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.NLP.Rewrite
 import MorewTest.NLP.DomainSupport
 import MorewTest.Rewrite.Registry.Source
@@ -24,7 +26,7 @@ open MorewTest.Affine (elaborate)
 private def input {X : Type} (source : X → Prop) (retained : Array (X → Prop)) :=
   (source, retained)
 
-private def check (term : TSyntax `term) (rows : Nat)
+private meta def check (term : TSyntax `term) (rows : Nat)
     (declaration? : Option Name := none) (parameters : Nat := 0) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do
     let before ← getMCtx
@@ -42,7 +44,7 @@ private def check (term : TSyntax `term) (rows : Nat)
       checkCompleteWithKernel proof "incomplete registered NLP evidence"
     assertMVarCountersUnchanged before "registered NLP planning leaked scratch metavariables"
 
-private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
+private meta def exactRows (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Expr := none) (declaration? : Option Name := none) : TermElabM Unit :=
   Domain.withInput term parameters fun source expected => do
     let before ← getMCtx
@@ -66,7 +68,7 @@ private def exactRows (term : TSyntax `term) (parameters : Nat := 0)
         result.certified.feasibleMemDomain] ++ result.certified.rowCertificates do
       checkCompleteWithKernel proof "incomplete registered NLP evidence"
 
-private def reject (term : TSyntax `term) (message : String)
+private meta def reject (term : TSyntax `term) (message : String)
     (declaration? : Option Name := none) (parameters : Nat := 0)
     (rule? : Option Expr := none) : TermElabM Unit :=
   Domain.withInput term parameters fun source retained => do

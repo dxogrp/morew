@@ -3,11 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Rewrite.Basic
-import Morew.Rewrite.Polyhedral.Lemmas
-import Morew.Fn.Cvar
-import Morew.Fn.Norm
-import Morew.Fn.SumLargest
+module
+
+public import Morew.Rewrite.Basic
+public import Morew.Rewrite.Polyhedral.Lemmas
+public import Morew.Fn.Cvar
+public import Morew.Fn.Norm
+public import Morew.Fn.SumLargest
 
 /-!
 # Exact polyhedral representations
@@ -17,6 +19,8 @@ vector norms. The norm of a finite real function is its infinity norm; the
 one-norm representation introduces an auxiliary vector. Norm bounds include
 dimension zero; finite extrema use a nonempty support.
 -/
+
+@[expose] public section
 
 namespace Morew.Rewrite
 

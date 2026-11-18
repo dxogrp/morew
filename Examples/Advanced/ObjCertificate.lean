@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Mathlib.LinearAlgebra.Matrix.PosDef
+module
+
+public import Morew.Reformulation.Conic
+public import Mathlib.LinearAlgebra.Matrix.PosDef
 
 /-!
 # Providing objective certificates
@@ -12,6 +14,8 @@ import Mathlib.LinearAlgebra.Matrix.PosDef
 Use `conic using cert` or `qconic using cert` to supply a representation of
 the objective. Constraints are converted automatically.
 -/
+
+@[expose] public section
 
 namespace Examples.Advanced.ObjCertificate
 

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.NLP.Form
 import MorewTest.NLP.DomainSupport
 
@@ -23,7 +25,7 @@ open MorewTest.Affine (elaborate)
 
 noncomputable section
 
-private def presentationFor (source : Expr) (sense : ObjectiveSense := .minimize)
+private meta def presentationFor (source : Expr) (sense : ObjectiveSense := .minimize)
     (empty : Bool := false) : MetaM Elab.Reformulation.PresentationState := do
   let type ← whnf (← inferType source)
   unless type.isAppOfArity ``Problem 2 do throwError "expected a problem"
@@ -37,7 +39,7 @@ private def presentationFor (source : Expr) (sense : ObjectiveSense := .minimize
       #[{ name := `bounds, predicate := feasible }]
   }
 
-private def requireForm (presentation : Elab.Reformulation.PresentationState)
+private meta def requireForm (presentation : Elab.Reformulation.PresentationState)
     (cached : Array (Option Rows.Result) := #[]) : MetaM Expr := do
   match ← buildForm presentation cached with
   | .error error => throwError "expected smooth-NLP form: {error.reason}"
@@ -45,10 +47,16 @@ private def requireForm (presentation : Elab.Reformulation.PresentationState)
     checkCompleteWithKernel form "incomplete NLP form"
     return form
 
-elab "nlp_form_for% " source:term : term => do
+local syntax "nlp_form_for% " term : term
+
+local elab_rules : term
+| `(nlp_form_for% $source:term) => do
   requireForm (← presentationFor (← elaborate source))
 
-elab "max_nlp_form_for% " source:term : term => do
+local syntax "max_nlp_form_for% " term : term
+
+local elab_rules : term
+| `(max_nlp_form_for% $source:term) => do
   requireForm (← presentationFor (← elaborate source) .maximize)
 
 def polynomial : Problem ℝ ℝ where
@@ -173,7 +181,7 @@ example : emptyForm.data.rowCount = 0 := rfl
 
 -- Failures report a specific unsupported row even for a smooth objective; no
 -- restricted operation is rescued by a tautology or cancellation.
-private def requireFailure (term : TSyntax `term) (kind : Smooth.SmoothFailureKind) :
+private meta def requireFailure (term : TSyntax `term) (kind : Smooth.SmoothFailureKind) :
     TermElabM Unit := do
   let presentation ← presentationFor (← elaborate term)
   let .error error ← buildForm presentation | throwError "unsupported problem was certified"

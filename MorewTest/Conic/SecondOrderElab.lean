@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
@@ -25,11 +27,11 @@ open scoped ENNReal
 
 private noncomputable abbrev nativeLE : LE ℝ := inferInstance
 
-private def conjunction (rows : Array Expr) : Expr :=
+private meta def conjunction (rows : Array Expr) : Expr :=
   if rows.isEmpty then mkConst ``True
   else rows.pop.toList.foldr (mkApp2 (mkConst ``And)) rows.back!
 
-private def checkPlan (source : Expr) (retained : Array Expr := #[])
+private meta def checkPlan (source : Expr) (retained : Array Expr := #[])
     (contextual : Bool := false) (rule? : Option Name := none) : MetaM Unit := do
   let domain ← Morew.Elab.Rewrite.Plan.predicateDomain source
   let outcome ← match rule? with
@@ -77,7 +79,7 @@ private def checkPlan (source : Expr) (retained : Array Expr := #[])
   for expression in proofs ++ #[row.constraint, row.pointwiseIff] do
     checkCompleteWithKernel expression "second-order planning returned an incomplete certificate"
 
-private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
+private meta def rejectPlan (source : Expr) (retained : Array Expr) (fragment : String) :
     MetaM Unit := do
   let .error error ← Rewrite.planUnique source retained
     | throwError "unsupported second-order predicate was accepted: {source}"
@@ -85,18 +87,18 @@ private def rejectPlan (source : Expr) (retained : Array Expr) (fragment : Strin
   unless message.contains fragment do
     throwError "expected diagnostic containing {fragment}, got {message}"
 
-private def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
+private meta def expectPlan (stx : TSyntax `term) (parameterCount : Nat := 0)
     (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => do
     checkPlan source (rule? := rule?)
 
-private def expectRejected (stx : TSyntax `term) (fragment : String)
+private meta def expectRejected (stx : TSyntax `term) (fragment : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ source => rejectPlan source #[] fragment
 
-private def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
+private meta def contextCase (stx : TSyntax `term) (parameterCount : Nat := 0)
     (failure? : Option String := none) : TermElabM Unit := do
   let expression ← elaborate stx
   lambdaBoundedTelescope expression parameterCount fun _ pair => do

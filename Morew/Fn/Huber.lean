@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Basic.Real.Basic
+module
+
+public import Mathlib.Basic.Real.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -15,6 +17,8 @@ For `M ≥ 0`, it is the attained minimum of `z² + 2M|x-z|` over real `z`.
 The normalization gives `x²` in the quadratic region, and the loss is zero
 everywhere when `M = 0`.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

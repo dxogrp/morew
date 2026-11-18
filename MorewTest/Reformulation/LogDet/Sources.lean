@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax
-import Morew.Conic.PSD
-import Morew.Fn.Matrix
+module
+
+public import Morew.Syntax
+public import Morew.Conic.PSD
+public import Morew.Fn.Matrix
 
 /-! Shared named and native log-determinant source problems. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.LogDet
 

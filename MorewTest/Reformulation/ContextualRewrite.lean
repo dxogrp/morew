@@ -3,11 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
-import MorewTest.Reformulation.Registry.Source
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
+public import MorewTest.Reformulation.Registry.Source
 
 /-!
 # Exact auxiliary rewrites under retained constraints
@@ -244,9 +247,10 @@ elab "assert_contextual_atomic% " nested:command : command => do
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed contextual rewrite changed local declarations"
-  if (Syntax.getProblemView? before targetName).isNone &&
-      (Syntax.getProblemView? after targetName).isSome then
-    Lean.throwError "failed contextual rewrite leaked presentation metadata"
+  for targetName in #[targetName, Lean.mkPrivateName after targetName] do
+    if (Syntax.getProblemView? before targetName).isNone &&
+        (Syntax.getProblemView? after targetName).isSome then
+      Lean.throwError "failed contextual rewrite leaked presentation metadata"
 
 def missingGuard :=
   problem (x t : ℝ)

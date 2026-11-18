@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.QuadConic.Terminal
-import Morew.Elab.Reformulation.Cone.Terminal
+module
+
+public import Morew.Elab.QuadConic.Terminal
+public import Morew.Elab.Reformulation.Cone.Terminal
 
 /-! Register `qconic` with the quadratic objective backend and shared cone planner.
 Validate and retarget `QuadConic.Form` evidence, checking the stored optimization sense. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -32,8 +36,9 @@ def prepareTerminalQuadConic (state : ReformState) (step : Syntax)
     return Morew.Elab.QuadConic.Terminal.backendWithCertificate proof
   Cone.prepareTerminalConeForm makeBackend terminalQuadConicAdapter `_terminalQuadConic state step
 
+/-- Elaborate the terminal `qconic` step producing a quadratic-conic representation. -/
 @[morew_reformulation_step Morew.quadConicStep]
-private def elabQuadConic : StepHandler := fun state step => do
+def elabQuadConic : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| qconic $[using $provided:term]?) =>
       prepareTerminalQuadConic state step provided

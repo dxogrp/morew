@@ -2,24 +2,27 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.QuadConic.Objective
-import Morew.Elab.Affine
-import Morew.Elab.Evidence
-import Morew.Elab.QuadConic.Expansion
-import Morew.Elab.Objective
-import Lean.Meta.Check
+public import Morew.QuadConic.Objective
+public import Morew.Elab.Affine
+public import Morew.Elab.Evidence
+public import Morew.Elab.QuadConic.Expansion
+public import Morew.Elab.Objective
+public import Lean.Meta.Check
 
 /-! Construct or validate a quadratic part and an affine part whose sum equals the source objective.
 Automatic recognition proves global curvature using evidence independent of decision variables.
 Completed and supplied certificates share validation. Transparent helpers unfold within a shared budget. -/
+
+public section
 
 namespace Morew.Elab.QuadConic
 
 open Lean Lean.Meta Qq
 
 /-- A quadratic decomposition and curvature proof for the presentation's sense. -/
-structure ObjectiveResult where
+meta structure ObjectiveResult where
   /-- The homogeneous quadratic part. -/
   quadratic : Expr
   /-- The affine part, including the constant term. -/
@@ -30,99 +33,103 @@ structure ObjectiveResult where
   maximization at every decision point. -/
   curvature : Expr
 
-private structure CertifiedResult where
+private meta structure CertifiedResult where
   certificate : Expr
   nonneg? : Option Expr := none
   nonpos? : Option Expr := none
   missing? : Option Expr := none
 
-private abbrev ReifyM := ExceptT Expr.Error MetaM
+private meta abbrev ReifyM := ExceptT Expr.Error MetaM
 
-private def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
+private meta def reject (expression : Expr) (reason : MessageData) : ReifyM α := do
   throwThe Expr.Error {
     expression
     reason := ← addMessageContext
       m!"quadratic objective: {reason}\nexpression: {expression}" }
 
 -- Printing a synthetic sorry in a diagnostic suppresses that error in Lean.
-private def rejectIncomplete (expression : Expr) : ReifyM α := do
+private meta def rejectIncomplete (expression : Expr) : ReifyM α := do
   throwThe Expr.Error {
     expression
     reason := ← addMessageContext
       "quadratic objective: unresolved metavariables or proof placeholders" }
 
-private noncomputable def canonicalNorm (n : Nat) (x : EuclideanSpace ℝ (Fin n)) : ℝ := ‖x‖
+private meta def canonicalNorm : Expr :=
+  q(fun (n : Nat) (x : EuclideanSpace ℝ (Fin n)) => ‖x‖)
 
-private def zeroMatrix (n : Nat) : Matrix (Fin n) (Fin n) ℝ := 0
+private meta def zeroMatrix : Expr := q(fun (n : Nat) => (0 : Matrix (Fin n) (Fin n) ℝ))
 
-private def positiveSemidefinite (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ) : Prop :=
-  Q.PosSemidef
+private meta def positiveSemidefinite : Expr :=
+  q(fun (n : Nat) (Q : Matrix (Fin n) (Fin n) ℝ) => Q.PosSemidef)
 
 -- Native expressions retain both source enumerations and use the canonical real operations.
-private noncomputable def indexedQuadForm (n : Nat) (outer inner : Fintype (Fin n))
-    (v : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
-  @dotProduct (Fin n) ℝ outer _ _ v (@Matrix.mulVec (Fin n) (Fin n) ℝ _ inner Q v)
+private meta def indexedQuadForm : Expr :=
+  q(fun (n : Nat) (outer inner : Fintype (Fin n))
+      (v : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) =>
+    @dotProduct (Fin n) ℝ outer _ _ v (@Matrix.mulVec (Fin n) (Fin n) ℝ _ inner Q v))
 
-private theorem indexedQuadForm_eq (n : Nat) (outer inner : Fintype (Fin n))
+theorem indexedQuadForm_eq (n : Nat) (outer inner : Fintype (Fin n))
     (v : Fin n → ℝ) (Q : Matrix (Fin n) (Fin n) ℝ) :
-    Morew.Fn.quadForm v Q = indexedQuadForm n outer inner v Q := by
+    Morew.Fn.quadForm v Q =
+      @dotProduct (Fin n) ℝ outer _ _ v
+        (@Matrix.mulVec (Fin n) (Fin n) ℝ _ inner Q v) := by
   have ho : outer = Fin.fintype n := Subsingleton.elim _ _
   have hi : inner = Fin.fintype n := Subsingleton.elim _ _
   subst outer inner
   rfl
 
-private theorem nonnegOfNegatedNonpos {c : ℝ} (h : c ≤ 0) : 0 ≤ -c :=
+theorem nonnegOfNegatedNonpos {c : ℝ} (h : c ≤ 0) : 0 ≤ -c :=
   neg_nonneg.mpr h
 
-private theorem nonposOfNegatedNonneg {c : ℝ} (h : 0 ≤ c) : -c ≤ 0 :=
+theorem nonposOfNegatedNonneg {c : ℝ} (h : 0 ≤ c) : -c ≤ 0 :=
   neg_nonpos.mpr h
 
-private theorem nonnegInverse {c : ℝ} (h : 0 ≤ c) : 0 ≤ c⁻¹ := inv_nonneg.mpr h
+theorem nonnegInverse {c : ℝ} (h : 0 ≤ c) : 0 ≤ c⁻¹ := inv_nonneg.mpr h
 
-private theorem nonposInverse {c : ℝ} (h : c ≤ 0) : c⁻¹ ≤ 0 := inv_nonpos.mpr h
+theorem nonposInverse {c : ℝ} (h : c ≤ 0) : c⁻¹ ≤ 0 := inv_nonpos.mpr h
 
 section Curvature
 
 variable {X : Type*} [AddCommGroup X] [Module ℝ X]
 variable {Q : QuadraticForm ℝ X}
 
--- Membership evidence stays bound in the attached index of every summand.
-private def sumOnSupport {ι : Type*} (s : Finset ι) (f : ι → X → ℝ)
+/-- Certify a finite sum using certificates indexed by membership in its support. -/
+@[expose] def sumOnSupport {ι : Type*} (s : Finset ι) (f : ι → X → ℝ)
     (a : ∀ i : {i // i ∈ s}, Morew.QuadConic.CertifiedExpr (f i)) :
     Morew.QuadConic.CertifiedExpr (fun x => ∑ i ∈ s, f i x) :=
   (Morew.QuadConic.CertifiedExpr.sum s.attach a).transport fun x =>
     Finset.sum_attach s (fun i => f i x)
 
-private theorem nonnegSMulZero (c : ℝ) (hQ : ∀ x, 0 ≤ Q x)
+theorem nonnegSMulZero (c : ℝ) (hQ : ∀ x, 0 ≤ Q x)
     (hQ' : ∀ x, Q x ≤ 0) : ∀ x, 0 ≤ (c • Q) x := by
   intro x
   change 0 ≤ c * Q x
   rw [le_antisymm (hQ' x) (hQ x), mul_zero]
 
-private theorem nonposSMulZero (c : ℝ) (hQ : ∀ x, 0 ≤ Q x)
+theorem nonposSMulZero (c : ℝ) (hQ : ∀ x, 0 ≤ Q x)
     (hQ' : ∀ x, Q x ≤ 0) : ∀ x, (c • Q) x ≤ 0 := by
   intro x
   change c * Q x ≤ 0
   rw [le_antisymm (hQ' x) (hQ x), mul_zero]
 
-private theorem nonnegZeroSMul (Q : QuadraticForm ℝ X) :
+theorem nonnegZeroSMul (Q : QuadraticForm ℝ X) :
     ∀ x, 0 ≤ ((0 : ℝ) • Q) x := by simp
 
-private theorem nonposZeroSMul (Q : QuadraticForm ℝ X) :
+theorem nonposZeroSMul (Q : QuadraticForm ℝ X) :
     ∀ x, ((0 : ℝ) • Q) x ≤ 0 := by simp
 
-private theorem nonnegEmptySum {ι : Type*} (s : Finset ι)
+theorem nonnegEmptySum {ι : Type*} (s : Finset ι)
     (Q : ι → QuadraticForm ℝ X) (h : s = ∅) : ∀ x, 0 ≤ (∑ i ∈ s, Q i) x := by
   simp [h]
 
-private theorem nonposEmptySum {ι : Type*} (s : Finset ι)
+theorem nonposEmptySum {ι : Type*} (s : Finset ι)
     (Q : ι → QuadraticForm ℝ X) (h : s = ∅) : ∀ x, (∑ i ∈ s, Q i) x ≤ 0 := by
   simp [h]
 
 end Curvature
 
 -- Specialize universal parameter assumptions at the current finite-sum indices.
-private partial def parameterProjection? (proof goal : Expr) (indices : List Expr)
+private meta partial def parameterProjection? (proof goal : Expr) (indices : List Expr)
     (reuseIndices : Bool) : StateT Nat MetaM (Option Expr) := do
   if reuseIndices then
     let remaining ← get
@@ -143,7 +150,7 @@ private partial def parameterProjection? (proof goal : Expr) (indices : List Exp
           return some found
   return none
 
-private def parameterProof? (point goal : Expr) (indices : Array Expr) :
+private meta def parameterProof? (point goal : Expr) (indices : Array Expr) :
     MetaM (Option Expr) := do
   if (← Expr.depends point goal) || !(← Evidence.complete goal) then return none
   if let some proof ← Evidence.proveIndependent? point goal then return some proof
@@ -160,7 +167,7 @@ private def parameterProof? (point goal : Expr) (indices : Array Expr) :
       return some found
   return none
 
-private partial def coefficientSign? (point value : Expr) (nonneg : Bool)
+private meta partial def coefficientSign? (point value : Expr) (nonneg : Bool)
     (indices : Array Expr) (fuel : Nat := 8) : MetaM (Option Expr) := do
   if fuel == 0 then return none
   let value : Q(ℝ) := value
@@ -179,7 +186,7 @@ private partial def coefficientSign? (point value : Expr) (nonneg : Bool)
           else ``nonposOfNegatedNonneg) #[proof])
   return none
 
-private def nonzeroProof? (point value : Expr) (indices : Array Expr) :
+private meta def nonzeroProof? (point value : Expr) (indices : Array Expr) :
     MetaM (Option Expr) := do
   let value : Q(ℝ) := value
   if let some proof ← parameterProof? point q($value ≠ 0) indices then return some proof
@@ -189,7 +196,7 @@ private def nonzeroProof? (point value : Expr) (indices : Array Expr) :
     return some (← mkAppM ``ne_of_lt #[proof])
   return none
 
-private def affineProvider (point : Expr) (indices : Array Expr)
+private meta def affineProvider (point : Expr) (indices : Array Expr)
     (provider : Affine.EvidenceProvider) : Affine.EvidenceProvider := {
   nonzeroEvidence? := some fun goal => do
     if goal.isAppOfArity ``Ne 3 then
@@ -197,7 +204,7 @@ private def affineProvider (point : Expr) (indices : Array Expr)
     if let some supply := provider.nonzeroEvidence? then supply goal else pure none
 }
 
-private def affine? (point expression : Expr) (provider : Affine.EvidenceProvider)
+private meta def affine? (point expression : Expr) (provider : Affine.EvidenceProvider)
     (indices : Array Expr) : MetaM (Except Expr.Error Expr) := do
   let source ← mkLambdaFVars #[point] expression
   -- The quadratic recognizer owns the shared helper-expansion budget.
@@ -209,7 +216,7 @@ private def affine? (point expression : Expr) (provider : Affine.EvidenceProvide
     return .ok (← Affine.Space.withCanonicalSpaces #[← inferType point, ← inferType expression] do
       mkAppM ``Morew.Affine.Certified.mk #[result.map, result.pointwiseEquality])
 
-private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
+private meta def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM Unit := do
   let source := source.consumeMData
   let expected ← Expr.reduceStructure expected
   match ← Expr.operationPrefixMismatch? source expected operandCount with
@@ -217,7 +224,7 @@ private def checkPrefix (source expected : Expr) (operandCount : Nat) : ReifyM U
   | some .shape => reject source "unsupported operation or arithmetic instance"
   | some .argument => reject source "expected the canonical real operation"
 
-private def finish (point source certificate : Expr) (count? : Option Nat := none) :
+private meta def finish (point source certificate : Expr) (count? : Option Nat := none) :
     ReifyM Expr := do
   let type ← instantiateMVars (← inferType certificate)
   unless type.isAppOf ``Morew.QuadConic.CertifiedExpr do
@@ -228,23 +235,23 @@ private def finish (point source certificate : Expr) (count? : Option Nat := non
     reject source "quadratic construction does not match the typed expression"
   return certificate
 
-private def construct (point source : Expr) (name : Name) (args : Array Expr)
+private meta def construct (point source : Expr) (name : Name) (args : Array Expr)
     (count? : Option Nat := none) : ReifyM Expr := do
   let certificate ← Affine.Space.withCanonicalSpaces #[← inferType point, mkConst ``Real] do
     mkAppM name args
   finish point source certificate count?
 
-private def proofApp (point : Expr) (name : Name) (args : Array Expr) : MetaM Expr := do
+private meta def proofApp (point : Expr) (name : Name) (args : Array Expr) : MetaM Expr := do
   Affine.Space.withCanonicalSpaces #[← inferType point, mkConst ``Real] do
     mkAppM name args
 
-private def combineProof? (point : Expr) (name : Name) (args : Array Expr)
+private meta def combineProof? (point : Expr) (name : Name) (args : Array Expr)
     (left right : Option Expr) : MetaM (Option Expr) := do
   match left, right with
   | some left, some right => return some (← proofApp point name (args ++ #[left, right]))
   | _, _ => return none
 
-private def scaled (point coefficient certificate : Expr) (value : CertifiedResult)
+private meta def scaled (point coefficient certificate : Expr) (value : CertifiedResult)
     (indices : Array Expr) : MetaM CertifiedResult := do
   let quadratic ← mkProjection value.certificate `quadratic
   if ← isDefEq coefficient q((0 : ℝ)) then
@@ -279,7 +286,7 @@ private def scaled (point coefficient certificate : Expr) (value : CertifiedResu
     nonpos?
     missing? := value.missing?.orElse (fun _ => some coefficient) }
 
-private partial def reifyBody (point expression : Expr) (provider : Affine.EvidenceProvider)
+private meta partial def reifyBody (point expression : Expr) (provider : Affine.EvidenceProvider)
     (indices : Array Expr := #[]) : ReifyM CertifiedResult := do
   let expression ← Expr.reduceStructure expression (preserveLets := true)
   if let .letE name type value body nondep := expression then
@@ -320,7 +327,7 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
         for instanceExpr in #[args[2]!, productArgs[4]!] do
           if ← Expr.depends point instanceExpr then
             reject instanceExpr "the finite indexing instance depends on an optimization variable"
-        let expected := (mkAppN (← getConstInfo ``indexedQuadForm).value!
+        let expected := (mkAppN indexedQuadForm
           #[n, args[2]!, productArgs[4]!, vector, matrix]).headBeta
         checkPrefix expression expected 2
         checkPrefix product expected.getAppArgs[6]! 2
@@ -348,14 +355,14 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
           ``Morew.QuadConic.CertifiedExpr.quadForm_empty_nonneg #[affine, matrix])
         nonpos? := some (← proofApp point
           ``Morew.QuadConic.CertifiedExpr.quadForm_empty_nonpos #[affine, matrix]) }
-    if ← isDefEq matrix (← mkAppM ``zeroMatrix #[n]) then
+    if ← isDefEq matrix ((mkApp zeroMatrix n).headBeta) then
       return {
         certificate
         nonneg? := some (← proofApp point
           ``Morew.QuadConic.CertifiedExpr.quadForm_zero_nonneg #[affine])
         nonpos? := some (← proofApp point
           ``Morew.QuadConic.CertifiedExpr.quadForm_zero_nonpos #[affine]) }
-    let positive ← parameterProof? point (← mkAppM ``positiveSemidefinite #[n, matrix]) indices
+    let positive ← parameterProof? point ((mkAppN positiveSemidefinite #[n, matrix]).headBeta) indices
     return {
       certificate
       nonneg? := ← positive.mapM (fun proof =>
@@ -375,7 +382,7 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
         let normArgs := base.getAppArgs
         let some n ← Expr.euclideanDimension? normArgs[0]!
           | reject base "squared norms require a canonical Euclidean space or Fn.norm2"
-        let expected := (mkAppN (← getConstInfo ``canonicalNorm).value! #[n, normArgs[2]!]).headBeta
+        let expected := (mkAppN canonicalNorm #[n, normArgs[2]!]).headBeta
         checkPrefix base expected 1
         let affine ← ExceptT.mk (affine? point normArgs[2]! provider indices)
         let coordinates ← Affine.Space.withCanonicalSpaces #[← inferType point, normArgs[0]!] do
@@ -527,7 +534,7 @@ private partial def reifyBody (point expression : Expr) (provider : Affine.Evide
     reject expression
       "expected affine terms, squared affine expressions, matrix quadratic forms, or their signed sums"
 
-private def withFiniteInstances (instances : List Expr) (action : ReifyM ObjectiveResult) :
+private meta def withFiniteInstances (instances : List Expr) (action : ReifyM ObjectiveResult) :
     ReifyM ObjectiveResult := do
   match instances with
   | [] => action
@@ -540,7 +547,7 @@ private def withFiniteInstances (instances : List Expr) (action : ReifyM Objecti
         pointwiseEquality := ← result.pointwiseEquality.replaceFVarsM #[binding] #[inst]
         curvature := ← result.curvature.replaceFVarsM #[binding] #[inst] }
 
-private def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSense)
+private meta def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSense)
     (certificate : Expr) : ReifyM ObjectiveResult := do
   for expression in #[source, certificate] do
     unless ← Evidence.complete expression do
@@ -576,14 +583,14 @@ private def validateCertificateCore (source : Expr) (sense : Morew.ObjectiveSens
     checkWithKernel expression
   return { quadratic, affine, pointwiseEquality, curvature }
 
-private def completeCertificate (decomposition curvature : Expr)
+private meta def completeCertificate (decomposition curvature : Expr)
     (sense : Morew.ObjectiveSense) : MetaM Expr :=
   mkAppM (match sense with
     | .minimize => ``Morew.QuadConic.CertifiedMin.mk
     | .maximize => ``Morew.QuadConic.CertifiedMax.mk) #[decomposition, curvature]
 
 /-- Check the completed certificate for the current objective and declared optimization sense. -/
-def validateObjectiveCertificate (presentation : Reformulation.PresentationState)
+meta def validateObjectiveCertificate (presentation : Reformulation.PresentationState)
     (certificate : Expr) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try
@@ -595,7 +602,7 @@ def validateObjectiveCertificate (presentation : Reformulation.PresentationState
         reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
 
 /-- Validate assembled objective fields before using them in a quadratic conic form. -/
-def validateObjectiveResult (presentation : Reformulation.PresentationState)
+meta def validateObjectiveResult (presentation : Reformulation.PresentationState)
     (objective : ObjectiveResult) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try
@@ -609,7 +616,7 @@ def validateObjectiveResult (presentation : Reformulation.PresentationState)
         expression := presentation.objective
         reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
 
-private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
+private meta def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
     (provider : Affine.EvidenceProvider) : ReifyM ObjectiveResult := do
   unless ← Evidence.complete original do
     rejectIncomplete original
@@ -637,7 +644,7 @@ private def reifyCore (source original : Expr) (sense : Morew.ObjectiveSense)
 
 /-- Prove an exact quadratic decomposition and the global sign required by the declared sense.
 Try direct recognition before bounded unfolding of transparent helpers. -/
-def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
+meta def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try
@@ -654,7 +661,7 @@ def reifyQuadratic (source : Expr) (sense : Morew.ObjectiveSense)
         reason := ← addMessageContext m!"quadratic objective: {error.toMessageData}" }
 
 /-- Certify the typed presentation's objective using its declared optimization sense. -/
-def reifyObjective (presentation : Reformulation.PresentationState)
+meta def reifyObjective (presentation : Reformulation.PresentationState)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error ObjectiveResult) :=
   State.withIsolatedMVars do
     try

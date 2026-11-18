@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.NLP.SmoothSupport
 
 /-!
@@ -19,7 +21,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP.Smooth
 open MorewTest.Affine (elaborate)
 
-private def rejectUnresolved (source : Expr) : MetaM Unit := do
+private meta def rejectUnresolved (source : Expr) : MetaM Unit := do
   let before ← getMCtx
   let .error error ← certifyGlobal source
     | throwError "an unresolved smoothness source was certified"
@@ -78,7 +80,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Placeholders hidden in local values and types receive the same rejection
 as direct placeholders, including through chains of local definitions. -/
 
-private def rejectHiddenPlaceholder (source : Expr) : MetaM Unit := do
+private meta def rejectHiddenPlaceholder (source : Expr) : MetaM Unit := do
   if source.hasSorry || source.hasMVar then
     throwError "hidden-placeholder regression no longer hides its placeholder"
   rejectUnresolved source
@@ -199,7 +201,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 finite sets. These certificates must still prove smoothness of the original
 source and leave caller metavariables untouched. -/
 
-private def checkStructuralSource (source : Expr) : MetaM Unit := do
+private meta def checkStructuralSource (source : Expr) : MetaM Unit := do
   let before ← getMCtx
   let result ← certifyGlobal source
   assertExprMVarStateUnchanged before "smoothness certification"
@@ -339,7 +341,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 /-! Ambient analytic instances do not change the fixed native certificate. -/
 
-private def checkAmbient (term : TSyntax `term) (parameterCount : Nat := 0)
+private meta def checkAmbient (term : TSyntax `term) (parameterCount : Nat := 0)
     (instanceType? : Option Expr := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
@@ -378,7 +380,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 /-! Intermediate vectors need the same canonical enumeration even when their
 index type does not occur in the scalar decision or result space. -/
 
-private def checkIntermediateEnumeration (source indexType : Expr) : MetaM Unit := do
+private meta def checkIntermediateEnumeration (source indexType : Expr) : MetaM Unit := do
   let baseline ← checkSuccess source
   let baselineType ← inferType baseline
   let finiteType ← mkAppM ``Fintype #[indexType]

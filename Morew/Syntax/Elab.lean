@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax.Presentation
+module
+
+public import Morew.Syntax.Presentation
 
 /-!
 # Problem term elaboration
@@ -11,6 +13,8 @@ import Morew.Syntax.Presentation
 Elaborate minimization and maximization terms into semantic problems and
 register their source presentations.
 -/
+
+public meta section
 
 namespace Morew
 

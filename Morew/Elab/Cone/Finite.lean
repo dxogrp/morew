@@ -2,13 +2,16 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Affine
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Reformulation.Presentation
-import Morew.Elab.State
+public import Morew.Elab.Affine
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Reformulation.Presentation
+public meta import Morew.Elab.State
 
 /-! Retain finite-index evidence from source expressions during cone certification. -/
+
+public meta section
 
 namespace Morew.Elab.Cone.Finite
 

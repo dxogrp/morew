@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.SpecialFunctions.Exp
-import Mathlib.Data.Fin.VecNotation
-import Mathlib.LinearAlgebra.Matrix.ToLin
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Exp
+public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.LinearAlgebra.Matrix.ToLin
 
 /-!
 # Imported helpers for affine expansion tests
@@ -13,6 +15,8 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 Separate declarations exercise parameters, universe instantiation, and finite
 evidence stored inside helper bodies.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Affine.HelperFixtures
 

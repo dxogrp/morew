@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Conic reformulations
@@ -13,6 +15,8 @@ Bare `conic` rewrites supported constraints and certifies an affine cone program
 recording its conic form and equivalence certificate. Introduce objective bounds
 and coordinate substitutions as separate steps.
 -/
+
+@[expose] public section
 
 namespace Examples.GettingStarted.Conic
 

@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.NLP.Basic
-import Morew.NLP.Smooth
-import Morew.NLP.Domain
+module
+
+public import Morew.NLP.Basic
+public import Morew.NLP.Smooth
+public import Morew.NLP.Domain
 
 /-!
 # Smooth nonlinear programs

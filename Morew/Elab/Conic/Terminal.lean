@@ -2,11 +2,14 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Conic.Form
-import Morew.Elab.Cone.Terminal
+public import Morew.Elab.Conic.Form
+public import Morew.Elab.Cone.Terminal
 
 /-! Combine affine objective certification with shared cone constraint planning. -/
+
+public meta section
 
 namespace Morew.Elab.Conic.Terminal
 
@@ -15,7 +18,7 @@ open Morew.Elab.Reformulation
 open Morew.Elab.Cone.Terminal
 
 /-- The affine objective backend used by `conic`. -/
-def backend : Backend where
+@[expose] def backend : Backend where
   command := "conic"
   checkObjective presentation provider := do
     match ← reifyObjective presentation provider with

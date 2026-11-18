@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Environment
-import MorewTest.DiagnosticsSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.Environment
+public import MorewTest.DiagnosticsSupport
 
 /-! Invalid objective certificates fail atomically, without automatic fallback. -/
 
@@ -26,8 +29,9 @@ elab "assert_objective_rejected% " target:ident " in " nested:command : command 
     throwError "failed objective certification changed declarations"
   for suffix in #[Name.anonymous, `equiv, `conicForm, `quadConicForm, `isConic, `isQuadConic] do
     let name := targetName ++ suffix
-    if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
-      throwError "failed objective certification retained an output or presentation"
+    for name in #[name, Lean.mkPrivateName after name] do
+      if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
+        throwError "failed objective certification retained an output or presentation"
 
 -- Bypass ordinary hole diagnostics to exercise certificate validation itself.
 elab "objective_missing%" : term <= expected => mkFreshExprMVar expected

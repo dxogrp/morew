@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Robust regression
@@ -23,6 +25,8 @@ v^2,& |v|\leq M\\
 For `M > 0`, the loss is quadratic near zero and grows linearly outside that
 region, reducing the influence of large residuals. At `M = 0`, it is zero.
 -/
+
+@[expose] public section
 
 namespace Examples.Applications.RobustReg
 

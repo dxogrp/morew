@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Rewrite.Registry.Source
@@ -21,7 +23,7 @@ namespace MorewTest.Conic.Registry
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Elab.Cone MorewTest.Affine
 
-private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := #[])
+private meta def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := #[])
     (name? : Option Name := none) (expected : Array (TSyntax `term) := #[])
     (rule? : Option Expr := none) :
     TermElabM Unit := do
@@ -52,7 +54,7 @@ private def check (term : TSyntax `term) (rows : Nat) (retained : Array Expr := 
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff
 
-private def reject (term : TSyntax `term) (fragment : String)
+private meta def reject (term : TSyntax `term) (fragment : String)
     (retained : Array Expr := #[]) (name? : Option Name := none)
     (rule? : Option Expr := none) : TermElabM Unit := do
   let source ← elaborate term

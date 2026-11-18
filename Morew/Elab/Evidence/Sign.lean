@@ -2,15 +2,18 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Evidence
-import Morew.Elab.Cone.Nonneg
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Expr
+public import Morew.Elab.Evidence
+public import Morew.Elab.Cone.Nonneg
+public import Morew.Elab.Rewrite.Decomposition
+public meta import Morew.Elab.Expr
 
 /-! Prove signs from independent constants or retained non-strict lower bounds.
 Project finite vector bounds or specialize retained finite families in presentation
 order. Exclude strict rows, arithmetic deductions, and the selected predicate. -/
+
+public section
 
 namespace Morew.Elab.Evidence.Sign
 
@@ -18,41 +21,41 @@ open Lean Lean.Meta Qq
 
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
-private theorem positiveOfMargin {epsilon value : ℝ}
+theorem positiveOfMargin {epsilon value : ℝ}
     (positive : 0 < epsilon) (bound : epsilon ≤ value) : 0 < value :=
   lt_of_lt_of_le positive bound
 
-private theorem nonnegOfMargin {epsilon value : ℝ}
+theorem nonnegOfMargin {epsilon value : ℝ}
     (nonneg : 0 ≤ epsilon) (bound : epsilon ≤ value) : 0 ≤ value :=
   le_trans nonneg bound
 
-private def canonicalDifference (value epsilon : ℝ) : ℝ := value - epsilon
+private meta def canonicalDifference : Expr := q(fun (value epsilon : ℝ) => value - epsilon)
 
-private def canonicalVectorDifference (n : Nat) (value epsilon : Fin n → ℝ) :
-    Fin n → ℝ := value - epsilon
+private meta def canonicalVectorDifference : Expr :=
+  q(fun (n : Nat) (value epsilon : Fin n → ℝ) => value - epsilon)
 
-private def canonicalVectorLE (n : Nat) (epsilon value : Fin n → ℝ) : Prop :=
-  epsilon ≤ value
+private meta def canonicalVectorLE : Expr :=
+  q(fun (n : Nat) (epsilon value : Fin n → ℝ) => epsilon ≤ value)
 
-private theorem vectorBoundAt {n : Nat} {epsilon value : Fin n → ℝ}
+theorem vectorBoundAt {n : Nat} {epsilon value : Fin n → ℝ}
     (bound : epsilon ≤ value) (i : Fin n) : epsilon i ≤ value i := bound i
 
-private theorem marginOfNonnegDifference {epsilon value : ℝ}
+theorem marginOfNonnegDifference {epsilon value : ℝ}
     (bound : value - epsilon ∈ ℝ₊) : epsilon ≤ value :=
   sub_nonneg.mp bound
 
-private theorem nonnegOfMembership {value : ℝ} (bound : value ∈ ℝ₊) :
+theorem nonnegOfMembership {value : ℝ} (bound : value ∈ ℝ₊) :
     0 ≤ value := bound
 
-private theorem nonnegVectorAt {n : Nat} {value : Fin n → ℝ}
+theorem nonnegVectorAt {n : Nat} {value : Fin n → ℝ}
     (bound : value ∈ ℝ₊^n) (i : Fin n) : 0 ≤ value i := bound i
 
-private theorem marginOfNonnegVectorDifference {n : Nat}
+theorem marginOfNonnegVectorDifference {n : Nat}
     {epsilon value : Fin n → ℝ} (bound : value - epsilon ∈ ℝ₊^n) (i : Fin n) :
     epsilon i ≤ value i := sub_nonneg.mp (bound i)
 
 -- Check the finite vector shape before applying an actual retained proof.
-private def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := do
+private meta def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := do
   let .forallE _ domain range _ ← whnf type | return none
   if range.hasLooseBVars then return none
   unless (← isDefEq range q(ℝ)) && (← isDefEq domain (← inferType index)) do return none
@@ -62,7 +65,7 @@ private def vectorDimension? (point type index : Expr) : MetaM (Option Expr) := 
   if (← Expr.depends point n) || (← Expr.hasUnresolved n) then return none
   return some n
 
-private def signInMembership? (point value body evidence : Expr) (strict : Bool)
+private meta def signInMembership? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) :
     MetaM (Option Expr) := do
   let some coordinate ← Cone.nonnegValue? point body | return none
@@ -76,7 +79,7 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
     let args := coordinate.getAppArgs
     let upper := args[4]!
     let epsilon := args[5]!
-    let canonical := (mkAppN (← getConstInfo ``canonicalVectorDifference).value!
+    let canonical := (mkAppN canonicalVectorDifference
       #[n, upper, epsilon]).headBeta
     unless (← isDefEq args[3]! canonical.getAppArgs[3]!) &&
         (← isDefEq coordinate canonical) && (← isDefEq (mkApp upper index) value) do return none
@@ -90,7 +93,7 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
   let args := coordinate.getAppArgs
   let upper := args[4]!
   let epsilon := args[5]!
-  let canonical := (mkAppN (← getConstInfo ``canonicalDifference).value!
+  let canonical := (mkAppN canonicalDifference
     #[upper, epsilon]).headBeta
   unless (← isDefEq args[3]! canonical.getAppArgs[3]!) &&
       (← isDefEq coordinate canonical) && (← isDefEq upper value) do return none
@@ -99,7 +102,7 @@ private def signInMembership? (point value body evidence : Expr) (strict : Bool)
   return some (← mkAppM
     (if strict then ``positiveOfMargin else ``nonnegOfMargin) #[sign, bound])
 
-private partial def signInRow? (point value body evidence : Expr) (strict : Bool)
+private meta partial def signInRow? (point value body evidence : Expr) (strict : Bool)
     (index? : Option Expr) (allowForall : Bool := true) :
     MetaM (Option Expr) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
@@ -131,7 +134,7 @@ private partial def signInRow? (point value body evidence : Expr) (strict : Bool
   unless ← isDefEq args[0]! q(ℝ) do
     let some index := index? | return none
     let some n ← vectorDimension? point args[0]! index | return none
-    let canonical := (mkAppN (← getConstInfo ``canonicalVectorLE).value!
+    let canonical := (mkAppN canonicalVectorLE
       #[n, epsilon, upper]).headBeta
     unless ← isDefEq args[1]! canonical.getAppArgs[1]! do return none
     unless ← isDefEq (mkApp upper index) value do return none
@@ -147,7 +150,7 @@ private partial def signInRow? (point value body evidence : Expr) (strict : Bool
 
 /-- Certify strict or non-strict nonnegativity from an independent constant or
 the first usable retained lower margin. The caller excludes the selected row. -/
-def signFromRetained? (point value : Expr) (retainedBodies : Array Expr)
+meta def signFromRetained? (point value : Expr) (retainedBodies : Array Expr)
     (remainderProof : Expr) (strict : Bool) (index? : Option Expr := none) : MetaM (Option Expr) := do
   if let some proof ← constantSign? point value strict index? then return some proof
   let parts ← conjunctionParts retainedBodies.size remainderProof

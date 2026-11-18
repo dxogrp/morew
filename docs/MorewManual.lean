@@ -1,11 +1,15 @@
-import VersoManual
-import MorewManual.Installation
-import MorewManual.QuickStart
-import MorewManual.Syntax
-import MorewManual.Functions
-import MorewManual.Advanced
-import MorewManual.API
-import MorewManual.Examples
+module
+
+public import VersoManual
+public import MorewManual.Installation
+public import MorewManual.QuickStart
+public import MorewManual.Syntax
+public import MorewManual.Functions
+public import MorewManual.Advanced
+public import MorewManual.API
+public import MorewManual.Examples
+
+public section
 
 open Verso.Genre Manual
 

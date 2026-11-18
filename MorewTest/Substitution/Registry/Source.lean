@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Substitution.Rules
+module
+
+public import Morew.Elab.Substitution.Rules
 
 /-! Imported downstream coordinate rules for registry and reconstruction tests. -/
+
+@[expose] public section
 
 namespace MorewTest.Substitution.Registry.Source
 

@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Deriving constraints
@@ -13,6 +15,8 @@ import Morew.Reformulation.NLP
 constraints. The first example derives a positive lower bound for a logarithm;
 the second derives, rewrites, and removes a redundant absolute-value bound.
 -/
+
+@[expose] public section
 
 namespace Examples.Transformations.Derive
 

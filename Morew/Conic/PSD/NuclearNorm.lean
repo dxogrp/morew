@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD.SingularVectors
-import Morew.Conic.PSD
+module
+
+public import Morew.Conic.PSD.SingularVectors
+public import Morew.Conic.PSD
 
 /-!
 # Exact semidefinite representation of the nuclear norm
@@ -13,6 +15,8 @@ A positive-semidefinite block with two auxiliary diagonal blocks bounds the
 nuclear norm by half their combined trace. Matrices constructed from singular
 vectors attain the bound.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Spectral
 

@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Registering custom rewrite rules
@@ -14,6 +16,8 @@ selection. A representation is a `def` and may carry both attributes.
 The examples cover absolute deviation, an absolute-value graph, and a
 logarithm on positive inputs.
 -/
+
+@[expose] public section
 
 namespace Examples.Advanced.CustomRules
 

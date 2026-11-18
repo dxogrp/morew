@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Conic.Terminal
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -21,7 +23,7 @@ open Morew.Elab.Reformulation
 open Morew.Elab.Cone
 open MorewTest.Affine
 
-private def makePresentation (objectiveSyntax : TSyntax `term)
+private meta def makePresentation (objectiveSyntax : TSyntax `term)
     (rows : Array (Name × TSyntax `term))
     (sense : Morew.ObjectiveSense := .minimize) : TermElabM PresentationState := do
   let objective ← elaborate objectiveSyntax
@@ -38,7 +40,7 @@ private def makePresentation (objectiveSyntax : TSyntax `term)
     constraints
   }
 
-private def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
+private meta def checkPlan (source : PresentationState) : MetaM Terminal.Result := do
   let result ← match ← Morew.Elab.Conic.Terminal.plan source with
     | .ok result => pure result
     | .error error => throwError "expected successful terminal conic plan: {error.reason}"

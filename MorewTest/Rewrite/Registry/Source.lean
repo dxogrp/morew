@@ -3,8 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Rewrite.Registry
-import Morew.Rewrite.Polyhedral
+module
+
+public import Morew.Elab.Rewrite.Registry
+public import Morew.Rewrite.Polyhedral
+
+
+@[expose] public section
 
 namespace MorewTest.Rewrite.Registry.Source
 

@@ -3,14 +3,18 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
+module
+
+public import Morew.Syntax
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
 # Shared problem declarations
 
 Source declarations for reformulation and diagnostic tests.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Surface
 

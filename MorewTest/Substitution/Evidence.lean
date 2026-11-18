@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Substitution.Evidence
 import Morew.Substitution
 import MorewTest.ElabSupport
@@ -20,7 +22,7 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command Qq
 open MorewTest.Affine
 open Morew.Elab.Substitution.Evidence
 
-private def verify (point goal : Expr) (action : MetaM (Option Expr)) (success : Bool) :
+private meta def verify (point goal : Expr) (action : MetaM (Option Expr)) (success : Bool) :
     MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
@@ -37,7 +39,7 @@ private def verify (point goal : Expr) (action : MetaM (Option Expr)) (success :
   else if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "failed coverage evidence leaked declaration {name}"
 
-private def check (term : TSyntax `term) (parameters : Nat) (success : Bool)
+private meta def check (term : TSyntax `term) (parameters : Nat) (success : Bool)
     (independent := false) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => do

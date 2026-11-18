@@ -1,4 +1,8 @@
-import VersoManual
+module
+
+public import VersoManual
+
+public section
 
 open Verso.Genre Manual
 open Verso.Code.External
@@ -24,10 +28,12 @@ The optimization variable is $`x\in\mathbf{R}^n`, with parameters
 $`A\in\mathbf{R}^{m\times n}` and $`b\in\mathbf{R}^m`.
 The symbol $`\succeq` means componentwise inequality.
 
-Import the conic commands and open the namespaces:
+Start a module, import the conic commands, and open the namespaces:
 
 ```anchor nonnegLSSetup -defSite
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 open Morew
 open scoped Matrix
 ```

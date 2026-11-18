@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Cone.Constraint
 
@@ -26,7 +28,10 @@ structure CertifiedRow {X : Type} [AddCommGroup X] [Module ℝ X]
   row : Morew.Conic.Constraint X
   equivalent : ∀ x, row.Holds x ↔ predicate x
 
-elab "certified_exp_row% " source:term : term => do
+local syntax "certified_exp_row% " term : term
+
+local elab_rules : term
+| `(certified_exp_row% $source:term) => do
   let predicate ← elaborateUnchecked source
   match ← Morew.Elab.Cone.normalizeRow predicate with
   | .error error => throwError "expected an exponential row: {error.reason}"
@@ -109,7 +114,7 @@ example (x : ℝ) : singletonFamily.row.Holds x ↔
   rw [singletonFamily.equivalent]
   simp
 
-private def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
+private meta def expectRejected (source : TSyntax `term) (fragment : String) : TermElabM Unit := do
   let predicate ← elaborateUnchecked source
   let .error error ← Morew.Elab.Cone.normalizeRow predicate (label? := some `bad_exp)
     | throwError "unsupported exponential row was accepted"

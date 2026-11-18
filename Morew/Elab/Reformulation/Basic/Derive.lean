@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Rows
 
 /-! Add a consequence of the current constraints and retain the result for normalization. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -47,8 +51,9 @@ def prepareDerive (state : ReformState) (label : TSyntax `ident)
     materialize := materializeDerive state label proposition provided
   }
 
+/-- Elaborate a `derive` step adding a constraint implied by feasibility. -/
 @[morew_reformulation_step Morew.deriveStep]
-private def elabDerive : StepHandler := fun state step => do
+def elabDerive : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| derive $label:ident : $proposition:term using $provided:term) =>
       prepareDerive state label proposition provided

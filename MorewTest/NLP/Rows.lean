@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.NLP.Rows
 import MorewTest.NLP.DomainSupport
 
@@ -13,7 +15,7 @@ namespace MorewTest.NLP.Rows
 open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.NLP
 
-private def check (feasible : Expr) (rows : Array Expr)
+private meta def check (feasible : Expr) (rows : Array Expr)
     (failure? : Option Smooth.SmoothFailureKind := none) : MetaM Unit := do
   match ← Rows.certifyRows feasible rows with
   | .error error =>
@@ -29,7 +31,7 @@ private def check (feasible : Expr) (rows : Array Expr)
     for proof in result.rowCertificates ++ #[result.domainIsOpen, result.feasibleMemDomain] do
       checkCompleteWithKernel proof "incomplete generated-row evidence"
 
-private def assertRows (term : TSyntax `term) (parameters : Nat := 0)
+private meta def assertRows (term : TSyntax `term) (parameters : Nat := 0)
     (failure? : Option Smooth.SmoothFailureKind := none) : TermElabM Unit :=
   Domain.withInput term parameters fun feasible rows => check feasible rows failure?
 

@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Positive semidefinite and positive definite matrix constraints
@@ -17,6 +19,8 @@ The first problem has a scalar variable `x`:
 \end{array}
 ```
 -/
+
+@[expose] public section
 
 namespace Examples.Models.PSD
 

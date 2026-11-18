@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 import MorewTest.DiagnosticsSupport
 
@@ -37,8 +39,9 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`missing, `missing.equiv, `missingAlias] do
     let full := `MorewTest.Reformulation.SecondOrderFailures ++ name
-    if env.contains full || (Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed second-order rewrite emitted {full}"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed second-order rewrite emitted {full}"
 
 def nonneg :=
   problem (x y t : ℝ)

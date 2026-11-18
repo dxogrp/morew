@@ -2,11 +2,14 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Expr
-import Morew.Elab.State
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
 
 /-! Replace expressions by reduced forms only after direct certification succeeds. -/
+
+public meta section
 
 namespace Morew.Elab.Rewrite.Reduction
 

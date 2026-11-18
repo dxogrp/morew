@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Reformulation.Runner
 import Mathlib.Data.Nat.Basic
 
@@ -19,9 +21,9 @@ namespace MorewTest.Reformulation.RunnerState
 open Lean
 open Morew.Elab.Reformulation
 
-private def placeholder : Expr := .const ``True.intro []
+private meta def placeholder : Expr := .const ``True.intro []
 
-private def terminalResult : StepResult := {
+private meta def terminalResult : StepResult := {
   nextSemantic := placeholder
   primitiveCertificate := placeholder
   presentationDelta := {}
@@ -64,7 +66,7 @@ theorem SyntheticRelation.transitivity {left middle right : Nat}
     SyntheticRelation left right :=
   first.trans second
 
-private def syntheticRunner : CertificateRunner where
+private meta def syntheticRunner : CertificateRunner where
   relation := ``SyntheticRelation
   refl := ``SyntheticRelation.reflexivity
   trans := ``SyntheticRelation.transitivity

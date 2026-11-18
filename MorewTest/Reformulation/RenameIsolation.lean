@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Reformulation.Basic.Rename
 import Morew.Elab.Reformulation.Step
 import MorewTest.Environment
@@ -37,7 +39,7 @@ theorem LabelRelation.transitivity {left middle right : Problem Nat Nat}
     (first : LabelRelation left middle) (second : LabelRelation middle right) :
     LabelRelation left right := first.trans second
 
-private def labelRunner : CertificateRunner := {
+private meta def labelRunner : CertificateRunner := {
   relation := ``LabelRelation
   refl := ``LabelRelation.reflexivity
   trans := ``LabelRelation.transitivity
@@ -66,7 +68,7 @@ run_cmd do
     | .error _ => pure ()
     | .ok () => throwError "invalid {description} checkpoint inventory was accepted"
 
-private def initialState : CommandElabM ReformState := do
+private meta def initialState : CommandElabM ReformState := do
   let (typed, sectionFVars, view, semantic) ← runTermElabM fun sectionFVars => do
     let some view := Morew.Syntax.getProblemView? (← getEnv) ``source
       | throwError "missing source presentation"

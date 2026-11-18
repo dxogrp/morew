@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Cone.Rewrite
 import Morew.Rewrite.Polyhedral.Lemmas
@@ -24,7 +26,7 @@ open scoped ENNReal
 
 noncomputable section
 
-private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
+private meta def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
     (rule? : Option (TSyntax `term) := none) (parameterCount : Nat := 0) :
     TermElabM Unit := do
   let expression ← elaborateUnchecked stx
@@ -49,7 +51,7 @@ private def expectPlan (stx : TSyntax `term) (rows : Nat) (auxiliary : Bool)
       checkWithKernel row.constraint
       checkWithKernel row.pointwiseIff
 
-private def expectRejected (stx : TSyntax `term) (fragment : String)
+private meta def expectRejected (stx : TSyntax `term) (fragment : String)
     (rule? : Option (TSyntax `term) := none) : TermElabM Unit := do
   let source ← elaborateUnchecked stx
   let rule? ← rule?.mapM elaborateUnchecked
@@ -62,7 +64,10 @@ private def expectRejected (stx : TSyntax `term) (fragment : String)
   unless message.contains fragment do
     throwError "expected diagnostic containing {fragment}, got {message}"
 
-elab "polyhedral_repr% " source:term : term => do
+local syntax "polyhedral_repr% " term : term
+
+local elab_rules : term
+| `(polyhedral_repr% $source:term) => do
   let source ← elaborateUnchecked source
   match ← Morew.Elab.Cone.Rewrite.planUnique source with
   | .ok result =>

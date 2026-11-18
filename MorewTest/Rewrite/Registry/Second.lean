@@ -3,7 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Rewrite.Registry.Source
+module
+
+public import MorewTest.Rewrite.Registry.Source
+
+
+@[expose] public section
 
 namespace MorewTest.Rewrite.Registry.Second
 

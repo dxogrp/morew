@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Removing redundant constraints
@@ -12,6 +14,8 @@ import Morew.Reformulation.Conic
 `remove at label using proof` removes a constraint implied by the remaining ones.
 Here `1 ≤ x` implies the weaker bound `0 ≤ x`.
 -/
+
+@[expose] public section
 
 namespace Examples.Transformations.Remove
 

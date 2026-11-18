@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-! # Restrictions must certify the complete current problem -/
 
@@ -24,17 +27,18 @@ elab "assert_restrict_atomic% " target:ident aliasName:ident " in " nested:comma
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed restriction changed declarations or certificate helpers"
-  for name in #[target, target ++ `equiv, aliasName] do
+  for name in #[target, target ++ `equiv, aliasName].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       Lean.throwError m!"failed restriction retained output or metadata for {name}"
 
-def free := problem (x : ℝ) minimize x
-def squareLine := problem (x : ℝ) minimize x ^ 2
+@[expose] public def free := problem (x : ℝ) minimize x
+@[expose] public def squareLine := problem (x : ℝ) minimize x ^ 2
 def flat := problem (_x : ℝ) minimize (0 : ℝ)
 def maximum := problem (x : ℝ) maximize x
 def tagged := problem (x : ℝ) minimize x subject to kept : True
 
-def trueRepair {X V : Type*} [Preorder V] (p : Problem X V) :
+@[expose] public def trueRepair {X V : Type*} [Preorder V] (p : Problem X V) :
     GlobalImprovement p (p.addConstraint (fun _ => True)) where
   map point := ⟨point.1, point.2, True.intro⟩
   objective_le _ := le_rfl
@@ -44,7 +48,7 @@ def constantRepair (value : ℝ) :
   map _ := ⟨value, True.intro, rfl⟩
   objective_le _ := le_rfl
 
-def zeroRepair :
+@[expose] public def zeroRepair :
     GlobalImprovement squareLine (squareLine.addConstraint (fun x => 0 ≤ x)) where
   map _ := ⟨0, True.intro, le_rfl⟩
   objective_le point := by simpa [squareLine] using sq_nonneg point.1
@@ -259,7 +263,8 @@ elab "assert_restrict_isolated% " target:ident " in " nested:command : command =
   let after ← getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     throwError "rejected incomplete restriction changed declarations"
-  for name in #[target, target ++ `equiv] do
+  for name in #[target, target ++ `equiv].flatMap
+      (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name || (Morew.Syntax.getProblemView? after name).isSome then
       throwError "rejected incomplete restriction retained an output or its metadata"
 

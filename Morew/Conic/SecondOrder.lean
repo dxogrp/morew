@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Cone
-import Morew.Fn.Huber
-import Mathlib.Analysis.InnerProductSpace.PiL2
+module
+
+public import Morew.Conic.Cone
+public import Morew.Fn.Huber
+public import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
@@ -18,6 +20,8 @@ The second-order cone is `{(t, x) | ‖x‖₂ ≤ t}`. The rotated cone uses
 require a positive denominator. Huber loss with a fixed nonnegative threshold
 and finite sums of Huber losses use a rotated cone and linear inequalities.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic
 

@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Rewrite.Basic
-import Morew.Rewrite.Sum.Lemmas
+module
+
+public import Morew.Rewrite.Basic
+public import Morew.Rewrite.Sum.Lemmas
 
 /-!
 # Exact finite-sum representations
@@ -12,6 +14,8 @@ import Morew.Rewrite.Sum.Lemmas
 Compose scalar epigraph or hypograph representations for functions on a common
 input space. Each summand has a scalar bound and its own auxiliary values.
 -/
+
+@[expose] public section
 
 namespace Morew
 

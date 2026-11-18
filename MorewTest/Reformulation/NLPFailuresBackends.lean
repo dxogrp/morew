@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.NLPFailures
@@ -24,11 +26,12 @@ run_cmd do
   let env ← Lean.getEnv
   for target in #[`afterTerminal] do
     let name := `MorewTest.Reformulation.NLPFailures ++ target
-    for declaration in #[name, name ++ `equiv] do
-      if env.contains declaration then
-        Lean.throwError "failed NLP reformulation emitted {declaration}"
-    if (Morew.Syntax.getProblemView? env name).isSome then
-      Lean.throwError "failed NLP reformulation registered presentation metadata"
+    for name in #[name, Lean.mkPrivateName env name] do
+      for declaration in #[name, name ++ `equiv] do
+        if env.contains declaration then
+          Lean.throwError "failed NLP reformulation emitted {declaration}"
+      if (Morew.Syntax.getProblemView? env name).isSome then
+        Lean.throwError "failed NLP reformulation registered presentation metadata"
 
 end
 end MorewTest.Reformulation.NLPFailures

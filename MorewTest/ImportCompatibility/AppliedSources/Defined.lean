@@ -3,13 +3,17 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Exported applied-source families
 
 Both original and generated presentations cross a compiled-module boundary.
 -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.AppliedSources.Defined
 

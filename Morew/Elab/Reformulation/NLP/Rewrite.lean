@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.NLP.Rewrite
-import Morew.Elab.Reformulation.Rows
-import Morew.Elab.Expr
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.NLP.Rewrite
+public import Morew.Elab.Reformulation.Rows
+public meta import Morew.Elab.Expr
 
 /-! Replace a selected bound with equivalent smooth constraints. Discovery requires
 one certified `morew_nlp` rule; `using` selects a single declaration or certificate.
@@ -16,6 +18,8 @@ Prove exactness from retained constraints, then use generated guards to certify 
 on an open domain containing the new feasible set. Vector and finite-family rows stay
 grouped. Replace the selected label with fresh `_nlp_i` row names and `_aux` binders;
 further steps may follow. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -81,8 +85,9 @@ def prepareNLP (state : ReformState) (step : Syntax)
     materialize := materializeNLP state index prepared preparedVars
   }
 
+/-- Elaborate a certified nonlinear rewrite of one selected constraint. -/
 @[morew_reformulation_step Morew.nlpAtStep]
-private def elabNLPAt : StepHandler := fun state step => do
+def elabNLPAt : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| nlp at $selector:ident $[using $rule:term]?) =>
       prepareNLP state step selector rule

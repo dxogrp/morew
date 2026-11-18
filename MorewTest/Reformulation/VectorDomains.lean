@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 import MorewTest.Affine.Support
 import MorewTest.DiagnosticsSupport
@@ -187,7 +189,7 @@ retained rows as terminal constraints. -/
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open MorewTest.Affine
 
-private def checkPlan (source : Expr) (retained : Array Expr) (accepted : Bool)
+private meta def checkPlan (source : Expr) (retained : Array Expr) (accepted : Bool)
     (fragment : String := "") (provider : Morew.Elab.Affine.EvidenceProvider := {}) :
     MetaM Unit := do
   let unresolved ← mkFreshExprMVar (mkConst ``Nat)

@@ -3,17 +3,21 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Rows
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Reformulation.Syntax
-import Morew.Transform.Context
-import Morew.Elab.ObjectiveContext
-import Morew.Elab.Expr
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Rows
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Reformulation.Syntax
+public meta import Morew.Transform.Context
+public import Morew.Elab.ObjectiveContext
+public meta import Morew.Elab.Expr
 
 /-! Select occurrences before reducing model-local definitions. Named selectors use
 binding identity; expression selectors compare rigid typed terms. Check the selected
 context and resulting presentation against the current problem. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -104,7 +108,9 @@ private structure SelectedOccurrence where
   auxiliaryType : Expr
   selected : Expr
   context : Expr
-  deriving Inhabited
+
+private instance : Inhabited SelectedOccurrence where
+  default := { view := default, auxiliaryType := default, selected := default, context := default }
 
 private def selectOccurrence (state : ReformState) (presentation : PresentationState)
     (selector : TSyntax `boundOccurrence) (row? : Option Nat)
@@ -369,16 +375,18 @@ def prepareOccurrenceBound (state : ReformState) (_step : Syntax)
     materialize := materializeOccurrenceBound state selector row? provided? direction
   }
 
+/-- Elaborate an epigraph bound for a selected occurrence. -/
 @[morew_reformulation_step Morew.epigraphAtStep]
-private def elabEpigraphAt : StepHandler := fun state step => do
+def elabEpigraphAt : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| epigraph $binder:ident at $selector:boundOccurrence
       $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>
       prepareOccurrenceBound state step binder selector constraint label provided .upper
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate a hypograph bound for a selected occurrence. -/
 @[morew_reformulation_step Morew.hypographAtStep]
-private def elabHypographAt : StepHandler := fun state step => do
+def elabHypographAt : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| hypograph $binder:ident at $selector:boundOccurrence
       $[in $constraint:ident]? $[as $label:ident]? $[using $provided:term]?) =>

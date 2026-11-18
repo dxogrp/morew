@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Form
-import MorewTest.ElabSupport
-import Morew.Elab.Expr
+module
+
+public import Morew.Elab.Conic.Form
+public import MorewTest.ElabSupport
+public meta import Morew.Elab.Expr
 
 /-! # Helpers for checking complete conic forms without importing test cases -/
+
+public meta section
 
 namespace MorewTest.Conic.Form
 

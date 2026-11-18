@@ -2,10 +2,13 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Expr
+public meta import Morew.Elab.Expr
 
 /-! Flatten conjunctions with equivalence proofs and scoped local evidence. -/
+
+public section
 
 namespace Morew.Elab.Rewrite
 
@@ -15,7 +18,7 @@ namespace Decomposition
 
 /-- Project exactly the requested ordered entries, retaining any conjunction
 inside an entry. The count comes from the checked presentation or decomposition. -/
-def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
+meta def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
   if count == 0 then return #[]
   let mut result := #[]
   let mut rest := proof
@@ -24,12 +27,12 @@ def conjunctionParts (count : Nat) (proof : Expr) : MetaM (Array Expr) := do
     rest ← mkAppM ``And.right #[rest]
   return result.push rest
 
-private theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
+theorem appendHead (p q r s : Prop) (h : q ∧ r ↔ s) :
     (p ∧ q) ∧ r ↔ p ∧ s :=
   and_assoc.trans (and_congr Iff.rfl h)
 
 /-- Join two normalized conjunctions without losing their equivalence. -/
-partial def appendIff (left right : List Expr) : MetaM Expr := do
+meta partial def appendIff (left right : List Expr) : MetaM Expr := do
   match left, right with
   | [], _ => mkIffOfEq (mkApp (mkConst ``true_and) (mkAndN right))
   | _, [] => mkIffOfEq (mkApp (mkConst ``and_true) (mkAndN left))
@@ -40,7 +43,7 @@ partial def appendIff (left right : List Expr) : MetaM Expr := do
 
 /-- Split a proposition using only the supplied structural reduction. Local
 lets remain attached to every conjunct and to the decomposition proof. -/
-partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
+meta partial def split (body : Expr) (reduce : Expr → MetaM Expr) :
     MetaM (List Expr × Expr) := do
   let body ← reduce body
   if let .letE name type value rest _ := body then
@@ -66,7 +69,7 @@ end Decomposition
 
 /-- Decompose into ordered atomic predicates with conjunction equivalence.
 `True` contributes no conjuncts; retain unsupported atomic predicates. -/
-def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
+meta def decomposePredicate (predicate : Expr) : MetaM (Array Expr × Expr) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type
     | throwError "expected a predicate on the decision space"

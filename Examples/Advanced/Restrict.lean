@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-!
 # Selecting feasible representatives
@@ -12,6 +14,8 @@ import Morew.Reformulation.Basic
 equivalence by mapping each feasible point to one with an objective at least
 as good.
 -/
+
+@[expose] public section
 
 namespace Examples.Advanced.Restrict
 

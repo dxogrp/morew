@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Exponential.Cone
-import Morew.Fn.Exponential
+module
+
+public import Morew.Conic.Exponential.Cone
+public import Morew.Fn.Exponential
 import Morew.Rewrite.Sum.Lemmas
 import Mathlib.Algebra.BigOperators.Field
 import Mathlib.Tactic.Linarith
@@ -15,6 +17,8 @@ import Mathlib.Tactic.Linarith
 Exponential, logarithm, entropy, relative-entropy, KL-divergence, log-sum-exp,
 and softplus bounds represented by exponential cone constraints.
 -/
+
+public section
 
 namespace Morew.Conic.Exponential
 

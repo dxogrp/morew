@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.NLP.HelperFixtures
 import MorewTest.NLP.DomainSupport
 import MorewTest.Environment
@@ -21,12 +23,12 @@ open Lean Lean.Meta Lean.Elab.Term
 open MorewTest.NLP.Smooth MorewTest.NLP.HelperFixtures
 open MorewTest.Affine (elaborate)
 
-private def unchanged (before : MetavarContext) (environment : Environment) : MetaM Unit := do
+private meta def unchanged (before : MetavarContext) (environment : Environment) : MetaM Unit := do
   assertExprMVarStateUnchanged before "helper certification"
   if let some name := MorewTest.newLocalDeclaration? environment (← getEnv) then
     throwError "helper certification leaked declaration {name}"
 
-private def assertLimit (term : TSyntax `term) (option : String)
+private meta def assertLimit (term : TSyntax `term) (option : String)
     (helper : String) (limit : Nat) (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do

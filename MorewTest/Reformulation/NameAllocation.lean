@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Names
-import Lean.Elab.BuiltinEvalCommand
+module
+
+meta import Morew.Elab.Reformulation.Names
+meta import Lean.Elab.BuiltinEvalCommand
 
 /-!
 # Reformulation name allocation
@@ -12,6 +14,8 @@ import Lean.Elab.BuiltinEvalCommand
 Visible-name comparison, independent name inventories, and deterministic
 freshening are checked through the name-allocation API without the public DSL.
 -/
+
+meta section
 
 namespace MorewTest.Reformulation.NameAllocation
 

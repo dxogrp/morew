@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Transform
+module
+
+public import Morew.Transform
 
 /-!
 # Epigraph and hypograph bounds for subexpressions
@@ -12,6 +14,8 @@ Replace a subexpression by an auxiliary bound while preserving global
 optimization. The equivalence conditions use feasibility for objectives and
 the remaining constraints for constraint substitutions.
 -/
+
+@[expose] public section
 
 namespace Morew
 

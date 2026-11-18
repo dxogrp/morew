@@ -3,6 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
+public import Mathlib.LinearAlgebra.Matrix.PosDef
+
 import Mathlib.Analysis.Matrix.Order
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 
@@ -13,12 +17,13 @@ The determinant is monotone under positive-semidefinite perturbations of a
 positive-definite real matrix.
 -/
 
+public section
+
 namespace Morew.Conic.LogDet
 
 open Matrix
 open scoped MatrixOrder Matrix.Norms.L2Operator
 
-set_option backward.isDefEq.respectTransparency.types false in
 /-- Every principal minor contributes nonnegatively to `det (I + H)` when `H`
 is positive semidefinite, and the empty minor contributes one. -/
 theorem one_le_det_one_add {n : Nat} {H : Matrix (Fin n) (Fin n) ℝ}

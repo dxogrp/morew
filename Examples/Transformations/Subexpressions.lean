@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Epigraphs of subexpressions
@@ -19,6 +21,8 @@ objective or constraint.
 - `as` names the added bound.
 - `using` supplies a context certificate; otherwise Morew attempts to infer it.
 -/
+
+@[expose] public section
 
 namespace Examples.Transformations.Subexpressions
 

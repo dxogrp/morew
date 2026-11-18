@@ -3,7 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.NLP
+import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 
 /-!
 # Smooth closure rules

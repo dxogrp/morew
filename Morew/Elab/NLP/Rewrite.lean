@@ -2,19 +2,22 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Rewrite
-import Morew.Elab.Rewrite.Match
-import Morew.Elab.NLP.Rules
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.NLP.Rows
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Rewrite
+public import Morew.Elab.Rewrite.Match
+public import Morew.Elab.NLP.Rules
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.NLP.Rows
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
 
 /-! Plan exact replacements of selected predicates, then certify generated residuals
 on an open domain containing the proposed feasible set. Retained constraints supply
 conditional premises. Automatic selection requires one certified rule; explicit records
 or declaration names bypass discovery and undergo the same checks. -/
+
+public meta section
 
 namespace Morew.Elab.NLP.Rewrite
 
@@ -214,7 +217,8 @@ private def planCore (source : Expr) (retained : Array Expr)
         if firstMatchError?.isNone then firstMatchError? := some error
     if let [(_, result)] := successes.toList then return .ok result
     if successes.size > 1 then
-      let names := successes.toList.map (fun (name, _) => name.toString)
+      let names := (successes.toList.map (fun (name, _) =>
+        (privateToUserName name).toString)).mergeSort (· ≤ ·)
       throwError "ambiguous exact NLP rules: {String.intercalate ", " names}; select one with `using ruleName`"
     if let some error := firstError? then return .error error
     let detail := firstMatchError?.map (fun error => m!"\ncandidate matching: {error.reason}")

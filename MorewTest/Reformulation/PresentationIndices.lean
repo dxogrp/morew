@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 
 /-!
@@ -17,7 +19,7 @@ namespace MorewTest.Reformulation.PresentationIndices
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Elab.Reformulation
 
-private def elaborate (term : TSyntax `term) (expectedType? : Option Expr := none) :
+private meta def elaborate (term : TSyntax `term) (expectedType? : Option Expr := none) :
     TermElabM Expr := do
   let expression ← elabTerm term expectedType?
   synthesizeSyntheticMVarsNoPostponing
@@ -26,7 +28,7 @@ private def elaborate (term : TSyntax `term) (expectedType? : Option Expr := non
     throwError "presentation test contains an incomplete term"
   return expression
 
-private def checkReplay (term : TSyntax `term) (required : Array String := #[]) :
+private meta def checkReplay (term : TSyntax `term) (required : Array String := #[]) :
     TermElabM Unit := do
   let expression ← elaborate term
   -- Complete ordinary printing supplies the proofs and types needed to reconstruct
@@ -44,7 +46,7 @@ private def checkReplay (term : TSyntax `term) (required : Array String := #[]) 
       unless ← isDefEq expression rebuilt do
         throwError "presentation replay changed its original expression"
 
-private def replayStored (declaration displayName exactName : Name) : CommandElabM Unit := do
+private meta def replayStored (declaration displayName exactName : Name) : CommandElabM Unit := do
   let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) declaration
     | throwError "missing finite-index display presentation"
   let some exact := Morew.Syntax.getProblemView? (← getEnv) declaration

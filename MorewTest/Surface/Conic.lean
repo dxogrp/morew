@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Conic
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Conic
 
 /-!
 # Manual conic forms for problem declarations
@@ -12,6 +14,8 @@ import Morew.Conic
 Certified conic data shares the semantic objective sense with the DSL and its
 typed runner. Attaching a form leaves source and transformed printer output intact.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Surface.Conic
 

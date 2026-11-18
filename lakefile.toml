@@ -1,7 +1,7 @@
 name = "morew"
 version = "0.2.0"
 defaultTargets = ["Morew", "MorewTest", "Examples"]
-allowNonModules = true
+requiresModuleSystem = true
 lintDriver = "batteries/runLinter"
 lintDriverArgs = ["Morew"]
 
@@ -13,6 +13,10 @@ name = "MorewTest"
 
 [[lean_lib]]
 name = "Examples"
+
+[[lean_lib]]
+name = "KernelCheck"
+srcDir = "scripts"
 
 [[require]]
 name = "mathlib"

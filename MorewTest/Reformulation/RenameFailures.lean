@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-!
 # Constraint-renaming failures and rollback
@@ -13,6 +16,8 @@ import MorewTest.Environment
 Source resolution precedes destination preflight. Failed commands retain no
 declarations or presentation metadata, including helpers from earlier steps.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.RenameFailures
 

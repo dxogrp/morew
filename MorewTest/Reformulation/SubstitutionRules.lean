@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import Morew.Elab.Substitution.Rules
+module
+
+public import Morew.Reformulation.Basic
+public import Morew.Elab.Substitution.Rules
 
 /-! # Theorem-backed coordinate substitution through the public DSL -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.SubstitutionRules
 

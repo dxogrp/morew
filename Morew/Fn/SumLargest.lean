@@ -3,9 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
+public import Mathlib.Data.Fin.Tuple.Sort
+public import Mathlib.Basic.Real.Basic
+
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
-import Mathlib.Data.Fin.Tuple.Sort
-import Mathlib.Basic.Real.Basic
+import Mathlib.Order.Interval.Finset.Fin
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -16,6 +21,8 @@ The sum of the largest `k` coordinates of a finite real vector uses every
 coordinate when `k` exceeds its dimension. For `k` at most the dimension, an
 attained threshold formula gives an exact linear epigraph.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

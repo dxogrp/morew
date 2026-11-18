@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Rewrite.Basic
-import Morew.Fn.Norm
-import Mathlib.Analysis.InnerProductSpace.PiL2
+module
+
+public import Morew.Rewrite.Basic
+public import Morew.Fn.Norm
+public import Mathlib.Analysis.InnerProductSpace.PiL2
 
 /-!
 # Exact squared Euclidean-norm representations
@@ -16,6 +18,8 @@ inequality.
 `norm2Epigraph` represents the Euclidean norm; `fnNorm2Epigraph` gives the
 corresponding representation for `Fn.norm2`.
 -/
+
+@[expose] public section
 
 namespace Morew.Rewrite
 

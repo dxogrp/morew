@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.CommandSupport
-import MorewTest.DiagnosticsSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.CommandSupport
+public import MorewTest.DiagnosticsSupport
 
 /-! # CVaR domain, polarity, and affine-coordinate failures are atomic -/
 
@@ -173,10 +176,11 @@ run_cmd do
       `reversed, `equal, `nonlinearLosses, `nonlinearLimit, `variableTarget,
       `familyTarget, `failedChain, `chainAlias, `failedLift] do
     let full := `MorewTest.Reformulation.CvarFailures ++ name
-    if env.contains full || (Syntax.getProblemView? env full).isSome ||
-        (Syntax.getProblemDisplayView? env full).isSome ||
-        (Syntax.getProblemPrintPresentation? env full).isSome then
-      Lean.throwError "failed CVaR rewrite retained {full}"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || (Syntax.getProblemView? env full).isSome ||
+          (Syntax.getProblemDisplayView? env full).isSome ||
+          (Syntax.getProblemPrintPresentation? env full).isSome then
+        Lean.throwError "failed CVaR rewrite retained {full}"
 
 end
 end MorewTest.Reformulation.CvarFailures

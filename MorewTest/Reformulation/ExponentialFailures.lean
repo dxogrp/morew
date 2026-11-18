@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import Morew.Conic.Exponential
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import Morew.Conic.Exponential
+public import MorewTest.CommandSupport
 
 /-!
 # Exponential rewrite diagnostics and atomic failure
@@ -414,9 +417,10 @@ run_cmd do
       `nonaffineCoordinate, `nonaffineLogArgument, `unsupportedSubset, `incompatibleOrder,
       `invalidExplicitRule, `explicitCannotFallback, `failureAfterAuxiliary, `stale] do
     let full := `MorewTest.Reformulation.ExponentialFailures ++ name
-    if env.contains full || env.contains (full ++ `equiv) ||
-        (Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed exponential rewrite emitted {full}"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || env.contains (full ++ `equiv) ||
+          (Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed exponential rewrite emitted {full}"
 
 end
 end MorewTest.Reformulation.ExponentialFailures

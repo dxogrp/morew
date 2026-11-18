@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
-import MorewTest.DiagnosticsSupport
+module
+
+public import Morew.Reformulation.NLP
+public import MorewTest.DiagnosticsSupport
 
 /-!
 # Signed exact NLP bounds and graphs
@@ -12,6 +14,8 @@ import MorewTest.DiagnosticsSupport
 Negation reuses existing records while every resulting row still passes the
 NLP domain and smoothness checks. Smooth expressions keep their direct path.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.NegationNLP
 

@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
-import MorewTest.Reformulation.PSD.Fixtures
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
+public import MorewTest.Reformulation.PSD.Fixtures
 
 /-!
 # PSD diagnostic context and transactional failure

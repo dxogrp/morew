@@ -48,7 +48,7 @@ jobs:
           use-github-cache: false
 
       - name: Check aggregate imports
-        run: lake exe mk_all --check
+        run: make check-imports
 
       - name: Lint Morew
         run: |

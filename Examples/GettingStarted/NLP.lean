@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.NLP
 
 /-!
 # Smooth NLP reformulations
@@ -21,6 +23,8 @@ The first problem has scalar variables `x`, `y`, and `t`:
 \end{array}
 ```
 -/
+
+@[expose] public section
 
 namespace Examples.GettingStarted.NLP
 

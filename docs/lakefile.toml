@@ -1,6 +1,6 @@
 name = "morewDocs"
 reservoir = false
-allowNonModules = true
+requiresModuleSystem = true
 packagesDir = "../.lake/packages"
 defaultTargets = ["morewManual"]
 

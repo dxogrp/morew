@@ -2,37 +2,40 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Evidence
-import Morew.Elab.Cone.Constraint
-import Morew.Elab.Cone.Symmetry
-import Morew.Conic.PSD.PosDef
+public import Morew.Elab.Evidence
+public import Morew.Elab.Cone.Constraint
+public import Morew.Elab.Cone.Symmetry
+public import Morew.Conic.PSD.PosDef
 
 /-! Prove positive definiteness from independent hypotheses, retained positive
 definiteness, positive scalar margins, or identity-block PSD witnesses.
 Exclude the selected row and its replacement. Certify global symmetry separately. -/
+
+public section
 
 namespace Morew.Elab.Cone.MatrixDomain
 
 open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
-private def canonicalPosDef (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) : Prop :=
-  P.PosDef
+private meta def canonicalPosDef : Expr :=
+  q(fun (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) => P.PosDef)
 
-private def canonicalMargin (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) (epsilon : ℝ) :
-    Matrix (Fin n) (Fin n) ℝ := P - epsilon • 1
+private meta def canonicalMargin : Expr :=
+  q(fun (n : Nat) (P : Matrix (Fin n) (Fin n) ℝ) (epsilon : ℝ) => P - epsilon • 1)
 
-private def canonicalIdentity (n : Nat) : Matrix (Fin n) (Fin n) ℝ := 1
+private meta def canonicalIdentity : Expr := q(fun (n : Nat) => (1 : Matrix (Fin n) (Fin n) ℝ))
 
-private theorem posDefOfMargin {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
+theorem posDefOfMargin {n : Nat} (P : Matrix (Fin n) (Fin n) ℝ)
     (epsilon : ℝ) (positive : 0 < epsilon) (bound : (P - epsilon • 1).PosSemidef) :
     P.PosDef := by
   have identity : (epsilon • (1 : Matrix (Fin n) (Fin n) ℝ)).PosDef :=
     Matrix.PosDef.one.smul positive
   simpa only [add_sub_cancel] using identity.add_posSemidef bound
 
-private def samePrefix (actual expected : Expr) (operands : Nat) : MetaM Bool := do
+private meta def samePrefix (actual expected : Expr) (operands : Nat) : MetaM Bool := do
   unless actual.getAppFn == expected.getAppFn &&
       actual.getAppNumArgs == expected.getAppNumArgs do return false
   let actualArgs := actual.getAppArgs
@@ -41,7 +44,7 @@ private def samePrefix (actual expected : Expr) (operands : Nat) : MetaM Bool :=
     unless ← isDefEq actualArgs[i]! expectedArgs[i]! do return false
   return true
 
-private def squareDimension? (point matrix : Expr) : MetaM (Option Expr) := do
+private meta def squareDimension? (point matrix : Expr) : MetaM (Option Expr) := do
   let .forallE _ row columnType _ ← whnf (← inferType matrix) | return none
   let .forallE _ column scalar _ ← whnf columnType | return none
   let row ← whnf row
@@ -52,10 +55,10 @@ private def squareDimension? (point matrix : Expr) : MetaM (Option Expr) := do
   if (← Expr.depends point n) || (← Expr.hasUnresolved n) then return none
   return some n
 
-private def posDefGoal (n matrix : Expr) : MetaM Expr := do
-  return (mkAppN (← getConstInfo ``canonicalPosDef).value! #[n, matrix]).headBeta
+private meta def posDefGoal (n matrix : Expr) : MetaM Expr := do
+  return (mkAppN canonicalPosDef #[n, matrix]).headBeta
 
-private partial def directEvidence? (goal body proof : Expr) (universal := false)
+private meta partial def directEvidence? (goal body proof : Expr) (universal := false)
     (fuel := 32) : MetaM (Option Expr) := do
   if fuel == 0 then return none
   let body ← Expr.reduceStructure body
@@ -79,7 +82,7 @@ private partial def directEvidence? (goal body proof : Expr) (universal := false
   if ← Expr.hasUnresolved proof then return none
   return some proof
 
-private def independentEvidence? (point goal : Expr) : MetaM (Option Expr) := do
+private meta def independentEvidence? (point goal : Expr) : MetaM (Option Expr) := do
   for declaration in ← getLCtx do
     if declaration.isImplementationDetail then continue
     let proof := declaration.toExpr
@@ -92,7 +95,7 @@ private def independentEvidence? (point goal : Expr) : MetaM (Option Expr) := do
     saved.restore
   return none
 
-private theorem posDefOfTransposedIdentity {n : Nat}
+theorem posDefOfTransposedIdentity {n : Nat}
     (P W : Matrix (Fin n) (Fin n) ℝ)
     (h : (Morew.Conic.fromBlocksFin P 1 (1 : Matrix (Fin n) (Fin n) ℝ).transpose W).PosSemidef) :
     P.PosDef := by
@@ -100,7 +103,7 @@ private theorem posDefOfTransposedIdentity {n : Nat}
   simpa only [Matrix.transpose_one] using h
 
 -- Check canonical operation prefixes before exposing matrix arithmetic.
-private partial def bundledCoordinate? (value : Expr) (fuel := 32) : MetaM (Option Expr) := do
+private meta partial def bundledCoordinate? (value : Expr) (fuel := 32) : MetaM (Option Expr) := do
   if fuel == 0 then return none
   let value ← Expr.reduceStructure value
   if value.isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3 then
@@ -133,7 +136,7 @@ private partial def bundledCoordinate? (value : Expr) (fuel := 32) : MetaM (Opti
     return some (mkAppN result.getAppFn ((result.getAppArgs.set! 4 left).set! 5 right))
   return some (← mkAppM ``Morew.Conic.SymmetricMatrix.toMatrix #[value])
 
-private def fromPSD? (point n matrix body proof : Expr) : MetaM (Option Expr) := do
+private meta def fromPSD? (point n matrix body proof : Expr) : MetaM (Option Expr) := do
   let some coordinate ← psdValue? point body | return none
   let coordinate ← if coordinate.isAppOfArity ``Morew.Conic.SymmetricMatrix.toMatrix 2 then
       bundledCoordinate? coordinate.getAppArgs[1]!
@@ -144,7 +147,7 @@ private def fromPSD? (point n matrix body proof : Expr) : MetaM (Option Expr) :=
     let args := coordinate.getAppArgs
     unless (← isDefEq args[0]! n) && (← isDefEq args[1]! n) &&
         (← isDefEq args[2]! matrix) do return none
-    let identity := (mkApp (← getConstInfo ``canonicalIdentity).value! n).headBeta
+    let identity := (mkApp canonicalIdentity n).headBeta
     unless ← isDefEq args[3]! identity do return none
     if ← isDefEq args[4]! identity then
       return some (← mkAppM ``Morew.Conic.posDef_of_fromBlocksFin_identity_psd
@@ -158,7 +161,7 @@ private def fromPSD? (point n matrix body proof : Expr) : MetaM (Option Expr) :=
   unless lower.isAppOfArity ``HSMul.hSMul 6 do return none
   let epsilon := lower.getAppArgs[4]!
   unless ← isDefEq (← inferType epsilon) q(ℝ) do return none
-  let canonical := (mkAppN (← getConstInfo ``canonicalMargin).value!
+  let canonical := (mkAppN canonicalMargin
     #[n, matrix, epsilon]).headBeta
   unless (← samePrefix coordinate canonical 2) &&
       (← samePrefix lower canonical.getAppArgs[5]! 2) &&
@@ -166,7 +169,7 @@ private def fromPSD? (point n matrix body proof : Expr) : MetaM (Option Expr) :=
   let some positive ← Evidence.constantSign? point epsilon true | return none
   return some (← mkAppM ``posDefOfMargin #[matrix, epsilon, positive, proof])
 
-private partial def retainedEvidence? (point n matrix goal body proof : Expr) :
+private meta partial def retainedEvidence? (point n matrix goal body proof : Expr) :
     MetaM (Option Expr) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
@@ -185,7 +188,7 @@ private partial def retainedEvidence? (point n matrix goal body proof : Expr) :
 
 /-- Prove positive definiteness from independent or retained evidence.
 The caller excludes the selected row; caller metavariables remain fixed. -/
-def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
+meta def prove? (point goal : Expr) (retained : Array Expr) (remainderProof : Expr) :
     MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     unless ← Evidence.complete goal do return .error ()

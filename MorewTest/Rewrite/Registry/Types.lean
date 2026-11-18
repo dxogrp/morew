@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.ElabSupport
 import Morew.Elab.Rewrite.Match
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
@@ -67,7 +69,7 @@ def familyOutputGraph (flag : Bool) : GraphRepr (familyOutputOperation flag) whe
   target x t _ := t = familyOutputOperation flag x
   source_iff_exists _ _ := by simp only [exists_const]
 
-private def selected (term : TSyntax `term) (expected : Array Name)
+private meta def selected (term : TSyntax `term) (expected : Array Name)
     (parameters : Nat := 0) (checkedRule? : Option Name := none) : TermElabM Unit := do
   let source ← elaborateUnchecked term
   lambdaBoundedTelescope source parameters fun _ source => do

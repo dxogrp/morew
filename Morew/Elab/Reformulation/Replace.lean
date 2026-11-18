@@ -3,27 +3,33 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Presentation
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Rewrite.Plan
-import Morew.Transform
+module
+
+public import Morew.Elab.Reformulation.Presentation
+public import Morew.Elab.Rewrite.Decomposition
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Transform
 
 /-! Assemble exact replacements in ordered constraints, preserving unselected row boundaries.
 `Rows` updates names and displayed constraints. -/
+
+public section
 
 namespace Morew.Elab.Reformulation.Replace
 
 open Lean Lean.Meta
 open Morew.Elab.Reformulation
 
-private theorem unitTargetIff {X : Type u} (source : X → Prop)
+theorem unitTargetIff {X : Type u} (source : X → Prop)
     (target : X → Unit → Prop)
     (h : ∀ x, source x ↔ ∃ a, target x a) :
     ∀ x, source x ↔ target x () :=
   fun x => (h x).trans Unique.exists_iff
 
-private theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () :=
+theorem existsUnitIff (target : Unit → Prop) : (∃ a, target a) ↔ target () :=
   Unique.exists_iff
+
+meta section
 
 open Morew.Elab.Rewrite.Decomposition (conjunctionParts)
 
@@ -220,4 +226,5 @@ def rewriteConstraintContextual (presentation : PresentationState) (index : Nat)
   checkWithKernel equiv
   return { targetProblem, equiv }
 
+end
 end Morew.Elab.Reformulation.Replace

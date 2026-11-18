@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -26,7 +28,7 @@ example (β : ℝ) (hn : 0 < n) (hβ : 0 ≤ β ∧ β < 1)
       0 ≤ u ∧ x - (fun _ => τ) ≤ u ∧
         τ + (∑ i, u i) / ((n : ℝ) * (1 - β)) ≤ t := Iff.rfl
 
-private def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private meta def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
   let before ← getMCtx
   let outcome ← match rule? with
     | none => Morew.Elab.Cone.Rewrite.planUnique source
@@ -68,12 +70,12 @@ private def check (source : Expr) (rule? : Option Name := none) : MetaM Unit := 
     unless ← isDefEq (← inferType row.pointwiseIff) expected do
       throwError "CVaR row certificate does not match its predicate"
 
-private def expect (term : TSyntax `term) (parameters : Nat := 0)
+private meta def expect (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => check source rule?
 
-private def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
+private meta def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let outcome ← match rule? with
@@ -84,7 +86,7 @@ private def reject (source : Expr) (rule? : Option Name := none) : MetaM Unit :=
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed CVaR planning changed declarations"
 
-private def rejected (term : TSyntax `term) (parameters : Nat := 0)
+private meta def rejected (term : TSyntax `term) (parameters : Nat := 0)
     (rule? : Option Name := none) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameters fun _ source => reject source rule?

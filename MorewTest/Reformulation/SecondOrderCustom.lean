@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
-import MorewTest.Reformulation.SecondOrderCustom.Fixtures
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
+public import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 
 /-!
 # Custom exact certificates with second-order targets
@@ -159,11 +162,13 @@ run_cmd do
     let full := `MorewTest.Reformulation.SecondOrderCustom ++ name
     for declaration in #[full, full ++ `equiv,
         `MorewTest.Reformulation.SecondOrderCustom ++
-          Lean.Name.mkSimple (name.toString ++ "Alias")] do
+          Lean.Name.mkSimple (name.toString ++ "Alias")].flatMap
+            (fun name => #[name, Lean.mkPrivateName env name]) do
       if env.contains declaration then
         Lean.throwError "failed custom rewrite emitted {declaration}"
-    if (Morew.Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed custom rewrite registered presentation metadata"
+    for name in #[full, Lean.mkPrivateName env full] do
+      if (Morew.Syntax.getProblemView? env name).isSome then
+        Lean.throwError "failed custom rewrite registered presentation metadata"
 
 end
 end MorewTest.Reformulation.SecondOrderCustom

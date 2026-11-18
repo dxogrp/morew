@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import MorewTest.Conic.Form.Support
+module
+
+public import MorewTest.Conic.Form.Support
 
 /-! # Separately compiled form using a finite index without an enumeration -/
+
+@[expose] public section
 
 namespace MorewTest.Conic.Form
 

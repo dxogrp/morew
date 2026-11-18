@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Rows
 
 /-! Append a restriction with an improvement certificate providing retained feasible
 representatives whose objectives are no worse. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -48,8 +52,9 @@ def prepareRestrict (state : ReformState) (label : TSyntax `ident)
     materialize := materializeRestrict state label proposition provided
   }
 
+/-- Elaborate a `restrict` step justified by an improvement certificate. -/
 @[morew_reformulation_step Morew.restrictStep]
-private def elabRestrict : StepHandler := fun state step => do
+def elabRestrict : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| restrict $label:ident : $proposition:term using $provided:term) =>
       prepareRestrict state label proposition provided

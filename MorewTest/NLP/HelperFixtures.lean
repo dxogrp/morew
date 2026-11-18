@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.NLP.Smooth
+module
+
+public import Morew.Elab.NLP.Smooth
 
 /-!
 # Imported fixtures for bounded smooth helper expansion
@@ -11,6 +13,8 @@ import Morew.Elab.NLP.Smooth
 These ordinary declarations have no registration attributes. Tests in separate
 modules exercise their imported bodies, universe parameters, and scoped evidence.
 -/
+
+@[expose] public section
 
 namespace MorewTest.NLP.HelperFixtures
 

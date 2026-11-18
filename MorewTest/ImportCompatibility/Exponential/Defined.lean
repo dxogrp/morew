@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Exported exponential presentations
@@ -12,6 +14,8 @@ Section-local nonempty-index and positive-margin evidence certifies the source
 rewrite without becoming extra optimization variables. The imported presentation
 retains its symbolic dimension, grouped cone row, margin, and generated names.
 -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.Exponential
 

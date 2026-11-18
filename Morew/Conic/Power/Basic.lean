@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Power.Cone
+module
+
+public import Morew.Conic.Power.Cone
 import Mathlib.Tactic.FieldSimp
 
 /-!
@@ -15,6 +17,8 @@ zero and one and binary weighted geometric means have hypographs on
 nonnegative inputs. Their auxiliary nonnegative scalar preserves negative
 lower bounds.
 -/
+
+public section
 
 namespace Morew.Conic.Power
 

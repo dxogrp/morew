@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.Affine.RowSupport
 import MorewTest.Environment
@@ -19,7 +21,7 @@ namespace MorewTest.Conic.PowerFailures
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Conic MorewTest.Affine
 
-private def reject (source : Expr) (retained : Array Expr := #[])
+private meta def reject (source : Expr) (retained : Array Expr := #[])
     (name? : Option Name := none) (fragment : String := "") : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
@@ -34,7 +36,7 @@ private def reject (source : Expr) (retained : Array Expr := #[])
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "failed power planning changed declarations"
 
-private def check (source : Expr) (retained : Array Expr := #[])
+private meta def check (source : Expr) (retained : Array Expr := #[])
     (name? : Option Name := none) : MetaM Unit := do
   let result ← match name? with
     | none => Morew.Elab.Cone.Rewrite.planUnique source retained
@@ -48,7 +50,7 @@ private def check (source : Expr) (retained : Array Expr := #[])
     checkWithKernel row.constraint
     checkWithKernel row.pointwiseIff
 
-private def rejected (term : TSyntax `term) (retained : Array Expr := #[])
+private meta def rejected (term : TSyntax `term) (retained : Array Expr := #[])
     (parameterCount : Nat := 0) (name? : Option Name := none)
     (fragment : String := "") : TermElabM Unit := do
   let expression ← elaborate term
@@ -112,7 +114,7 @@ run_cmd liftTermElabM do
   let domain ← elaborate (← `(fun p : ℝ × ℝ => 0 ≤ p.1))
   check source #[domain]
 
-private def rejectRow (source : Expr) (fragment : String := "") : MetaM Unit := do
+private meta def rejectRow (source : Expr) (fragment : String := "") : MetaM Unit := do
   let before ← getMCtx
   let environment ← getEnv
   let .error error ← Morew.Elab.Cone.normalizeRow source (label? := some `power_row)

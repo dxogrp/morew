@@ -17,14 +17,18 @@ update: ## update Lean dependencies and the package manifest
 .PHONY: imports
 imports: ## synchronize generated root import aggregators
 	@printf "$(BLUE)Synchronizing aggregate imports...$(RESET)\n"
-	@status=0; lake exe mk_all || status=$$?; \
+	@for lib in Morew MorewTest Examples; do \
+		status=0; lake exe mk_all --module --lib "$$lib" || status=$$?; \
 		if [ "$$status" -gt 125 ]; then exit "$$status"; fi; \
-		lake exe mk_all --check
+		lake exe mk_all --module --check --lib "$$lib" || exit $$?; \
+	 done
 
 .PHONY: check-imports
 check-imports: ## verify root import aggregators without changing them
 	@printf "$(BLUE)Checking aggregate imports...$(RESET)\n"
-	@lake exe mk_all --check
+	@for lib in Morew MorewTest Examples; do \
+		lake exe mk_all --module --check --lib "$$lib" || exit $$?; \
+	 done
 
 .PHONY: build
 build: imports ## synchronize imports and build all Lean libraries warning-free
@@ -39,11 +43,9 @@ lint: build ## build and lint the shipped Morew library
 	@lake lint
 
 .PHONY: check-kernel
-# Fresh replay avoids the Lean 4.36 checker's multi-module crash.
-# The combined root checks shared dependencies once.
+# Replay all project roots and shared dependencies once in an empty kernel environment.
 check-kernel: build ## build and kernel-check the library, tests, and examples
-	@lake env lean -DwarningAsError=true --root=scripts \
-		-o .lake/build/lib/lean/KernelCheck.olean scripts/KernelCheck.lean
+	@lake build --wfail KernelCheck
 	@printf "$(BLUE)Kernel-checking compiled modules...$(RESET)\n"
 	@LEAN_NUM_THREADS=1 lake env leanchecker --fresh KernelCheck
 

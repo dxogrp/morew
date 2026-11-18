@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Elab.Command
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import MorewTest.Environment
 
 /-! Shared command elaboration and declaration rollback checks. -/
+
+public meta section
 
 namespace MorewTest
 

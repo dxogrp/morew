@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax
-import Morew.Conic.SecondOrder.Repr
-import Mathlib.Analysis.SpecialFunctions.Exp
+module
+
+public import Morew.Syntax
+public import Morew.Conic.SecondOrder.Repr
+public import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-! # Shared auxiliary second-order certificate and its source problem -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.SecondOrderCustom
 

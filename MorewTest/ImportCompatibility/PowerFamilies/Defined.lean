@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Conic.Power.GeometricMean
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Conic.Power.GeometricMean
 
 /-!
 # Exported finite power-family presentations
@@ -12,6 +14,8 @@ import Morew.Conic.Power.GeometricMean
 A symbolic nonempty dimension and its checked chain indices cross the module
 boundary, together with the original named functions and retained domain row.
 -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.PowerFamilies.Defined
 

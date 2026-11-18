@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Conic
 
 /-!
@@ -442,16 +444,19 @@ run_cmd do
       `unregisteredApplication, `nonProblemApplication, `lambdaSource, `localSource,
       `conflictingParameter, `conflictingNewBinder, `conflictingSubstitution,
       `failedAfterTerminal] do
-    let name := `MorewTest.Surface.AppliedSources ++ shortName
-    for artifact in #[name, name ++ `equiv, name ++ `conicForm, name ++ `isConic] do
-      if env.contains artifact then
-        Lean.throwError "failed applied source emitted declaration `{artifact}`"
-    if (Morew.Syntax.getProblemView? env name).isSome then
-      Lean.throwError "failed applied source emitted presentation `{name}`"
+    let target := `MorewTest.Surface.AppliedSources ++ shortName
+    for name in #[target, Lean.mkPrivateName env target] do
+      for artifact in #[name, name ++ `equiv, name ++ `conicForm, name ++ `isConic] do
+        if env.contains artifact then
+          Lean.throwError "failed applied source emitted declaration `{artifact}`"
+      if (Morew.Syntax.getProblemView? env name).isSome then
+        Lean.throwError "failed applied source emitted presentation `{name}`"
   for aliasName in #[`conflictingParameterAlias, `conflictingNewBinderAlias,
       `failedAfterTerminalAlias] do
-    if env.contains (`MorewTest.Surface.AppliedSources ++ aliasName) then
-      Lean.throwError "failed applied source emitted its certificate alias"
+    let aliasName := `MorewTest.Surface.AppliedSources ++ aliasName
+    for name in #[aliasName, Lean.mkPrivateName env aliasName] do
+      if env.contains name then
+        Lean.throwError "failed applied source emitted its certificate alias"
 
 namespace GeneratedNames
 

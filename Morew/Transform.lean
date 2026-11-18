@@ -3,8 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Rewrite.Basic
-import Morew.Syntax
+module
+
+public import Morew.Core
+public import Morew.Rewrite.Basic
+public import Morew.Syntax
 
 /-!
 # Verified primitive transformations
@@ -12,6 +15,8 @@ import Morew.Syntax
 Problem transformations and their global equivalence proofs, used by the
 `reformulation` command.
 -/
+
+@[expose] public section
 
 namespace Morew
 

@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
+module
+
+public import Morew.Reformulation.Basic
 
 /-!
 # Bounds on selected objective and constraint occurrences
@@ -11,6 +13,8 @@ import Morew.Reformulation.Basic
 Check generated semantics, local bindings, row order, explicit context evidence,
 and composition with conic conversion.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.OccurrenceBounds
 

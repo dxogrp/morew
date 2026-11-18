@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Reformulation.Basic
 import MorewTest.Atom.Support
 import MorewTest.DiagnosticsSupport
@@ -48,10 +50,11 @@ reformulation customSubstitutionTarget : customSubstitutionSource := by
 
 run_cmd do
   let env ← getEnv
-  if env.contains `MorewTest.Surface.Atom.customSubstitutionTarget ||
-      env.contains `MorewTest.Surface.Atom.customSubstitutionTarget.equiv ||
-      (Morew.Syntax.getProblemView? env `MorewTest.Surface.Atom.customSubstitutionTarget).isSome then
-    throwError "an unsupported substitution committed output"
+  let name := `MorewTest.Surface.Atom.customSubstitutionTarget
+  for name in #[name, Lean.mkPrivateName env name] do
+    if env.contains name || env.contains (name ++ `equiv) ||
+        (Morew.Syntax.getProblemView? env name).isSome then
+      throwError "an unsupported substitution committed output"
 
 /-! Source spellings and all presentation fields survive recognition unchanged. -/
 

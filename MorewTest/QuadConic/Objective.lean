@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.QuadConic.Objective
 import MorewTest.ElabSupport
 import Mathlib.Analysis.SpecialFunctions.Exp
@@ -18,7 +20,7 @@ open Lean Lean.Meta Lean.Elab.Term
 open Morew.Elab.QuadConic MorewTest.Affine Matrix
 open scoped BigOperators
 
-private def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
+private meta def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
     (sense : Morew.ObjectiveSense := .minimize) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
@@ -46,7 +48,7 @@ private def assertQuadratic (term : TSyntax `term) (parameterCount : Nat := 0)
     unless ← isDefEq (← inferType result.curvature) expected do
       throwError "quadratic certificate has the wrong curvature"
 
-private def assertRejected (term : TSyntax `term) (parameterCount : Nat := 0)
+private meta def assertRejected (term : TSyntax `term) (parameterCount : Nat := 0)
     (sense : Morew.ObjectiveSense := .minimize) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do
@@ -213,7 +215,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
 
 /-! Explicit and automatically constructed certificates share the final checks. -/
 
-private def presentationForObjective (objective : Expr)
+private meta def presentationForObjective (objective : Expr)
     (sense : Morew.ObjectiveSense := .minimize) :
     MetaM Morew.Elab.Reformulation.PresentationState := do
   let .forallE _ domain valueType _ ← whnf (← inferType objective)

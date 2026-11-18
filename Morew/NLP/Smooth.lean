@@ -3,18 +3,25 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
+public import Mathlib.Analysis.Calculus.ContDiff.Basic
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+public import Mathlib.Data.Matrix.Mul
+public import Morew.Fn.Norm
+
 import Mathlib.Analysis.Calculus.ContDiff.Operations
-import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
-import Mathlib.Data.Matrix.Mul
-import Morew.Fn.Norm
 
 /-!
 # Smooth expression closure rules
 
 Closure rules for $C^2$ functions on domains in real normed spaces.
 -/
+
+public section
 
 namespace Morew.NLP.Smooth
 

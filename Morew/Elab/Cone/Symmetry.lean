@@ -2,44 +2,47 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Conic.PSD
-import Morew.Elab.Affine.Expansion
-import Morew.Elab.Evidence
-import Mathlib.Tactic.FinCases
-import Mathlib.Tactic.Ring
+public import Morew.Conic.PSD
+public import Morew.Elab.Affine.Expansion
+public import Morew.Elab.Evidence
+public import Mathlib.Tactic.FinCases
+public import Mathlib.Tactic.Ring
 
 /-! Prove global matrix symmetry from structural identities and independent hypotheses.
 Feasibility evidence involving the decision point is excluded. -/
+
+public section
 
 namespace Morew.Elab.Cone.Symmetry
 
 open Lean Lean.Meta
 
-private theorem congruence {m n : Type*} [Fintype m]
+theorem congruence {m n : Type*} [Fintype m]
     (A : Matrix m m ℝ) (C : Matrix m n ℝ) (h : A.IsSymm) :
     (C.transpose * A * C).IsSymm := by
   simp only [Matrix.IsSymm, Matrix.transpose_mul, Matrix.transpose_transpose,
     h.eq, Matrix.mul_assoc]
 
-private theorem congruenceRight {m n : Type*} [Fintype n]
+theorem congruenceRight {m n : Type*} [Fintype n]
     (A : Matrix n n ℝ) (C : Matrix m n ℝ) (h : A.IsSymm) :
     (C * A * C.transpose).IsSymm := by
   simp only [Matrix.IsSymm, Matrix.transpose_mul, Matrix.transpose_transpose,
     h.eq, Matrix.mul_assoc]
 
-private theorem sumSymmetric {ι n : Type*} (s : Finset ι)
+theorem sumSymmetric {ι n : Type*} (s : Finset ι)
     (f : ι → Matrix n n ℝ) (h : ∀ i, (f i).IsSymm) :
     (∑ i ∈ s, f i).IsSymm := by
   simp only [Matrix.IsSymm, Matrix.transpose_sum, fun i => (h i).eq]
 
-private theorem posDefSymmetric {n : Type*} (M : Matrix n n ℝ)
+theorem posDefSymmetric {n : Type*} (M : Matrix n n ℝ)
     (h : M.PosDef) : M.IsSymm := Matrix.isHermitian_iff_isSymm.mp h.isHermitian
 
-private theorem psdSymmetric {n : Type*} (M : Matrix n n ℝ)
+theorem psdSymmetric {n : Type*} (M : Matrix n n ℝ)
     (h : M.PosSemidef) : M.IsSymm := Matrix.isHermitian_iff_isSymm.mp h.isHermitian
 
-private def structuralRules (matrix : Expr) : Array Name := Id.run do
+private meta def structuralRules (matrix : Expr) : Array Name := Id.run do
   let head := matrix.getAppFn.constName?
   if head == some ``HAdd.hAdd then
     return #[``Matrix.IsSymm.add, ``Matrix.isSymm_add_transpose_self,
@@ -66,7 +69,7 @@ private def structuralRules (matrix : Expr) : Array Name := Id.run do
   return #[]
 
 -- Use bounded coordinate proofs for concrete sizes and structural proofs for symbolic sizes.
-private def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
+private meta def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
   let .forallE _ index _ _ ← whnf (← inferType matrix) | failure
   let index ← whnf index
   unless index.isAppOfArity ``Fin 1 do failure
@@ -81,7 +84,7 @@ private def literalProof (goal : MVarId) (matrix : Expr) : MetaM Unit := do
 
 -- Project independent conjunctions while retaining quantifiers.
 -- Bound inspected conjunction and quantifier nodes per hypothesis.
-private partial def conjunctionConsequences (proof : Expr) (fuel : Nat) :
+private meta partial def conjunctionConsequences (proof : Expr) (fuel : Nat) :
     MetaM (Array Expr × Nat) := do
   if fuel == 0 then return (#[], 0)
   let fuel := fuel - 1
@@ -99,7 +102,7 @@ private partial def conjunctionConsequences (proof : Expr) (fuel : Nat) :
       return (consequences, fuel)
   return (#[], fuel)
 
-private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat) :
+private meta partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat) :
     MetaM Unit := goal.withContext do
   if fuel == 0 then failure
   let saved ← saveState
@@ -157,7 +160,7 @@ private partial def solve (goal : MVarId) (hypotheses : Array Expr) (fuel : Nat)
 
 /-- Prove symmetry of the supplied matrix for every decision point, using only
 independent hypotheses and bounded structural or literal proofs. -/
-def prove? (point matrix : Expr) : MetaM (Option Expr) := do
+meta def prove? (point matrix : Expr) : MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     try
       unless ← Evidence.complete matrix do

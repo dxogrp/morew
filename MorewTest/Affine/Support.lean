@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Affine
-import Lean.Meta.Check
-import MorewTest.ElabSupport
+module
+
+public import Morew.Elab.Affine
+public import Lean.Meta.Check
+public import MorewTest.ElabSupport
 
 /-!
 # Shared affine test assertions
@@ -13,6 +15,8 @@ import MorewTest.ElabSupport
 Check generated maps against their source propositions and reject incomplete
 certificates. Each behavior suite imports these helpers independently.
 -/
+
+public meta section
 
 namespace MorewTest.Affine
 

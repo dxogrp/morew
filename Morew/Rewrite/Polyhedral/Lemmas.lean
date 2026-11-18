@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Algebra.Order.Group.PosPart
-import Mathlib.Analysis.Normed.Lp.PiLp
-import Mathlib.Data.Fintype.EquivFin
+module
+
+public import Mathlib.Algebra.Order.Group.PosPart
+public import Mathlib.Analysis.Normed.Lp.PiLp
+public import Mathlib.Data.Fintype.EquivFin
 
 /-!
 # Exact polyhedral bounds
@@ -13,6 +15,8 @@ import Mathlib.Data.Fintype.EquivFin
 Scalar and coordinatewise inequalities for absolute values, extrema, and vector
 norms. The norm bounds retain their scalar condition in dimension zero.
 -/
+
+public section
 
 namespace Morew.Rewrite.Polyhedral
 

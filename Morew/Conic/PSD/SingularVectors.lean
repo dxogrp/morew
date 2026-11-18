@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Fn.Matrix
+module
+
+public import Morew.Fn.Matrix
 
 /-!
 # Thin singular-vector decomposition
@@ -13,6 +15,8 @@ orthonormal family. This construction applies to rectangular and rank-deficient
 matrices.
 -/
 
+@[expose] public section
+
 namespace Morew.Conic.Spectral
 
 open scoped RealInnerProductSpace
@@ -20,39 +24,35 @@ open Matrix
 
 variable {m n : Nat} (A : Matrix (Fin m) (Fin n) ℝ)
 
-private noncomputable abbrev lin := Matrix.toEuclideanLin A
-
-private theorem dim : Module.finrank ℝ (EuclideanSpace ℝ (Fin n)) = n := by simp
-
 /-- Singular values indexed by the domain dimension. -/
-noncomputable def singularValue (i : Fin n) : ℝ := (lin A).singularValues i
+noncomputable def singularValue (i : Fin n) : ℝ := A.toEuclideanLin.singularValues i
 
 /-- The right singular basis is an eigenbasis of the Gram operator. -/
 noncomputable def rightSingularBasis : OrthonormalBasis (Fin n) ℝ (EuclideanSpace ℝ (Fin n)) :=
-  (lin A).isSymmetric_adjoint_comp_self.eigenvectorBasis dim
+  A.toEuclideanLin.isSymmetric_adjoint_comp_self.eigenvectorBasis (by simp)
 
 theorem singularValue_nonneg (i : Fin n) : 0 ≤ singularValue A i :=
-  (lin A).singularValues_nonneg i
+  A.toEuclideanLin.singularValues_nonneg i
 
 theorem gram_rightSingularBasis (i : Fin n) :
-    ((lin A).adjoint ∘ₗ lin A) (rightSingularBasis A i) =
+    (A.toEuclideanLin.adjoint ∘ₗ A.toEuclideanLin) (rightSingularBasis A i) =
       singularValue A i ^ 2 • rightSingularBasis A i := by
-  rw [singularValue, (lin A).sq_singularValues_fin dim]
+  rw [singularValue, A.toEuclideanLin.sq_singularValues_fin (by simp)]
   rw [rightSingularBasis, LinearMap.IsSymmetric.apply_eigenvectorBasis]
   rfl
 
 theorem inner_images_rightSingularBasis (i j : Fin n) :
-    ⟪lin A (rightSingularBasis A i), lin A (rightSingularBasis A j)⟫ =
+    ⟪A.toEuclideanLin (rightSingularBasis A i), A.toEuclideanLin (rightSingularBasis A j)⟫ =
       singularValue A j ^ 2 * (if i = j then 1 else 0) := by
   rw [← LinearMap.adjoint_inner_right]
   change ⟪rightSingularBasis A i,
-    ((lin A).adjoint ∘ₗ lin A) (rightSingularBasis A j)⟫ = _
+    (A.toEuclideanLin.adjoint ∘ₗ A.toEuclideanLin) (rightSingularBasis A j)⟫ = _
   rw [gram_rightSingularBasis, inner_smul_right]
   congr 1
   exact orthonormal_iff_ite.mp (rightSingularBasis A).orthonormal i j
 
 theorem norm_image_rightSingularBasis (i : Fin n) :
-    ‖lin A (rightSingularBasis A i)‖ = singularValue A i := by
+    ‖A.toEuclideanLin (rightSingularBasis A i)‖ = singularValue A i := by
   have h := inner_images_rightSingularBasis A i i
   rw [real_inner_self_eq_norm_sq] at h
   simp only [ite_true, mul_one] at h
@@ -65,7 +65,7 @@ noncomputable instance : Fintype (PositiveSingularIndex A) := Fintype.ofFinite _
 
 /-- Normalized images of the positive right singular vectors. -/
 noncomputable def leftSingularVector (i : PositiveSingularIndex A) : EuclideanSpace ℝ (Fin m) :=
-  (singularValue A i.val)⁻¹ • lin A (rightSingularBasis A i.val)
+  (singularValue A i.val)⁻¹ • A.toEuclideanLin (rightSingularBasis A i.val)
 
 theorem leftSingularVector_orthonormal : Orthonormal ℝ (leftSingularVector A) := by
   classical
@@ -85,7 +85,7 @@ theorem rightSingularVector_orthonormal :
   (rightSingularBasis A).orthonormal.comp Subtype.val Subtype.val_injective
 
 theorem singularValue_smul_leftSingularVector (i : PositiveSingularIndex A) :
-    singularValue A i.val • leftSingularVector A i = lin A (rightSingularBasis A i.val) := by
+    singularValue A i.val • leftSingularVector A i = A.toEuclideanLin (rightSingularBasis A i.val) := by
   simp [leftSingularVector, smul_smul, ne_of_gt i.property]
 
 theorem sum_positive_singularValues :
@@ -99,15 +99,15 @@ theorem sum_positive_singularValues :
   exact le_antisymm (le_of_not_gt h) (singularValue_nonneg A i)
 
 theorem image_eq_sum_positive (x : EuclideanSpace ℝ (Fin n)) :
-    lin A x = ∑ i : PositiveSingularIndex A,
+    A.toEuclideanLin x = ∑ i : PositiveSingularIndex A,
       ⟪rightSingularBasis A i.val, x⟫ •
         (singularValue A i.val • leftSingularVector A i) := by
   classical
   simp_rw [singularValue_smul_leftSingularVector]
   rw [← Finset.sum_subtype (Finset.univ.filter fun i => 0 < singularValue A i) (by simp)
-    (fun i => ⟪rightSingularBasis A i, x⟫ • lin A (rightSingularBasis A i))]
-  have hexp : lin A x = ∑ i : Fin n,
-      ⟪rightSingularBasis A i, x⟫ • lin A (rightSingularBasis A i) := by
+    (fun i => ⟪rightSingularBasis A i, x⟫ • A.toEuclideanLin (rightSingularBasis A i))]
+  have hexp : A.toEuclideanLin x = ∑ i : Fin n,
+      ⟪rightSingularBasis A i, x⟫ • A.toEuclideanLin (rightSingularBasis A i) := by
     conv_lhs => rw [← (rightSingularBasis A).sum_repr x]
     simp only [map_sum, map_smul, OrthonormalBasis.repr_apply_apply]
   rw [hexp]
@@ -117,7 +117,7 @@ theorem image_eq_sum_positive (x : EuclideanSpace ℝ (Fin n)) :
   have h : ¬ 0 < singularValue A i := by simpa using hi
   have hz : singularValue A i = 0 :=
     le_antisymm (le_of_not_gt h) (singularValue_nonneg A i)
-  have hv : lin A (rightSingularBasis A i) = 0 := by
+  have hv : A.toEuclideanLin (rightSingularBasis A i) = 0 := by
     apply norm_eq_zero.mp
     rw [norm_image_rightSingularBasis, hz]
   simp [hv]
@@ -130,7 +130,7 @@ theorem matrix_eq_sum_positive :
   apply Matrix.toEuclideanLin.injective
   ext x j
   have h := congrArg (fun v : EuclideanSpace ℝ (Fin m) => v j) (image_eq_sum_positive A x)
-  simpa [lin, Matrix.toLpLin_apply, Matrix.sum_mulVec, Matrix.smul_mulVec,
+  simpa [Matrix.toLpLin_apply, Matrix.sum_mulVec, Matrix.smul_mulVec,
     Matrix.vecMulVec_mulVec, EuclideanSpace.inner_eq_star_dotProduct,
     Finset.sum_apply, WithLp.ofLp_sum, WithLp.ofLp_smul, smul_eq_mul,
     mul_comm, mul_left_comm, mul_assoc, dotProduct_comm] using h

@@ -2,11 +2,14 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Evidence
-import Morew.Elab.Reformulation.Presentation
+public import Morew.Elab.Evidence
+public import Morew.Elab.Reformulation.Presentation
 
 /-! Validate complete real objectives against their typed presentations. -/
+
+public meta section
 
 namespace Morew.Elab
 

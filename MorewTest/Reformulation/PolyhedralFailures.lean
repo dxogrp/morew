@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.Environment
 
 /-!
 # Targeted polyhedral diagnostics and rollback
@@ -20,14 +23,16 @@ open Morew
 
 noncomputable section
 
-private def assertAbsent (target aliasName : Lean.Name) :
+private meta def assertAbsent (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
   for name in #[target, target ++ `equiv, aliasName] do
-    if env.contains name then
-      Lean.throwError "failed conic rewrite emitted declaration `{name}`"
-  if (Morew.Syntax.getProblemView? env target).isSome then
-    Lean.throwError "failed conic rewrite registered presentation metadata"
+    for name in #[name, Lean.mkPrivateName env name] do
+      if env.contains name then
+        Lean.throwError "failed conic rewrite emitted declaration `{name}`"
+  for target in #[target, Lean.mkPrivateName env target] do
+    if (Morew.Syntax.getProblemView? env target).isSome then
+      Lean.throwError "failed conic rewrite registered presentation metadata"
 
 elab "assert_polyhedral_atomic% " nested:command : command => do
   let before ← Lean.getEnv
@@ -44,7 +49,7 @@ elab "assert_polyhedral_atomic% " nested:command : command => do
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed conic label lookup changed local declarations"
-  for name in names do
+  for name in names.flatMap (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name then
       Lean.throwError "failed conic label lookup emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome ||

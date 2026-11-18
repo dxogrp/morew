@@ -2,24 +2,27 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Expr
-import Morew.Elab.State
-import Mathlib.Basic.ENNReal.Inv
-import Mathlib.Tactic.NormNum
-import Lean.Meta.Check
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
+public import Mathlib.Basic.ENNReal.Inv
+public import Mathlib.Tactic.NormNum
+public import Lean.Meta.Check
 
 /-! Parameter and sign evidence from independent hypotheses, conjunction projections,
 one finite-index specialization, and bounded numeral/rational evaluation.
 Natural bounds include zero and reflexive inequalities. Transport real exponents
 through `ofReal`; exclude decision-dependent premises. -/
 
+public section
+
 namespace Morew.Elab.Evidence
 
 open Lean Lean.Meta Qq
 
 /-- Detect placeholders through referenced local types and values. -/
-partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM Bool := do
+meta partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM Bool := do
   let expression ← instantiateMVars expression
   if expression.hasSorry then return true
   let mut seen := seen
@@ -33,10 +36,10 @@ partial def hasPlaceholders (expression : Expr) (seen : FVarIdSet := {}) : MetaM
   return false
 
 /-- Reject unresolved terms and placeholders through referenced local types and values. -/
-def complete (expression : Expr) : MetaM Bool := do
+meta def complete (expression : Expr) : MetaM Bool := do
   return !(← Expr.hasUnresolved expression) && !(← hasPlaceholders expression)
 
-private partial def projection? (proof goal : Expr) (index? : Option Expr) :
+private meta partial def projection? (proof goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
   let type ← Expr.reduceStructure (← inferType proof)
   if ← isDefEq type goal then return some proof
@@ -50,13 +53,13 @@ private partial def projection? (proof goal : Expr) (index? : Option Expr) :
         return ← projection? (mkApp proof index) goal none
   return none
 
-private theorem one_lt_toReal_ofReal {q : ℝ} (h : 1 < q) :
+theorem one_lt_toReal_ofReal {q : ℝ} (h : 1 < q) :
     1 < (ENNReal.ofReal q).toReal := by
   rw [ENNReal.toReal_ofReal (le_trans zero_le_one h.le)]
   exact h
 
 /-- Normalize standard `ENNReal.toReal` numerals, inverses, and divisions by proved equalities. -/
-def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
+meta def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
   let mut theorems : SimpTheorems := {}
   for declaration in #[``ENNReal.toReal_zero, ``ENNReal.toReal_one,
       ``ENNReal.toReal_ofNat, ``ENNReal.toReal_natCast, ``ENNReal.toReal_inv,
@@ -66,7 +69,7 @@ def normalizeToReal (expression : Expr) : MetaM Simp.Result := do
     (simpTheorems := #[theorems]) (congrTheorems := ← getSimpCongrTheorems)
   return (← simp expression context).1
 
-private def boundedNatAttempt? {α : Type} (action : MetaM α) : MetaM (Option α) := do
+private meta def boundedNatAttempt? {α : Type} (action : MetaM α) : MetaM (Option α) := do
   let context ← readThe Core.Context
   let localLimit := (← IO.getNumHeartbeats) - context.initHeartbeats + 2_000_000
   let limit := if context.maxHeartbeats == 0 then localLimit else min context.maxHeartbeats localLimit
@@ -77,7 +80,7 @@ private def boundedNatAttempt? {α : Type} (action : MetaM α) : MetaM (Option �
       if exception.isMaxHeartbeat then Core.checkMaxHeartbeats "natural parameter evidence"
       return none
 
-private def proveNatLE? (goal : Expr) : MetaM (Option Expr) := do
+private meta def proveNatLE? (goal : Expr) : MetaM (Option Expr) := do
   let args := goal.getAppArgs
   let left : Q(Nat) := args[2]!
   let right : Q(Nat) := args[3]!
@@ -102,7 +105,7 @@ private def proveNatLE? (goal : Expr) : MetaM (Option Expr) := do
         | throwError "independent natural parameter inequality was not established"
       return proof
 
-private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
+private meta partial def proveCore? (point goal : Expr) (index? : Option Expr) :
     MetaM (Option Expr) := do
   if (← Expr.depends point goal) || !(← complete goal) then return none
   for declaration in ← getLCtx do
@@ -159,7 +162,7 @@ private partial def proveCore? (point goal : Expr) (index? : Option Expr) :
 /-- Prove parameter conditions from independent hypotheses, one supplied `Fin` index,
 natural zero and reflexive bounds, the `ofReal` bridge, or bounded numerical evaluation.
 Reject unresolved inputs. -/
-def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
+meta def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     MetaM (Option Expr) := do
   let result ← State.withIsolatedMVars do
     if let some index := index? then
@@ -172,12 +175,12 @@ def proveIndependent? (point goal : Expr) (index? : Option Expr := none) :
     return .ok proof
   return result.toOption
 
-private theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
+theorem nonnegOfPositive {value : ℝ} (h : 0 < value) : 0 ≤ value :=
   le_of_lt h
 
 /-- Prove the sign of an independent real constant from an independent local
 hypothesis or bounded numeral/rational evaluation, using canonical real order. -/
-def constantSign? (point value : Expr) (strict : Bool)
+meta def constantSign? (point value : Expr) (strict : Bool)
     (index? : Option Expr := none) : MetaM (Option Expr) := do
   if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value

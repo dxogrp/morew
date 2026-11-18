@@ -3,8 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.Environment
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.Environment
 
 /-!
 # Explicit epigraph and hypograph labels
@@ -348,7 +351,7 @@ elab "assert_objective_bound_atomic% " nested:command : command => do
   let after ← Lean.getEnv
   unless MorewTest.sameLocalDeclarationNames before after do
     Lean.throwError "failed objective-bound step changed local declarations"
-  for name in names do
+  for name in names.flatMap (fun name => #[name, Lean.mkPrivateName after name]) do
     if after.contains name then
       Lean.throwError "failed objective-bound step emitted {name}"
     if (Morew.Syntax.getProblemView? after name).isSome ||
@@ -393,15 +396,18 @@ reformulation atomicTarget : minimumSource certificate atomicAlias := by
 
 run_cmd do
   let env ← Lean.getEnv
-  if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget then
-    Lean.throwError "a label collision emitted the reformulation target"
-  if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget.equiv then
-    Lean.throwError "a label collision emitted the canonical certificate"
-  if env.contains `MorewTest.Reformulation.ObjectiveBoundLabels.atomicAlias then
-    Lean.throwError "a label collision emitted the certificate alias"
-  if (Morew.Syntax.getProblemView? env
-      `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget).isSome then
-    Lean.throwError "a label collision emitted target presentation metadata"
+  let target := `MorewTest.Reformulation.ObjectiveBoundLabels.atomicTarget
+  for target in #[target, Lean.mkPrivateName env target] do
+    if env.contains target then
+      Lean.throwError "a label collision emitted the reformulation target"
+    if env.contains (target ++ `equiv) then
+      Lean.throwError "a label collision emitted the canonical certificate"
+    if (Morew.Syntax.getProblemView? env target).isSome then
+      Lean.throwError "a label collision emitted target presentation metadata"
+  let aliasName := `MorewTest.Reformulation.ObjectiveBoundLabels.atomicAlias
+  for name in #[aliasName, Lean.mkPrivateName env aliasName] do
+    if env.contains name then
+      Lean.throwError "a label collision emitted the certificate alias"
 
 reformulation atomicTarget : minimumSource certificate atomicAlias := by
   epigraph t as shared

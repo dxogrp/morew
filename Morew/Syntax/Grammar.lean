@@ -3,13 +3,17 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Parser
+module
+
+public meta import Lean.Parser
 
 /-!
 # Problem grammar
 
 Syntax categories and parser declarations for problem terms and `#printp`.
 -/
+
+public meta section
 
 namespace Morew
 

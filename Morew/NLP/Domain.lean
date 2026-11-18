@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.NLP.Smooth
+module
+
+public import Morew.NLP.Smooth
 import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 import Mathlib.Analysis.SpecialFunctions.Sqrt
@@ -15,6 +17,8 @@ Open domains from intersections, positivity, and nonzero conditions, with
 proofs of feasible-set inclusion. Smoothness rules for logarithms, square roots,
 reciprocals, and real powers apply on these domains.
 -/
+
+@[expose] public section
 
 namespace Morew.NLP.Domain
 

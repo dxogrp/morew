@@ -3,7 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Conic.PSD.LogDet
+import Morew.Conic.PSD.LDL
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.NormNum
 

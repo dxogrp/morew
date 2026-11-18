@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Conic.PSD.Triangular
 
 /-! Exact lower-triangular coordinates, including symbolic and empty dimensions. -/

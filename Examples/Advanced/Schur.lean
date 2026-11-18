@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Schur-complement reformulation
@@ -24,6 +26,8 @@ The Schur complement gives the equivalent linear matrix inequality:
 \begin{bmatrix} A & B \\ B^T & tI \end{bmatrix} \succeq 0.
 ```
 -/
+
+@[expose] public section
 
 namespace Examples.Advanced.Schur
 

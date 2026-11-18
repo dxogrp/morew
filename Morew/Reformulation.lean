@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Reformulation command

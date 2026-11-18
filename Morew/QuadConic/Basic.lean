@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Basic
-import Mathlib.Analysis.Convex.Function
-import Mathlib.LinearAlgebra.QuadraticForm.Basic
+module
+
+public import Morew.Conic.Basic
+public import Mathlib.Analysis.Convex.Function
+public import Mathlib.LinearAlgebra.QuadraticForm.Basic
 
 /-!
 # Certified quadratic cone programs
@@ -14,6 +16,8 @@ The objective is a homogeneous quadratic form plus an affine map, `Q x + a x`.
 The optimization direction is stored explicitly in `data.sense` because
 `OrderDual ℝ` is definitionally equal to `ℝ`.
 -/
+
+@[expose] public section
 
 namespace Morew
 

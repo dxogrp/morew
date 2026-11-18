@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Syntax
-import MorewTest.Affine.HelperFixtures
+module
+
+public import Morew.Syntax
+public import MorewTest.Affine.HelperFixtures
 
 /-!
 # Imported model family with affine helper references
@@ -12,6 +14,8 @@ import MorewTest.Affine.HelperFixtures
 The consuming module must retain the family's local definition and labels when
 certifying an applied source through bounded helper expansion.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.AffineHelperSource
 

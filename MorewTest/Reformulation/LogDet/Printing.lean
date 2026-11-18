@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.Reformulation.LogDet.Sources
-import MorewTest.Reformulation.PrintSupport
+module
+
+public import Morew.Reformulation.Conic
+public import MorewTest.Reformulation.LogDet.Sources
+public import MorewTest.Reformulation.PrintSupport
 
 /-! Log-det auxiliaries preserve helper-disabled certification, fresh names, and deterministic printing. -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.LogDet
 

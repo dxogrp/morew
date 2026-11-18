@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Constraint
 import Morew.Elab.Conic.Objective
 import Morew.Elab.Reformulation.Presentation
@@ -27,7 +29,7 @@ noncomputable section
 /-! Rows consume the typed predicates directly and retain the optimization
 sense independently of the reducible real order-dual type. -/
 
-private def checkPresentation (sense : ObjectiveSense) : TermElabM Unit := do
+private meta def checkPresentation (sense : ObjectiveSense) : TermElabM Unit := do
   let real := Lean.mkConst ``Real
   let valueType ← if sense == .maximize then mkAppM ``OrderDual #[real] else pure real
   let objective ← elabTerm (← `(fun x : ℝ => -x + 2)) none

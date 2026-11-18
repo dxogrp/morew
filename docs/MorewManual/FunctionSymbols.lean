@@ -1,4 +1,8 @@
-import VersoManual
+module
+
+public import VersoManual
+
+public section
 
 open Verso.Genre Manual
 open Verso.Doc.Elab Verso.ArgParse Lean
@@ -35,10 +39,10 @@ inline_extension propertySymbol (label path : String) where
 }
 "#]
 
-private structure SymbolConfig where
+structure SymbolConfig where
   name : Ident
 
-private meta instance [Monad m] [MonadError m] [MonadLiftT CoreM m] : FromArgs SymbolConfig m where
+meta instance [Monad m] [MonadError m] [MonadLiftT CoreM m] : FromArgs SymbolConfig m where
   fromArgs := SymbolConfig.mk <$> .positional' `name
 
 /-- A function-property symbol with a hover label and accessible name. -/

@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -22,7 +24,7 @@ open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew Morew.Conic MorewTest.Affine
 open scoped ENNReal
 
-private def checkState (before : MetavarContext) (environment : Environment)
+private meta def checkState (before : MetavarContext) (environment : Environment)
     (sentinel : Expr) : MetaM Unit := do
   assertMVarAllocationStateUnchanged before "norm rule selection leaked scratch metavariables"
   if ← sentinel.mvarId!.isAssigned then
@@ -30,7 +32,7 @@ private def checkState (before : MetavarContext) (environment : Environment)
   unless MorewTest.sameLocalDeclarationNames environment (← getEnv) do
     throwError "norm rule selection changed the caller environment"
 
-private def check (term : TSyntax `term) (expected : Array (TSyntax `term))
+private meta def check (term : TSyntax `term) (expected : Array (TSyntax `term))
     (auxiliary : Bool := false) (rule? : Option Name := none) : TermElabM Unit := do
   let source ← elaborate term
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
@@ -60,7 +62,7 @@ private def check (term : TSyntax `term) (expected : Array (TSyntax `term))
       result.certifiedRows.flatMap (fun row => #[row.constraint, row.pointwiseIff]) do
     checkCompleteWithKernel expression "norm selection returned an incomplete certificate"
 
-private def reject (term : TSyntax `term) (message : String)
+private meta def reject (term : TSyntax `term) (message : String)
     (rule? : Option Name := none) (exact : Bool := true) : TermElabM Unit := do
   let source ← elaborate term
   let sentinel ← mkFreshExprMVar (mkConst ``Real)
@@ -75,11 +77,11 @@ private def reject (term : TSyntax `term) (message : String)
   unless if exact then actual == message else actual.contains message do
     throwError "unexpected norm-selection diagnostic: {actual}"
 
-private def socRows : TermElabM (Array (TSyntax `term)) := do
+private meta def socRows : TermElabM (Array (TSyntax `term)) := do
   return #[← `(fun z : (Fin 2 → ℝ) × ℝ =>
     (z.2, z.1) ∈ (Cone.secondOrder 2).carrier)]
 
-private def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `term)) := do
+private meta def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `term)) := do
   return #[← `(fun z : ((Fin 2 → ℝ) × ℝ) × (Fin 2 → ℝ) => 0 ≤ z.1.2),
     ← `(fun z : ((Fin 2 → ℝ) × ℝ) × (Fin 2 → ℝ) => (∑ i, z.2 i) ≤ z.1.2),
     ← `(fun z : ((Fin 2 → ℝ) × ℝ) × (Fin 2 → ℝ) =>
@@ -88,7 +90,7 @@ private def powerRows (exponent : TSyntax `term) : TermElabM (Array (TSyntax `te
 -- Both built-in `L2` candidates need an evidence-generated declaration. The
 -- preferred SOC certificate must retain its own declaration while discarding
 -- the power candidate's declaration; ambiguity must discard every candidate.
-private def checkCandidateEvidence (ambiguous : Bool := false)
+private meta def checkCandidateEvidence (ambiguous : Bool := false)
     (negative : Bool := false) : TermElabM Unit := do
   let expression ← elaborate (← if negative then
     `(fun (c : ℝ) (_ : c ≠ 0 ∧ True) =>

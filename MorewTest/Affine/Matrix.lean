@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.Affine.Support
 import Morew.Affine.SymmetricMatrix
 import Morew.Elab.Affine.Space

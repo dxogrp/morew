@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Elab.Command
+module
+
+public meta import Lean.Elab.Command
 import Lean.Elab.BuiltinCommand
 import Lean.AddDecl
 import MorewTest.Environment
@@ -20,7 +22,7 @@ namespace MorewTest.EnvironmentRollback
 
 open Lean Elab Command
 
-private def addAuxiliary (name : Name) : CoreM Unit :=
+private meta def addAuxiliary (name : Name) : CoreM Unit :=
   addDecl <| .thmDecl {
     name
     levelParams := []

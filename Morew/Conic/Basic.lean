@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Cone
-import Morew.Core
+module
+
+public import Morew.Conic.Cone
+public import Morew.Core
 
 /-!
 # Certified affine cone programs
@@ -12,6 +14,8 @@ import Morew.Core
 Conic data records an affine objective and finitely many affine cone constraints.
 `Conic.Form p` certifies that these data represent `p`.
 -/
+
+@[expose] public section
 
 namespace Morew
 

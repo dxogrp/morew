@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Affine
-import Morew.Conic.PSD.Triangular
-import Mathlib.Data.Matrix.Block
-import Mathlib.LinearAlgebra.Matrix.Trace
+module
+
+public import Morew.Affine
+public import Morew.Conic.PSD.Triangular
+public import Mathlib.Data.Matrix.Block
+public import Mathlib.LinearAlgebra.Matrix.Trace
 
 /-! Certified affine constructions for ordinary real matrices. -/
+
+@[expose] public section
 
 namespace Morew.Affine.Certified
 

@@ -3,8 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
+public import Mathlib.Basic.Real.Basic
+
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
-import Mathlib.Basic.Real.Basic
 
 /-!
 # Exact finite-sum bounds
@@ -12,6 +16,8 @@ import Mathlib.Basic.Real.Basic
 A bound on a finite sum is equivalent to bounds on its summands and one
 inequality on the sum of the bounds. The index type may be empty.
 -/
+
+public section
 
 namespace Morew.Rewrite.Sum
 

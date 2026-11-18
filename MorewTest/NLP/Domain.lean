@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.NLP.DomainSupport
 import Morew.NLP.Basic
 
@@ -181,7 +183,10 @@ structure PairCertificate (feasible : ℝ → Prop) (objective residual : ℝ �
   residual_smooth : ContDiffOn ℝ 2 residual domain
   feasible_mem_domain : ∀ x, feasible x → x ∈ domain
 
-elab "test_domain_pair" : term <= expected => do
+local syntax "test_domain_pair" : term
+
+local elab_rules : term <= expected
+| `(test_domain_pair) => do
   let expected ← instantiateMVars expected
   unless expected.isAppOfArity ``PairCertificate 3 do
     throwError "expected a two-source domain certificate"

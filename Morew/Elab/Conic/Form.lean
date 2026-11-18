@@ -2,15 +2,18 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Conic.Objective
-import Morew.Elab.Cone.Rows
-import Morew.Elab.Cone.Finite
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Conic.Objective
+public import Morew.Elab.Cone.Rows
+public import Morew.Elab.Cone.Finite
+public meta import Morew.Elab.Expr
+public meta import Morew.Elab.State
 
 /-! Construct `Conic.Form` with exact objective equality and feasibility equivalence.
 Function spaces with abstract indices require `Finite` evidence for the index type. -/
+
+public meta section
 
 namespace Morew.Elab.Conic
 

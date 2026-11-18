@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Cone.Rewrite
-import Morew.Elab.Reformulation.Rows
-import Morew.Elab.Expr
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Cone.Rewrite
+public import Morew.Elab.Reformulation.Rows
+public meta import Morew.Elab.Expr
 
 /-! Replace the constraint selected by `conic at label` with an exact conic representation.
 Discovery requires one certified `morew_conic` rule after the built-in rule preferences;
@@ -19,6 +21,8 @@ and exponents require independent evidence.
 
 Replace the selected label with fresh `_conic_i` row names and `_aux` binders.
 Vector rows and finite cone families remain grouped; further steps may follow. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -77,8 +81,9 @@ def prepareConic (state : ReformState) (step : Syntax)
     materialize := materializeConic state index prepared preparedVars
   }
 
+/-- Elaborate a certified conic rewrite of one selected constraint. -/
 @[morew_reformulation_step Morew.conicAtStep]
-private def elabConicAt : StepHandler := fun state step => do
+def elabConicAt : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| conic at $selector:ident $[using $rule:term]?) =>
       prepareConic state step selector rule

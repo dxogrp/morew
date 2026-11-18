@@ -3,6 +3,8 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import Morew.Elab.Cone.Rewrite
 import MorewTest.ElabSupport
 import MorewTest.Environment
@@ -22,7 +24,7 @@ namespace MorewTest.Conic.Negation
 open Lean Lean.Meta Lean.Elab.Term Lean.Elab.Command
 open Morew MorewTest.Affine
 
-private def reject (term : TSyntax `term) (rule? : Option Name := none) :
+private meta def reject (term : TSyntax `term) (rule? : Option Name := none) :
     TermElabM Unit := do
   let source ← elaborate term
   let sentinel ← mkFreshExprMVar (mkConst ``Real)

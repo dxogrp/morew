@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 open Morew
 
@@ -23,6 +25,8 @@ The relative entropy model has scalar variables `a` and `b`:
 
 The objective is defined by continuity as zero at `a = 0`.
 -/
+
+@[expose] public section
 
 namespace Examples.Models.Exponential
 

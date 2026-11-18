@@ -2,18 +2,21 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.QuadConic.Form
-import Morew.Elab.Cone.Terminal
+public import Morew.Elab.QuadConic.Form
+public import Morew.Elab.Cone.Terminal
 
 /-! Combine quadratic objective certification with shared cone constraint planning. -/
+
+public meta section
 
 namespace Morew.Elab.QuadConic.Terminal
 
 open Lean Lean.Meta
 
 /-- Quadratic objective recognition and final form construction for `qconic`. -/
-def backend : Morew.Elab.Cone.Terminal.Backend where
+@[expose] def backend : Morew.Elab.Cone.Terminal.Backend where
   command := "qconic"
   checkObjective presentation provider := do
     return (← reifyObjective presentation provider).map fun _ => ()

@@ -2,19 +2,20 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Affine
-import Morew.Affine.Matrix
-import Morew.Affine.SymmetricMatrix
-import Morew.Elab.Expr
-import Morew.Elab.Evidence
-import Morew.Elab.Affine.Space
-import Morew.Elab.State
-import Morew.Elab.Affine.Expansion
-import Morew.Core
-import Mathlib.Tactic.NormNum
-import Lean.Meta.Check
-import Lean.Meta.Match.MatcherInfo
+public import Morew.Affine
+public import Morew.Affine.Matrix
+public import Morew.Affine.SymmetricMatrix
+public meta import Morew.Elab.Expr
+public import Morew.Elab.Evidence
+public import Morew.Elab.Affine.Space
+public meta import Morew.Elab.State
+public import Morew.Elab.Affine.Expansion
+public import Morew.Core
+public import Mathlib.Tactic.NormNum
+public import Lean.Meta.Check
+public import Lean.Meta.Match.MatcherInfo
 
 /-! Construct affine maps and prove pointwise agreement with the source expressions.
 
@@ -29,6 +30,8 @@ Expansion limits apply per source expression, including evidence discovery:
 A zero limit leaves only direct recognition. Opaque, irreducible, and recursive
 helpers and custom predicates remain unexpanded. Standard operations require canonical
 instances and domain evidence. -/
+
+public meta section
 
 namespace Morew.Elab.Affine
 

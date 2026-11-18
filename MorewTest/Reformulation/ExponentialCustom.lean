@@ -3,9 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import MorewTest.DiagnosticsSupport
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Conic
+public import MorewTest.DiagnosticsSupport
+public import MorewTest.CommandSupport
 
 /-!
 # Custom exact exponential representations
@@ -14,6 +17,8 @@ All four certificate families may emit single or grouped exponential rows.
 `Unit` auxiliaries disappear; scalar and vector auxiliaries extend the original
 domain once. Invalid explicit certificates never fall back to automatic rules.
 -/
+
+@[expose] public section
 
 namespace MorewTest.Reformulation.ExponentialCustom
 
@@ -201,10 +206,11 @@ run_cmd do
   let env ← Lean.getEnv
   for name in #[`rollback, `noFallback, `nonlinearTarget, `uninspectableTarget] do
     let full := `MorewTest.Reformulation.ExponentialCustom ++ name
-    if env.contains full || env.contains (full ++ `equiv) then
-      Lean.throwError "failed custom rewrite emitted {full}"
-    if (Morew.Syntax.getProblemView? env full).isSome then
-      Lean.throwError "failed custom rewrite registered presentation metadata"
+    for full in #[full, Lean.mkPrivateName env full] do
+      if env.contains full || env.contains (full ++ `equiv) then
+        Lean.throwError "failed custom rewrite emitted {full}"
+      if (Morew.Syntax.getProblemView? env full).isSome then
+        Lean.throwError "failed custom rewrite registered presentation metadata"
 
 end
 end MorewTest.Reformulation.ExponentialCustom

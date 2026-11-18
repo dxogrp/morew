@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
+module
+
+public import Morew.Reformulation.Conic
 
 /-!
 # Exported terminal conic artifacts
@@ -12,6 +14,8 @@ Nonempty-dimension and positive-margin evidence is needed only by equivalence
 proofs. It must survive separate compilation without becoming a decision binder
 or an unnecessary parameter of the represented target.
 -/
+
+@[expose] public section
 
 namespace MorewTest.ImportCompatibility.TerminalConic
 

@@ -3,8 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Basic
-import MorewTest.CommandSupport
+module
+
+public meta import Lean.Elab.Command
+public import Morew.Reformulation.Basic
+public import MorewTest.CommandSupport
 
 /-!
 # Occurrence-bound selection failures and atomicity
@@ -18,16 +21,18 @@ namespace MorewTest.Reformulation.OccurrenceFailures
 open Morew
 noncomputable section
 
-private def assertAbsent (target aliasName : Lean.Name) :
+private meta def assertAbsent (target aliasName : Lean.Name) :
     Lean.Elab.Command.CommandElabM Unit := do
   let env ← Lean.getEnv
   for name in #[target, target ++ `equiv, aliasName] do
-    if env.contains name then
-      Lean.throwError "failed occurrence lift emitted declaration `{name}`"
-  if (Morew.Syntax.getProblemView? env target).isSome ||
-      (Morew.Syntax.getProblemDisplayView? env target).isSome ||
-      (Morew.Syntax.getProblemPrintPresentation? env target).isSome then
-    Lean.throwError "failed occurrence lift registered presentation metadata"
+    for name in #[name, Lean.mkPrivateName env name] do
+      if env.contains name then
+        Lean.throwError "failed occurrence lift emitted declaration `{name}`"
+  for target in #[target, Lean.mkPrivateName env target] do
+    if (Morew.Syntax.getProblemView? env target).isSome ||
+        (Morew.Syntax.getProblemDisplayView? env target).isSome ||
+        (Morew.Syntax.getProblemPrintPresentation? env target).isSome then
+      Lean.throwError "failed occurrence lift registered presentation metadata"
 
 elab "assert_occurrence_atomic% " nested:command : command =>
   MorewTest.elabNoNewDeclarations nested fun name => m!"failed occurrence lift leaked declaration {name}"

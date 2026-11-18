@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
+module
+
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
 
 /-!
 # Ridge regression
@@ -22,6 +24,8 @@ and a weight `λ ≥ 0`, choose `x ∈ ℝⁿ` to solve
 The first term fits the observations `b`; the second controls the size of `x`.
 The equations impose linear constraints. We obtain four equivalent formulations.
 -/
+
+@[expose] public section
 
 namespace Examples.Applications.RidgeReg
 

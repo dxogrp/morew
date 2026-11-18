@@ -3,27 +3,35 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.View
-import Morew.Elab.Cone.Terminal
-import Morew.Elab.Expr
-import Morew.Elab.Rewrite.Reduction
+module
+
+public meta import Qq
+public import Morew.Elab.Reformulation.View
+public import Morew.Elab.Cone.Terminal
+public meta import Morew.Elab.Expr
+public import Morew.Elab.Rewrite.Reduction
 
 /-! Normalize retained and direct cone presentations while preserving model-local bindings
 and the evidence checked by the shared terminal planner. -/
 
+public section
+
 namespace Morew.Elab.Reformulation.Cone.Presentation
 
-open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term
+open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Qq
 
-private def psdMembership {n : ℕ}
-    (matrix : Matrix (Fin n) (Fin n) ℝ) (symmetric : matrix.IsSymm) : Prop :=
-  Morew.Conic.SymmetricMatrix.ofMatrix matrix symmetric ∈
-    (Morew.Conic.Cone.psd n).carrier
-
-private theorem retainedMatrixIsSymm {n : ℕ}
+theorem retainedMatrixIsSymm {n : ℕ}
     {retained checked : Matrix (Fin n) (Fin n) ℝ}
     (equality : retained = checked) (symmetry : checked.IsSymm) : retained.IsSymm :=
   equality.symm ▸ symmetry
+
+meta section
+
+private def psdMembership (n : Q(ℕ))
+    (matrix : Q(Matrix (Fin $n) (Fin $n) ℝ)) (symmetric : Q(Matrix.IsSymm $matrix)) :
+    Q(Prop) :=
+  q(Morew.Conic.SymmetricMatrix.ofMatrix $matrix $symmetric ∈
+    (Morew.Conic.Cone.psd $n).carrier)
 
 -- Recover semantic symmetry evidence and transport it along checked matrix equalities.
 private def normalizeRetainedPSD (normalizationProof : Term)
@@ -45,9 +53,7 @@ private def normalizeRetainedPSD (normalizationProof : Term)
     checkWithKernel equality
     symmetry ← mkAppM ``retainedMatrixIsSymm #[equality, symmetry]
   let converted ← mkAppM ``Morew.Conic.SymmetricMatrix.ofMatrix #[matrix, symmetry]
-  let some body ← unfoldDefinition? (← mkAppM ``psdMembership
-    #[matrix, symmetry])
-    | throwError "could not reconstruct retained PSD membership"
+  let body := psdMembership value.getAppArgs[0]! matrix symmetry
   let iff ← mkAppM ``Iff.symm
     #[← mkAppM ``Morew.Conic.Cone.mem_psd #[converted]]
   unless ← isDefEq (← inferType iff) (mkApp2 (mkConst ``Iff) original body) do
@@ -170,4 +176,5 @@ def normalizeDirectPresentation (backend : Morew.Elab.Cone.Terminal.Backend)
     return .ok { presentation with objective, constraints }
   return result.toOption.getD presentation
 
+end
 end Morew.Elab.Reformulation.Cone.Presentation

@@ -3,12 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Basic.Real.Basic
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
-import Mathlib.Data.Fin.VecNotation
-import Mathlib.LinearAlgebra.AffineSpace.AffineMap
-import Mathlib.LinearAlgebra.Matrix.ToLin
+module
+
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.LinearAlgebra.AffineSpace.AffineMap
+public import Mathlib.LinearAlgebra.Matrix.ToLin
 
 /-!
 # Certified affine constructions
@@ -16,6 +18,8 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 Each construction retains both an affine map and its pointwise equality with
 the original function.
 -/
+
+@[expose] public section
 
 namespace Morew.Affine
 

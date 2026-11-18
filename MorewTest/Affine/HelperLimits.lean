@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
+module
+
 import MorewTest.Affine.Support
 import MorewTest.Affine.HelperFixtures
-import Morew.Elab.Expr
+meta import Morew.Elab.Expr
 
 /-!
 # Deterministic helper expansion limits
@@ -77,7 +79,7 @@ private noncomputable def problemReturningProblem (f : Fin 2 → ℝ) :
 private noncomputable def projectedNestedProblemDuplicate (f : Fin 2 → ℝ) : Fin 2 → ℝ :=
   ((problemReturningProblem f).objective ()).objective
 
-private def assertLimit (term : TSyntax `term) (kind : String)
+private meta def assertLimit (term : TSyntax `term) (kind : String)
     (parameterCount : Nat := 0) : TermElabM Unit := do
   let expression ← elaborate term
   lambdaBoundedTelescope expression parameterCount fun _ source => do

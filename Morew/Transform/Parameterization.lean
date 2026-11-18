@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Transform
+module
+
+public import Morew.Transform
 
 /-!
 # Certified coordinate parameterizations
@@ -12,6 +14,8 @@ A coordinate parameterization supplies a right inverse on a specified range.
 To apply it to a problem, prove that every feasible source coordinate lies in
 that range.
 -/
+
+@[expose] public section
 
 namespace Morew
 
