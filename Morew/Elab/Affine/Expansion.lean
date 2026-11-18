@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -/
 module
 
-public import Morew.Affine
+import Morew.Affine
 public import Morew.Elab.Expansion
 
 /-! Bounded expansion of affine helpers with shared size, depth, and step limits. -/

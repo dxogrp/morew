@@ -4,10 +4,10 @@ SPDX-License-Identifier: Apache-2.0
 -/
 module
 
-public import Mathlib.Analysis.InnerProductSpace.PiL2
-public import Mathlib.Data.Fin.VecNotation
-public import Mathlib.LinearAlgebra.Matrix.ToLin
-public import Mathlib.Data.Matrix.Block
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Data.Fin.VecNotation
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Data.Matrix.Block
 public import Morew.Core
 public import Lean.Meta.Match.MatcherInfo
 public import Lean.Meta.RecExt

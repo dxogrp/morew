@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public meta import Lean.PrettyPrinter
+public meta import Lean.CoreM
 
 /-!
 # Displaying finite power-cone representations
