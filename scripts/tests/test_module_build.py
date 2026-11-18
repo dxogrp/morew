@@ -50,9 +50,10 @@ class ModuleBuildTests(unittest.TestCase):
     def test_missing_aggregates_regenerate_as_importable_modules(self):
         self.run_tool("make", "imports")
         self.run_tool("make", "check-imports")
-        self.run_tool("lake", "build", "--wfail", "Morew")
+        self.run_tool("lake", "build", "--wfail", "Morew", "MorewTest", "Examples")
         self.run_tool("lake", "env", "lean", "-DwarningAsError=true", "--stdin", input=(
-            "module\n\nimport Morew\n\nexample : fixtureValue = 3 := rfl\n"
+            "module\n\nimport Morew\nimport MorewTest\nimport Examples\n\n"
+            "example : fixtureValue = 3 := rfl\n"
         ))
         self.assertFalse((self.root / "KernelCheck.lean").exists())
 
