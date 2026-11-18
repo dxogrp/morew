@@ -24,7 +24,6 @@ namespace Morew.Conic.LogDet
 open Matrix
 open scoped MatrixOrder Matrix.Norms.L2Operator
 
-set_option backward.isDefEq.respectTransparency.types false in
 /-- Every principal minor contributes nonnegatively to `det (I + H)` when `H`
 is positive semidefinite, and the empty minor contributes one. -/
 theorem one_le_det_one_add {n : Nat} {H : Matrix (Fin n) (Fin n) ℝ}
