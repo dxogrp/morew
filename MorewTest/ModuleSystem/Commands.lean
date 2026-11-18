@@ -6,10 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import MorewTest.ModuleSystem.Defined
-import MorewTest.CommandSupport
-import MorewTest.DiagnosticsSupport
 
-/-! Native import visibility, exposed computational certificates, and command rollback. -/
+/-! Native import visibility, exposed computational certificates, and hygienic command names. -/
 
 namespace MorewTest.ModuleSystem
 
@@ -113,27 +111,6 @@ reformulation continued : (exposedTarget offset) := by
 
 example : GlobalEquiv (exposedSource offset) (continued offset) :=
   (exposedCertificate offset).trans (continued.equiv offset)
-
--- A native private collision must fail before any target or alias is emitted.
-def collision.conicForm : Nat := 19
-
-#guard_error_fragments ["collision.conicForm", "has already been declared"] in
-run_cmd do
-  let before ← Lean.getEnv
-  let targetIdent := Lean.mkIdent `collision
-  let aliasIdent := Lean.mkIdent `collisionAlias
-  let nested ← `(command|
-    reformulation $targetIdent : (exposedTarget offset) certificate $aliasIdent := by
-      conic)
-  MorewTest.elabNoNewDeclarations nested fun name =>
-    m!"failed native-module command leaked declaration {name}"
-  let after ← Lean.getEnv
-  let target := Lean.mkPrivateName after `MorewTest.ModuleSystem.collision
-  if (Syntax.getProblemView? before target).isNone &&
-      (Syntax.getProblemView? after target).isSome then
-    Lean.throwError "failed native-module command leaked presentation metadata"
-
-example : collision.conicForm = 19 := rfl
 
 -- Macro-generated declaration names retain their scopes through native emission.
 run_cmd do

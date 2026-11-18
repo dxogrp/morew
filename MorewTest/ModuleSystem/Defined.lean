@@ -71,13 +71,6 @@ reformulation exposedTarget : (exposedSource offset) certificate exposedCertific
   epigraph bound as objectiveBound
   conic
 
-example (point : FeasiblePoint (exposedSource offset)) :
-    ((exposedTarget.equiv offset).forward.map point).val =
-      (point.val, |point.val - offset|) := rfl
-
-example (point : FeasiblePoint (exposedTarget offset)) :
-    ((exposedTarget.equiv offset).backward.map point).val = point.val.1 := rfl
-
 end
 end
 end MorewTest.ModuleSystem

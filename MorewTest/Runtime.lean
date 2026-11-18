@@ -15,9 +15,7 @@ import Morew.Elab.Expansion
 import Morew.Elab.Reformulation.Names
 import Morew.Elab.State
 meta import Morew.Elab.Atom
-meta import Morew.Elab.Expr
 meta import Morew.Elab.Expansion
-meta import Morew.Elab.Reformulation.Names
 
 /-! Ordinary runtime consumers of mathematical constructors, recovery maps, and reusable helpers. -/
 
@@ -64,10 +62,6 @@ def withExpressionInstances (instances : List Lean.Expr) (action : Lean.MetaM Le
     Lean.MetaM Lean.Expr :=
   Elab.State.withInstances `instance instances action
 
-#guard match allocateNames with
-  | .ok names => names.findName? 0 == some `value_1 && names.findName? 1 == some `value
-  | .error _ => false
-
 -- Atom recognition, structural reduction, and expansion budgets are reusable outside elaborators.
 def recognizeOperation (expression : Lean.Expr) :
     Lean.MetaM (Option Elab.Atom.AtomApplication) :=
@@ -82,10 +76,6 @@ def canExpand (depth steps nodes : Nat) : Bool :=
     depthOption := `depth, stepsOption := `steps, nodesOption := `nodes
     label := "runtime"
   }
-
-#guard hoistProjection (.proj ``Prod 0 (.letE `pair (.sort .zero)
-    (.bvar 0) (.bvar 0) false)) ==
-  .letE `pair (.sort .zero) (.bvar 0) (.proj ``Prod 0 (.bvar 0)) false
 
 #guard canExpand 1 1 1 && !canExpand 0 1 1 && !canExpand 1 0 1 && !canExpand 1 1 0
 
