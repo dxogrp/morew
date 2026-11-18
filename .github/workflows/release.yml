@@ -51,7 +51,7 @@ jobs:
 
       - name: Check aggregate imports and lint
         run: |
-          lake exe mk_all --check
+          make check-imports
           lake check-lint
           lake lint
 
