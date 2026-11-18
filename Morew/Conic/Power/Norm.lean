@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Power.Basic
-import Morew.Rewrite.Basic
-import Mathlib.Analysis.Normed.Lp.PiLp
+module
+
+public import Morew.Conic.Power.Basic
+public import Morew.Rewrite.Basic
+public import Mathlib.Analysis.Normed.Lp.PiLp
 
 /-!
 # Exact finite `p`-norm epigraphs
@@ -13,6 +15,8 @@ import Mathlib.Analysis.Normed.Lp.PiLp
 Power-cone representations of the `PiLp` norm for a finite exponent `p > 1`.
 A scalar nonnegativity constraint handles empty coordinate spaces.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Power
 

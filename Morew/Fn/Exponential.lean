@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
-import Mathlib.Algebra.BigOperators.Fin
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
+public import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Linarith
 
 /-!
@@ -14,6 +16,8 @@ Log-sum-exp, softplus, entropy, relative entropy, and KL divergence use the tota
 real logarithm and real division. Their conic representations impose the domains
 stated below. Entropy uses Mathlib's `Real.negMulLog`.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

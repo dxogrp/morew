@@ -3,14 +3,18 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
-import Mathlib.Algebra.BigOperators.Fin
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Algebra.BigOperators.Fin
 
 /-!
 # Finite geometric means and inverse products
 
 The geometric mean and reciprocal product, with their conic representation domains.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

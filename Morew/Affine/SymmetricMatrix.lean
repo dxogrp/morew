@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Affine.Matrix
-import Morew.Conic.PSD
+module
+
+public import Morew.Affine.Matrix
+public import Morew.Conic.PSD
 
 /-! Restrict affine matrix maps to the space of symmetric matrices. -/
+
+@[expose] public section
 
 namespace Morew.Affine
 

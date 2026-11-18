@@ -3,11 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.QuadConic.Basic
-import Morew.Affine
-import Morew.Fn.Norm
-import Morew.Fn.Matrix
-import Mathlib.Analysis.InnerProductSpace.Basic
+module
+
+public import Morew.QuadConic.Basic
+public import Morew.Affine
+public import Morew.Fn.Norm
+public import Morew.Fn.Matrix
+public import Mathlib.Analysis.InnerProductSpace.Basic
 
 /-!
 # Certified quadratic objectives
@@ -16,6 +18,8 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 with the source objective. `CertifiedMin` and `CertifiedMax` add the global curvature
 proof required by the optimization direction. Both allow a zero quadratic part.
 -/
+
+@[expose] public section
 
 namespace Morew.QuadConic
 

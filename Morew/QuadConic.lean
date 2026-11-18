@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.QuadConic.Basic
-import Morew.QuadConic.Objective
+module
+
+public import Morew.QuadConic.Basic
+public import Morew.QuadConic.Objective
 
 /-!
 # Quadratic conic forms

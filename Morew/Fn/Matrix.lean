@@ -3,13 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.InnerProductSpace.SingularValues
-import Mathlib.Analysis.Matrix.Hermitian
-import Mathlib.Analysis.Matrix.Spectrum
-import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-import Mathlib.LinearAlgebra.Matrix.PosDef
-import Mathlib.Basic.Real.Basic
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
+module
+
+public import Mathlib.Analysis.InnerProductSpace.SingularValues
+public import Mathlib.Analysis.Matrix.Hermitian
+public import Mathlib.Analysis.Matrix.Spectrum
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+public import Mathlib.LinearAlgebra.Matrix.PosDef
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 /-!
 # Real matrix modeling functions
@@ -17,6 +19,8 @@ import Mathlib.Analysis.SpecialFunctions.Log.Basic
 Quadratic forms, extreme eigenvalues, matrix-fractional functions, nuclear norms, and
 log-determinants. The conic representations use the domains stated below.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

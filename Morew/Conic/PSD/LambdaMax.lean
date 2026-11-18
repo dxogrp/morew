@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Fn.Matrix
-import Morew.Conic.PSD
-import Mathlib.Analysis.Matrix.Order
+module
+
+public import Morew.Fn.Matrix
+public import Morew.Conic.PSD
+public import Mathlib.Analysis.Matrix.Order
 
 /-!
 # Exact eigenvalue bounds
@@ -14,6 +16,8 @@ For a symmetric matrix of positive dimension, an upper bound on its largest
 eigenvalue is equivalent to positive semidefiniteness of `t I - A`. A lower bound
 on its smallest eigenvalue is equivalent to positive semidefiniteness of `A - t I`.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Spectral
 

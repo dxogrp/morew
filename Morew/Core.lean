@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Order.OrderDual
+module
+
+public import Mathlib.Order.OrderDual
 
 /-!
 # Semantic core for Morew
@@ -12,6 +14,8 @@ Optimization problems and maps between feasible points that preserve global
 optimality through objective inequalities. The objective values carry an order;
 maximization uses its dual.
 -/
+
+@[expose] public section
 
 namespace Morew
 

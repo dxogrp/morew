@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD
-import Mathlib.Analysis.CStarAlgebra.Matrix
+module
+
+public import Morew.Conic.PSD
+public import Mathlib.Analysis.CStarAlgebra.Matrix
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
 /-! # Exact epigraph of the Euclidean matrix operator norm -/
+
+@[expose] public section
 
 namespace Morew.Conic.Spectral
 

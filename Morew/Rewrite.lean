@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Rewrite.Basic
-import Morew.Rewrite.Sum
-import Morew.Rewrite.Polyhedral
-import Morew.Rewrite.Euclidean
+module
+
+public import Morew.Rewrite.Basic
+public import Morew.Rewrite.Sum
+public import Morew.Rewrite.Polyhedral
+public import Morew.Rewrite.Euclidean
 
 /-!
 # Exact constraint rewrite representations

@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Power.Basic
-import Morew.Fn.Power
-import Morew.Rewrite.Basic
+module
+
+public import Morew.Conic.Power.Basic
+public import Morew.Fn.Power
+public import Morew.Rewrite.Basic
 
 /-!
 # Finite geometric-mean and inverse-product representations
@@ -14,6 +16,8 @@ A chain of power cones bounds auxiliary variables by successive prefix means.
 Geometric means require nonnegative inputs and a nonempty dimension;
 inverse products require positive inputs.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Power
 

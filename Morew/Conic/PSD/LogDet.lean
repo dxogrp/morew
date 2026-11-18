@@ -3,12 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD
-import Morew.Conic.PSD.LDL
-import Morew.Conic.PSD.Determinant
-import Morew.Conic.PSD.Triangular
-import Morew.Conic.Exponential
-import Morew.Fn.Matrix
+module
+
+public import Morew.Conic.PSD
+public import Morew.Conic.PSD.LDL
+public import Morew.Conic.PSD.Determinant
+public import Morew.Conic.PSD.Triangular
+public import Morew.Conic.Exponential
+public import Morew.Fn.Matrix
 
 /-!
 # Exact log-determinant hypographs
@@ -16,6 +18,8 @@ import Morew.Fn.Matrix
 Lower triangular factors give a semidefinite/exponential cone representation
 of the log-determinant hypograph on positive-definite matrices.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.LogDet
 

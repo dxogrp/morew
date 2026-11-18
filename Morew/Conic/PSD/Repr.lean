@@ -3,13 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD.PosDef
-import Morew.Conic.PSD.MatrixFraction
-import Morew.Conic.PSD.LambdaMax
-import Morew.Conic.PSD.SpectralNorm
-import Morew.Conic.PSD.NuclearNorm
-import Morew.Conic.PSD.LogDet
-import Morew.Rewrite.Basic
+module
+
+public import Morew.Conic.PSD.PosDef
+public import Morew.Conic.PSD.MatrixFraction
+public import Morew.Conic.PSD.LambdaMax
+public import Morew.Conic.PSD.SpectralNorm
+public import Morew.Conic.PSD.NuclearNorm
+public import Morew.Conic.PSD.LogDet
+public import Morew.Rewrite.Basic
 
 /-!
 # Exact positive-semidefinite representation records
@@ -18,6 +20,8 @@ Rewrite records for spectral bounds, matrix-fractional functions,
 log-determinants, and positive definiteness using semidefinite and exponential
 cones and scalar inequalities.
 -/
+
+@[expose] public section
 
 open scoped Matrix Matrix.Norms.L2Operator
 

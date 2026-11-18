@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.NLP.Basic
-import Morew.NLP.Domain
-import Mathlib.Algebra.BigOperators.Fin
+module
+
+public import Morew.NLP.Basic
+public import Morew.NLP.Domain
+public import Mathlib.Algebra.BigOperators.Fin
 
 /-!
 # Smoothness evidence for generated constraint rows
@@ -13,6 +15,8 @@ import Mathlib.Algebra.BigOperators.Fin
 `Block` represents a predicate by smooth scalar residuals with closed bounds.
 Finite families are ordered by coordinate.
 -/
+
+@[expose] public section
 
 namespace Morew.NLP.Rows
 

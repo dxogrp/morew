@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Fn.Matrix
-import Morew.Conic.PSD
+module
+
+public import Morew.Fn.Matrix
+public import Morew.Conic.PSD
 
 /-!
 # Matrix-fractional epigraph
@@ -12,6 +14,8 @@ import Morew.Conic.PSD
 On the positive-definite domain, a Schur complement gives a semidefinite
 representation of the matrix-fractional epigraph.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.MatrixFraction
 

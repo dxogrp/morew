@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.Matrix.Order
-import Morew.Conic.SecondOrder
-import Morew.Fn.Matrix
-import Morew.Fn.Norm
+module
+
+public import Mathlib.Analysis.Matrix.Order
+public import Morew.Conic.SecondOrder
+public import Morew.Fn.Matrix
+public import Morew.Fn.Norm
 
 /-!
 # Quadratic-form epigraphs
@@ -16,6 +18,8 @@ Its quadratic form is the squared Euclidean norm of the factored vector, so its
 epigraph is a rotated second-order cone constraint. Singular matrices and empty
 vectors require no additional assumptions.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.QuadForm
 

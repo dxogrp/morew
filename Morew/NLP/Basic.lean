@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.Calculus.ContDiff.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Defs
-import Morew.Core
+module
+
+public import Mathlib.Analysis.Calculus.ContDiff.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+public import Morew.Core
 
 /-!
 # Certified smooth nonlinear programs
@@ -14,6 +16,8 @@ NLP data stores an objective and finitely many scalar residuals with closed
 bounds, all $C^2$ on a common open domain containing every feasible point.
 `Form` certifies equality with the represented problem.
 -/
+
+@[expose] public section
 
 namespace Morew
 

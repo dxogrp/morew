@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Cone
-import Mathlib.Algebra.Order.Star.Real
-import Mathlib.LinearAlgebra.Matrix.PosDef
+module
+
+public import Morew.Conic.Cone
+public import Mathlib.Algebra.Order.Star.Real
+public import Mathlib.LinearAlgebra.Matrix.PosDef
 
 /-!
 # Symmetric matrices and positive-semidefinite cones
@@ -17,6 +19,8 @@ identities use positive-definite pivots; block matrices are indexed by
 `Morew.Conic.PSD.Repr` provides rewrite records for spectral bounds,
 matrix-fractional functions, log-determinants, and positive definiteness.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic
 

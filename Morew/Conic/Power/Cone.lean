@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Cone
-import Mathlib.Analysis.MeanInequalities
-import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
-import Mathlib.Algebra.BigOperators.Fin
+module
+
+public import Morew.Conic.Cone
+public import Mathlib.Analysis.MeanInequalities
+public import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
+public import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -17,6 +19,8 @@ Power cones consist of triples `(x, y, z)` with `x ≥ 0`, `y ≥ 0`, and
 `|z| ≤ x ^ α * y ^ (1 - α)`, where `0 < α < 1`. The underlying set is defined
 for every real `α`; the cone laws require the stated range.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Cone
 

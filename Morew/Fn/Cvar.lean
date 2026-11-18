@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Fn.SumLargest
-import Mathlib.Algebra.Order.Archimedean.Real.Basic
+module
+
+public import Morew.Fn.SumLargest
+public import Mathlib.Algebra.Order.Archimedean.Real.Basic
 import Mathlib.Tactic.FieldSimp
 
 /-!
@@ -14,6 +16,8 @@ CVaR uses equally weighted finite losses and a real threshold infimum. Its
 interpretation and exact linear epigraph require a nonempty sample and
 `0 ≤ β < 1`. Fractional tail mass interpolates adjacent sums of largest losses.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

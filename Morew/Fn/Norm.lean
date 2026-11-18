@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.Normed.Lp.PiLp
+module
+
+public import Mathlib.Analysis.Normed.Lp.PiLp
 
 /-!
 # Named real vector norms
@@ -11,6 +13,8 @@ import Mathlib.Analysis.Normed.Lp.PiLp
 The one-, two-, and infinity-norms on finite real vectors, independent of local
 norm instances. Each norm is zero on an empty vector.
 -/
+
+@[expose] public section
 
 namespace Morew.Fn
 

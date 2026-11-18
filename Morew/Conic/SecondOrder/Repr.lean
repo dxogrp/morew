@@ -3,10 +3,12 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.SecondOrder
-import Morew.Conic.SecondOrder.QuadForm
-import Morew.Rewrite.Basic
-import Morew.Fn.Norm
+module
+
+public import Morew.Conic.SecondOrder
+public import Morew.Conic.SecondOrder.QuadForm
+public import Morew.Rewrite.Basic
+public import Morew.Fn.Norm
 
 /-!
 # Exact second-order representations
@@ -16,6 +18,8 @@ forms, and quadratic-over-linear expressions. Subtype inputs carry the positive
 denominator hypotheses. The Huber threshold is a fixed nonnegative parameter;
 quadratic-form matrices are fixed positive-semidefinite parameters.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.SecondOrder
 

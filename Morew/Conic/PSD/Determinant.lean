@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Mathlib.Analysis.Matrix.Order
-import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
+module
+
+public import Mathlib.Analysis.Matrix.Order
+public import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 
 /-!
 # Determinant bounds for positive-definite matrices
@@ -12,6 +14,8 @@ import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 The determinant is monotone under positive-semidefinite perturbations of a
 positive-definite real matrix.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.LogDet
 

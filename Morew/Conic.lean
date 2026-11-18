@@ -3,17 +3,19 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Basic
-import Morew.Conic.Exponential
-import Morew.Conic.PSD
-import Morew.Conic.PSD.LambdaMax
-import Morew.Conic.PSD.MatrixFraction
-import Morew.Conic.PSD.NuclearNorm
-import Morew.Conic.PSD.PosDef
-import Morew.Conic.PSD.SpectralNorm
-import Morew.Conic.Power
-import Morew.Conic.SecondOrder
-import Morew.Conic.SecondOrder.QuadForm
+module
+
+public import Morew.Conic.Basic
+public import Morew.Conic.Exponential
+public import Morew.Conic.PSD
+public import Morew.Conic.PSD.LambdaMax
+public import Morew.Conic.PSD.MatrixFraction
+public import Morew.Conic.PSD.NuclearNorm
+public import Morew.Conic.PSD.PosDef
+public import Morew.Conic.PSD.SpectralNorm
+public import Morew.Conic.Power
+public import Morew.Conic.SecondOrder
+public import Morew.Conic.SecondOrder.QuadForm
 
 /-!
 # Conic forms

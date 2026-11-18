@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.Cone
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Topology.Order.OrderClosed
+module
+
+public import Morew.Conic.Cone
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Topology.Order.OrderClosed
 import Mathlib.Tactic.FieldSimp
 import Mathlib.Tactic.FunProp
 import Mathlib.Tactic.Linarith
@@ -19,6 +21,8 @@ The exponential cone consists of triples `(x, y, z)` with
 Its closedness and cone laws follow from an intersection of homogeneous
 closed halfspaces.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic.Cone
 

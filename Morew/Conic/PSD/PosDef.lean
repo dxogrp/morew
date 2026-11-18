@@ -3,8 +3,10 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Conic.PSD
-import Mathlib.Analysis.Matrix.Order
+module
+
+public import Morew.Conic.PSD
+public import Mathlib.Analysis.Matrix.Order
 
 /-!
 # A semidefinite representation of positive definiteness
@@ -12,6 +14,8 @@ import Mathlib.Analysis.Matrix.Order
 Positive definiteness is equivalent to the existence of a positive-semidefinite
 block completion with identity off-diagonal blocks.
 -/
+
+@[expose] public section
 
 namespace Morew.Conic
 
