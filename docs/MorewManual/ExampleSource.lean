@@ -1,7 +1,6 @@
 module
 
 public import VersoManual.Literate
-public meta import VersoManual.Literate
 import Verso.Code.External.Code
 
 public section

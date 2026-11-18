@@ -9,8 +9,6 @@ public import MorewManual.Advanced
 public import MorewManual.API
 public import MorewManual.Examples
 
-public meta import VersoManual
-
 public section
 
 open Verso.Genre Manual

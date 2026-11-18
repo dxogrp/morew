@@ -2,8 +2,6 @@ module
 
 public import MorewManual.ExampleSource
 
-public meta import VersoManual
-
 public section
 
 open Verso.Genre Manual

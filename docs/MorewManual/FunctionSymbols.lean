@@ -1,7 +1,6 @@
 module
 
 public import VersoManual
-public meta import VersoManual
 
 public section
 
