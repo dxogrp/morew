@@ -2,17 +2,20 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Core
-import Morew.Conic.PSD
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Lean.Meta.Basic
-import Lean.Meta.Transform
-import Lean.Meta.Match.MatcherInfo
-import Qq
+public import Morew.Core
+public import Morew.Conic.PSD
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Lean.Meta.Basic
+public import Lean.Meta.Transform
+public import Lean.Meta.Match.MatcherInfo
+public import Qq
 
 /-! Inspect dependencies, unresolved terms, presentation structure, and real-space shapes.
 Structural reduction preserves arithmetic and user-function heads. -/
+
+public meta section
 
 namespace Morew.Elab.Expr
 

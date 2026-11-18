@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.View
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.View
 
 /-! Prepare and construct objective epigraph and hypograph reformulations. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -140,15 +144,17 @@ def prepareObjectiveBound (state : ReformState) (step : Lean.Syntax)
       materializeObjectiveBound state binder expectedSense allocation
   }
 
+/-- Elaborate an `epigraph` step bounding the minimization objective from above. -/
 @[morew_reformulation_step Morew.epigraphStep]
-private def elabEpigraph : StepHandler := fun state step => do
+def elabEpigraph : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| epigraph $binder:ident $[as $label:ident]?) =>
       prepareObjectiveBound state step binder label .minimize
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate a `hypograph` step bounding the maximization objective from below. -/
 @[morew_reformulation_step Morew.hypographStep]
-private def elabHypograph : StepHandler := fun state step => do
+def elabHypograph : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| hypograph $binder:ident $[as $label:ident]?) =>
       prepareObjectiveBound state step binder label .maximize

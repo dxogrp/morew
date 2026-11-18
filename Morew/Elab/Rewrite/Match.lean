@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Rewrite.Registry
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Rewrite.Registry
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Match exact representations while preserving mathematical operation heads.
 Reconstruct product and subtype inputs from operands, using caller evidence for subtype conditions. -/
+
+public meta section
 
 namespace Morew.Elab.Rewrite.Match
 

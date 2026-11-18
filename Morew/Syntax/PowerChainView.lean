@@ -3,7 +3,9 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.PrettyPrinter
+module
+
+public meta import Lean.PrettyPrinter
 
 /-!
 # Displaying finite power-cone representations
@@ -11,6 +13,8 @@ import Lean.PrettyPrinter
 Format geometric-mean and inverse-product constraints using names from the checked
 presentation.
 -/
+
+public meta section
 
 namespace Morew.Syntax
 

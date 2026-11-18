@@ -2,19 +2,22 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.NLP.Form
-import Morew.Elab.NLP.Rewrite
-import Morew.Elab.Reformulation.Replace
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Rewrite.Reduction
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.NLP.Form
+public import Morew.Elab.NLP.Rewrite
+public import Morew.Elab.Reformulation.Replace
+public import Morew.Elab.Rewrite.Decomposition
+public import Morew.Elab.Rewrite.Reduction
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Certify smooth rows before trying exact bound rewrites. Retain accepted row data
 through auxiliary insertions and certify the objective against final feasibility.
 Split conjunction groups only after a successful replacement. Retry failed rows when
 later rewrites expose domain evidence; generated rows are already certified. -/
+
+public meta section
 
 namespace Morew.Elab.NLP.Terminal
 

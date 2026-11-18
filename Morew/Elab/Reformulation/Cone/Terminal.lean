@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Cone.Presentation
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Cone.Presentation
+public import Morew.Elab.Reformulation.Rows
 
 /-! Allocate names and materialize a terminal cone form through the selected adapter. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation.Cone
 

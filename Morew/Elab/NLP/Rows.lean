@@ -2,22 +2,25 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.NLP.Rows
-import Morew.Elab.NLP.Domain
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.NLP.Rows
+public import Morew.Elab.NLP.Domain
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Certify generated residuals after the caller proves replacement exactness.
 Domain inclusion uses admitted retained and generated rows; unsupported predicates
 supply no facts. Finite families stay grouped with intersected domains. -/
+
+public section
 
 namespace Morew.Elab.NLP.Rows
 
 open Lean Lean.Meta Qq
 
 /-- Checked common-domain evidence for exactly the generated predicates. -/
-structure Result where
+meta structure Result where
   /-- Common open evaluation domain. -/
   domain : Expr
   /-- Openness of the common domain. -/
@@ -30,7 +33,7 @@ structure Result where
   rowBlocks : Array Expr
 
 /-- Express the result in a new variable context before constructing a reformulation step. -/
-def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
+meta def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   domain := result.domain.replaceFVars oldVars newVars
   domainIsOpen := result.domainIsOpen.replaceFVars oldVars newVars
   feasibleMemDomain := result.feasibleMemDomain.replaceFVars oldVars newVars
@@ -39,29 +42,29 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
 }
 
 /-- Retain one already certified predicate without changing its common domain. -/
-def Result.select (result : Result) (index : Nat) : Result :=
+meta def Result.select (result : Result) (index : Nat) : Result :=
   { result with rowCertificates := #[result.rowCertificates[index]!]
                 rowBlocks := #[result.rowBlocks[index]!] }
 
-private theorem transportInclusion {X Y : Type*} {p : X → Prop}
+theorem transportInclusion {X Y : Type*} {p : X → Prop}
     (q : Y → Prop) (map : Y → X) {s : Set X}
     (included : ∀ x, p x → x ∈ s)
     (backward : ∀ y, q y → p (map y)) : ∀ y, q y → y ∈ map ⁻¹' s :=
   fun y hy => included (map y) (backward y hy)
 
-private theorem smoothProjection {X Y : Type*}
+theorem smoothProjection {X Y : Type*}
     [NormedAddCommGroup X] [NormedSpace ℝ X]
     [NormedAddCommGroup Y] [NormedSpace ℝ Y] :
     ContDiff ℝ 2 (Prod.fst : X × Y → X) := contDiff_fst
 
-private theorem openProjection {X Y : Type*}
+theorem openProjection {X Y : Type*}
     [NormedAddCommGroup X] [NormedAddCommGroup Y]
     (s : Set X) (opened : IsOpen s) : IsOpen ((Prod.fst : X × Y → X) ⁻¹' s) :=
   opened.preimage continuous_fst
 
 /-- Transport certified residuals through stronger feasibility or an auxiliary product.
 `backward` must recover the old feasibility. -/
-def Result.transport (result : Result) (newFeasible backward : Expr)
+meta def Result.transport (result : Result) (newFeasible backward : Expr)
     (auxiliary? : Option Expr := none) : MetaM Result := do
   let .forallE _ nextDomain _ _ ← whnf (← inferType newFeasible)
     | throwError "expected the replacement feasibility predicate"
@@ -101,15 +104,15 @@ def Result.transport (result : Result) (newFeasible backward : Expr)
     checkWithKernel included
     return { result with feasibleMemDomain := included }
 
-private inductive Relation where
+private meta inductive Relation where
   | le | ge | eq
 
-private def vectorRule : Relation → Name
+private meta def vectorRule : Relation → Name
   | .le => ``Morew.NLP.Rows.vector_le_iff
   | .ge => ``Morew.NLP.Rows.vector_ge_iff
   | .eq => ``Morew.NLP.Rows.vector_eq_iff
 
-private def relation? (body : Expr) : Option (Relation × Expr × Expr × Expr) := do
+private meta def relation? (body : Expr) : Option (Relation × Expr × Expr × Expr) := do
   let args := body.getAppArgs
   if body.isAppOfArity ``Eq 3 then
     return (.eq, args[0]!, args[1]!, args[2]!)
@@ -119,7 +122,7 @@ private def relation? (body : Expr) : Option (Relation × Expr × Expr × Expr) 
     return (.ge, args[0]!, args[2]!, args[3]!)
   none
 
-private def vectorSize? (type : Expr) : MetaM (Option Expr) := do
+private meta def vectorSize? (type : Expr) : MetaM (Option Expr) := do
   let .forallE name index target info ← whnf type | return none
   let shape ← whnf index
   unless shape.isAppOfArity ``Fin 1 do return none
@@ -130,7 +133,7 @@ private def vectorSize? (type : Expr) : MetaM (Option Expr) := do
     return some shape.getAppArgs[0]!
 
 -- Check the relation instance before reducing a vector order into a quantifier.
-private def canonicalRelation (body : Expr) (relation : Relation)
+private meta def canonicalRelation (body : Expr) (relation : Relation)
     (type lhs rhs : Expr) : MetaM Bool := do
   if let .eq := relation then return true
   let expected ← if ← isDefEq type q(ℝ) then do
@@ -143,14 +146,14 @@ private def canonicalRelation (body : Expr) (relation : Relation)
     else return false
   isDefEq body.getAppArgs[1]! expected.getAppArgs[1]!
 
-private def structural (point body : Expr) : MetaM Expr :=
+private meta def structural (point body : Expr) : MetaM Expr :=
   Expr.reduceStructure body (opaqueProblemDependencies? := some point)
 
-private def addUnique (values : Array Expr) (value : Expr) : Array Expr :=
+private meta def addUnique (values : Array Expr) (value : Expr) : Array Expr :=
   if values.contains value then values else values.push value
 
 -- Check finite carrier and membership instance before reducing the membership head.
-private def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) := do
+private meta def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) := do
   let proposition ← structural point proposition
   unless proposition.isAppOfArity ``Membership.mem 5 do return none
   let args := proposition.getAppArgs
@@ -162,7 +165,7 @@ private def finiteMembership? (point proposition : Expr) : MetaM (Option Expr) :
   return some args[4]!
 
 -- Use obligation indices and active finite scopes, retaining subtype membership proofs.
-private partial def collectIndices (point expression : Expr)
+private meta partial def collectIndices (point expression : Expr)
     (values facts : Array Expr) : MetaM (Array Expr × Array Expr) := do
   if values.size ≥ 64 then return (values, facts)
   let mut values := values
@@ -188,7 +191,7 @@ private partial def collectIndices (point expression : Expr)
     collectIndices point body nextValues nextFacts
   | _ => return (values, facts)
 
-private def indexContext (point obligation : Expr) : MetaM (Array Expr × Array Expr) := do
+private meta def indexContext (point obligation : Expr) : MetaM (Array Expr × Array Expr) := do
   let mut values := #[]
   let mut facts := #[]
   for declaration in ← getLCtx do
@@ -206,7 +209,7 @@ private def indexContext (point obligation : Expr) : MetaM (Array Expr × Array 
   collectIndices point obligation values facts
 
 -- Specialize independent parameter families at finite-support coordinates.
-private partial def specializeParameters (proof : Expr) (indices facts : Array Expr)
+private meta partial def specializeParameters (proof : Expr) (indices facts : Array Expr)
     (fuel : Nat) : MetaM (Array Expr) := do
   if fuel == 0 then return #[]
   let type ← whnf (← inferType proof)
@@ -219,7 +222,7 @@ private partial def specializeParameters (proof : Expr) (indices facts : Array E
       result := result ++ (← specializeParameters (mkApp proof choice) indices facts (fuel - 1))
   return result
 
-private partial def projectedFacts (point proof : Expr) (indices support : Array Expr)
+private meta partial def projectedFacts (point proof : Expr) (indices support : Array Expr)
     (fuel : Nat) : MetaM (Array Expr) := do
   if fuel == 0 then return #[]
   let type ← structural point (← inferType proof)
@@ -262,7 +265,7 @@ private partial def projectedFacts (point proof : Expr) (indices support : Array
   return #[]
 
 /-- Extract checked real equalities and non-strict inequalities at compatible finite indices. -/
-def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obligation => do
+meta def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obligation => do
   let (indices, support) ← indexContext point obligation
   let mut result ← projectedFacts point feasibleProof indices support 32
   for proof in support do
@@ -272,23 +275,23 @@ def factsProvider : Domain.Evidence.FactsProvider := fun point feasibleProof obl
     checkWithKernel proof
   return result
 
-private structure RowCertificate where
+private meta structure RowCertificate where
   domain : Expr
   isOpen : Expr
   included : Expr
   proof : Expr
   block : Expr
 
-private structure Context where
+private meta structure Context where
   feasible : Expr
   decision : Expr
   source : Expr
   rowIndex : Nat
   unrestricted : Domain.DomainResult
 
-private abbrev RowsM := ReaderT Context (ExceptT Domain.DomainError MetaM)
+private meta abbrev RowsM := ReaderT Context (ExceptT Domain.DomainError MetaM)
 
-private def reject (expression : Expr) (reason : MessageData)
+private meta def reject (expression : Expr) (reason : MessageData)
     (kind : Smooth.SmoothFailureKind := .unsupportedRow) : RowsM α := do
   let context ← read
   let type ← inferType expression
@@ -299,14 +302,14 @@ private def reject (expression : Expr) (reason : MessageData)
       m!"generated row {context.rowIndex}: at {expression} : {type}: {reason}"
   }
 
-private def analytic (action : MetaM Expr) : RowsM Expr := do
+private meta def analytic (action : MetaM Expr) : RowsM Expr := do
   Space.withCanonicalSpaces #[(← read).decision] action
 
-private def restrict (certificate : RowCertificate) (subset : Expr) : RowsM (Expr × Expr) := do
+private meta def restrict (certificate : RowCertificate) (subset : Expr) : RowsM (Expr × Expr) := do
   return (← analytic <| mkAppM ``Morew.NLP.Rows.Certified.mono #[certificate.proof, subset],
     ← analytic <| mkAppM ``Morew.NLP.Rows.Block.mono #[certificate.block, subset])
 
-private def intersect (left right : RowCertificate) :
+private meta def intersect (left right : RowCertificate) :
     RowsM (RowCertificate × (Expr × Expr) × (Expr × Expr)) := do
   let domain ← mkAppM ``Set.inter #[left.domain, right.domain]
   let leftSubset ← mkAppOptM ``Set.inter_subset_left #[none, some left.domain, some right.domain]
@@ -319,7 +322,7 @@ private def intersect (left right : RowCertificate) :
   return (⟨domain, isOpen, included, left.proof, left.block⟩,
     ← restrict left leftSubset, ← restrict right rightSubset)
 
-private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
+private meta partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
   let body := Expr.hoistProjectionLets (← Expr.reduceStructure body (preserveLets := true)
     (opaqueProblemDependencies? := some point))
   if let .letE name type value rest nondep := body then
@@ -426,7 +429,7 @@ private partial def certifyBody (point body : Expr) : RowsM RowCertificate := do
     return ⟨domain, isOpen, included, proof, block⟩
   reject body "expected True, conjunctions, closed real comparisons, or finite families"
 
-private def certifyCore (feasible : Expr) (rows : Array Expr) :
+private meta def certifyCore (feasible : Expr) (rows : Array Expr) :
     MetaM (Except Domain.DomainError Result) := do
   let outcome ← Domain.certifyWithEvidence feasible #[] factsProvider
   let .ok base := outcome | do
@@ -505,7 +508,7 @@ private def certifyCore (feasible : Expr) (rows : Array Expr) :
 /-- Certify generated rows against the proposed feasibility after exactness is proved.
 Conditional exactness uses only retained constraints. Ignore unsupported retained predicates
 and restore caller state on every outcome. -/
-def certifyRows (feasible : Expr) (rows : Array Expr) :
+meta def certifyRows (feasible : Expr) (rows : Array Expr) :
     MetaM (Except Domain.DomainError Result) :=
   State.withIsolatedMVars do
     try

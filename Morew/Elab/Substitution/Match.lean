@@ -2,15 +2,18 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Substitution.Registry
-import Morew.Elab.Substitution.Evidence
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Substitution.Registry
+public import Morew.Elab.Substitution.Evidence
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Match complete coordinate maps while keeping retained and new binders fixed.
 Use independent evidence for premises and source feasibility for range coverage.
 Certify each candidate in isolation before resolving ambiguity. -/
+
+public meta section
 
 namespace Morew.Elab.Substitution.Match
 
@@ -177,7 +180,8 @@ def discover {α : Type} (map point retained selected feasibleEvidence : Expr)
         setEnv environment
         return .ok selected
       if successes.size > 1 then
-        let names := successes.toList.map (·.1.toString)
+        let names := (successes.toList.map (fun (name, _) =>
+          (privateToUserName name).toString)).mergeSort (· ≤ ·)
         throwError "ambiguous coordinate parameterizations: {String.intercalate ", " names}; select one with `via`"
       if failures.isEmpty then
         throwError "no registered coordinate parameterization matches the replacement map"

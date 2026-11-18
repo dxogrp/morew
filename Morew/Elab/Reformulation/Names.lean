@@ -3,9 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Lean.Meta.Basic
+module
+
+public meta import Lean.Meta.Basic
 
 /-! Allocate visible names and check exact global declaration names. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -204,10 +208,11 @@ def preflightDeclarationNames (env : Environment)
     Except DeclarationPreflightError Unit := do
   let mut reserved : Array Name := #[]
   for request in requests do
-    let visible := request.name.eraseMacroScopes
+    let visible := privateToUserName request.name
     if reserved.any fun name => name == visible then
       throw (.duplicate request)
-    if env.contains visible then
+    if (env.setExporting false).contains visible ||
+        (env.setExporting false).contains (mkPrivateName env visible) then
       throw (.alreadyDeclared request)
     reserved := reserved.push visible
 

@@ -1,147 +1,149 @@
-import Morew.Affine
-import Morew.Affine.Matrix
-import Morew.Affine.SymmetricMatrix
-import Morew.Conic
-import Morew.Conic.Basic
-import Morew.Conic.Cone
-import Morew.Conic.Exponential
-import Morew.Conic.Exponential.Basic
-import Morew.Conic.Exponential.Cone
-import Morew.Conic.Exponential.Repr
-import Morew.Conic.PSD
-import Morew.Conic.PSD.Determinant
-import Morew.Conic.PSD.LDL
-import Morew.Conic.PSD.LambdaMax
-import Morew.Conic.PSD.LogDet
-import Morew.Conic.PSD.MatrixFraction
-import Morew.Conic.PSD.NuclearNorm
-import Morew.Conic.PSD.PosDef
-import Morew.Conic.PSD.Repr
-import Morew.Conic.PSD.SingularVectors
-import Morew.Conic.PSD.SpectralNorm
-import Morew.Conic.PSD.Triangular
-import Morew.Conic.Power
-import Morew.Conic.Power.Basic
-import Morew.Conic.Power.Cone
-import Morew.Conic.Power.GeometricMean
-import Morew.Conic.Power.Norm
-import Morew.Conic.Power.Repr
-import Morew.Conic.SecondOrder
-import Morew.Conic.SecondOrder.QuadForm
-import Morew.Conic.SecondOrder.Repr
-import Morew.Core
-import Morew.Elab.Affine
-import Morew.Elab.Affine.Expansion
-import Morew.Elab.Affine.Space
-import Morew.Elab.Atom
-import Morew.Elab.Cone.Constraint
-import Morew.Elab.Cone.Finite
-import Morew.Elab.Cone.MatrixDomain
-import Morew.Elab.Cone.Nonneg
-import Morew.Elab.Cone.Normalize
-import Morew.Elab.Cone.Plan
-import Morew.Elab.Cone.Rewrite
-import Morew.Elab.Cone.Rows
-import Morew.Elab.Cone.Rules
-import Morew.Elab.Cone.Space
-import Morew.Elab.Cone.Symmetry
-import Morew.Elab.Cone.Terminal
-import Morew.Elab.Conic.Form
-import Morew.Elab.Conic.Objective
-import Morew.Elab.Conic.Terminal
-import Morew.Elab.Evidence
-import Morew.Elab.Evidence.Sign
-import Morew.Elab.Expansion
-import Morew.Elab.Expr
-import Morew.Elab.NLP.Domain
-import Morew.Elab.NLP.Domain.Evidence
-import Morew.Elab.NLP.Form
-import Morew.Elab.NLP.Rewrite
-import Morew.Elab.NLP.Rows
-import Morew.Elab.NLP.Rules
-import Morew.Elab.NLP.Smooth
-import Morew.Elab.NLP.Space
-import Morew.Elab.NLP.Terminal
-import Morew.Elab.Objective
-import Morew.Elab.ObjectiveContext
-import Morew.Elab.QuadConic.Expansion
-import Morew.Elab.QuadConic.Form
-import Morew.Elab.QuadConic.Objective
-import Morew.Elab.QuadConic.Terminal
-import Morew.Elab.Reformulation.Basic.Derive
-import Morew.Elab.Reformulation.Basic.ObjectiveBound
-import Morew.Elab.Reformulation.Basic.Occurrence
-import Morew.Elab.Reformulation.Basic.Remove
-import Morew.Elab.Reformulation.Basic.Rename
-import Morew.Elab.Reformulation.Basic.Restrict
-import Morew.Elab.Reformulation.Basic.Substitution
-import Morew.Elab.Reformulation.Command
-import Morew.Elab.Reformulation.Cone.PowerChain
-import Morew.Elab.Reformulation.Cone.Presentation
-import Morew.Elab.Reformulation.Cone.Rewrite
-import Morew.Elab.Reformulation.Cone.Terminal
-import Morew.Elab.Reformulation.Cone.View
-import Morew.Elab.Reformulation.Conic.Terminal
-import Morew.Elab.Reformulation.NLP.Rewrite
-import Morew.Elab.Reformulation.NLP.Terminal
-import Morew.Elab.Reformulation.Names
-import Morew.Elab.Reformulation.Presentation
-import Morew.Elab.Reformulation.QuadConic.Terminal
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Remove
-import Morew.Elab.Reformulation.Replace
-import Morew.Elab.Reformulation.Rows
-import Morew.Elab.Reformulation.Runner
-import Morew.Elab.Reformulation.State
-import Morew.Elab.Reformulation.Step
-import Morew.Elab.Reformulation.Syntax
-import Morew.Elab.Reformulation.View
-import Morew.Elab.Rewrite.Comparison
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Rewrite.Match
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Rewrite.Reduction
-import Morew.Elab.Rewrite.Registry
-import Morew.Elab.State
-import Morew.Elab.Substitution.Coordinates
-import Morew.Elab.Substitution.Evidence
-import Morew.Elab.Substitution.Match
-import Morew.Elab.Substitution.Registry
-import Morew.Elab.Substitution.Rules
-import Morew.Fn
-import Morew.Fn.Cvar
-import Morew.Fn.Exponential
-import Morew.Fn.Huber
-import Morew.Fn.Matrix
-import Morew.Fn.Norm
-import Morew.Fn.Power
-import Morew.Fn.SumLargest
-import Morew.NLP
-import Morew.NLP.Basic
-import Morew.NLP.Domain
-import Morew.NLP.Rows
-import Morew.NLP.Smooth
-import Morew.QuadConic
-import Morew.QuadConic.Basic
-import Morew.QuadConic.Objective
-import Morew.Reformulation
-import Morew.Reformulation.Basic
-import Morew.Reformulation.Conic
-import Morew.Reformulation.NLP
-import Morew.Rewrite
-import Morew.Rewrite.Basic
-import Morew.Rewrite.Euclidean
-import Morew.Rewrite.Polyhedral
-import Morew.Rewrite.Polyhedral.Lemmas
-import Morew.Rewrite.Sum
-import Morew.Rewrite.Sum.Lemmas
-import Morew.Substitution
-import Morew.Syntax
-import Morew.Syntax.Elab
-import Morew.Syntax.Grammar
-import Morew.Syntax.PowerChainView
-import Morew.Syntax.Presentation
-import Morew.Syntax.Printer
-import Morew.Transform
-import Morew.Transform.Context
-import Morew.Transform.Parameterization
+module  -- shake: keep-all --deprecated_module: ignore
+
+public import Morew.Affine
+public import Morew.Affine.Matrix
+public import Morew.Affine.SymmetricMatrix
+public import Morew.Conic
+public import Morew.Conic.Basic
+public import Morew.Conic.Cone
+public import Morew.Conic.Exponential
+public import Morew.Conic.Exponential.Basic
+public import Morew.Conic.Exponential.Cone
+public import Morew.Conic.Exponential.Repr
+public import Morew.Conic.PSD
+public import Morew.Conic.PSD.Determinant
+public import Morew.Conic.PSD.LDL
+public import Morew.Conic.PSD.LambdaMax
+public import Morew.Conic.PSD.LogDet
+public import Morew.Conic.PSD.MatrixFraction
+public import Morew.Conic.PSD.NuclearNorm
+public import Morew.Conic.PSD.PosDef
+public import Morew.Conic.PSD.Repr
+public import Morew.Conic.PSD.SingularVectors
+public import Morew.Conic.PSD.SpectralNorm
+public import Morew.Conic.PSD.Triangular
+public import Morew.Conic.Power
+public import Morew.Conic.Power.Basic
+public import Morew.Conic.Power.Cone
+public import Morew.Conic.Power.GeometricMean
+public import Morew.Conic.Power.Norm
+public import Morew.Conic.Power.Repr
+public import Morew.Conic.SecondOrder
+public import Morew.Conic.SecondOrder.QuadForm
+public import Morew.Conic.SecondOrder.Repr
+public import Morew.Core
+public import Morew.Elab.Affine
+public import Morew.Elab.Affine.Expansion
+public import Morew.Elab.Affine.Space
+public import Morew.Elab.Atom
+public import Morew.Elab.Cone.Constraint
+public import Morew.Elab.Cone.Finite
+public import Morew.Elab.Cone.MatrixDomain
+public import Morew.Elab.Cone.Nonneg
+public import Morew.Elab.Cone.Normalize
+public import Morew.Elab.Cone.Plan
+public import Morew.Elab.Cone.Rewrite
+public import Morew.Elab.Cone.Rows
+public import Morew.Elab.Cone.Rules
+public import Morew.Elab.Cone.Space
+public import Morew.Elab.Cone.Symmetry
+public import Morew.Elab.Cone.Terminal
+public import Morew.Elab.Conic.Form
+public import Morew.Elab.Conic.Objective
+public import Morew.Elab.Conic.Terminal
+public import Morew.Elab.Evidence
+public import Morew.Elab.Evidence.Sign
+public import Morew.Elab.Expansion
+public import Morew.Elab.Expr
+public import Morew.Elab.NLP.Domain
+public import Morew.Elab.NLP.Domain.Evidence
+public import Morew.Elab.NLP.Form
+public import Morew.Elab.NLP.Rewrite
+public import Morew.Elab.NLP.Rows
+public import Morew.Elab.NLP.Rules
+public import Morew.Elab.NLP.Smooth
+public import Morew.Elab.NLP.Space
+public import Morew.Elab.NLP.Terminal
+public import Morew.Elab.Objective
+public import Morew.Elab.ObjectiveContext
+public import Morew.Elab.QuadConic.Expansion
+public import Morew.Elab.QuadConic.Form
+public import Morew.Elab.QuadConic.Objective
+public import Morew.Elab.QuadConic.Terminal
+public import Morew.Elab.Reformulation.Basic.Derive
+public import Morew.Elab.Reformulation.Basic.ObjectiveBound
+public import Morew.Elab.Reformulation.Basic.Occurrence
+public import Morew.Elab.Reformulation.Basic.Remove
+public import Morew.Elab.Reformulation.Basic.Rename
+public import Morew.Elab.Reformulation.Basic.Restrict
+public import Morew.Elab.Reformulation.Basic.Substitution
+public import Morew.Elab.Reformulation.Command
+public import Morew.Elab.Reformulation.Cone.PowerChain
+public import Morew.Elab.Reformulation.Cone.Presentation
+public import Morew.Elab.Reformulation.Cone.Rewrite
+public import Morew.Elab.Reformulation.Cone.Terminal
+public import Morew.Elab.Reformulation.Cone.View
+public import Morew.Elab.Reformulation.Conic.Terminal
+public import Morew.Elab.Reformulation.NLP.Rewrite
+public import Morew.Elab.Reformulation.NLP.Terminal
+public import Morew.Elab.Reformulation.Names
+public import Morew.Elab.Reformulation.Presentation
+public import Morew.Elab.Reformulation.QuadConic.Terminal
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Remove
+public import Morew.Elab.Reformulation.Replace
+public import Morew.Elab.Reformulation.Rows
+public import Morew.Elab.Reformulation.Runner
+public import Morew.Elab.Reformulation.State
+public import Morew.Elab.Reformulation.Step
+public import Morew.Elab.Reformulation.Syntax
+public import Morew.Elab.Reformulation.View
+public import Morew.Elab.Rewrite.Comparison
+public import Morew.Elab.Rewrite.Decomposition
+public import Morew.Elab.Rewrite.Match
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Rewrite.Reduction
+public import Morew.Elab.Rewrite.Registry
+public import Morew.Elab.State
+public import Morew.Elab.Substitution.Coordinates
+public import Morew.Elab.Substitution.Evidence
+public import Morew.Elab.Substitution.Match
+public import Morew.Elab.Substitution.Registry
+public import Morew.Elab.Substitution.Rules
+public import Morew.Fn
+public import Morew.Fn.Cvar
+public import Morew.Fn.Exponential
+public import Morew.Fn.Huber
+public import Morew.Fn.Matrix
+public import Morew.Fn.Norm
+public import Morew.Fn.Power
+public import Morew.Fn.SumLargest
+public import Morew.NLP
+public import Morew.NLP.Basic
+public import Morew.NLP.Domain
+public import Morew.NLP.Rows
+public import Morew.NLP.Smooth
+public import Morew.QuadConic
+public import Morew.QuadConic.Basic
+public import Morew.QuadConic.Objective
+public import Morew.Reformulation
+public import Morew.Reformulation.Basic
+public import Morew.Reformulation.Conic
+public import Morew.Reformulation.NLP
+public import Morew.Rewrite
+public import Morew.Rewrite.Basic
+public import Morew.Rewrite.Euclidean
+public import Morew.Rewrite.Polyhedral
+public import Morew.Rewrite.Polyhedral.Lemmas
+public import Morew.Rewrite.Sum
+public import Morew.Rewrite.Sum.Lemmas
+public import Morew.Substitution
+public import Morew.Syntax
+public import Morew.Syntax.Elab
+public import Morew.Syntax.Grammar
+public import Morew.Syntax.PowerChainView
+public import Morew.Syntax.Presentation
+public import Morew.Syntax.Printer
+public import Morew.Transform
+public import Morew.Transform.Context
+public import Morew.Transform.Parameterization

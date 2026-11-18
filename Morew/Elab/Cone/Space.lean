@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Conic.Basic
-import Morew.Elab.Affine.Space
-import Morew.Elab.Expr
-import Lean.Meta.Basic
-import Qq
+public import Morew.Conic.Basic
+public import Morew.Elab.Affine.Space
+public import Morew.Elab.Expr
+public import Lean.Meta.Basic
+public import Qq
 
 /-! Canonical algebra for decision spaces and normed structures for cone coordinates. -/
+
+public section
 
 namespace Morew.Elab.Cone.Space
 
@@ -60,11 +63,11 @@ abbrev pi (ι : Type*) [Finite ι] {Y : Type*} (a : Domain Y) :
 
 end Domain
 
-private def finishDomain (type data : Expr) : MetaM Expr := do
+private meta def finishDomain (type data : Expr) : MetaM Expr := do
   let dataType ← mkAppM ``Domain #[type]
   mkAppOptM ``id #[some dataType, some data]
 
-private partial def buildDomain (type : Expr) : MetaM Expr := do
+private meta partial def buildDomain (type : Expr) : MetaM Expr := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← finishDomain type (← mkAppM ``Domain.symmetricMatrix #[n])
   let shape ← whnf type
@@ -131,11 +134,11 @@ noncomputable abbrev pi (ι : Type*) [Fintype ι] {Y : Type*} (a : Structure Y) 
 end Structure
 
 -- Preserve `Matrix` aliases in local instance types for typeclass matching.
-private def finishSpace (type data : Expr) : MetaM Expr := do
+private meta def finishSpace (type data : Expr) : MetaM Expr := do
   let dataType ← mkAppM ``Structure #[type]
   mkAppOptM ``id #[some dataType, some data]
 
-private partial def buildSpace (type : Expr) : MetaM Expr := do
+private meta partial def buildSpace (type : Expr) : MetaM Expr := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← finishSpace type (← mkAppM ``Structure.symmetricMatrix #[n])
   let shape ← whnf type
@@ -163,7 +166,7 @@ private partial def buildSpace (type : Expr) : MetaM Expr := do
     throwError "unsupported affine row domain {type}"
 
 /-- Expose decision-space aliases in persisted instance types for typeclass synthesis. -/
-partial def structuralDomain (type : Expr) : MetaM Expr := do
+meta partial def structuralDomain (type : Expr) : MetaM Expr := do
   if let some n ← Expr.symmetricMatrixDimension? type then
     return ← mkAppM ``Morew.Conic.SymmetricMatrix #[n]
   let shape ← whnf type
@@ -183,7 +186,7 @@ partial def structuralDomain (type : Expr) : MetaM Expr := do
     return ← mkArrow index (← structuralDomain body)
   throwError "unsupported affine row domain {type}"
 
-private def realInstances : Array Expr := #[
+private meta def realInstances : Array Expr := #[
   q(inferInstance : NormedAddCommGroup ℝ),
   q(inferInstance : NormedSpace ℝ ℝ),
   q(inferInstance : FiniteDimensional ℝ ℝ),
@@ -191,7 +194,7 @@ private def realInstances : Array Expr := #[
   q(inferInstance : IsOrderedAddMonoid ℝ),
   q(inferInstance : PosSMulMono ℝ ℝ)]
 
-private def targetInstances (type : Expr) : MetaM (Array Expr) := do
+private meta def targetInstances (type : Expr) : MetaM (Array Expr) := do
   let shape ← whnf type
   if shape.isConstOf ``Real then return realInstances
   let .forallE _ index body _ := shape | throwError "unsupported affine row target {type}"
@@ -209,7 +212,7 @@ private def targetInstances (type : Expr) : MetaM (Array Expr) := do
     q(inferInstance : IsOrderedAddMonoid (Fin $n → ℝ)),
     q(inferInstance : PosSMulMono ℝ (Fin $n → ℝ))]
 
-private def installInstances (remaining : List Expr)
+private meta def installInstances (remaining : List Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   match remaining with
   | [] =>
@@ -223,7 +226,7 @@ private def installInstances (remaining : List Expr)
 
 /-- Construct a row with canonical decision algebra and normed, ordered targets.
 Substitute temporary instances into the result. -/
-def withCanonicalSpaces (domain target : Expr)
+meta def withCanonicalSpaces (domain target : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   let (group, module) ← Affine.Space.canonicalSpace domain
   let instances := realInstances ++ #[group, module] ++ (← targetInstances target)
@@ -231,7 +234,7 @@ def withCanonicalSpaces (domain target : Expr)
 
 /-- Construct a cone-membership row using canonical normed structures on its
 coordinate space. Cone coordinates need no order structure. -/
-def withCanonicalConeSpaces (domain target : Expr)
+meta def withCanonicalConeSpaces (domain target : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   let (group, module) ← Affine.Space.canonicalSpace domain
   let targetData ← buildSpace target
@@ -243,7 +246,7 @@ def withCanonicalConeSpaces (domain target : Expr)
   installInstances instances.toList action
 
 /-- Build data and its proof using canonical finite-dimensional decision structures. -/
-def withCanonicalDomainPair (domain : Expr)
+meta def withCanonicalDomainPair (domain : Expr)
     (action : MetaM (Expr × Expr)) : MetaM (Expr × Expr) := do
   let data ← buildDomain domain
   let algebra ← mkAppM ``Domain.algebra #[data]
@@ -255,7 +258,7 @@ def withCanonicalDomainPair (domain : Expr)
   installInstances instances.toList action
 
 /-- Build a form using the affine maps' canonical finite-dimensional structures. -/
-def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
+meta def withCanonicalDomain (domain : Expr) (action : MetaM Expr) : MetaM Expr := do
   let (result, _) ← withCanonicalDomainPair domain do
     let result ← action
     return (result, result)

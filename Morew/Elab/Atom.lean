@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
-import Mathlib.Algebra.Order.Group.PosPart
-import Lean.Meta.Basic
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Algebra.Order.Group.PosPart
+public import Lean.Meta.Basic
 
 /-! Recognize standard mathlib operations by their elaborated heads and instances.
 Callers supply domain evidence and transformation certificates. -/
+
+public meta section
 
 namespace Morew.Elab.Atom
 

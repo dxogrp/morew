@@ -3,15 +3,19 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Atom
-import Morew.Elab.Expr
-import Morew.Elab.Substitution.Coordinates
-import Morew.Elab.Substitution.Match
-import Morew.Elab.Substitution.Rules
-import Morew.Elab.Reformulation.View
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Atom
+public import Morew.Elab.Expr
+public import Morew.Elab.Substitution.Coordinates
+public import Morew.Elab.Substitution.Match
+public import Morew.Elab.Substitution.Rules
+public import Morew.Elab.Reformulation.View
 
 /-! Infer, select, and construct certified coordinate substitutions. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -551,16 +555,18 @@ def prepareSubstitution (state : ReformState) (step : Lean.Syntax)
         oldName binderIndex allocation
   }
 
+/-- Elaborate a variable substitution with an optional equivalence certificate. -/
 @[morew_reformulation_step Morew.substituteStep]
-private def elabSubstitution : StepHandler := fun state step => do
+def elabSubstitution : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| substitute $oldName:ident := $replacement:term
       $[using $provided:term]?) =>
       prepareSubstitution state step oldName replacement provided
   | _ => throwUnsupportedSyntax
 
+/-- Elaborate a variable substitution using the selected substitution rule. -/
 @[morew_reformulation_step Morew.substituteViaStep]
-private def elabSubstitutionVia : StepHandler := fun state step => do
+def elabSubstitutionVia : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| substitute $oldName:ident := $replacement:term via $rule:term) =>
       prepareSubstitution state step oldName replacement none (some rule)

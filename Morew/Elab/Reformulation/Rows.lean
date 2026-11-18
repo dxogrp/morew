@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Replace
-import Morew.Elab.Reformulation.View
-import Lean.Meta.Closure
+module
+
+public import Morew.Elab.Reformulation.Replace
+public import Morew.Elab.Reformulation.View
+public meta import Lean.Meta.Closure
 
 /-! Construct replacement and added constraints, storing their names, certificates,
 and reference problems. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation.Rows
 

@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Replace
-import Morew.Elab.Substitution.Evidence
+module
+
+public import Morew.Elab.Reformulation.Replace
+public import Morew.Elab.Substitution.Evidence
 
 /-! Remove duplicate constraints, tautologies, or rows implied by retained constraints.
 Duplicate search uses complete rows; tautology proofs use unconditional facts. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation.Remove
 

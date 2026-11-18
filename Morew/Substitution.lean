@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Transform.Parameterization
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Analysis.Real.Sqrt
+module
+
+public import Morew.Transform.Parameterization
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Analysis.Real.Sqrt
 
 /-!
 # Reusable coordinate substitution rules
@@ -14,6 +16,8 @@ Coordinate parameterizations with right inverses on specified ranges.
 Coefficients may depend on unchanged coordinates; affine substitutions require
 nonzero slopes at feasible points.
 -/
+
+@[expose] public section
 
 namespace Morew.Substitution
 

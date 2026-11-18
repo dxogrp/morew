@@ -2,16 +2,19 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Cone.Rewrite
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.Cone.Normalize
-import Morew.Elab.Reformulation.Replace
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Cone.Rewrite
+public import Morew.Elab.Rewrite.Decomposition
+public import Morew.Elab.Cone.Normalize
+public import Morew.Elab.Reformulation.Replace
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Plan exact cone constraint replacements and retain their equivalence proofs.
 Split unsupported conjunctions so affine rows can supply domain evidence. -/
+
+public section
 
 namespace Morew.Elab.Cone.Terminal
 
@@ -21,7 +24,7 @@ open Morew.Elab.Reformulation
 open Morew.Elab.Reformulation.Replace
 
 /-- Objective checking and form construction supplied to the shared cone planner. -/
-structure Backend where
+meta structure Backend where
   /-- Terminal command spelling used in diagnostic suggestions. -/
   command : String
   /-- Check the objective before rewriting constraints. -/
@@ -33,7 +36,7 @@ structure Backend where
     Array (Option (Array RowResult)) → MetaM (Except Expr.Error Expr)
 
 /-- A complete checked terminal transformation, before visible-name allocation. -/
-structure Result where
+meta structure Result where
   /-- Final typed presentation, with temporary names for generated entries. -/
   presentation : PresentationState
   /-- Exact equivalence from the incoming canonical problem to the final one. -/
@@ -50,7 +53,7 @@ structure Result where
   auxiliaries : Array (Nat × Expr)
 
 /-- Express terminal evidence in a fresh section-variable context. -/
-def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
+meta def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result := {
   result with
   presentation := result.presentation.replaceFVars oldVars newVars
   equiv := result.equiv.replaceFVars oldVars newVars
@@ -59,7 +62,7 @@ def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Resul
     (origin, type.replaceFVars oldVars newVars)
 }
 
-private structure Work where
+private meta structure Work where
   presentation : PresentationState
   equiv : Expr
   rowOrigins : Array Nat
@@ -69,7 +72,7 @@ private structure Work where
   auxiliaries : Array (Nat × Expr) := #[]
   nextName : Nat := 0
 
-private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.EvidenceProvider) :
+private meta def certifyPredicateDetailed (predicate : Expr) (provider : Affine.EvidenceProvider) :
     MetaM (Except Expr.Error (Array RowResult)) := do
   let (leaves, _) ← decomposePredicate predicate
   let mut rows := #[]
@@ -79,14 +82,15 @@ private def certifyPredicateDetailed (predicate : Expr) (provider : Affine.Evide
     | .ok row => rows := rows.push row
   return .ok rows
 
-private def pullbackConstraint {X A : Type*}
+/-- Extend a conic constraint to a product domain by projecting onto the original variables. -/
+@[expose] def pullbackConstraint {X A : Type*}
     [AddCommGroup X] [Module ℝ X]
     [AddCommGroup A] [Module ℝ A]
     (row : Morew.Conic.Constraint X) : Morew.Conic.Constraint (X × A) :=
   ⟨row.cone, row.map.comp AffineMap.fst⟩
 
 -- Compose accepted affine maps with the product projection to retain local evidence.
-private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowResult := do
+private meta def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowResult := do
   let nextDomain ← mkAppM ``Prod #[domain, auxiliary]
   let constraint ← Space.withCanonicalDomain domain do
     Space.withCanonicalDomain auxiliary do
@@ -105,7 +109,7 @@ private def pullbackRow (domain auxiliary : Expr) (row : RowResult) : MetaM RowR
   return { constraint, pointwiseIff, normalization? }
 
 /-- Pull back domains and retain each entry's original index. -/
-private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
+private meta def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
     (certificates : Array (Option (Array RowResult)))
     (nextDomain : Expr) (auxiliary? : Option Expr)
     (rewrite : Replace.RewriteResult) : MetaM Work := do
@@ -163,7 +167,7 @@ private def applyReplacement (work : Work) (index : Nat) (rows : Array Expr)
   }
 
 /-- Split nonlinear groups so affine siblings can supply domain margins. -/
-private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvider) : MetaM Work := do
+private meta def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvider) : MetaM Work := do
   let mut work := work
   let mut index := 0
   while index < work.presentation.constraints.size do
@@ -189,20 +193,20 @@ private def splitNonconicGroups (work : Work) (provider : Affine.EvidenceProvide
     index := index + leaves.size
   return work
 
-private def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Result) : MetaM Work := do
+private meta def applyPrepared (work : Work) (index : Nat) (prepared : Plan.Result) : MetaM Work := do
   let rewrite ← Morew.Elab.Reformulation.Replace.applyReplacement
     work.presentation index prepared.toResult
   applyReplacement work index prepared.rowPredicates
     (prepared.certifiedRows.map fun row => some #[row]) prepared.nextDomain prepared.auxiliary? rewrite
 
-private def originalError (command : String) (original : PresentationState) (origin : Nat)
+private meta def originalError (command : String) (original : PresentationState) (origin : Nat)
     (error : Expr.Error) : MetaM Expr.Error := do
   let label := original.constraints[origin]!.name.eraseMacroScopes
   let reason ← addMessageContext
     m!"constraint `{label}`: {error.reason}\nunsupported expression: {error.expression}\nuse `conic at {label} using rule` with an exact representation before `{command}`"
   return { error with reason }
 
-private partial def lower (command : String) (original : PresentationState) (work : Work)
+private meta partial def lower (command : String) (original : PresentationState) (work : Work)
     (provider : Affine.EvidenceProvider) : MetaM (Except Expr.Error Work) := do
   let mut work := work
   let mut firstError? := none
@@ -242,7 +246,7 @@ private partial def lower (command : String) (original : PresentationState) (wor
   | none => return .ok work
 
 -- Transport accepted affine maps and evidence to normalized membership predicates.
-private def prepareNormalizations (domain source : Expr) (rows : Array RowResult) :
+private meta def prepareNormalizations (domain source : Expr) (rows : Array RowResult) :
     MetaM (Array PredicateNormalization) := do
   let (leaves, _) ← decomposePredicate source
   unless leaves.size == rows.size do
@@ -262,7 +266,7 @@ private def prepareNormalizations (domain source : Expr) (rows : Array RowResult
     checkWithKernel conversion.pointwiseIff
     return conversion
 
-private def transportRows (domain target : Expr) (rows : Array RowResult)
+private meta def transportRows (domain target : Expr) (rows : Array RowResult)
     (conversions : Array PredicateNormalization) :
     MetaM (Array RowResult) := do
   let (newLeaves, _) ← decomposePredicate target
@@ -279,7 +283,7 @@ private def transportRows (domain target : Expr) (rows : Array RowResult)
 
 /-- Normalize the actual final target and transport the already accepted row
 certificates. Presentation-entry boundaries and provenance remain unchanged. -/
-private def normalizeFinal (work : Work) : MetaM Work := do
+private meta def normalizeFinal (work : Work) : MetaM Work := do
   let mut work := work
   for index in [:work.presentation.constraints.size] do
     let source := work.presentation.constraints[index]!.predicate
@@ -315,7 +319,7 @@ private def normalizeFinal (work : Work) : MetaM Work := do
   return work
 
 -- Auxiliary domains are appended as left-associated products. Compose their first projections.
-private def objectiveProjection (domain : Expr) (auxiliaries : Array (Nat × Expr)) :
+private meta def objectiveProjection (domain : Expr) (auxiliaries : Array (Nat × Expr)) :
     MetaM Expr := do
   let real := mkConst ``Real
   let mut domain := domain
@@ -334,7 +338,7 @@ private def objectiveProjection (domain : Expr) (auxiliaries : Array (Nat × Exp
 /-- Plan a terminal step before name allocation and declaration emission.
 Restore state on failure. Report the first unresolved row after later rows
 have supplied any newly exposed margins. -/
-def planWith (backend : Backend) (presentation : PresentationState)
+meta def planWith (backend : Backend) (presentation : PresentationState)
     (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do

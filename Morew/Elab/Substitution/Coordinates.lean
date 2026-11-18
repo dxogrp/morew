@@ -2,12 +2,15 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Transform.Parameterization
-import Lean.Meta
+public import Morew.Transform.Parameterization
+public import Lean.Meta
 
 /-! Separate a selected coordinate from retained coordinates in original order.
 Use left-associated products, with `Unit` for no retained coordinates. -/
+
+public meta section
 
 namespace Morew.Elab.Substitution.Coordinates
 

@@ -2,11 +2,14 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Affine
-import Morew.Elab.Expansion
+public import Morew.Affine
+public import Morew.Elab.Expansion
 
 /-! Bounded expansion of affine helpers with shared size, depth, and step limits. -/
+
+public meta section
 
 /-- Maximum nested helper expansions; zero disables expansion. -/
 register_option morew.affine.maxExpansionDepth : Nat := {

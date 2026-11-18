@@ -2,54 +2,57 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Atom
-import Morew.Elab.Evidence
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Atom
+public import Morew.Elab.Evidence
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Transport scalar bounds through real arithmetic, exponentials, maxima, minima, and
 positive parts. Fixed scalar products use independent sign evidence. Unrecognized
 contexts require an explicit certificate. -/
 
+public section
+
 namespace Morew.Elab.ObjectiveContext
 
 open Lean Lean.Meta Qq
 
-private theorem reflexive (a : ℝ) : a ≤ a := le_refl a
-private theorem add {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) : a + c ≤ b + d :=
+theorem reflexive (a : ℝ) : a ≤ a := le_refl a
+theorem add {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) : a + c ≤ b + d :=
   add_le_add h k
-private theorem sub {a b c d : ℝ} (h : a ≤ b) (k : d ≤ c) : a - c ≤ b - d :=
+theorem sub {a b c d : ℝ} (h : a ≤ b) (k : d ≤ c) : a - c ≤ b - d :=
   sub_le_sub h k
-private theorem neg {a b : ℝ} (h : b ≤ a) : -a ≤ -b := neg_le_neg h
-private theorem maximum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
+theorem neg {a b : ℝ} (h : b ≤ a) : -a ≤ -b := neg_le_neg h
+theorem maximum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
     max a c ≤ max b d := max_le_max h k
-private theorem minimum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
+theorem minimum {a b c d : ℝ} (h : a ≤ b) (k : c ≤ d) :
     min a c ≤ min b d := min_le_min h k
-private theorem positive {a b : ℝ} (h : a ≤ b) : a⁺ ≤ b⁺ := posPart_mono h
-private theorem mulLeft {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : c * a ≤ c * b :=
+theorem positive {a b : ℝ} (h : a ≤ b) : a⁺ ≤ b⁺ := posPart_mono h
+theorem mulLeft {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : c * a ≤ c * b :=
   mul_le_mul_of_nonneg_left h sign
-private theorem mulRight {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : a * c ≤ b * c :=
+theorem mulRight {a b c : ℝ} (h : a ≤ b) (sign : 0 ≤ c) : a * c ≤ b * c :=
   mul_le_mul_of_nonneg_right h sign
-private theorem mulLeftNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : c * a ≤ c * b :=
+theorem mulLeftNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : c * a ≤ c * b :=
   mul_le_mul_of_nonpos_left h sign
-private theorem mulRightNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : a * c ≤ b * c :=
+theorem mulRightNeg {a b c : ℝ} (h : b ≤ a) (sign : c ≤ 0) : a * c ≤ b * c :=
   mul_le_mul_of_nonpos_right h sign
-private theorem nonposOfNegative {a : ℝ} (h : a < 0) : a ≤ 0 := le_of_lt h
-private theorem nonposOfNegNonneg {a : ℝ} (h : 0 ≤ -a) : a ≤ 0 :=
+theorem nonposOfNegative {a : ℝ} (h : a < 0) : a ≤ 0 := le_of_lt h
+theorem nonposOfNegNonneg {a : ℝ} (h : 0 ≤ -a) : a ≤ 0 :=
   neg_nonneg.mp h
-private theorem trans {a b c : ℝ} (h : a ≤ b) (k : b ≤ c) : a ≤ c := le_trans h k
+theorem trans {a b c : ℝ} (h : a ≤ b) (k : b ≤ c) : a ≤ c := le_trans h k
 
-private abbrev ContextM := ExceptT MessageData MetaM
+private meta abbrev ContextM := ExceptT MessageData MetaM
 
-private def reject (left right : Expr) (reason : MessageData) : ContextM α := do
+private meta def reject (left right : Expr) (reason : MessageData) : ContextM α := do
   throwThe MessageData (← addMessageContext
     m!"cannot certify bound context from {left} to {right}: {reason}; use `using` with an explicit context certificate")
 
 /-- Compare typed expressions structurally with proof irrelevance and fixed function heads.
 Preserve local-definition identities unless `reduceStructure` requests `let`, projection,
 and tuple-match reduction after occurrence selection. -/
-partial def sameExpression (left right : Expr) (reduceStructure : Bool := false) : MetaM Bool := do
+meta partial def sameExpression (left right : Expr) (reduceStructure : Bool := false) : MetaM Bool := do
   let left ← if reduceStructure then Expr.reduceStructure left else pure left.consumeMData
   let right ← if reduceStructure then Expr.reduceStructure right else pure right.consumeMData
   if left == right then return true
@@ -73,19 +76,19 @@ partial def sameExpression (left right : Expr) (reduceStructure : Bool := false)
       sameExpression (lb.instantiate1 binder) (rb.instantiate1 binder) reduceStructure
   | _, _ => return false
 
-private def same (left right : Expr) : MetaM Bool :=
+private meta def same (left right : Expr) : MetaM Bool :=
   sameExpression left right (reduceStructure := true)
 
-private def canonicalPrefix (source expected : Expr) (operands : Nat) : MetaM Bool := do
+private meta def canonicalPrefix (source expected : Expr) (operands : Nat) : MetaM Bool := do
   let source := source.consumeMData
   let expected := expected.consumeMData
   return (← Expr.operationPrefixMismatch? source expected operands).isNone
 
-private inductive Arithmetic where
+private meta inductive Arithmetic where
   | add | sub | neg | mul | exp | maximum | minimum | pos
   deriving BEq
 
-private def arithmetic? (expression : Expr) : MetaM (Option (Arithmetic × Array Expr)) := do
+private meta def arithmetic? (expression : Expr) : MetaM (Option (Arithmetic × Array Expr)) := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
   let binary (kind : Arithmetic) (expected : Expr) : MetaM (Option (Arithmetic × Array Expr)) := do
@@ -109,7 +112,7 @@ private def arithmetic? (expression : Expr) : MetaM (Option (Arithmetic × Array
     | _ => pure ()
   return none
 
-private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
+private meta def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
   let expression := expression.consumeMData
   let ge := expression.isAppOfArity ``GE.ge 4
   unless ge || expression.isAppOfArity ``LE.le 4 do return none
@@ -118,7 +121,7 @@ private def realRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :=
       (← isDefEq args[1]! (mkConst ``Real.instLE)) do return none
   return some (args[if ge then 3 else 2]!, args[if ge then 2 else 3]!)
 
-private def nonpos? (point value : Expr) : MetaM (Option Expr) := do
+private meta def nonpos? (point value : Expr) : MetaM (Option Expr) := do
   if (← Expr.depends point value) || (← Expr.hasUnresolved value) then return none
   let value : Q(ℝ) := value
   for declaration in ← getLCtx do
@@ -134,7 +137,7 @@ private def nonpos? (point value : Expr) : MetaM (Option Expr) := do
     return some (← mkAppOptM ``nonposOfNegNonneg #[some value, some proof])
   return none
 
-private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
+private meta def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) := do
   let mut expression := expression
   -- Unfold one relation definition at a time to retain operation and instance identity.
   for _ in [:8] do
@@ -147,7 +150,7 @@ private def boundRelation? (expression : Expr) : MetaM (Option (Expr × Expr)) :
     expression := next.consumeMData
   return none
 
-private partial def inequality (point left right bound : Expr) : ContextM Expr := do
+private meta partial def inequality (point left right bound : Expr) : ContextM Expr := do
   let left ← Expr.reduceStructure left
   let right ← Expr.reduceStructure right
   -- Unfold the bound's definition while preserving its endpoints.
@@ -193,7 +196,7 @@ private partial def inequality (point left right bound : Expr) : ContextM Expr :
             return ← mkAppM (if i == 0 then ``mulLeftNeg else ``mulRightNeg) #[proof, sign]
     reject left right "multiplication requires an unchanged decision-independent scalar with a proved sign"
 
-private partial def predicate (point source target bound sourceProof : Expr) : ContextM Expr := do
+private meta partial def predicate (point source target bound sourceProof : Expr) : ContextM Expr := do
   let source ← Expr.reduceStructure source
   let target ← Expr.reduceStructure target
   if ← same source target then return sourceProof
@@ -213,7 +216,7 @@ private partial def predicate (point source target bound sourceProof : Expr) : C
   let right ← inequality point sourceRight targetRight bound
   return ← mkAppM ``trans #[left, ← mkAppM ``trans #[sourceProof, right]]
 
-private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM Expr) :
+private meta def checked (inputs : Array Expr) (expected : Expr) (action : ContextM Expr) :
     MetaM (Except MessageData Expr) :=
   State.withIsolatedMVars do
     for input in inputs do
@@ -234,7 +237,7 @@ private def checked (inputs : Array Expr) (expected : Expr) (action : ContextM E
 /-- Prove `lower ≤ upper` by transporting the supplied bound through real arithmetic,
 exponentials, maxima, minima, and positive parts.
 Isolate caller metavariables and failed environment changes. -/
-def proveInequality (point lower upper boundProof : Expr) : MetaM (Except MessageData Expr) := do
+meta def proveInequality (point lower upper boundProof : Expr) : MetaM (Except MessageData Expr) := do
   let lower : Q(ℝ) := lower
   let upper : Q(ℝ) := upper
   checked #[point, lower, upper, boundProof] q($lower ≤ $upper) <|
@@ -242,7 +245,7 @@ def proveInequality (point lower upper boundProof : Expr) : MetaM (Except Messag
 
 /-- Prove `target` from `sourceProof : source` and a scalar bound through standard
 non-strict real comparisons and conjunctions. For constraints, `source` is the rewritten predicate. -/
-def provePredicate (point source target boundProof sourceProof : Expr) :
+meta def provePredicate (point source target boundProof sourceProof : Expr) :
     MetaM (Except MessageData Expr) :=
   checked #[point, source, target, boundProof, sourceProof] target <|
     predicate point source target boundProof sourceProof

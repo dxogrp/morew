@@ -2,11 +2,14 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Affine.Expansion
-import Morew.Elab.Expr
+public import Morew.Elab.Affine.Expansion
+public import Morew.Elab.Expr
 
 /-! Bounded unfolding of transparent helpers in quadratic objectives. -/
+
+public meta section
 
 /-- Maximum nested helper expansions during quadratic objective certification. -/
 register_option morew.quadConic.maxExpansionDepth : Nat := {

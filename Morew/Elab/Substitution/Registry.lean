@@ -2,12 +2,15 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Transform.Parameterization
-import Morew.Elab.Rewrite.Registry
+public import Morew.Transform.Parameterization
+public import Morew.Elab.Rewrite.Registry
 
 /-! Register coordinate parameterizations through `morew_substitute` with Lean attribute scope.
 Store discovery metadata; matching checks complete maps and operation instances. -/
+
+public meta section
 
 namespace Morew.Elab.Substitution.Registry
 
@@ -61,7 +64,10 @@ initialize extension : SimpleScopedEnvExtension Entry (Array Entry) ←
     name := `morewSubstitutionRegistry
     initial := #[]
     addEntry := fun entries value =>
-      if entries.any (·.declaration == value.declaration) then entries else entries.push value }
+      if entries.any (·.declaration == value.declaration) then entries else entries.push value
+    exportEntry? := fun _ entry =>
+      if isPrivateName entry.declaration then ⟨none, none, some entry⟩
+      else .uniform (some entry) }
 
 initialize registerBuiltinAttribute {
   name := `morew_substitute

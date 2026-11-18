@@ -3,16 +3,21 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.State
-import Mathlib.Analysis.Normed.Lp.WithLp
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Lean.Meta.Tactic.Simp.Main
+module
+
+public meta import Qq
+public import Morew.Elab.Reformulation.State
+public import Mathlib.Analysis.Normed.Lp.WithLp
+public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public meta import Lean.Meta.Tactic.Simp.Main
 
 /-! Stable syntax, canonical presentations, and normalization for steps and command emission. -/
 
+public meta section
+
 namespace Morew.Elab.Reformulation
 
-open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
+open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser Qq
 
 /-- Presentation rendering contexts. -/
 inductive ViewMode where
@@ -112,7 +117,8 @@ private def sectionReferenceNames : TermElabM (Std.HashMap FVarId Name) := do
       references := references.insert id uid
   pure references
 
-private partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
+/-- Retain resolved constants and exact section-variable names in delaborated syntax. -/
+partial def freezeConstantReferences (infos : SubExpr.PosMap Elab.Info)
     (sectionReferences : Std.HashMap FVarId Name)
     (stx : Lean.Syntax) : Lean.Syntax :=
   if let some uid :=
@@ -465,8 +471,9 @@ def presentationInstanceResynthesizes (stored : Expr) : MetaM Bool :=
     | _ => pure false
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Display a coordinate of an `Lp` vector using function application notation. -/
 @[delab app.WithLp.ofLp]
-private def delabLpCoordinate : Delab := do
+def delabLpCoordinate : Delab := do
   let options ← getOptions
   unless options.getBool coordinateNotationOption && !options.getBool `pp.explicit do failure
   withOverApp 4 do
@@ -483,13 +490,14 @@ private def delabLpCoordinate : Delab := do
     let index ← withNaryArg 3 delab
     `($value $index)
 
-private def presentationSingletonMembership {Y : Type} (value zero : Y) : Prop :=
-  value ∈ ({zero} : Set Y)
+private def presentationSingletonMembership (Y : Q(Type))
+    (value zero : Q($Y)) : Q(Prop) :=
+  q($value ∈ ({$zero} : Set $Y))
 
--- Annotate singleton sets with their `Set` type so stored syntax can be elaborated unambiguously.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Annotate zero singleton sets with their `Set` type for unambiguous reconstruction. -/
 @[delab app.Membership.mem]
-private def delabZeroSetMembership : Delab := do
+def delabZeroSetMembership : Delab := do
   unless (← getOptions).getBool presentationNotationOption &&
       !(← getOptions).getBool `pp.explicit do failure
   let expression ← getExpr
@@ -509,8 +517,7 @@ private def delabZeroSetMembership : Delab := do
   guard <| zero.isAppOfArity ``Zero.zero 2 ||
     (zero.isAppOfArity ``OfNat.ofNat 3 &&
       (zero.getAppArgs[1]! == mkRawNatLit 0 || zero.getAppArgs[1]! == mkNatLit 0))
-  let template ← mkAppM ``presentationSingletonMembership #[args[4]!, zero]
-  let some template ← unfoldDefinition? template | failure
+  let template := presentationSingletonMembership args[0]! args[4]! zero
   let canonical := template.getAppArgs
   guard (← isDefEq args[2]! canonical[2]!)
   guard (← isDefEq singletonArgs[2]! canonical[3]!.getAppArgs[2]!)
@@ -536,28 +543,34 @@ private def delabStoredInstance (arity instanceIndex : Nat) : Delab := do
       |>.setBool `pp.instances true) delabApp
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored subtraction instance when notation would select another instance. -/
 @[delab app.HSub.hSub]
-private def delabStoredSubtraction : Delab := delabStoredInstance 6 3
+def delabStoredSubtraction : Delab := delabStoredInstance 6 3
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored negation instance when notation would select another instance. -/
 @[delab app.Neg.neg]
-private def delabStoredNegation : Delab := delabStoredInstance 3 1
+def delabStoredNegation : Delab := delabStoredInstance 3 1
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored zero instance when notation would select another instance. -/
 @[delab app.Zero.zero]
-private def delabStoredZero : Delab := delabStoredInstance 2 1
+def delabStoredZero : Delab := delabStoredInstance 2 1
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored numeral instance when notation would select another instance. -/
 @[delab app.OfNat.ofNat]
-private def delabStoredNumeral : Delab := delabStoredInstance 3 2
+def delabStoredNumeral : Delab := delabStoredInstance 3 2
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored membership instance when notation would select another instance. -/
 @[delab app.Membership.mem]
-private def delabStoredMembership : Delab := delabStoredInstance 5 2
+def delabStoredMembership : Delab := delabStoredInstance 5 2
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Retain the stored singleton instance when notation would select another instance. -/
 @[delab app.Singleton.singleton]
-private def delabStoredSingleton : Delab := delabStoredInstance 4 2
+def delabStoredSingleton : Delab := delabStoredInstance 4 2
 
 /-- Render with fixed global references and supplied binding names. -/
 def delabPresentationTerm (expression : Expr)
@@ -906,7 +919,7 @@ def refreshProblemView (targetName : Name)
           lctx := lctx.setUserName parameter.fvarId! displayName
         let target := mkAppN target parameters
         let some target ← unfoldDefinition? target
-          | throwError "cannot inspect reformulation target `{targetName}`"
+          | throwError "cannot inspect reformulation target `{privateToUserName targetName}`"
         withLCtx' lctx do
           -- Reconstruct instance parameters by local identity or imported class type in parameter order.
           -- Keep the selected operation instances explicit.

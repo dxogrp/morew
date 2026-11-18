@@ -2,15 +2,16 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Rewrite.Polyhedral
-import Morew.Conic.SecondOrder.Repr
-import Morew.Conic.Exponential.Repr
-import Morew.Conic.Power.Repr
-import Morew.Conic.Power.Norm
-import Morew.Conic.Power.GeometricMean
-import Morew.Conic.PSD.Repr
-import Morew.Elab.Rewrite.Registry
+public import Morew.Rewrite.Polyhedral
+public import Morew.Conic.SecondOrder.Repr
+public import Morew.Conic.Exponential.Repr
+public import Morew.Conic.Power.Repr
+public import Morew.Conic.Power.Norm
+public import Morew.Conic.Power.GeometricMean
+public import Morew.Conic.PSD.Repr
+public import Morew.Elab.Rewrite.Registry
 
 /-! Install built-in conic rules via `morew_conic`. Local attribute removal excludes a rule.
 Automatic selection prefers `SecondOrder.normEpigraph` over `Power.normEpigraph`

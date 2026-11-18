@@ -2,17 +2,20 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Data.Fin.VecNotation
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.Data.Matrix.Block
-import Morew.Core
-import Lean.Meta.Match.MatcherInfo
-import Lean.Meta.RecExt
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.Data.Matrix.Block
+public import Morew.Core
+public import Lean.Meta.Match.MatcherInfo
+public import Lean.Meta.RecExt
 
 /-! Shared helper unfolding, resource accounting, and structural reduction.
 Callers choose traversal and unfolding points. -/
+
+public meta section
 
 namespace Morew.Elab.Expansion
 

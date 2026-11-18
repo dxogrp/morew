@@ -2,32 +2,35 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Conic.Basic
-import Morew.Conic.SecondOrder
-import Morew.Conic.Exponential.Cone
-import Morew.Conic.PSD
-import Morew.Elab.Affine
-import Morew.Elab.State
-import Morew.Elab.Cone.Space
-import Morew.Elab.Evidence
-import Morew.Elab.Cone.Nonneg
-import Morew.Elab.Cone.Normalize
-import Morew.Elab.Cone.Symmetry
-import Morew.Conic.Power.Cone
-import Morew.Elab.Reformulation.Presentation
-import Morew.Elab.Expr
+public import Morew.Conic.Basic
+public import Morew.Conic.SecondOrder
+public import Morew.Conic.Exponential.Cone
+public import Morew.Conic.PSD
+public import Morew.Elab.Affine
+public import Morew.Elab.State
+public import Morew.Elab.Cone.Space
+public import Morew.Elab.Evidence
+public import Morew.Elab.Cone.Nonneg
+public import Morew.Elab.Cone.Normalize
+public import Morew.Elab.Cone.Symmetry
+public import Morew.Conic.Power.Cone
+public import Morew.Elab.Reformulation.Presentation
+public import Morew.Elab.Expr
 
 /-! Certify affine scalar and vector comparisons and standard cone memberships, including
 PSD predicates with global symmetry. Finite exponential and power families use
 product cones. Return a cone row and pointwise equivalence. -/
 
+public section
+
 namespace Morew.Elab.Cone
 
-open Lean Lean.Meta
+open Lean Lean.Meta Qq
 
 /-- The semantic row and the proof relating it to the input predicate. -/
-structure RowResult where
+meta structure RowResult where
   /-- An expression of type `Morew.Conic.Constraint X`. -/
   constraint : Expr
   /-- Proof of `∀ x, constraint.Holds x ↔ predicate x`. -/
@@ -36,7 +39,7 @@ structure RowResult where
   normalization? : Option PredicateNormalization := none
 
 /-- Transform every expression in a row, including its cached normalization evidence. -/
-def RowResult.mapExprM (row : RowResult) (f : Expr → MetaM Expr) : MetaM RowResult := do
+meta def RowResult.mapExprM (row : RowResult) (f : Expr → MetaM Expr) : MetaM RowResult := do
   return {
     constraint := ← f row.constraint
     pointwiseIff := ← f row.pointwiseIff
@@ -47,7 +50,7 @@ def RowResult.mapExprM (row : RowResult) (f : Expr → MetaM Expr) : MetaM RowRe
   }
 
 /-- Express a row and its cached evidence in a new variable context. -/
-def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : RowResult := {
+meta def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : RowResult := {
   constraint := row.constraint.replaceFVars oldVars newVars
   pointwiseIff := row.pointwiseIff.replaceFVars oldVars newVars
   normalization? := row.normalization?.map fun normalized => {
@@ -56,13 +59,13 @@ def RowResult.replaceFVars (row : RowResult) (oldVars newVars : Array Expr) : Ro
     pointwiseIff := normalized.pointwiseIff.replaceFVars oldVars newVars }
 }
 
--- Fix real algebra instances before subtracting certified affine maps.
-private def subtractMaps
+/-- Subtract affine maps using the given real vector-space structures. -/
+@[expose] def subtractMaps
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     (f g : X →ᵃ[ℝ] Y) : X →ᵃ[ℝ] Y := f - g
 
-private theorem normalizeEq
+theorem normalizeEq
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (f g : X →ᵃ[ℝ] Y) (lhs rhs : X → Y)
@@ -73,7 +76,7 @@ private theorem normalizeEq
   change f x - g x = 0 ↔ lhs x = rhs x
   rw [hf, hg, sub_eq_zero]
 
-private theorem normalizeLE
+theorem normalizeLE
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] [PartialOrder Y] [IsOrderedAddMonoid Y]
@@ -86,15 +89,15 @@ private theorem normalizeLE
   rw [hf, hg, sub_nonneg]
 
 -- Check the canonical membership instance independently of tuple values.
-private def canonicalMembership (cone : Morew.Conic.Cone) (value : cone.Space) : Prop :=
-  value ∈ cone.carrier
+private meta def canonicalMembership : Expr :=
+  q(fun (cone : Morew.Conic.Cone) (value : cone.Space) => value ∈ cone.carrier)
 
-private def canonicalPowerMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
-  value ∈ Morew.Conic.Cone.powerSet α
+private meta def canonicalPowerMembership : Expr :=
+  q(fun (α : ℝ) (value : ℝ × ℝ × ℝ) => value ∈ Morew.Conic.Cone.powerSet α)
 
-private def powerExponentRange (α : ℝ) : Prop := 0 < α ∧ α < 1
+private meta def powerExponentRange : Expr := q(fun (α : ℝ) => 0 < α ∧ α < 1)
 
-private theorem normalizeMembership
+theorem normalizeMembership
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     (cone : Morew.Conic.Cone) (map : X →ᵃ[ℝ] cone.Space)
     (source : X → cone.Space) (h : ∀ x, map x = source x) :
@@ -103,26 +106,26 @@ private theorem normalizeMembership
   change map x ∈ cone.carrier ↔ source x ∈ cone.carrier
   rw [h x]
 
-private def canonicalPSD (n : Nat)
-    (value : Matrix (Fin n) (Fin n) ℝ) : Prop := value.PosSemidef
+private meta def canonicalPSD : Expr :=
+  q(fun (n : Nat) (value : Matrix (Fin n) (Fin n) ℝ) => value.PosSemidef)
 
-private theorem psdMembership {n : Nat}
+theorem psdMembership {n : Nat}
     (value : Matrix (Fin n) (Fin n) ℝ) (symmetric : value.IsSymm) :
     value.PosSemidef ↔ Morew.Conic.SymmetricMatrix.ofMatrix value symmetric ∈
       (Morew.Conic.Cone.psd n).carrier := Iff.rfl
 
-private def canonicalScalarZeroMembership (value : ℝ) : Prop :=
-  value ∈ ({0} : Set ℝ)
+private meta def canonicalScalarZeroMembership : Expr :=
+  q(fun (value : ℝ) => value ∈ ({0} : Set ℝ))
 
-private def canonicalVectorZeroMembership (n : Nat) (value : Fin n → ℝ) : Prop :=
-  value ∈ ({0} : Set (Fin n → ℝ))
+private meta def canonicalVectorZeroMembership : Expr :=
+  q(fun (n : Nat) (value : Fin n → ℝ) => value ∈ ({0} : Set (Fin n → ℝ)))
 
-private def canonicalScalarZero : ℝ := @Zero.zero ℝ inferInstance
+private meta def canonicalScalarZero : Expr := q(@Zero.zero ℝ inferInstance)
 
-private def canonicalVectorZero (n : Nat) : Fin n → ℝ :=
-  @Zero.zero (Fin n → ℝ) inferInstance
+private meta def canonicalVectorZero : Expr :=
+  q(fun (n : Nat) => @Zero.zero (Fin n → ℝ) inferInstance)
 
-private theorem normalizeZeroMembership
+theorem normalizeZeroMembership
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [FiniteDimensional ℝ Y] (map : X →ᵃ[ℝ] Y)
@@ -131,7 +134,7 @@ private theorem normalizeZeroMembership
   intro x
   rw [Morew.Conic.Constraint.holds_eqZero, h x, Set.mem_singleton_iff]
 
-private theorem normalizeExponentialFamily
+theorem normalizeExponentialFamily
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     (n : Nat) (map : X →ᵃ[ℝ] (Morew.Conic.Cone.exponentialProduct n).Space)
     (source : X → Fin n → ℝ × ℝ × ℝ) (h : ∀ x, map x = source x) :
@@ -142,7 +145,7 @@ private theorem normalizeExponentialFamily
   rw [h x]
   exact Morew.Conic.Cone.mem_exponentialProduct (source x)
 
-private theorem normalizePowerFamily
+theorem normalizePowerFamily
     {X : Type u} [AddCommGroup X] [Module ℝ X]
     (n : Nat) (α : Fin n → ℝ) (hα : ∀ i, 0 < α i ∧ α i < 1)
     (map : X →ᵃ[ℝ] (Morew.Conic.Cone.powerProduct n α hα).Space)
@@ -155,7 +158,7 @@ private theorem normalizePowerFamily
   exact Morew.Conic.Cone.mem_powerProduct α hα (source x)
 
 /-- Return the canonical real or coordinatewise real order. -/
-private def realOrder? (type : Expr) : MetaM (Option Expr) := do
+private meta def realOrder? (type : Expr) : MetaM (Option Expr) := do
   let type ← whnf type
   if type.isConstOf ``Real then
     return some (mkConst ``Real.instLE)
@@ -169,7 +172,7 @@ private def realOrder? (type : Expr) : MetaM (Option Expr) := do
   return some <| mkAppN (mkConst ``Pi.hasLe [Level.zero, Level.zero])
     #[domain, family, orders]
 
-private def rowError (expression : Expr) (reason : MessageData)
+private meta def rowError (expression : Expr) (reason : MessageData)
     (label? : Option Name) : MetaM Expr.Error := do
   let reason := match label? with
     | none => m!"constraint: {reason}"
@@ -177,7 +180,7 @@ private def rowError (expression : Expr) (reason : MessageData)
   return { expression, reason := ← addMessageContext reason }
 
 -- Reject metavariables in relation instances and local declarations before matching.
-private partial def hasUnresolved (expression : Expr)
+private meta partial def hasUnresolved (expression : Expr)
     (seen : FVarIdSet := {}) : MetaM Bool := do
   let expression ← instantiateMVars expression
   if expression.hasMVar then return true
@@ -192,7 +195,7 @@ private partial def hasUnresolved (expression : Expr)
   return false
 
 -- Substitute decision-dependent lets before abstraction; retain independent evidence lets.
-private partial def withPredicateLets (point body : Expr)
+private meta partial def withPredicateLets (point body : Expr)
     (action : Expr → MetaM (Except Expr.Error RowResult)) :
     MetaM (Except Expr.Error RowResult) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
@@ -207,7 +210,7 @@ private partial def withPredicateLets (point body : Expr)
   else
     action body
 
-private def membershipData (point body : Expr) (label? : Option Name)
+private meta def membershipData (point body : Expr) (label? : Option Name)
     (index? : Option Expr := none) :
     MetaM (Except Expr.Error (Expr × Expr)) := do
   let args := body.getAppArgs
@@ -217,13 +220,13 @@ private def membershipData (point body : Expr) (label? : Option Name)
     if ← Expr.depends point exponent then
       return .error (← rowError body "power cone exponent depends on the decision point" label?)
     let value := args[4]!
-    let template := (← getConstInfo ``canonicalPowerMembership).value!
+    let template := canonicalPowerMembership
     let canonical := (mkAppN template #[exponent, value]).headBeta
     unless ← isDefEq args[2]! canonical.getAppArgs[2]! do
       return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
     unless ← isDefEq body canonical do
       return .error (← rowError body "membership does not match the canonical power cone set" label?)
-    let range := (mkApp (← getConstInfo ``powerExponentRange).value! exponent).headBeta
+    let range := (mkApp powerExponentRange exponent).headBeta
     let some evidence ← Evidence.proveIndependent? point range index?
       | return .error (← rowError body
           m!"missing independent power cone exponent evidence: required 0 < {exponent} ∧ {exponent} < 1" label?)
@@ -258,7 +261,7 @@ private def membershipData (point body : Expr) (label? : Option Name)
       else "cone dimension depends on the decision point"
     return .error (← rowError body description label?)
   let value := args[4]!
-  let template := (← getConstInfo ``canonicalMembership).value!
+  let template := canonicalMembership
   let canonical := (mkAppN template #[cone, value]).headBeta
   let canonicalArgs := canonical.getAppArgs
   unless ← isDefEq args[2]! canonicalArgs[2]! do
@@ -269,7 +272,7 @@ private def membershipData (point body : Expr) (label? : Option Name)
 
 /-- Recover matrix coordinates of standard PSD predicates or canonical PSD membership.
 Check scalar and membership instances. -/
-def psdValue? (point body : Expr) : MetaM (Option Expr) := do
+meta def psdValue? (point body : Expr) : MetaM (Option Expr) := do
   let result : Except Unit Expr ← State.withIsolatedMVars do
     if (← hasUnresolved body) || (← Evidence.hasPlaceholders body) then return .error ()
     if body.isAppOfArity ``Membership.mem 5 then
@@ -289,7 +292,7 @@ def psdValue? (point body : Expr) : MetaM (Option Expr) := do
         (← isDefEq row column) && (← whnf scalar).isConstOf ``Real do return .error ()
     let n := row.getAppArgs[0]!
     if ← Expr.depends point n then return .error ()
-    let canonical := (mkAppN (← getConstInfo ``canonicalPSD).value!
+    let canonical := (mkAppN canonicalPSD
       #[n, value]).headBeta
     let arguments := body.getAppArgs
     let expected := canonical.getAppArgs
@@ -300,14 +303,14 @@ def psdValue? (point body : Expr) : MetaM (Option Expr) := do
     return .ok value
   return result.toOption
 
-private def singletonZeroData (point body : Expr) (label? : Option Name) :
+private meta def singletonZeroData (point body : Expr) (label? : Option Name) :
     MetaM (Except Expr.Error Expr) := do
   let args := body.getAppArgs
   let value := args[4]!
   let target ← whnf args[0]!
   let (canonical, explicitZero) ← if target.isConstOf ``Real then do
-      pure ((mkApp (← getConstInfo ``canonicalScalarZeroMembership).value! value).headBeta,
-        (← getConstInfo ``canonicalScalarZero).value!)
+      pure ((mkApp canonicalScalarZeroMembership value).headBeta,
+        canonicalScalarZero)
     else do
       let .forallE _ index range _ := target
         | return .error (← rowError body "expected a real scalar or finite-vector zero singleton" label?)
@@ -320,9 +323,9 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
       let dimension := index.getAppArgs[0]!
       if ← Expr.depends point dimension then
         return .error (← rowError body "cone dimension depends on the decision point" label?)
-      pure ((mkAppN (← getConstInfo ``canonicalVectorZeroMembership).value!
+      pure ((mkAppN canonicalVectorZeroMembership
         #[dimension, value]).headBeta,
-        (mkApp (← getConstInfo ``canonicalVectorZero).value! dimension).headBeta)
+        (mkApp canonicalVectorZero dimension).headBeta)
   let canonicalArgs := canonical.getAppArgs
   unless ← isDefEq args[2]! canonicalArgs[2]! do
     return .error (← rowError body m!"unsupported membership instance {args[2]!}" label?)
@@ -353,7 +356,7 @@ private def singletonZeroData (point body : Expr) (label? : Option Name) :
     return .error (← rowError body "membership does not match the canonical zero singleton" label?)
   return .ok value
 
-private def finishRow (predicate point constraint pointwiseIff : Expr)
+private meta def finishRow (predicate point constraint pointwiseIff : Expr)
     (description : String := "row") : MetaM (Expr × Expr) := do
   if constraint.hasMVar || pointwiseIff.hasMVar then
     throwError "{description} construction left unresolved metavariables"
@@ -365,7 +368,7 @@ private def finishRow (predicate point constraint pointwiseIff : Expr)
     throwError "{description} equivalence did not match the input predicate"
   return (constraint, pointwiseIff)
 
-private def normalizeZeroMembershipRow (predicate domain point body : Expr)
+private meta def normalizeZeroMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let data ← singletonZeroData point body label?
@@ -383,7 +386,7 @@ private def normalizeZeroMembershipRow (predicate domain point body : Expr)
     finishRow predicate point constraint pointwiseIff
   return .ok { constraint, pointwiseIff }
 
-private def normalizePSDRow (predicate domain point body : Expr)
+private meta def normalizePSDRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let value := body.getAppArgs.back!
@@ -399,7 +402,7 @@ private def normalizePSDRow (predicate domain point body : Expr)
   let n := row.getAppArgs[0]!
   if ← Expr.depends point n then
     return .error (← rowError body "PSD matrix dimension depends on the decision point" label?)
-  let canonical := (mkAppN (← getConstInfo ``canonicalPSD).value!
+  let canonical := (mkAppN canonicalPSD
     #[n, value]).headBeta
   let arguments := body.getAppArgs
   let canonicalArguments := canonical.getAppArgs
@@ -459,7 +462,7 @@ private def normalizePSDRow (predicate domain point body : Expr)
       changed := true }
   }
 
-private def normalizeMembershipRow (predicate domain point body : Expr)
+private meta def normalizeMembershipRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let data ← membershipData point body label?
@@ -480,13 +483,13 @@ private def normalizeMembershipRow (predicate domain point body : Expr)
     finishRow predicate point constraint pointwiseIff
   return .ok { constraint, pointwiseIff }
 
-private structure FamilyMember where
+private meta structure FamilyMember where
   coordinates : Expr
   /-- A power parameter and its range proof; `none` denotes the exponential cone. -/
   power? : Option (Expr × Expr) := none
 
 -- Retain coordinate evidence lets; cone parameters keep only their own dependencies.
-private partial def familyMember (point index body : Expr)
+private meta partial def familyMember (point index body : Expr)
     (label? : Option Name) : MetaM (Except Expr.Error FamilyMember) := do
   let body ← Expr.reduceStructure body (preserveLets := true)
   if let .letE name type value rest nondep := body then
@@ -514,7 +517,7 @@ private partial def familyMember (point index body : Expr)
       return .error (← rowError body
         "finite quantified rows require the native exponential cone or power cone" label?)
 
-private def normalizeFiniteFamilyRow (predicate domain point body : Expr)
+private meta def normalizeFiniteFamilyRow (predicate domain point body : Expr)
     (provider : Affine.EvidenceProvider) (label? : Option Name) :
     MetaM (Except Expr.Error RowResult) := do
   let .forallE name index rest info := body
@@ -558,7 +561,7 @@ private def normalizeFiniteFamilyRow (predicate domain point body : Expr)
     finishRow predicate point constraint pointwiseIff "quantified row"
   return .ok { constraint, pointwiseIff }
 
-private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.EvidenceProvider)
+private meta def normalizeRowWithInstances (predicate : Expr) (provider : Affine.EvidenceProvider)
     (label? : Option Name) : MetaM (Except Expr.Error RowResult) := do
   let type ← whnf (← inferType predicate)
   let .forallE _ domain codomain _ := type
@@ -623,7 +626,7 @@ private def normalizeRowWithInstances (predicate : Expr) (provider : Affine.Evid
         finishRow predicate point constraint pointwiseIff
       return .ok { constraint, pointwiseIff }
 
-private def withFiniteInstances (instances : List Expr)
+private meta def withFiniteInstances (instances : List Expr)
     (action : MetaM (Except Expr.Error RowResult)) :
     MetaM (Except Expr.Error RowResult) := do
   match instances with
@@ -634,7 +637,7 @@ private def withFiniteInstances (instances : List Expr)
       | .error error => return .error error
       | .ok result => return .ok (← result.mapExprM (·.replaceFVarsM #[binding] #[inst]))
 
-private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvider)
+private meta def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvider)
     (label? : Option Name) : MetaM (Except Expr.Error RowResult) := do
   let predicate ← instantiateMVars predicate
   if ← hasUnresolved predicate then
@@ -645,7 +648,7 @@ private def normalizeRowCore (predicate : Expr) (provider : Affine.EvidenceProvi
 /-- Certify affine comparisons, zero singletons, standard cone memberships, matrix PSD,
 and finite exponential or power families. All coordinates must be affine.
 The optional label supplies diagnostic context. -/
-def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
+meta def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
     (label? : Option Name := none) : MetaM (Except Expr.Error RowResult) :=
   State.withIsolatedMVars do
     try
@@ -664,7 +667,7 @@ def normalizeRow (predicate : Expr) (provider : Affine.EvidenceProvider := {})
       return .error (← rowError predicate error.toMessageData label?)
 
 /-- Normalize a typed named constraint, retaining its label in diagnostics. -/
-def normalizeConstraint (entry : Reformulation.ConstraintEntry)
+meta def normalizeConstraint (entry : Reformulation.ConstraintEntry)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error RowResult) :=
   normalizeRow entry.predicate provider (some entry.name)
 

@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Rows
 
 /-! Rename a constraint label while preserving its predicate and semantic problem. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -52,8 +56,9 @@ def prepareRenameConstraint (state : ReformState)
     materialize := materializeRenameConstraint state index destination unchanged
   }
 
+/-- Elaborate a `rename` step changing a constraint label. -/
 @[morew_reformulation_step Morew.renameConstraintStep]
-private def elabRename : StepHandler := fun state step => do
+def elabRename : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| rename $source:ident to $destination:ident) =>
       prepareRenameConstraint state source destination

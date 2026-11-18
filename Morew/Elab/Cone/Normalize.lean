@@ -2,23 +2,26 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Rewrite.Decomposition
-import Morew.Elab.State
-import Morew.Elab.Cone.Space
-import Morew.Elab.Expr
+public import Morew.Elab.Rewrite.Decomposition
+public import Morew.Elab.State
+public import Morew.Elab.Cone.Space
+public import Morew.Elab.Expr
 
 /-! Prove equivalence between scalar or finite-vector comparisons and cone membership.
 Preserve conjunctions, local lets, and operands; simplify literal zero and negation.
 The row certifier checks affinity of the coordinates separately. -/
 
+public section
+
 namespace Morew.Elab.Cone
 
-open Lean Lean.Meta
+open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite
 
 /-- A proposition and a checked equivalence from its original spelling. -/
-structure BodyNormalization where
+meta structure BodyNormalization where
   /-- The proposition after comparison-to-membership normalization. -/
   body : Expr
   /-- Proof of `original ↔ body`. -/
@@ -27,7 +30,7 @@ structure BodyNormalization where
   changed : Bool
 
 /-- A predicate and a checked pointwise equivalence from its original spelling. -/
-structure PredicateNormalization where
+meta structure PredicateNormalization where
   /-- The predicate after comparison-to-membership normalization. -/
   predicate : Expr
   /-- Proof of `∀ x, original x ↔ predicate x`. -/
@@ -35,12 +38,12 @@ structure PredicateNormalization where
   /-- Whether a comparison was replaced. -/
   changed : Bool
 
-private theorem comparisonEq
+theorem comparisonEq
     {Y : Type} [NormedAddCommGroup Y] (lhs rhs value : Y)
     (h : lhs - rhs = value) : lhs = rhs ↔ value ∈ ({0} : Set Y) := by
   rw [Set.mem_singleton_iff, ← h, sub_eq_zero]
 
-private theorem comparisonLE
+theorem comparisonLE
     {Y : Type} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
     [PartialOrder Y] [IsOrderedAddMonoid Y] [PosSMulMono ℝ Y]
     (lhs rhs value : Y) (h : rhs - lhs = value) :
@@ -48,42 +51,39 @@ private theorem comparisonLE
   change lhs ≤ rhs ↔ 0 ≤ value
   rw [← h, sub_nonneg]
 
-private def coneMembership (cone : Morew.Conic.Cone) (value : cone.Space) : Prop :=
-  value ∈ cone.carrier
+private meta def coneMembership : Expr :=
+  q(fun (cone : Morew.Conic.Cone) (value : cone.Space) => value ∈ cone.carrier)
 
-private def zeroMembership {Y : Type} [NormedAddCommGroup Y] (value : Y) : Prop :=
-  value ∈ ({0} : Set Y)
+private meta def zeroMembership : Expr :=
+  q(fun {Y : Type} [NormedAddCommGroup Y] (value : Y) => value ∈ ({0} : Set Y))
 
 -- Use fixed arithmetic instances for generated margins.
-private def nativeDifference {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) : Y :=
-  lhs - rhs
+private meta def nativeDifference : Expr :=
+  q(fun {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) => lhs - rhs)
 
-private def nativeAddition {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) : Y :=
-  lhs + rhs
+private meta def nativeAddition : Expr :=
+  q(fun {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) => lhs + rhs)
 
-private def nativeZero {Y : Type} [NormedAddCommGroup Y] : Y := 0
+private meta def nativeZero : Expr :=
+  q(fun {Y : Type} [NormedAddCommGroup Y] => (0 : Y))
 
-private def nativeNegation {Y : Type} [NormedAddCommGroup Y] (value : Y) : Y := -value
+private meta def nativeNegation : Expr :=
+  q(fun {Y : Type} [NormedAddCommGroup Y] (value : Y) => -value)
 
-private theorem nativeSubZero {Y : Type} [NormedAddCommGroup Y] (value : Y) :
+theorem nativeSubZero {Y : Type} [NormedAddCommGroup Y] (value : Y) :
     value - 0 = value := sub_zero value
 
-private theorem nativeZeroSub {Y : Type} [NormedAddCommGroup Y] (value : Y) :
+theorem nativeZeroSub {Y : Type} [NormedAddCommGroup Y] (value : Y) :
     0 - value = -value := zero_sub value
 
-private theorem nativeSubNeg {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) :
+theorem nativeSubNeg {Y : Type} [NormedAddCommGroup Y] (lhs rhs : Y) :
     lhs - -rhs = lhs + rhs := sub_neg_eq_add lhs rhs
 
-private theorem nativeZeroSubNeg {Y : Type} [NormedAddCommGroup Y] (value : Y) :
+theorem nativeZeroSubNeg {Y : Type} [NormedAddCommGroup Y] (value : Y) :
     0 - -value = value := by rw [sub_neg_eq_add, zero_add]
 
-private def exposeTemplate (value : Expr) : MetaM Expr := do
-  let some result ← unfoldDefinition? value
-    | throwError "could not construct a native normalization expression"
-  return result
-
 -- Recognize literal zero; preserve named operands.
-private def literalZero (value zero : Expr) : MetaM Bool := do
+private meta def literalZero (value zero : Expr) : MetaM Bool := do
   let value := value.consumeMData
   let args := value.getAppArgs
   let literal := value.isAppOfArity ``Zero.zero 2 ||
@@ -91,28 +91,28 @@ private def literalZero (value zero : Expr) : MetaM Bool := do
       (args[1]! == mkRawNatLit 0 || args[1]! == mkNatLit 0))
   return literal && (← isDefEq value zero)
 
-private def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
-  let difference ← exposeTemplate (← mkAppM ``nativeDifference #[lhs, rhs])
+private meta def subtract (lhs rhs : Expr) : MetaM (Expr × Expr) := do
+  let difference := (← mkAppM' nativeDifference #[lhs, rhs]).headBeta
   let type ← inferType lhs
-  let zero ← exposeTemplate (← mkAppOptM ``nativeZero #[some type, none])
+  let zero := (← mkAppOptM' nativeZero #[some type, none]).headBeta
   if ← literalZero rhs zero then
     return (lhs, ← mkAppM ``nativeSubZero #[lhs])
   -- Recognize standard negation without unfolding operands.
   let negated := rhs.consumeMData
   if negated.isAppOfArity ``Neg.neg 3 then
     let args := negated.getAppArgs
-    let native ← exposeTemplate (← mkAppM ``nativeNegation #[args[2]!])
+    let native := (← mkAppM' nativeNegation #[args[2]!]).headBeta
     if ← isDefEq args[1]! native.getAppArgs[1]! then
       if ← literalZero lhs zero then
         return (args[2]!, ← mkAppM ``nativeZeroSubNeg #[args[2]!])
-      return (← exposeTemplate (← mkAppM ``nativeAddition #[lhs, args[2]!]),
+      return ((← mkAppM' nativeAddition #[lhs, args[2]!]).headBeta,
         ← mkAppM ``nativeSubNeg #[lhs, args[2]!])
   if ← literalZero lhs zero then
-    return (← exposeTemplate (← mkAppM ``nativeNegation #[rhs]),
+    return ((← mkAppM' nativeNegation #[rhs]).headBeta,
       ← mkAppM ``nativeZeroSub #[rhs])
   return (difference, ← mkEqRefl difference)
 
-private def nonnegCone (type : Expr) : MetaM Expr := do
+private meta def nonnegCone (type : Expr) : MetaM Expr := do
   let type ← whnf type
   if type.isConstOf ``Real then
     return mkConst ``Morew.Conic.Cone.nonnegScalar
@@ -126,7 +126,7 @@ private def nonnegCone (type : Expr) : MetaM Expr := do
     throwError "expected real scalar or finite-vector comparison operands"
   return ← mkAppM ``Morew.Conic.Cone.nonneg #[index.getAppArgs[0]!]
 
-private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
+private meta def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
   let args := body.getAppArgs
   let equality := body.isAppOfArity ``Eq 3
   let greaterEqual := body.isAppOfArity ``GE.ge 4
@@ -139,10 +139,9 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
     let (left, right) := if equality || greaterEqual then (lhs, rhs) else (rhs, lhs)
     let (value, differenceEq) ← subtract left right
     let normalized ← if equality then
-        unfoldDefinition? (← mkAppM ``zeroMembership #[value])
+        pure (← mkAppM' zeroMembership #[value]).headBeta
       else
-        unfoldDefinition? (← mkAppM ``coneMembership #[cone, value])
-    let some normalized := normalized | throwError "could not construct native cone membership"
+        pure (← mkAppM' coneMembership #[cone, value]).headBeta
     let proof ← if equality then
         mkAppM ``comparisonEq #[lhs, rhs, value, differenceEq]
       else if greaterEqual then
@@ -159,7 +158,7 @@ private def normalizeComparison (body : Expr) : MetaM BodyNormalization := do
     throwError "comparison uses an unsupported order or arithmetic instance"
   return { body := normalized, iff := proof, changed := true }
 
-private partial def normalizeBodyCore (original : Expr)
+private meta partial def normalizeBodyCore (original : Expr)
     (certified : Expr → MetaM (Option BodyNormalization) := fun _ => pure none) :
     MetaM BodyNormalization := do
   let body ← Expr.reduceStructure original (preserveLets := true)
@@ -188,7 +187,7 @@ private partial def normalizeBodyCore (original : Expr)
     return ← normalizeComparison body
   return { body := original, iff := mkApp (mkConst ``Iff.rfl) original, changed := false }
 
-private def isolated (action : MetaM α) : MetaM α := do
+private meta def isolated (action : MetaM α) : MetaM α := do
   let result ← State.withIsolatedMVars (ε := Empty) do
     return .ok (← action)
   match result with
@@ -197,7 +196,7 @@ private def isolated (action : MetaM α) : MetaM α := do
 
 /-- Normalize standard comparisons, preserving operands, local lets, and conjunctions.
 Leave other predicates intact; reject unresolved inputs in isolation. -/
-def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
+meta def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
   if ← Expr.hasUnresolvedStrict original then
     throwError "membership normalization requires fully elaborated expressions"
   let result ← normalizeBodyCore original
@@ -214,7 +213,7 @@ def normalizeBody (original : Expr) : MetaM BodyNormalization := isolated do
 
 /-- Normalize a predicate with pointwise equivalence. Nonempty certificates follow
 `decomposePredicate` order, excluding `True` and retaining repeated occurrences. -/
-def normalizePredicate (predicate : Expr)
+meta def normalizePredicate (predicate : Expr)
     (certificates : Array PredicateNormalization := #[]) :
     MetaM PredicateNormalization := isolated do
   if ← Expr.hasUnresolvedStrict predicate then

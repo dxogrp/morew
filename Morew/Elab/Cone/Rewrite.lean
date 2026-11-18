@@ -2,21 +2,24 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Cone.Rules
-import Morew.Elab.Evidence.Sign
-import Morew.Elab.Cone.Plan
-import Morew.Elab.Cone.MatrixDomain
-import Morew.Elab.Evidence
-import Morew.Elab.Rewrite.Match
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Cone.Rules
+public import Morew.Elab.Evidence.Sign
+public import Morew.Elab.Cone.Plan
+public import Morew.Elab.Cone.MatrixDomain
+public import Morew.Elab.Evidence
+public import Morew.Elab.Rewrite.Match
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Select and certify exact conic replacements.
 Automatic selection requires a unique success after preferring the built-in SOC
 norm rule over the power-norm rule, and the native matrix-fraction rule over the
 native quadratic-form rule. Explicit selection bypasses these preferences.
 Retained constraints supply rule premises. -/
+
+public meta section
 
 namespace Morew.Elab.Cone.Rewrite
 
@@ -231,7 +234,8 @@ def planUnique (predicate : Expr) (retained : Array Expr := #[])
         setEnv selected.environment
         return .ok selected.result
       if successes.size > 1 then
-        let names := successes.toList.map (·.name.toString)
+        let names := (successes.toList.map (fun candidate =>
+          (privateToUserName candidate.name).toString)).mergeSort (· ≤ ·)
         throwError "ambiguous exact conic rules: {String.intercalate ", " names}; select one with `using`"
       if failures.isEmpty then
         throwError "no supported registered conic rule matches the entire selected predicate and bound polarity"

@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Presentation
-import Morew.Transform
+module
+
+public import Morew.Elab.Reformulation.Presentation
+public import Morew.Transform
 
 /-! Typed step interfaces, certificate composition, normalization, and atomic commit. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 

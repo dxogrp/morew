@@ -2,9 +2,10 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Substitution
-import Morew.Elab.Substitution.Registry
+public import Morew.Substitution
+public import Morew.Elab.Substitution.Registry
 
 /-! Install built-in coordinate parameterizations. Explicit `via` also accepts unregistered records. -/
 

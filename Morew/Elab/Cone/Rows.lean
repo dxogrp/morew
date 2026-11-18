@@ -2,13 +2,16 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Cone.Constraint
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Cone.Constraint
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Assemble checked affine cone rows and their exact feasibility certificate. -/
+
+public section
 
 namespace Morew.Elab.Cone
 
@@ -16,29 +19,30 @@ open Lean Lean.Meta
 open Morew.Elab.Rewrite
 open Reformulation
 
-private theorem emptyRows {X : Type u} [AddCommGroup X] [Module ℝ X]
+theorem emptyRows {X : Type u} [AddCommGroup X] [Module ℝ X]
     (x : X) :
     (∀ i : Fin 0, (Fin.elim0 i : Morew.Conic.Constraint X).Holds x) ↔ True :=
   Fin.forall_fin_zero
 
-private def prependRow {X : Type u} [AddCommGroup X] [Module ℝ X]
+/-- Prepend a conic row to a finite family, preserving the remaining order. -/
+@[expose] def prependRow {X : Type u} [AddCommGroup X] [Module ℝ X]
     {n : Nat} (row : Morew.Conic.Constraint X)
     (rest : Fin n → Morew.Conic.Constraint X) : Fin (n + 1) → Morew.Conic.Constraint X :=
   Fin.cons row rest
 
-private theorem consRows {X : Type u} [AddCommGroup X] [Module ℝ X]
+theorem consRows {X : Type u} [AddCommGroup X] [Module ℝ X]
     {n : Nat} (row : Morew.Conic.Constraint X)
     (rest : Fin n → Morew.Conic.Constraint X) (x : X) :
     (∀ i, (prependRow row rest i).Holds x) ↔ row.Holds x ∧ ∀ i, (rest i).Holds x :=
   Fin.forall_fin_succ
 
-private structure RowBlock where
+private meta structure RowBlock where
   predicates : Array Expr
   decomposition : Expr
   rows : Array RowResult
 
 -- Build the row table and its ordered conjunction equivalence together.
-private def assembleRows (domain : Expr) (predicates : Array Expr)
+private meta def assembleRows (domain : Expr) (predicates : Array Expr)
     (rows : Array RowResult) : MetaM (Expr × Expr) := do
   let rowType ← mkAppOptM ``Morew.Conic.Constraint #[some domain, none, none]
   let empty ← withLocalDeclD `i (← mkAppM ``Fin #[mkNatLit 0]) fun i => do
@@ -58,7 +62,7 @@ private def assembleRows (domain : Expr) (predicates : Array Expr)
     return (table, ← mkLambdaFVars #[point] proof)
 
 -- Flatten conjunctions into data while retaining named presentation boundaries.
-private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
+private meta def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
     MetaM Expr :=
   withLocalDeclD `point domain fun point => do
     let mut proof := mkApp (mkConst ``Iff.rfl) (mkConst ``True)
@@ -76,7 +80,7 @@ private def assembleDecomposition (domain : Expr) (blocks : Array RowBlock) :
     mkLambdaFVars #[point] proof
 
 -- Check cached row certificates against the current domain and predicates.
-private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
+private meta def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
     MetaM RowResult := do
   for expression in #[row.constraint, row.pointwiseIff] do
     if ← Expr.hasUnresolvedStrict expression then
@@ -99,7 +103,7 @@ private def checkCertifiedRow (domain predicate : Expr) (row : RowResult) :
   return row
 
 /-- A finite table of cone rows representing the complete current feasible predicate. -/
-structure RowTable where
+meta structure RowTable where
   /-- Number of rows after decomposing presentation groups. -/
   count : Nat
   /-- A term of type `Fin count → Conic.Constraint X`. -/
@@ -108,7 +112,7 @@ structure RowTable where
   feasibleIff : Expr
 
 /-- Certify and assemble cone rows in presentation order, validating any cached evidence. -/
-def buildRows (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
+meta def buildRows (presentation : PresentationState) (provider : Affine.EvidenceProvider := {})
     (certifiedRows : Array (Option (Array RowResult)) := #[]) :
     MetaM (Except Expr.Error RowTable) := do
   unless certifiedRows.isEmpty || certifiedRows.size == presentation.constraints.size do

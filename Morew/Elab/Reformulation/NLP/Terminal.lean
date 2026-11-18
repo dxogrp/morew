@@ -3,9 +3,11 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.NLP.Terminal
-import Morew.Elab.Reformulation.Rows
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.NLP.Terminal
+public import Morew.Elab.Reformulation.Rows
 
 /-! Apply exact bound rewrites and certify the objective and residuals on a common
 open domain containing the feasible set. Emit `equiv`, `nlpForm`, and `isSmoothNLP`.
@@ -17,6 +19,8 @@ dimensions, but not general quantifiers. Maximization retains `OrderDual ℝ` an
 records `maximize` in the form.
 
 This terminal step allocates names and emits declarations and metadata atomically. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -86,8 +90,9 @@ def prepareTerminalNLP (state : ReformState) (step : Syntax) :
     (prepared.auxiliaries.map (·.1)) prepared.rowOrigins prepared.replacedIndices
   return { nameRequests, materialize := materializeTerminalNLP state prepared preparedVars }
 
+/-- Elaborate the terminal `nlp` step producing a nonlinear representation. -/
 @[morew_reformulation_step Morew.nlpStep]
-private def elabNLP : StepHandler := fun state step => do
+def elabNLP : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| nlp) => prepareTerminalNLP state step
   | _ => throwUnsupportedSyntax

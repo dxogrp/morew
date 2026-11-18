@@ -3,12 +3,16 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.Registry
-import Morew.Elab.Reformulation.Step
-import Lean.Elab.MutualDef
+module
+
+public import Morew.Elab.Reformulation.Registry
+public import Morew.Elab.Reformulation.Step
+public meta import Lean.Elab.MutualDef
 
 /-! Declare a transformed problem and its `GlobalEquiv` certificate.
 Terminal `conic` and `nlp` steps also emit structural forms and representability proofs. -/
+
+public meta section
 
 namespace Morew
 
@@ -16,19 +20,17 @@ open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
 open Morew.Elab.Reformulation
 
 private def outputDeclName (ident : TSyntax `ident) : CommandElabM Name := do
-  let shortName := ident.getId
-  let view := extractMacroScopes shortName
-  let name := view.name
-  if name == `_root_ then
-    throwErrorAt ident
-      "invalid declaration name `_root_`, `_root_` is a prefix used to refer to the root namespace"
-  if (`_root_).isPrefixOf name then
-    pure { view with name := name.replacePrefix `_root_ Name.anonymous }.review
-  else
-    pure ((← getCurrNamespace) ++ shortName)
+  let scope ← getScope
+  let modifiers : Modifiers := {
+    visibility := if scope.isPublic then .public else .private }
+  return (← withRef ident <| mkDeclName (← getCurrNamespace) modifiers ident.getId).1
 
 private def rootIdentFrom (ref : Syntax) (name : Name) : TSyntax `ident :=
   ⟨mkIdentFrom ref (`_root_ ++ name)⟩
+
+-- Native declaration elaboration allocates private names from user-facing syntax.
+private def declarationIdentFrom (ref : Syntax) (name : Name) : TSyntax `ident :=
+  rootIdentFrom ref (privateToUserName name)
 
 private def ensureFreshOutput (ref : Syntax) (name : Name) : CommandElabM Unit :=
   withRef ref do
@@ -65,8 +67,10 @@ private def emitDefinitionWithParameters (target : TSyntax `ident)
   let definition ← `(Parser.Command.definition|
     def $target : $(← Term.exprToSyntax type) := $(← Term.exprToSyntax value))
   Term.elabMutualDef sectionVars scope #[
-    Command.mkDefViewOfDef { computeKind := .noncomputable } definition]
-  let name := target.getId.replacePrefix `_root_ Name.anonymous
+    Command.mkDefViewOfDef {
+      visibility := if scope.isPublic then .public else .private
+      computeKind := .noncomputable } definition]
+  let name ← resolveGlobalConstNoOverload target
   -- Retain checked universe names and section parameters during generalization.
   let info ← getConstInfo name
   let mut application := Lean.mkConst name (info.levelParams.map Level.param)
@@ -94,7 +98,6 @@ private def emitDefinition (target : TSyntax `ident)
   let scope ← getScope
   -- `withInitQuotContext` returns `Unit`.
   let result ← IO.mkRef (none : Option (TSyntax `term))
-  withExporting (isExporting := scope.isPublic) do
   withInitQuotContext (some (hash #[target.getId])) do
     let application ← runTermElabM fun sectionVars => do
       let (type, value) ← elaborate sectionVars
@@ -171,15 +174,10 @@ private def emitCompanionDeclaration
     (request : Morew.Elab.Reformulation.CompanionRequest)
     (sectionFVars : Array Expr) :
     CommandElabM Unit := do
-  let (typeSyntax, valueSyntax) ← runTermElabM fun currentSectionFVars => do
+  let declarationIdent := declarationIdentFrom request.ref request.name
+  discard <| emitDefinition declarationIdent fun currentSectionFVars => do
     let request := request.replaceFVars sectionFVars currentSectionFVars
-    let typeSyntax ← exactExpressionSyntax request.type
-    let valueSyntax ← exactExpressionSyntax request.value
-    pure (typeSyntax, valueSyntax)
-  let declarationIdent := rootIdentFrom request.ref request.name
-  let command ← liftMacroM `(command|
-    noncomputable def $declarationIdent : $typeSyntax := $valueSyntax)
-  elabCommand command
+    pure (request.type, request.value)
 
 -- Preserve occurrence structure and `OrderDual` after checking canonical agreement.
 private def emitCheckedTarget (target : TSyntax `ident) (state : ReformState) :
@@ -203,7 +201,6 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
     (appliedTarget : TSyntax `term) (artifact : CheckedTerminalArtifact) :
     CommandElabM Unit := do
   let scope ← getScope
-  withExporting (isExporting := scope.isPublic) do
   withInitQuotContext (some (hash #[targetName])) do
     runTermElabM fun sectionVars => do
       let artifact := artifact.replaceFVars state.sectionFVars sectionVars
@@ -232,8 +229,8 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
           "emitted {artifact.adapter.description} form contains unresolved metavariables"
       withLCtx' (← instantiateLCtxMVars (← getLCtx)) do
         checkWithKernel form
-      let formIdent := rootIdentFrom artifact.ref (targetName ++ artifact.adapter.formSuffix)
-      let propertyIdent := rootIdentFrom artifact.ref (targetName ++ artifact.adapter.propertySuffix)
+      let formIdent := declarationIdentFrom artifact.ref (targetName ++ artifact.adapter.formSuffix)
+      let propertyIdent := declarationIdentFrom artifact.ref (targetName ++ artifact.adapter.propertySuffix)
       let namedForm ← emitDefinitionWithParameters formIdent sectionVars scope formType form
       -- Use the emitted form's stored instances when constructing its property.
       let property ← artifact.adapter.property namedForm
@@ -258,7 +255,8 @@ private def emitTerminalArtifacts (targetName : Name) (state : ReformState)
         else if (← sectionVar.fvarId!.getDecl).binderInfo.isInstImplicit then
           propertyScope := { propertyScope with omittedVars := propertyScope.omittedVars.insert name }
       Term.elabMutualDef sectionVars propertyScope
-        #[Command.mkDefViewOfTheorem {} propertyDefinition]
+        #[Command.mkDefViewOfTheorem {
+          visibility := if propertyScope.isPublic then .public else .private } propertyDefinition]
 
 private def elabReformulationCore : CommandElab := fun stx => do
   let (targetName, inputTerm, instantiatedSource, aliasName, steps) ← match stx with
@@ -272,208 +270,216 @@ private def elabReformulationCore : CommandElab := fun stx => do
     | _ => throwUnsupportedSyntax
 
   let targetDeclName ← outputDeclName targetName
-  let certificateDeclName := targetDeclName ++ `equiv
-  let aliasDeclName? ← aliasName.mapM outputDeclName
-  if let some aliasDeclName := aliasDeclName? then
-    if aliasDeclName == targetDeclName then
-      throwErrorAt aliasName.get!
-        "certificate alias names the same declaration as the reformulation target"
-    if aliasDeclName == certificateDeclName then
-      throwErrorAt aliasName.get!
-        "certificate alias names the same declaration as the canonical certificate"
-  let targetDeclIdent := rootIdentFrom targetName targetDeclName
-  let certificateDeclIdent := rootIdentFrom targetName certificateDeclName
-  let aliasDeclIdent? := match aliasName, aliasDeclName? with
-    | some ref, some name => some (rootIdentFrom ref name)
-    | _, _ => none
+  withDeclNameForAuxNaming targetDeclName do
+    let certificateDeclName := targetDeclName ++ `equiv
+    let aliasDeclName? ← aliasName.mapM outputDeclName
+    if let some aliasDeclName := aliasDeclName? then
+      if aliasDeclName == targetDeclName then
+        throwErrorAt aliasName.get!
+          "certificate alias names the same declaration as the reformulation target"
+      if aliasDeclName == certificateDeclName then
+        throwErrorAt aliasName.get!
+          "certificate alias names the same declaration as the canonical certificate"
+    let targetDeclIdent := declarationIdentFrom targetName targetDeclName
+    let certificateDeclIdent := declarationIdentFrom targetName certificateDeclName
+    let aliasDeclIdent? := match aliasName, aliasDeclName? with
+      | some ref, some name => some (declarationIdentFrom ref name)
+      | _, _ => none
 
-  let runner := globalEquivRunner
-  let (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
-      usedSourceParameterNames) ← runTermElabM fun sectionFVars => withRef inputTerm do
-    let source ← elabTerm inputTerm none
-    synthesizeSyntheticMVarsNoPostponing
-    let source ← instantiateMVars source
-    if source.hasMVar then
-      throwError "reformulation source contains unresolved metavariables"
-    let .const sourceName _ := source.consumeMData.getAppFn
-      | throwError "reformulation source must be an application of a registered problem declaration"
-    let some template := Morew.Syntax.getProblemView? (← getEnv) sourceName
-      | throwError "declaration `{sourceName}` has no registered problem presentation"
-    let problemTypes ← problemTypeSyntaxFromExpression source
-    let sourceType ← whnf (← inferType source)
-    let mut usedSourceParameterNames := #[]
-    if instantiatedSource then
-      let dependencies ← (Lean.collectFVars {} source).addDependencies
-      for id in dependencies.fvarSet.toArray do
-        let name := (← id.getDecl).userName.eraseMacroScopes
-        if template.binders.any (sameVisibleName ·.name name) then
-          throwError "source parameter `{name}` conflicts with an optimization variable; rename the outer parameter"
-        if template.definitions.any (sameVisibleName ·.name name) then
-          throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
-        unless usedSourceParameterNames.contains name do
-          usedSourceParameterNames := usedSourceParameterNames.push name
-    let canonical ← canonicalTargetExpressionFromExpressions sourceName source source
-      template {} source false
-    let sourceView ← problemViewFromExpression source template (instantiateBinderTypes := true)
-    let presentation ← typedPresentationFromExpression canonical sourceView
-    let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
-    let accumulatedCertificate ← runner.reflexivity source
-    synthesizeSyntheticMVarsNoPostponing
-    let accumulatedCertificate ← instantiateMVars accumulatedCertificate
-    let typed : Morew.Elab.Reformulation.RunnerState := {
-      semantic := source
-      canonical
-      semanticDomainType := presentation.domainType
-      semanticValueType := sourceType.getAppArgs[1]!
-      presentation
-      accumulatedCertificate
-      normalization
-    }
-    let sourceTerm ← exactExpressionSyntax source
-    pure (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
-      usedSourceParameterNames)
-  let initialCertificateSyntax ← liftMacroM <|
-    certificateReflTerm runner sourceTerm
-  let mut state : ReformState := {
-    typed
-    sectionFVars
-    view := sourceView
-    semantic := sourceTerm
-    semanticDomainType := problemTypes.domain
-    semanticValueType := problemTypes.value
-    certificateSyntax := initialCertificateSyntax
-    source := sourceTerm
-    sourceName
-    instantiatedSource
-    usedSourceParameterNames
-    checkpoint := {
-      semantic := sourceTerm, semanticAnchor := sourceTerm, view := sourceView }
-    liveCheckpointRows := Array.range sourceView.constraints.size
-    runner
-  }
-
-  for step in steps do
-    if state.typed.status == .terminal then
-      throwErrorAt step "cannot apply a reformulation step after a terminal step"
-    let draft ← prepareStep state step
-    let (result, materialization) ← runTypedStepPlan state draft
-    state ← commitSurfaceStep state result materialization
-
-  let mut outputRequests :
-      Array Morew.Elab.Reformulation.DeclarationNameRequest := #[
-    { name := targetDeclName, ref := targetName.raw },
-    { name := certificateDeclName, ref := targetName.raw }
-  ]
-  if let some aliasDeclName := aliasDeclName? then
-    outputRequests := outputRequests.push {
-      name := aliasDeclName
-      ref := aliasName.get!.raw
-    }
-  for companion in state.typed.companions do
-    outputRequests := outputRequests.push companion.nameRequest
-  if let some artifact := state.terminalArtifact? then
-    outputRequests := outputRequests ++ #[
-      { name := targetDeclName ++ artifact.adapter.formSuffix, ref := artifact.ref },
-      { name := targetDeclName ++ artifact.adapter.propertySuffix, ref := artifact.ref }]
-  match Morew.Elab.Reformulation.preflightDeclarationNames
-      (← getEnv) outputRequests with
-  | .ok _ => pure ()
-  | .error (.alreadyDeclared request) =>
-      ensureFreshOutput request.ref request.name
-  | .error (.duplicate request) =>
-      throwErrorAt request.ref
-        "duplicate generated declaration name `{request.name}`"
-  for request in outputRequests do
-    ensureFreshOutput request.ref request.name
-
-  withDeclarationTransaction do
-    let stableSemantic ← stabilizeTerm state.semantic
-    if (← get).messages.hasErrors then
-      return
-    runTermElabM fun sectionFVars => do
-      let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
-      let finalProof ← typed.finalCertificate state.runner
+    let runner := globalEquivRunner
+    let (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+        usedSourceParameterNames) ← runTermElabM fun sectionFVars => withRef inputTerm do
+      let source ← elabTerm inputTerm none
       synthesizeSyntheticMVarsNoPostponing
-      let finalProof ← instantiateMVars finalProof
-      if finalProof.hasMVar then
-        throwError "final reformulation certificate contains unresolved metavariables"
-      check finalProof
-    let stableEquivProof := state.certificateSyntax
+      let source ← instantiateMVars source
+      if source.hasMVar then
+        throwError "reformulation source contains unresolved metavariables"
+      let .const sourceName _ := source.consumeMData.getAppFn
+        | throwError "reformulation source must be an application of a registered problem declaration"
+      let some template := Morew.Syntax.getProblemView? (← getEnv) sourceName
+        | throwError "declaration `{privateToUserName sourceName}` has no registered problem presentation"
+      let problemTypes ← problemTypeSyntaxFromExpression source
+      let sourceType ← whnf (← inferType source)
+      let mut usedSourceParameterNames := #[]
+      if instantiatedSource then
+        let dependencies ← (Lean.collectFVars {} source).addDependencies
+        for id in dependencies.fvarSet.toArray do
+          let name := (← id.getDecl).userName.eraseMacroScopes
+          if template.binders.any (sameVisibleName ·.name name) then
+            throwError "source parameter `{name}` conflicts with an optimization variable; rename the outer parameter"
+          if template.definitions.any (sameVisibleName ·.name name) then
+            throwError "source parameter `{name}` conflicts with a model-local definition; rename the outer parameter"
+          unless usedSourceParameterNames.contains name do
+            usedSourceParameterNames := usedSourceParameterNames.push name
+      let canonical ← canonicalTargetExpressionFromExpressions sourceName source source
+        template {} source false
+      let sourceView ← problemViewFromExpression source template (instantiateBinderTypes := true)
+      let presentation ← typedPresentationFromExpression canonical sourceView
+      let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
+      let accumulatedCertificate ← runner.reflexivity source
+      synthesizeSyntheticMVarsNoPostponing
+      let accumulatedCertificate ← instantiateMVars accumulatedCertificate
+      let typed : Morew.Elab.Reformulation.RunnerState := {
+        semantic := source
+        canonical
+        semanticDomainType := presentation.domainType
+        semanticValueType := sourceType.getAppArgs[1]!
+        presentation
+        accumulatedCertificate
+        normalization
+      }
+      let sourceTerm ← exactExpressionSyntax source
+      pure (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+        usedSourceParameterNames)
+    let initialCertificateSyntax ← liftMacroM <|
+      certificateReflTerm runner sourceTerm
+    let mut state : ReformState := {
+      typed
+      sectionFVars
+      view := sourceView
+      semantic := sourceTerm
+      semanticDomainType := problemTypes.domain
+      semanticValueType := problemTypes.value
+      certificateSyntax := initialCertificateSyntax
+      source := sourceTerm
+      sourceName
+      instantiatedSource
+      usedSourceParameterNames
+      checkpoint := {
+        semantic := sourceTerm, semanticAnchor := sourceTerm, view := sourceView }
+      liveCheckpointRows := Array.range sourceView.constraints.size
+      runner
+    }
 
-    let targetTerm ← liftMacroM <| state.view.toTermSyntax
-    let emitRawTarget := emitDefinition targetDeclIdent fun _ => do
-      let value ← elabTerm targetTerm none
-      pure (← inferType value, value)
+    for step in steps do
+      if state.typed.status == .terminal then
+        throwErrorAt step "cannot apply a reformulation step after a terminal step"
+      let draft ← prepareStep state step
+      let (result, materialization) ← runTypedStepPlan state draft
+      state ← commitSurfaceStep state result materialization
 
-    let emitCertificate (appliedTarget : TSyntax `term) :
-        CommandElabM (TSyntax `term) := do
-      let normalizationLemmas ← liftMacroM <|
-        normalizationSimpLemmas sourceName state.normalizationLemmas
-      let targetSimp ← liftMacroM `(
-        Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
-      let normalizationLemmas := normalizationLemmas.push targetSimp
-      let normalizationEquiv ← liftMacroM `(
-        Morew.pointwiseEquiv $stableSemantic $appliedTarget
-          (fun _ => by
-            simp only [$[$normalizationLemmas],*] <;> rfl)
-          (fun _ => by
-            simp only [$[$normalizationLemmas],*] <;> rfl))
-      let normalization ← liftMacroM <|
-        liftCertificateEquiv state.runner normalizationEquiv
-      let equivProof ← liftMacroM <|
-        certificateTransTerm state.runner stableEquivProof normalization
-      let relation ← liftMacroM <|
-        certificateRelationTerm state.runner sourceTerm appliedTarget
-      emitDefinition certificateDeclIdent fun _ => do
-        let type ← elabTerm relation none
-        let value ← elabTermEnsuringType equivProof type
-        pure (type, value)
-    let emitAlias (appliedCertificate : TSyntax `term) : CommandElabM Unit := do
-      if let some aliasDeclIdent := aliasDeclIdent? then
-        let relation ← runTermElabM fun _ => do
-          let proof ← elabTerm appliedCertificate none
-          exactExpressionSyntax (← inferType proof)
-        let aliasCommand ← liftMacroM `(command|
-          noncomputable abbrev $aliasDeclIdent : $relation := $appliedCertificate)
-        elabCommand aliasCommand
+    let mut outputRequests :
+        Array Morew.Elab.Reformulation.DeclarationNameRequest := #[
+      { name := targetDeclName, ref := targetName.raw },
+      { name := certificateDeclName, ref := targetName.raw }
+    ]
+    if let some aliasDeclName := aliasDeclName? then
+      outputRequests := outputRequests.push {
+        name := aliasDeclName
+        ref := aliasName.get!.raw
+      }
+    for companion in state.typed.companions do
+      outputRequests := outputRequests.push companion.nameRequest
+    if let some artifact := state.terminalArtifact? then
+      outputRequests := outputRequests ++ #[
+        { name := targetDeclName ++ artifact.adapter.formSuffix, ref := artifact.ref },
+        { name := targetDeclName ++ artifact.adapter.propertySuffix, ref := artifact.ref }]
+    match Morew.Elab.Reformulation.preflightDeclarationNames
+        (← getEnv) outputRequests with
+    | .ok _ => pure ()
+    | .error (.alreadyDeclared request) =>
+        ensureFreshOutput request.ref request.name
+    | .error (.duplicate request) =>
+        throwErrorAt request.ref
+          "duplicate generated declaration name `{privateToUserName request.name}`"
+    for request in outputRequests do
+      ensureFreshOutput request.ref request.name
 
-    let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do
-      let target ← emitCheckedTarget targetDeclIdent state
-      if (← get).messages.hasErrors then return none
-      let appliedCertificate ← emitCertificate target
-      if (← get).messages.hasErrors then return none
-      emitAlias appliedCertificate
-      pure <| if (← get).messages.hasErrors then none else some target
+    withDeclarationTransaction do
+      let stableSemantic ← stabilizeTerm state.semantic
+      if (← get).messages.hasErrors then
+        return
+      runTermElabM fun sectionFVars => do
+        let typed := state.typed.replaceFVars state.sectionFVars sectionFVars
+        let finalProof ← typed.finalCertificate state.runner
+        synthesizeSyntheticMVarsNoPostponing
+        let finalProof ← instantiateMVars finalProof
+        if finalProof.hasMVar then
+          throwError "final reformulation certificate contains unresolved metavariables"
+        check finalProof
+      let stableEquivProof := state.certificateSyntax
 
-    let appliedTarget? ← if state.hasSubstitution || state.terminalArtifact?.isSome ||
-        state.instantiatedSource then do
-        elabCanonicalDeclarations
-      else
-        match ← tryRawDeclarations emitRawTarget emitCertificate emitAlias with
-        | .success target => pure (some target)
-        | .failed => pure none
-        | .retryWithSemanticTarget rawMessages =>
-            try
-              let target? ← elabCanonicalDeclarations
-              if target?.isNone then
+      let targetTerm ← liftMacroM <| state.view.toTermSyntax
+      let emitRawTarget := emitDefinition targetDeclIdent fun _ => do
+        let value ← elabTerm targetTerm none
+        pure (← inferType value, value)
+
+      let emitCertificate (appliedTarget : TSyntax `term) :
+          CommandElabM (TSyntax `term) := do
+        let normalizationLemmas ← liftMacroM <|
+          normalizationSimpLemmas sourceName state.normalizationLemmas
+        let targetSimp ← liftMacroM `(
+          Lean.Parser.Tactic.simpLemma| $targetDeclIdent:term)
+        let normalizationLemmas := normalizationLemmas.push targetSimp
+        let normalizationEquiv ← liftMacroM `(
+          Morew.pointwiseEquiv $stableSemantic $appliedTarget
+            (fun _ => by
+              simp only [$[$normalizationLemmas],*] <;> rfl)
+            (fun _ => by
+              simp only [$[$normalizationLemmas],*] <;> rfl))
+        let normalization ← liftMacroM <|
+          liftCertificateEquiv state.runner normalizationEquiv
+        let equivProof ← liftMacroM <|
+          certificateTransTerm state.runner stableEquivProof normalization
+        let relation ← liftMacroM <|
+          certificateRelationTerm state.runner sourceTerm appliedTarget
+        emitDefinition certificateDeclIdent fun _ => do
+          let type ← elabTerm relation none
+          let value ← elabTermEnsuringType equivProof type
+          pure (type, value)
+      let emitAlias (appliedCertificate : TSyntax `term) : CommandElabM Unit := do
+        if let some aliasDeclIdent := aliasDeclIdent? then
+          let scope ← getScope
+          runTermElabM fun sectionVars => do
+            let proof ← elabTerm appliedCertificate none
+            let relation ← exactExpressionSyntax (← inferType proof)
+            let aliasDefinition ← `(Parser.Command.abbrev|
+              abbrev $aliasDeclIdent : $relation := $appliedCertificate)
+            Term.elabMutualDef sectionVars scope #[Command.mkDefViewOfAbbrev {
+              visibility := if scope.isPublic then .public else .private
+              computeKind := .noncomputable } aliasDefinition]
+
+      let elabCanonicalDeclarations : CommandElabM (Option (TSyntax `term)) := do
+        let target ← emitCheckedTarget targetDeclIdent state
+        if (← get).messages.hasErrors then return none
+        let appliedCertificate ← emitCertificate target
+        if (← get).messages.hasErrors then return none
+        emitAlias appliedCertificate
+        pure <| if (← get).messages.hasErrors then none else some target
+
+      let appliedTarget? ← if state.hasSubstitution || state.terminalArtifact?.isSome ||
+          state.instantiatedSource then do
+          elabCanonicalDeclarations
+        else
+          match ← tryRawDeclarations emitRawTarget emitCertificate emitAlias with
+          | .success target => pure (some target)
+          | .failed => pure none
+          | .retryWithSemanticTarget rawMessages =>
+              try
+                let target? ← elabCanonicalDeclarations
+                if target?.isNone then
+                  modify fun state => { state with messages := state.messages ++ rawMessages }
+                pure target?
+              catch exception =>
                 modify fun state => { state with messages := state.messages ++ rawMessages }
-              pure target?
-            catch exception =>
-              modify fun state => { state with messages := state.messages ++ rawMessages }
-              throw exception
-    if let some appliedTarget := appliedTarget? then
-      for companion in state.typed.companions do
+                throw exception
+      if let some appliedTarget := appliedTarget? then
+        for companion in state.typed.companions do
+          unless (← get).messages.hasErrors do
+            emitCompanionDeclaration companion state.sectionFVars
+        if let some artifact := state.terminalArtifact? then
+          unless (← get).messages.hasErrors do
+            emitTerminalArtifacts targetDeclName state appliedTarget artifact
         unless (← get).messages.hasErrors do
-          emitCompanionDeclaration companion state.sectionFVars
-      if let some artifact := state.terminalArtifact? then
-        unless (← get).messages.hasErrors do
-          emitTerminalArtifacts targetDeclName state appliedTarget artifact
-      unless (← get).messages.hasErrors do
-        refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
+          refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
 
 /-- Elaborate steps and generate the target, certificates, and metadata in one transaction. -/
 @[command_elab reformulationCmd, command_elab appliedReformulationCmd]
-def elabReformulation : CommandElab := fun stx =>
-  withDeclarationTransaction (elabReformulationCore stx)
+def elabReformulation : CommandElab := fun stx => do
+  let scope ← getScope
+  -- Planning can create native match/proof auxiliaries used by the emitted body.
+  withExporting (isExporting := scope.isPublic &&
+      scope.attrs.any (· matches `(Lean.Parser.Term.attrInstance| expose))) do
+    withDeclarationTransaction (elabReformulationCore stx)
 
 end Morew

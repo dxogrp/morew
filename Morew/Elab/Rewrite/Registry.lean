@@ -2,10 +2,11 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Rewrite.Basic
-import Morew.Elab.Rewrite.Comparison
-import Lean
+public import Morew.Rewrite.Basic
+public import Morew.Elab.Rewrite.Comparison
+public import Lean
 
 /-! Register exact representations with `morew_conic` and `morew_nlp`, following Lean
 attribute scope. Records live in `Type`. Registration checks record types and requires
@@ -26,6 +27,8 @@ equalities, non-strict inequalities, and compatible finite indices. Once exactne
 NLP may use generated constraints for domain inclusion. Unsupported retained predicates supply no facts.
 
 Conic and NLP `Rules` modules install built-ins; `Morew.Reformulation` imports both rule sets. -/
+
+public meta section
 
 namespace Morew.Elab.Rewrite.Registry
 
@@ -154,7 +157,10 @@ private def makeExtension (name : Name) : IO (SimpleScopedEnvExtension Entry (Ar
   registerSimpleScopedEnvExtension {
     name, initial := #[]
     addEntry := fun entries value =>
-      if entries.any (·.declaration == value.declaration) then entries else entries.push value }
+      if entries.any (·.declaration == value.declaration) then entries else entries.push value
+    exportEntry? := fun _ entry =>
+      if isPrivateName entry.declaration then ⟨none, none, some entry⟩
+      else .uniform (some entry) }
 
 /-- Scoped persistent registrations for conic rewriting. -/
 initialize conicExtension : SimpleScopedEnvExtension Entry (Array Entry) ←

@@ -2,14 +2,17 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Elab.Cone.Constraint
-import Morew.Elab.Cone.Finite
-import Morew.Elab.Rewrite.Plan
-import Morew.Elab.Expr
-import Morew.Elab.State
+public import Morew.Elab.Cone.Constraint
+public import Morew.Elab.Cone.Finite
+public import Morew.Elab.Rewrite.Plan
+public import Morew.Elab.Expr
+public import Morew.Elab.State
 
 /-! Adapt exact representations, split ordered target rows, and certify each row. -/
+
+public section
 
 namespace Morew.Elab.Cone.Plan
 
@@ -17,17 +20,17 @@ open Lean Lean.Meta Qq
 open Morew.Elab.Rewrite Morew.Elab.Rewrite.Plan
 
 /-- A complete exact replacement, before presentation names are allocated. -/
-structure Result extends Morew.Elab.Rewrite.Plan.Result where
+meta structure Result extends Morew.Elab.Rewrite.Plan.Result where
   /-- Checked affine cone rows corresponding to `rowPredicates`. -/
   certifiedRows : Array RowResult
 
 /-- Express a checked replacement in a new variable context. -/
-def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
+meta def Result.replaceFVars (result : Result) (oldVars newVars : Array Expr) : Result :=
   { toResult := result.toResult.replaceFVars oldVars newVars
     certifiedRows := result.certifiedRows.map fun row => row.replaceFVars oldVars newVars }
 
 /-- Reduce checked representation target fields without unfolding predicate helpers. -/
-partial def exposeTarget (body : Expr) : MetaM Expr := do
+meta partial def exposeTarget (body : Expr) : MetaM Expr := do
   let body ← Expr.reduceStructure body (preserveLets := true)
   let head := body.getAppFn
   let prefixSize? := match head.constName? with
@@ -46,7 +49,7 @@ partial def exposeTarget (body : Expr) : MetaM Expr := do
   return body
 
 /-- Expose representation fields and split a checked replacement target. -/
-def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
+meta def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
   Decomposition.split body fun body => do
     let body ← exposeTarget body
     -- Use shared conjunction proofs with conic diagnostics.
@@ -58,29 +61,30 @@ def splitTarget (body : Expr) : MetaM (List Expr × Expr) :=
     return body
 
 /-- Certify each replacement row without changing its presentation predicate. -/
-def certifyRows (predicates : Array Expr) (provider : Affine.EvidenceProvider := {}) :
+meta def certifyRows (predicates : Array Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Array RowResult) := do
   predicates.mapM fun predicate => do
     match ← normalizeRow predicate provider with
     | .ok row => pure row
     | .error error => throwError "generated row: {error.reason}"
 
-private def powerMembership (α : ℝ) (hα : 0 < α ∧ α < 1)
-    (value : ℝ × ℝ × ℝ) : Prop :=
-  value ∈ (Morew.Conic.Cone.power α hα).carrier
+private meta def powerMembership : Expr :=
+  q(fun (α : ℝ) (hα : 0 < α ∧ α < 1) (value : ℝ × ℝ × ℝ) =>
+    value ∈ (Morew.Conic.Cone.power α hα).carrier)
 
-private theorem powerRangeOfEq {α β : ℝ} (h : α = β)
+theorem powerRangeOfEq {α β : ℝ} (h : α = β)
     (hα : 0 < α ∧ α < 1) : 0 < β ∧ β < 1 := h ▸ hα
 
-private theorem powerMembershipCongr (α β : ℝ)
+theorem powerMembershipCongr (α β : ℝ)
     (hα : 0 < α ∧ α < 1) (hβ : 0 < β ∧ β < 1)
     (value : ℝ × ℝ × ℝ) (h : α = β) :
-    powerMembership α hα value ↔ powerMembership β hβ value := by
+    value ∈ (Morew.Conic.Cone.power α hα).carrier ↔
+      value ∈ (Morew.Conic.Cone.power β hβ).carrier := by
   subst β
   rfl
 
 -- Reduce standard extended-real numerals, inverses, and quotients inside `toReal`.
-private partial def literalENNReal (expression : Expr) : MetaM Bool := do
+private meta partial def literalENNReal (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
   if expression.isAppOfArity ``OfNat.ofNat 3 then
@@ -100,7 +104,7 @@ private partial def literalENNReal (expression : Expr) : MetaM Bool := do
     (← literalENNReal left) && (← literalENNReal right)
 
 -- Preserve named constants, local definitions, and symbolic parameters.
-private partial def literalRational (expression : Expr) : MetaM Bool := do
+private meta partial def literalRational (expression : Expr) : MetaM Bool := do
   let expression := expression.consumeMData
   let args := expression.getAppArgs
   if expression.isAppOfArity ``ENNReal.toReal 1 then
@@ -137,7 +141,7 @@ private partial def literalRational (expression : Expr) : MetaM Bool := do
   return (← Expr.operationPrefixMismatch? expression canonical 2).isNone &&
     (← literalRational left) && (← literalRational right)
 
-private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Expr)) := do
+private meta def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Expr)) := do
   let expression := body.consumeMData
   unless expression.isAppOfArity ``Membership.mem 5 do return none
   let args := expression.getAppArgs
@@ -155,7 +159,7 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
         let exponent : Q(ℝ) := cone.getAppArgs[0]!
         unless ← literalRational exponent do return .error ()
         let evidence := cone.getAppArgs[1]!
-        let canonical := (mkAppN (← getConstInfo ``powerMembership).value!
+        let canonical := (mkAppN powerMembership
           #[exponent, evidence, args[4]!]).headBeta
         unless (← isDefEq args[2]! canonical.getAppArgs[2]!) &&
             (← isDefEq body canonical) do return .error ()
@@ -170,7 +174,7 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
           return .error ()
         checkWithKernel equality
         let range ← mkAppM ``powerRangeOfEq #[equality, evidence]
-        let normalized := (mkAppN (← getConstInfo ``powerMembership).value!
+        let normalized := (mkAppN powerMembership
           #[evaluated.expr, range, args[4]!]).headBeta
         let proof ← mkAppM ``powerMembershipCongr
           #[exponent, evaluated.expr, evidence, range, args[4]!, equality]
@@ -181,7 +185,7 @@ private def normalizePowerMembership? (body : Expr) : MetaM (Option (Expr × Exp
     catch _ => return .error ()
   return result.toOption
 
-private partial def normalizeGeneratedPower? (body : Expr) :
+private meta partial def normalizeGeneratedPower? (body : Expr) :
     MetaM (Option (Expr × Expr)) := do
   if let .letE name type value rest nondep := body.consumeMData then
     return ← withLetDecl name type value (nondep := nondep) fun binding => do
@@ -204,13 +208,13 @@ private partial def normalizeGeneratedPower? (body : Expr) :
       return some (normalized, proof)
   normalizePowerMembership? body
 
-private partial def conjunctionCongr (proofs : List Expr) : MetaM Expr := do
+private meta partial def conjunctionCongr (proofs : List Expr) : MetaM Expr := do
   match proofs with
   | [] => return mkApp (mkConst ``Iff.rfl) (mkConst ``True)
   | [proof] => return proof
   | proof :: rest => mkAppM ``and_congr #[proof, ← conjunctionCongr rest]
 
-private def finishCore (source domain : Expr) (certificate : Certificate)
+private meta def finishCore (source domain : Expr) (certificate : Certificate)
     (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   certificate.check source retained
   let auxiliary ← whnf (← certificate.auxiliaryType)
@@ -248,7 +252,7 @@ private def finishCore (source domain : Expr) (certificate : Certificate)
   return { toResult := prepared, certifiedRows }
 
 /-- Split and certify every replacement row. -/
-def finish (source domain : Expr) (certificate : Certificate)
+meta def finish (source domain : Expr) (certificate : Certificate)
     (retained : Array Expr) (provider : Affine.EvidenceProvider) : MetaM Result := do
   let target ← whnf (← certificate.targetFunction)
   let result ← Finite.withHelperFiniteInstances Result.replaceFVars #[target] do
@@ -262,7 +266,7 @@ def finish (source domain : Expr) (certificate : Certificate)
 
 /-- Adapt a record for the selected predicate and certify its rows.
 Restore caller metavariables and the environment on failure. -/
-private def planDirect (sourcePredicate rule : Expr)
+private meta def planDirect (sourcePredicate rule : Expr)
     (provider : Affine.EvidenceProvider := {}) : MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
     try
@@ -284,7 +288,7 @@ private def planDirect (sourcePredicate rule : Expr)
       }
 
 /-- Certify a record against the original predicate; retry with helper-derived finite evidence. -/
-def plan (sourcePredicate rule : Expr) (provider : Affine.EvidenceProvider := {}) :
+meta def plan (sourcePredicate rule : Expr) (provider : Affine.EvidenceProvider := {}) :
     MetaM (Except Expr.Error Result) :=
   State.withIsolatedMVars do
     Finite.withHelperFiniteInstances Result.replaceFVars #[sourcePredicate]

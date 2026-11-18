@@ -3,17 +3,22 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.View
-import Morew.Elab.Reformulation.Cone.PowerChain
-import Morew.Conic.SecondOrder
-import Morew.Conic.Exponential.Cone
-import Morew.Conic.PSD
+module
+
+public meta import Qq
+public import Morew.Elab.Reformulation.View
+public import Morew.Elab.Reformulation.Cone.PowerChain
+public import Morew.Conic.SecondOrder
+public import Morew.Conic.Exponential.Cone
+public import Morew.Conic.PSD
 
 /-! Conic notation and syntax for reconstructing and displaying constraints. -/
 
+public meta section
+
 namespace Morew.Elab.Reformulation.Cone
 
-open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser
+open Lean Lean.Meta Lean.Elab Lean.Elab.Command Lean.Elab.Term Lean.Parser Qq
 
 -- Share power-cone proofs in exact syntax without readable notation.
 private def powerMembershipReplayOption : Name :=
@@ -50,8 +55,9 @@ private def psdDimensionNumeralResynthesizes (dimension : Expr) (n : Nat) : Meta
     | _ => pure false
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Display supported cone carriers using their mathematical notation. -/
 @[delab app.Morew.Conic.Cone.carrier]
-private def delabConeCarrier : Delab := do
+def delabConeCarrier : Delab := do
   unless (← getOptions).getBool presentationNotationOption do failure
   let expression ← getExpr
   guard <| expression.isAppOfArity ``Morew.Conic.Cone.carrier 1
@@ -84,28 +90,25 @@ private def delabConeCarrier : Delab := do
     `(ℝ₊^$dimension)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Display a power-cone set as `POW` with its exponent. -/
 @[delab app.Morew.Conic.Cone.powerSet]
-private def delabPowerSet : Delab := do
+def delabPowerSet : Delab := do
   unless (← getOptions).getBool presentationNotationOption do failure
   guard <| (← getExpr).isAppOfArity ``Morew.Conic.Cone.powerSet 1
   let exponent ← withAppArg delab
   `(POW $exponent)
 
-private def presentationPowerMembership (α : ℝ) (hα : 0 < α ∧ α < 1)
-    (value : ℝ × ℝ × ℝ) : Prop :=
-  value ∈ ((Morew.Conic.Cone.power α hα).carrier : ConvexCone ℝ (ℝ × ℝ × ℝ))
+private def presentationPowerMembership (α : Q(ℝ)) (hα : Q(0 < $α ∧ $α < 1))
+    (value : Q(ℝ × ℝ × ℝ)) : Q(Prop) :=
+  q($value ∈ ((Morew.Conic.Cone.power $α $hα).carrier : ConvexCone ℝ (ℝ × ℝ × ℝ)))
 
-@[instance_reducible]
-private def presentationPowerMembershipInstance :
-    Membership (ℝ × ℝ × ℝ) (ConvexCone ℝ (ℝ × ℝ × ℝ)) := inferInstance
+private def presentationPowerSetMembership (α : Q(ℝ)) (value : Q(ℝ × ℝ × ℝ)) : Q(Prop) :=
+  q($value ∈ Morew.Conic.Cone.powerSet $α)
 
-private def presentationPowerSetMembership (α : ℝ) (value : ℝ × ℝ × ℝ) : Prop :=
-  value ∈ Morew.Conic.Cone.powerSet α
-
--- Use a closed function to retain the cone and its proof when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Use a closed function to retain the cone and its proof when reconstructing expressions. -/
 @[delab app.Membership.mem]
-private def delabPowerConeReplay : Delab := do
+def delabPowerConeReplay : Delab := do
   let options ← getOptions
   unless options.getBool `pp.explicit &&
       (options.getBool presentationNotationOption || options.getBool powerMembershipReplayOption) do failure
@@ -116,22 +119,29 @@ private def delabPowerConeReplay : Delab := do
   guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
   let cone := carrier.getAppArgs[0]!.consumeMData
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.power 2
-  let canonical := (mkAppN (← getConstInfo ``presentationPowerMembership).value!
-    #[cone.getAppArgs[0]!, cone.getAppArgs[1]!, args[4]!]).headBeta
+  let canonical := presentationPowerMembership cone.getAppArgs[0]! cone.getAppArgs[1]! args[4]!
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
   guard (← isDefEq expression canonical)
   let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
   let evidence ← withNaryArg 3 <| withAppArg <| withNaryArg 1 delab
   let value ← withNaryArg 4 delab
+  -- A closed dictionary keeps the cone's range proof shared by the lambda below.
+  let membership := q(inferInstance : Membership (ℝ × ℝ × ℝ) (ConvexCone ℝ (ℝ × ℝ × ℝ)))
+  guard (← isDefEq args[2]! membership)
+  let (membership, infos) ← withOptions (·.setBool `pp.all true) <|
+    PrettyPrinter.delabCore membership {} PrettyPrinter.Delaborator.delab
+  -- Its position map belongs to this nested delaboration, not the surrounding term.
+  let membership : Term := ⟨(freezeConstantReferences infos {} membership.raw).rewriteBottomUp
+    (·.setInfo .none)⟩
   let function ← `(fun α hα value =>
-    @Membership.mem _ _ $(mkCIdent ``presentationPowerMembershipInstance)
+    @Membership.mem _ _ $membership
       ($(mkCIdent ``Morew.Conic.Cone.carrier) ($(mkCIdent ``Morew.Conic.Cone.power) α hα)) value)
   `($function $exponent $evidence $value)
 
--- Display membership in the defining set; retain cone proofs when reconstructing expressions.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Display power-cone membership using the defining set's notation. -/
 @[delab app.Membership.mem]
-private def delabPowerConeMembership : Delab := do
+def delabPowerConeMembership : Delab := do
   unless (← getOptions).getBool presentationNotationOption &&
       !(← getOptions).getBool `pp.explicit do failure
   let expression ← getExpr
@@ -147,11 +157,9 @@ private def delabPowerConeMembership : Delab := do
       |>.setBool `pp.instances true) delabApp
   let exponent := cone.getAppArgs[0]!
   let evidence := cone.getAppArgs[1]!
-  let canonical := (mkAppN (← getConstInfo ``presentationPowerMembership).value!
-    #[exponent, evidence, args[4]!]).headBeta
+  let canonical := presentationPowerMembership exponent evidence args[4]!
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
-  let asSet := (mkAppN (← getConstInfo ``presentationPowerSetMembership).value!
-    #[exponent, args[4]!]).headBeta
+  let asSet := presentationPowerSetMembership exponent args[4]!
   let value ← withNaryArg 4 delab
   let exponent ← withNaryArg 3 <| withAppArg <| withNaryArg 0 delab
   unless ← presentationInstanceResynthesizes asSet.getAppArgs[2]! do
@@ -159,13 +167,14 @@ private def delabPowerConeMembership : Delab := do
     return ← `(@Membership.mem _ _ $(mkCIdent ``Set.instMembership) (POW $exponent) $value)
   `($value ∈ POW $exponent)
 
-private def presentationPSDMembership (n : Nat)
-    (value : Morew.Conic.SymmetricMatrix n) : Prop :=
-  value ∈ (Morew.Conic.Cone.psd n).carrier
+private def presentationPSDMembership (n : Q(Nat))
+    (value : Q(Morew.Conic.SymmetricMatrix $n)) : Q(Prop) :=
+  q($value ∈ (Morew.Conic.Cone.psd $n).carrier)
 
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Omit symmetric-subtype conversions within compact PSD coordinates. -/
 @[delab app.Morew.Conic.SymmetricMatrix.ofMatrix]
-private def delabCompactPSDCoordinate : Delab := do
+def delabCompactPSDCoordinate : Delab := do
   let options ← getOptions
   unless options.getBool compactPSDCoordinatesOption && options.getBool compactPSDOption &&
       options.getBool presentationNotationOption && !options.getBool `pp.explicit &&
@@ -173,10 +182,10 @@ private def delabCompactPSDCoordinate : Delab := do
   guard <| (← getExpr).isAppOfArity ``Morew.Conic.SymmetricMatrix.ofMatrix 3
   withNaryArg 1 delab
 
--- Rename unused constant-diagonal binders in the display copy.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Rename unused constant-diagonal binders in the display copy. -/
 @[delab app.Matrix.diagonal]
-private def delabCompactConstantDiagonal : Delab := do
+def delabCompactConstantDiagonal : Delab := do
   let options ← getOptions
   unless options.getBool compactPSDOption && options.getBool presentationNotationOption &&
       !options.getBool `pp.explicit && !getPPProofs options do failure
@@ -187,10 +196,10 @@ private def delabCompactConstantDiagonal : Delab := do
   let expression := mkApp expression.appFn! (.lam `_ domain body binderInfo)
   withTheReader SubExpr (fun context => { context with expr := expression }) delabApp
 
--- Omit symmetric-subtype conversions only in compact PSD printing.
 open Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr in
+/-- Omit symmetric-subtype conversions only in compact PSD printing. -/
 @[delab app.Membership.mem]
-private def delabCompactPSDMembership : Delab := do
+def delabCompactPSDMembership : Delab := do
   let options ← getOptions
   unless options.getBool compactPSDOption && options.getBool presentationNotationOption &&
       !options.getBool `pp.explicit && !getPPProofs options do failure
@@ -201,8 +210,7 @@ private def delabCompactPSDMembership : Delab := do
   guard <| carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1
   let cone := carrier.getAppArgs[0]!.consumeMData
   guard <| cone.isAppOfArity ``Morew.Conic.Cone.psd 1
-  let canonical := (mkAppN (← getConstInfo ``presentationPSDMembership).value!
-    #[cone.getAppArgs[0]!, args[4]!]).headBeta
+  let canonical := presentationPSDMembership cone.getAppArgs[0]! args[4]!
   guard (← isDefEq args[2]! canonical.getAppArgs[2]!)
   guard (← isDefEq expression canonical)
   let matrix ← withOptions (·.setBool compactPSDCoordinatesOption true) <| withNaryArg 4 delab
@@ -218,9 +226,19 @@ def viewHooks : Morew.Elab.Reformulation.ViewHooks where
     | .detailed => options
   prepareReadable expression := do
     -- Display the membership relation defined by the stored function.
-    if expression.isApp && expression.getAppFn.isLambda &&
-        (expression.getAppFn.find? (·.isConstOf ``presentationPowerMembershipInstance)).isSome then
-      return some expression.headBeta
+    if expression.isApp && expression.getAppFn.isLambda then
+      let mut reduced := expression.headBeta
+      while reduced.isApp && reduced.getAppFn.isLambda do
+        reduced := reduced.headBeta
+      if reduced.isAppOfArity ``Membership.mem 5 then
+        let args := reduced.getAppArgs
+        let carrier := args[3]!.consumeMData
+        if carrier.isAppOfArity ``Morew.Conic.Cone.carrier 1 then
+          let cone := carrier.getAppArgs[0]!.consumeMData
+          if cone.isAppOfArity ``Morew.Conic.Cone.power 2 then
+            let canonical := presentationPowerMembership
+              cone.getAppArgs[0]! cone.getAppArgs[1]! args[4]!
+            if ← isDefEq reduced canonical then return some reduced
     return none
   mathematicalRows := powerChainPrintRows
 

@@ -3,10 +3,13 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Core
-import Morew.Syntax.Grammar
-import Morew.Syntax.PowerChainView
-import Lean.Elab.Term
+module
+
+public import Morew.Core
+public meta import Morew.Core
+public import Morew.Syntax.Grammar
+public import Morew.Syntax.PowerChainView
+public meta import Lean.Elab.Term
 
 /-!
 # Source problem presentations
@@ -14,6 +17,8 @@ import Lean.Elab.Term
 Source spelling, the persistent presentation registry, and syntax helpers used
 by problem elaboration and reformulations.
 -/
+
+public meta section
 
 namespace Morew.Syntax
 
@@ -23,8 +28,9 @@ open Lean Lean.Elab Lean.Elab.Term Lean.Parser
 back to typeclass search in the new context. -/
 syntax (name := replayInstance) "morew_replay_instance% " ident " : " term : term
 
+/-- Elaborate a stored instance reference in the current parameter context. -/
 @[term_elab replayInstance]
-private def elabReplayInstance : TermElab := fun stx expectedType? => do
+def elabReplayInstance : TermElab := fun stx expectedType? => do
   let `(morew_replay_instance% $name:ident : $type) := stx | throwUnsupportedSyntax
   let type ← elabType type
   let result ← match ← resolveLocalName name.getId with
@@ -94,7 +100,6 @@ private structure RegisteredProblemView where
   view : ProblemView
   displayView : ProblemView
   printPresentation? : Option ProblemPrintPresentation := none
-  deriving Inhabited
 
 private initialize problemViewExtension :
     SimplePersistentEnvExtension (Name × RegisteredProblemView) (NameMap RegisteredProblemView) ←
@@ -102,6 +107,10 @@ private initialize problemViewExtension :
     addImportedFn := mkStateFromImportedEntries
       (fun state entry => state.insert entry.1 entry.2) {}
     addEntryFn := fun state entry => state.insert entry.1 entry.2
+    exportEntriesFnEx? := some fun _ _ entries =>
+      let entries := entries.toArray
+      let exported := entries.filter fun entry => !isPrivateName entry.1
+      { exported, server := exported, «private» := entries }
   }
 
 /-- Register reconstruction syntax and optional displays. By default, print the

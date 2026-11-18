@@ -3,11 +3,15 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Conic.Terminal
-import Morew.Elab.Reformulation.Cone.Terminal
+module
+
+public import Morew.Elab.Conic.Terminal
+public import Morew.Elab.Reformulation.Cone.Terminal
 
 /-! Register `conic` with the affine objective backend and shared cone planner.
 Validate and retarget `Conic.Form` evidence, checking the stored optimization sense. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
@@ -29,8 +33,9 @@ def prepareTerminalConic (state : ReformState) (step : Syntax)
     return Morew.Elab.Conic.Terminal.backendWithCertificate proof
   Cone.prepareTerminalConeForm makeBackend terminalConicAdapter `_terminalConic state step
 
+/-- Elaborate the terminal `conic` step producing an affine-conic representation. -/
 @[morew_reformulation_step Morew.conicStep]
-private def elabConic : StepHandler := fun state step => do
+def elabConic : StepHandler := fun state step => do
   match step with
   | `(reformulationStep| conic $[using $provided:term]?) =>
       prepareTerminalConic state step provided

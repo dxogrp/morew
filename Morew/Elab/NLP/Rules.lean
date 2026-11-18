@@ -2,9 +2,10 @@
 Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
+module
 
-import Morew.Rewrite
-import Morew.Elab.Rewrite.Registry
+public import Morew.Rewrite
+public import Morew.Elab.Rewrite.Registry
 
 /-! Install exact NLP rules for automatic rewriting.
 `norm2Epigraph` covers Euclidean values and explicit `toLp 2` inputs;

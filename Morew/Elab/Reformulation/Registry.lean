@@ -3,10 +3,14 @@ Copyright 2026 Hao Zhu
 SPDX-License-Identifier: Apache-2.0
 -/
 
-import Morew.Elab.Reformulation.State
-import Morew.Elab.Reformulation.Syntax
+module
+
+public import Morew.Elab.Reformulation.State
+public import Morew.Elab.Reformulation.Syntax
 
 /-! Associate each reformulation syntax kind with one command procedure supplied by an import. -/
+
+public meta section
 
 namespace Morew.Elab.Reformulation
 
