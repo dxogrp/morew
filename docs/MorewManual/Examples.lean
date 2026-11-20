@@ -59,6 +59,7 @@ tag := "examples-models"
 {includeExample Examples.Models.SecondOrder "Second-order cones"}
 {includeExample Examples.Models.Norms "Vector norms"}
 {includeExample Examples.Models.Exponential "Exponential cones"}
+{includeExample Examples.Models.LogSumExp "Log-sum-exp with a Euclidean bound"}
 {includeExample Examples.Models.Power "Power cones"}
 {includeExample Examples.Models.PSD "Positive semidefinite matrices"}
 {includeExample Examples.Models.Spectral "Eigenvalues and matrix norms"}
@@ -71,6 +72,7 @@ tag := "examples-applications"
 
 {includeExample Examples.Applications.Calibration "Multiplicative calibration"}
 {includeExample Examples.Applications.RidgeReg "Ridge regression"}
+{includeExample Examples.Applications.Lasso "LASSO"}
 {includeExample Examples.Applications.RobustReg "Robust regression"}
 
 # Advanced
