@@ -410,6 +410,103 @@ For `Fn.sumLargest`, $`x_{[1]}\geq\cdots\geq x_{[n]}` are the sorted coordinates
 $`k=0` gives zero and $`k\geq n` gives the full sum. Its linear epigraph
 representation requires $`k\leq n`.
 
+:::table (tag := "functions-vector-support") +header
+*
+  * Lean expression
+  * Conic representation
+  * NLP support
+  * Checked example
+*
+  * `Fn.norm1 x`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.fnNorm1Epigraph)
+  * Same epigraph rewrite
+  * [Vector norms](examples/Models/Vector-norms/)
+*
+  * `Fn.normInf x`, `‖x‖` for `x : Fin n → ℝ`
+  * [Named](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.fnNormInfEpigraph) and [native](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.normInfEpigraph) epigraphs
+  * Same epigraph rewrites
+  * [Vector norms](examples/Models/Vector-norms/)
+*
+  * `Fn.norm2 x`, `‖WithLp.toLp 2 x‖`
+  * [Named](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.fnNorm2Epigraph) and [native](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.normEpigraph) epigraphs
+  * [Polynomial epigraph rewrite](api/Morew/Rewrite/Euclidean.html#Morew.Rewrite.fnNorm2Epigraph)
+  * [SOC and NLP formulations](examples/Models/Vector-norms/)
+*
+  * `‖WithLp.toLp p x‖`, $`1<p.\mathrm{toReal}`
+  * [Epigraph](api/Morew/Conic/Power/Norm.html#Morew.Conic.Power.normEpigraph)
+  * No general rule beyond the $`1`, $`2`, and $`\infty` norm cases
+  * [Power-cone norm](examples/Models/Vector-norms/)
+*
+  * `Fn.norm2 x ^ 2`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.fnNorm2SquareEpigraph)
+  * [Smooth squared norm](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.norm2_sq)
+  * [Ridge regression](examples/Applications/Ridge-regression/)
+*
+  * `∑ i, x i ^ 2`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.sumSquaresEpigraph)
+  * Smooth finite sum
+  * [Least squares](examples/Models/Second-order-cones/)
+*
+  * `(∑ i, x i ^ 2) / y`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.sumSquaresDivEpigraph), $`y>0`
+  * Smooth for $`y\ne0`
+  * [Quadratic-over-linear bounds](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/SecondOrderElab.lean)
+*
+  * `s.sup' hs x`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.finsetSupEpigraph), `hs : s.Nonempty`
+  * Same epigraph rewrite
+  * [Finite extrema](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/PolyhedralElab.lean)
+*
+  * `s.inf' hs x`
+  * [Hypograph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.finsetInfHypograph), `hs : s.Nonempty`
+  * Same hypograph rewrite
+  * [Finite extrema](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/PolyhedralElab.lean)
+*
+  * `Fn.sumLargest k x`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.sumLargestEpigraph), $`k\leq n`
+  * No registered NLP rule
+  * [Threshold formulation](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/SumLargest.lean)
+*
+  * `Fn.cvar β x`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.cvarEpigraph), $`n>0`, $`0\leq\beta<1`
+  * No registered NLP rule
+  * [Empirical CVaR](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/Cvar.lean)
+*
+  * `Fn.logSumExp x`
+  * [Epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.logSumExpEpigraph), $`n>0`
+  * Expanded formula; positivity of the exponential sum must be inferred
+  * [Log-sum-exp model](examples/Models/Log-sum-exp-with-a-Euclidean-bound/)
+*
+  * `Fn.geoMean x`
+  * [Hypograph](api/Morew/Conic/Power/GeometricMean.html#Morew.Conic.Power.geoMeanHypograph), $`n>0`, $`x\succeq0`
+  * No built-in finite-product smoothness rule
+  * [Geometric mean](examples/Models/Power-cones/)
+*
+  * `Fn.invProd x`
+  * [Epigraph](api/Morew/Conic/Power/GeometricMean.html#Morew.Conic.Power.invProdEpigraph), $`n>0`, $`x_i>0`
+  * No built-in finite-product smoothness rule
+  * [Inverse product](examples/Models/Power-cones/)
+:::
+
+The norm registrations also cover `WithLp.toLp 1 x` and `WithLp.toLp ∞ x`.
+For a Euclidean norm, automatic conic selection prefers the SOC representation
+to the built-in power-cone representation. The [norm example](examples/Models/Vector-norms/)
+shows explicit selection of the latter. Custom matching rules can still require
+disambiguation.
+
+The conic squared-norm representation also covers `‖v‖ ^ 2` for a Euclidean `v`.
+The direct NLP smoothness rule above matches `Fn.norm2 x ^ 2`.
+The native expression `Real.log (∑ i, Real.exp (x i))` has a registered conic
+epigraph as well. It has no dedicated NLP rewrite: with symbolic dimension,
+$`n>0` alone need not suffice for automatic inference of the logarithm's domain.
+
+Finite Huber sums have an [epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.sumHuberEpigraph)
+for $`M\geq0`; finite entropy sums have a [hypograph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.sumEntrHypograph)
+for nonnegative coordinates. Finite KL sums against a fixed positive vector
+have an [epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.sumKlDivEpigraph).
+These conic rules allow empty sums; see [robust regression](examples/Applications/Robust-regression/)
+and the [entropy and KL examples](examples/Models/Exponential-cones/).
+
 # Matrix functions
 
 The sets $`\mathbf{S}^n`, $`\mathbf{S}_+^n`, and $`\mathbf{S}_{++}^n` contain
