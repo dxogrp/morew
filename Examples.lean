@@ -5,6 +5,7 @@ public import Examples.Advanced.ObjCertificate
 public import Examples.Advanced.Restrict
 public import Examples.Advanced.Schur
 public import Examples.Applications.Calibration
+public import Examples.Applications.Lasso
 public import Examples.Applications.RidgeReg
 public import Examples.Applications.RobustReg
 public import Examples.GettingStarted.Basic
