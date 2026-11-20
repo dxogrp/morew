@@ -84,45 +84,5 @@ reformulation supplied : source := by
 
 example : supplied = selected := rfl
 
-/-!
-## Registration
-
-The attribute `[morew_substitute]` registers a parameterization for automatic
-selection. A local registration applies only within its section.
--/
-
-section
-
-attribute [local morew_substitute] shiftRule
-
-reformulation automatic : source := by
-  substitute x := shift c u
-
-example : automatic = selected := rfl
-
-end
-
-/-!
-A scoped registration is activated by `open scoped` in the section where the
-rule is needed.
--/
-
-namespace Scoped
-
-attribute [scoped morew_substitute] shiftRule
-
-end Scoped
-
-section
-
-open scoped Scoped
-
-reformulation scopedSelection : source := by
-  substitute x := shift c u
-
-example : scopedSelection = selected := rfl
-
-end
-
 end
 end Examples.Advanced.CustomSubstitution
