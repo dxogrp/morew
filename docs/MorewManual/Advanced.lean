@@ -62,7 +62,7 @@ reformulation commands. The [checked examples](examples/Advanced/Custom-rules/)
 derive the absolute-value formula with `Unit` auxiliary values and the
 log-sum-exp formula with a vector of exponential-cone witnesses.
 
-`EpigraphRepr.toConstraintRepr input bound` applies an epigraph representation
+`EpigraphRepr.toConstraintRepr repr input bound` applies an epigraph representation
 to the predicate $`f(\mathrm{input}(x))\leq\mathrm{bound}(x)` on a decision space.
 The resulting `ConstraintRepr` can be selected in a reformulation.
 
