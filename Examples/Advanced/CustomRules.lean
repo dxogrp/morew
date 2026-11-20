@@ -9,12 +9,7 @@ public import Morew.Reformulation.Conic
 public import Morew.Reformulation.NLP
 
 /-!
-# Registering custom rewrite rules
-
-`@[morew_conic]` and `@[morew_nlp]` register representations for automatic
-selection. A representation is a `def` and may carry both attributes.
-The examples cover absolute deviation, an absolute-value graph, and a
-logarithm on positive inputs.
+# Representation certificates and custom rules
 -/
 
 @[expose] public section
@@ -24,6 +19,41 @@ namespace Examples.Advanced.CustomRules
 open Morew
 noncomputable section
 
+/-!
+## Using certificates directly
+
+The field `source_iff_exists` proves the represented mathematical formula.
+For absolute value, `Auxiliary := Unit`, so the existential can be removed.
+-/
+
+example (x t : ℝ) : |x| ≤ t ↔ x ≤ t ∧ -x ≤ t := by
+  simpa only [Rewrite.absEpigraph, exists_const] using
+    Rewrite.absEpigraph.source_iff_exists x t
+
+/-!
+The log-sum-exp certificate uses a vector of auxiliary values. In positive
+dimension, its formula is
+
+```math
+\log\sum_{i=1}^n e^{x_i}\leq t
+\iff \exists u\in\mathbf{R}^n,\quad
+(x_i-t,1,u_i)\in\mathrm{EXP}\ \text{for all }i,\quad
+\mathbf{1}^T u\leq1.
+```
+-/
+
+example {n : Nat} (hn : 0 < n) (x : Fin n → ℝ) (t : ℝ) :
+    Fn.logSumExp x ≤ t ↔ ∃ u : Fin n → ℝ,
+      (∀ i, (x i - t, 1, u i) ∈ EXP) ∧ (∑ i, u i) ≤ 1 :=
+  (Conic.Exponential.logSumExpEpigraph hn).source_iff_exists x t
+
+/-!
+## Registering a representation
+
+`@[morew_conic]` and `@[morew_nlp]` register representations for automatic
+selection. A representation is a `def` and may carry both attributes.
+-/
+
 def absoluteDeviation (center x : ℝ) : ℝ := |x - center|
 
 @[morew_conic, morew_nlp]
@@ -32,6 +62,11 @@ def absoluteDeviationEpigraph (center : ℝ) :
   Auxiliary := Unit -- No auxiliary optimization variable.
   target x t _ := x - center ≤ t ∧ -(x - center) ≤ t
   source_iff_exists x t := Rewrite.absEpigraph.source_iff_exists (x - center) t
+
+-- Apply the epigraph representation to a bound on the decision space `ℝ × ℝ`.
+def absoluteDeviationBound (center : ℝ) :
+    ConstraintRepr (fun p : ℝ × ℝ => absoluteDeviation center p.1 ≤ p.2) :=
+  (absoluteDeviationEpigraph center).toConstraintRepr Prod.fst Prod.snd
 
 def fitting (center : ℝ) :=
   problem (x t : ℝ)
@@ -62,14 +97,20 @@ example : (smooth.nlpForm center).data.toProblem = smooth center :=
   (smooth.nlpForm center).represents
 example : IsSmoothNLP (smooth center) := smooth.isSmoothNLP center
 
--- `using` selects a rule explicitly and infers its parameters.
+-- `using` selects the unregistered constraint representation and infers `center`.
 reformulation selected : (fitting center) := by
-  conic at deviation using absoluteDeviationEpigraph
+  conic at deviation using absoluteDeviationBound
   conic
 
 example : GlobalEquiv (fitting center) (selected center) :=
   selected.equiv center
 example : IsConic (selected center) := selected.isConic center
+example : (selected.conicForm center).data.toProblem = selected center :=
+  (selected.conicForm center).represents
+example (x t : ℝ) : (selected center).feasible (x, t) ↔
+    x - center ≤ t ∧ -(x - center) ≤ t := by
+  change (0 ≤ t - (x - center) ∧ 0 ≤ t + (x - center)) ↔ _
+  constructor <;> rintro ⟨h₁, h₂⟩ <;> constructor <;> linarith
 
 #printp selected
 
