@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import Examples.Advanced.CustomRules
+public import Examples.Advanced.CustomSubstitution
 public import Examples.Advanced.ObjCertificate
 public import Examples.Advanced.Restrict
 public import Examples.Advanced.Schur
