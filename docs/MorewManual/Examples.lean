@@ -81,6 +81,7 @@ tag := "examples-advanced"
 %%%
 
 {includeExample Examples.Advanced.CustomRules "Custom rules"}
+{includeExample Examples.Advanced.CustomSubstitution "Custom substitutions"}
 {includeExample Examples.Advanced.ObjCertificate "Objective certificates"}
 {includeExample Examples.Advanced.Schur "Schur complements"}
 {includeExample Examples.Advanced.Restrict "Restricting the feasible set"}

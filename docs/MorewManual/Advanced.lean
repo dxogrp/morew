@@ -107,6 +107,39 @@ parts are allowed.
 The [affine API](api/Morew/Affine.html) and
 [quadratic API](api/Morew/QuadConic/Objective.html) list the definitions.
 
+# Custom substitutions
+%%%
+tag := "custom-substitutions"
+%%%
+
+A `CoordinateParameterization f` describes a change of one coordinate,
+possibly depending on retained coordinates. Supply `range`, the source values
+covered by the map; `preimage`, a choice of new coordinate for each value in
+that range; and `rightInverse`, a proof that applying the map recovers the
+source coordinate. Applying the rule also requires proof that current source
+feasibility implies membership in `range`.
+
+Register the definition with `@[morew_substitute]` for automatic selection.
+Use `attribute [local morew_substitute] rule` within a section, or
+`attribute [scoped morew_substitute] rule` in a namespace and activate it with
+`open scoped Namespace` where needed.
+
+The clause `via rule` selects a coordinate parameterization explicitly, even
+when it is unregistered. The clause `using proof` instead supplies a
+`FeasibleSurjection` for the complete current problem.
+`CoordinateParameterization.toFeasibleSurjection` constructs this certificate
+from a parameterization, decompositions of the source and target decision
+spaces into retained and selected coordinates, and a range-coverage proof.
+
+The current `substitute` command preserves the selected coordinate's type.
+The mathematical structures allow different source and target coordinate types.
+
+The [custom substitution example](examples/Advanced/Custom-substitutions/)
+checks these selection methods and the recovery map for a translation that
+depends on a retained coordinate. The
+[parameterization API](api/Morew/Transform/Parameterization.html) lists the
+definitions.
+
 # Options
 %%%
 tag := "options"
