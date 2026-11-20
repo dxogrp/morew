@@ -83,5 +83,35 @@ example : smoothConstraints.nlpForm.data.toProblem = smoothConstraints :=
   smoothConstraints.nlpForm.represents
 example : IsSmoothNLP smoothConstraints := smoothConstraints.isSmoothNLP
 
+/-!
+## An explicit objective context
+
+Here `weight` is a decision variable. Source feasibility gives
+`0 ≤ weight`, so `x ^ 2 ≤ t` implies `weight * x ^ 2 ≤ weight * t`.
+This inequality justifies replacing the selected square in the objective.
+-/
+
+def weighted :=
+  problem (weight x : ℝ)
+    let loss := x ^ 2
+    minimize weight * loss
+    subject to nonneg : 0 ≤ weight
+
+theorem weightedContext : ObjectiveEpigraphContext weighted
+    (fun p => p.2 ^ 2) (fun p t => p.1 * t) where
+  atValue _ := rfl
+  backward _ feasible _ bound := mul_le_mul_of_nonneg_left bound feasible
+
+reformulation weightedSplit : weighted := by
+  epigraph t at loss as loss_bound using weightedContext
+
+#printp weightedSplit
+example : GlobalEquiv weighted weightedSplit := weightedSplit.equiv
+example (weight x t : ℝ) : weightedSplit.objective ((weight, x), t) = weight * t := rfl
+example (weight x t : ℝ) : weightedSplit.feasible ((weight, x), t) ↔
+    0 ≤ weight ∧ x ^ 2 ≤ t := Iff.rfl
+example (z : FeasiblePoint weightedSplit) :
+    (weightedSplit.equiv.backward.map z).val = z.val.1 := rfl
+
 end
 end Examples.Transformations.Subexpressions
