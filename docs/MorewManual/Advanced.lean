@@ -69,6 +69,26 @@ The remaining constraints supply the domain proof required to apply the rule.
 
 The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
 
+# Custom substitutions
+%%%
+tag := "custom-substitutions"
+%%%
+
+A `CoordinateParameterization f` describes a change of one coordinate,
+possibly depending on retained coordinates. Supply `range`, the source values
+covered by the map; `preimage`, a choice of new coordinate for each value in
+that range; and `rightInverse`, a proof that applying the map recovers the
+source coordinate. Applying the rule also requires proof that current source
+feasibility implies membership in `range`. Registering a definition with
+`@[morew_substitute]` makes it available for automatic selection.
+
+The clause `via rule` of the `substitute` command selects a coordinate
+parameterization explicitly. The clause `using proof` instead supplies a
+`FeasibleSurjection` certificate for the complete current rewriting step.
+`CoordinateParameterization.toFeasibleSurjection` allows constructing this
+certificate from a parameterization, decompositions of the source and target
+decision spaces into retained and selected coordinates, and a range-coverage proof.
+
 # Objective certificates
 %%%
 tag := "objective-certificates"
