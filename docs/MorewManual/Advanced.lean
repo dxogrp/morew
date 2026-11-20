@@ -21,7 +21,7 @@ of helper functions.
 tag := "custom-rules"
 %%%
 
-A custom rule proves $`P(x)\iff\exists u,\ Q(x,u)`, with source constraint
+A representation proves $`P(x)\iff\exists u,\ Q(x,u)`, with source constraint
 $`P`, replacement $`Q`, and auxiliary values $`u`. Define it with `def`
 using one of these representations:
 
@@ -43,6 +43,9 @@ using one of these representations:
   * $`P(x)`
 :::
 
+An epigraph represents an inequality. Use a graph representation to express
+the equality $`y=f(x)`.
+
 ## Required fields
 
 Supply `Auxiliary`, the type of auxiliary values; `target`, the replacement
@@ -51,6 +54,20 @@ when the replacement needs no auxiliary variable.
 
 For equivalent conditions $`P(x)\iff Q(x)`, `ConstraintRepr.ofIff`
 constructs a representation directly.
+
+## Using certificates directly
+
+The field `source_iff_exists` can be used in a proof independently of the
+reformulation commands. The [checked examples](examples/Advanced/Custom-rules/)
+derive the absolute-value formula with `Unit` auxiliary values and the
+log-sum-exp formula with a vector of exponential-cone witnesses.
+
+`EpigraphRepr.toConstraintRepr input bound` applies an epigraph representation
+to the predicate $`f(\mathrm{input}(x))\leq\mathrm{bound}(x)` on a decision space.
+The resulting `ConstraintRepr` can be selected in a reformulation.
+
+These certificates prove formulas over real numbers. Relating those formulas
+to software requires a separately established correspondence with that software.
 
 ## Registration and selection
 
