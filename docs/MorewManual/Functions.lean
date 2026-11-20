@@ -14,8 +14,9 @@ file := "functions"
 htmlSplit := .never
 %%%
 
-These tables give the mathematical properties of the supported functions on
-the stated domains. All inputs are real, and parameters are fixed. Convexity is
+The property tables give mathematical definitions on the stated domains; the
+support tables describe the registered reformulations. All inputs are real,
+and parameters are fixed. Convexity is
 joint in the arguments; monotonicity is coordinatewise unless specified otherwise.
 
 We use the following symbols for convexity and monotonicity.
@@ -24,6 +25,23 @@ We use the following symbols for convexity and monotonicity.
 {functionSymbol affine}[] affine; {functionSymbol neither}[] neither.
 - Monotonicity: {functionSymbol increasing}[] nondecreasing;
 {functionSymbol decreasing}[] nonincreasing; {functionSymbol notMonotone}[] neither.
+
+In the support tables, an epigraph represents $`f(x)\leq t`, and a hypograph
+represents $`t\leq f(x)`. Neither is a graph representation of $`f(x)=t`.
+Replacing a nested occurrence also requires the appropriate context evidence;
+see {ref "syntax"}[Syntax].
+
+`conic` and `qconic` use the same constraint rules. Their final certificates
+also require affine cone arguments and an affine or quadratic objective,
+respectively. The listed rules are selected automatically when their hypotheses
+can be established. `using` selects a rule explicitly without removing those
+hypotheses.
+
+The NLP column distinguishes exact bound rewrites from smoothness certification
+of an expression. Smoothness requires an open domain containing the feasible
+set. “No built-in rule” describes the current automation for the stated
+expression, not a mathematical impossibility. A total Lean definition may have
+values outside the domain of its representation or smoothness theorem.
 
 # Scalar functions
 
@@ -123,9 +141,96 @@ positive real numbers, respectively.
   * {functionSymbol notMonotone}[]
 :::
 
-`Fn.entr x` is defined as `Real.negMulLog x`; both forms are supported.
+`Fn.entr x` is defined as `Real.negMulLog x`; both have registered conic hypographs.
 Entropy and relative entropy have value zero at $`x=0`. KL divergence has value
 $`y` at $`x=0` and value zero at $`x=y`; its denominator remains positive.
+
+:::table (tag := "functions-scalar-support") +header
+*
+  * Lean expression
+  * Conic representation
+  * NLP support
+  * Checked example
+*
+  * `abs x`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.absEpigraph)
+  * Same epigraph rewrite
+  * [Nonlinear absolute-value bound](examples/Getting-started/Smooth-nonlinear-problems/)
+*
+  * `x⁺`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.posEpigraph)
+  * Same epigraph rewrite
+  * [Polyhedral rules](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/PolyhedralElab.lean)
+*
+  * `max x y`
+  * [Epigraph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.maxEpigraph)
+  * Same epigraph rewrite
+  * [Polyhedral rules](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/PolyhedralElab.lean)
+*
+  * `min x y`
+  * [Hypograph](api/Morew/Rewrite/Polyhedral.html#Morew.Rewrite.minHypograph)
+  * Same hypograph rewrite
+  * [Minimum in an objective](examples/Getting-started/Smooth-nonlinear-problems/)
+*
+  * `x ^ 2`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.squareEpigraph)
+  * Smooth polynomial
+  * [Squares and quotients](examples/Models/Second-order-cones/)
+*
+  * `Fn.huber M x`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.huberEpigraph), $`M\geq0`
+  * No built-in rule
+  * [Robust regression](examples/Applications/Robust-regression/)
+*
+  * `x ^ 2 / y`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.squareDivEpigraph), $`y>0`
+  * Smooth for $`y\ne0`
+  * [Quadratic-over-linear bound](examples/Models/Second-order-cones/)
+*
+  * `Real.exp x`
+  * [Epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.expEpigraph)
+  * [Smooth](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.exp)
+  * [Exponential rules](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/ExponentialElab.lean)
+*
+  * `Real.log x`
+  * [Hypograph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.logHypograph), $`x>0`
+  * [Smooth for $`x>0`](api/Morew/NLP/Domain.html#Morew.NLP.Domain.log)
+  * [Inferred domains](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Domain.lean)
+*
+  * `Fn.entr x`, `Real.negMulLog x`
+  * [Hypograph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.entrHypograph), $`x\geq0`
+  * No built-in rule for these expressions
+  * [Entropy](examples/Models/Exponential-cones/)
+*
+  * `Real.sqrt x`
+  * No registered rule
+  * [Smooth for $`x>0`](api/Morew/NLP/Domain.html#Morew.NLP.Domain.sqrt)
+  * [Positive inputs](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Domain.lean), [boundary rejection](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/DomainFailures.lean)
+*
+  * `Fn.softplus x`
+  * [Epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.softplusEpigraph)
+  * Smooth expanded formula
+  * [Softplus](examples/Models/Exponential-cones/)
+*
+  * `Fn.relEntr x y`
+  * [Epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.relEntrEpigraph), $`x\geq0`, $`y>0`
+  * Smooth expanded formula for $`x,y>0`
+  * [Relative entropy](examples/Models/Exponential-cones/)
+*
+  * `Fn.klDiv x y`
+  * [Epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.klDivEpigraph), $`x\geq0`, $`y>0`
+  * Smooth expanded formula for $`x,y>0`
+  * [KL divergence](examples/Models/Exponential-cones/)
+:::
+
+The registered native forms include `Real.log (1 + Real.exp x)` for softplus
+and `x * Real.log (x / y)` for relative entropy. The entropy expression
+`-x * Real.log x` can be smooth-certified for positive `x`; this does not make
+`Fn.entr x` a recognized smooth expression.
+
+The conic rule for `x ^ (1 / 2 : ℝ)` is a real-power hypograph. It does not
+register `Real.sqrt x` as an equivalent spelling. Likewise, the square-root
+smoothness rule requires $`x>0`, although the property table includes $`x=0`.
 
 # Powers
 
@@ -165,6 +270,45 @@ Here `p` and `α` are real parameters. `Real.rpow x p` can also be written `x ^ 
 :::
 
 The cases $`p=0` and $`p=1` give the affine functions $`1` and $`x`.
+
+:::table (tag := "functions-powers-support") +header
+*
+  * Lean expression
+  * Conic representation
+  * NLP support
+  * Checked example
+*
+  * `Real.rpow x p`, $`p<0`
+  * [Epigraph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowNegativeEpigraph), $`x>0`
+  * Smooth for $`x>0`
+  * [Negative powers](examples/Models/Power-cones/)
+*
+  * `Real.rpow x p`, $`0<p<1`
+  * [Hypograph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowHypograph), $`x\geq0`
+  * Smooth for $`x>0`
+  * [Fractional powers](examples/Models/Power-cones/)
+*
+  * `Real.rpow x p`, $`p>1`
+  * [Epigraph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowEpigraph), $`x\geq0`
+  * Smooth for $`x>0`
+  * [Positive powers](examples/Models/Power-cones/)
+*
+  * `Real.rpow x 0`, `Real.rpow x 1`
+  * [Epigraphs and hypographs](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowZeroEpigraph), no base restriction
+  * General real-power recognition requires $`x>0`
+  * [Affine powers](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/PowerRules.lean)
+*
+  * `x ^ α * y ^ (1 - α)`
+  * [Hypograph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.weightedGeoMeanNotationHypograph), $`x,y\geq0`, $`0<\alpha<1`
+  * Smooth for $`x,y>0`
+  * [Weighted geometric mean](examples/Models/Power-cones/)
+:::
+
+The real-power registrations cover both `Real.rpow x p` and `x ^ p`, including
+mixed spellings in the weighted geometric mean. Parameter hypotheses must be
+available to the conic rule. NLP smoothness uses
+[`Domain.rpow`](api/Morew/NLP/Domain.html#Morew.NLP.Domain.rpow); natural powers
+such as `x ^ (2 : ℕ)` instead use the unrestricted polynomial rule.
 
 # Vector functions
 
