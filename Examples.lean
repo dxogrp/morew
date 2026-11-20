@@ -14,6 +14,7 @@ public import Examples.GettingStarted.GraphImpl
 public import Examples.GettingStarted.NLP
 public import Examples.Models.Exponential
 public import Examples.Models.LogDet
+public import Examples.Models.LogSumExp
 public import Examples.Models.Norms
 public import Examples.Models.PSD
 public import Examples.Models.Power
