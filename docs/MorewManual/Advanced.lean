@@ -13,8 +13,8 @@ file := "advanced"
 htmlSplit := .never
 %%%
 
-Define custom rules, supply objective certificates, and configure the expansion
-of helper functions.
+Define custom rules and bound contexts, supply objective certificates, and
+configure the expansion of helper functions.
 
 # Custom rules
 %%%
@@ -68,6 +68,41 @@ Express an input domain with a subtype, such as `{x : ℝ // 0 < x}`.
 The remaining constraints supply the domain proof required to apply the rule.
 
 The [representation API](api/Morew/Rewrite/Basic.html) lists the definitions.
+
+# Bound contexts
+%%%
+tag := "bound-contexts"
+%%%
+
+An epigraph representation expresses $`f(x)\leq t` as equivalent constraints.
+Replacing $`f(x)` by $`t` within an objective or constraint also requires a
+context certificate. For example, $`x^2\leq t` justifies replacing
+$`w x^2` by $`w t` in a minimization objective when $`w\geq 0`.
+The sign assumption is needed even when a representation of $`x^2\leq t`
+is available.
+
+`ObjectiveBoundContext p f C direction` describes the replacement of
+$`C(x,f(x))` by $`C(x,t)`. Its `atValue` field identifies $`C(x,f(x))`
+with the original objective. Its `backward` field proves that projection
+to a source feasible point does not worsen the objective, using source
+feasibility and the selected bound. `ObjectiveEpigraphContext` and
+`ObjectiveHypographContext` specialize it to upper and lower bounds.
+
+`ConstraintBoundContext remainder source f C direction` describes a
+replacement within one constraint. Its `atValue` field identifies the
+source predicate with $`C(x,f(x))`. Its `backward` field recovers that
+predicate from the retained constraints, the bound, and $`C(x,t)`.
+For $`w|x|\leq 10`, the retained assumption $`w\geq 0`, the bound
+$`|x|\leq t`, and the new constraint $`w t\leq 10` give the required proof.
+
+Without `using`, an `epigraph` or `hypograph` step attempts to infer its
+context certificate. An explicit `using` clause supplies that certificate;
+a later `conic at label using rule` or `nlp at label using rule` instead
+selects a representation of the added bound. These are separate proofs.
+See {ref "syntax"}[Syntax] for the command clauses and
+[Bounds on subexpressions](examples/Transformations/Bounds-on-subexpressions/)
+for checked objective and constraint examples, including recovery.
+The [context API](api/Morew/Transform/Context.html) lists the interfaces.
 
 # Objective certificates
 %%%
