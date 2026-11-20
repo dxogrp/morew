@@ -33,7 +33,8 @@ see {ref "syntax"}[Syntax].
 
 `conic` and `qconic` use the same constraint rules. Their final certificates
 also require affine cone arguments and an affine or quadratic objective,
-respectively. The listed rules are selected automatically when their hypotheses
+respectively. A quadratic objective must be convex for minimization or concave
+for maximization. The listed rules are selected automatically when their hypotheses
 can be established. `using` selects a rule explicitly without removing those
 hypotheses.
 
@@ -180,7 +181,7 @@ $`y` at $`x=0` and value zero at $`x=y`; its denominator remains positive.
   * `Fn.huber M x`
   * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.huberEpigraph), $`M\geq0`
   * No built-in rule
-  * [Robust regression](examples/Applications/Robust-regression/)
+  * [Huber reformulations](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/Huber.lean)
 *
   * `x ^ 2 / y`
   * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.squareDivEpigraph), $`y>0`
@@ -286,7 +287,7 @@ The cases $`p=0` and $`p=1` give the affine functions $`1` and $`x`.
   * `Real.rpow x p`, $`0<p<1`
   * [Hypograph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowHypograph), $`x\geq0`
   * Smooth for $`x>0`
-  * [Fractional powers](examples/Models/Power-cones/)
+  * [Fractional powers](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/Power.lean)
 *
   * `Real.rpow x p`, $`p>1`
   * [Epigraph](api/Morew/Conic/Power/Repr.html#Morew.Conic.Power.rpowEpigraph), $`x\geq0`
@@ -432,7 +433,7 @@ representation requires $`k\leq n`.
   * [Polynomial epigraph rewrite](api/Morew/Rewrite/Euclidean.html#Morew.Rewrite.fnNorm2Epigraph)
   * [SOC and NLP formulations](examples/Models/Vector-norms/)
 *
-  * `‖WithLp.toLp p x‖`, $`1<p.\mathrm{toReal}`
+  * `‖WithLp.toLp p x‖`, `1 < p.toReal`
   * [Epigraph](api/Morew/Conic/Power/Norm.html#Morew.Conic.Power.normEpigraph)
   * No general rule beyond the $`1`, $`2`, and $`\infty` norm cases
   * [Power-cone norm](examples/Models/Vector-norms/)
@@ -502,8 +503,8 @@ $`n>0` alone need not suffice for automatic inference of the logarithm's domain.
 
 Finite Huber sums have an [epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.SecondOrder.sumHuberEpigraph)
 for $`M\geq0`; finite entropy sums have a [hypograph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.sumEntrHypograph)
-for nonnegative coordinates. Finite KL sums against a fixed positive vector
-have an [epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.sumKlDivEpigraph).
+for nonnegative coordinates. Finite KL sums of nonnegative coordinates against
+a fixed positive vector have an [epigraph](api/Morew/Conic/Exponential/Repr.html#Morew.Conic.Exponential.sumKlDivEpigraph).
 These conic rules allow empty sums; see [robust regression](examples/Applications/Robust-regression/)
 and the [entropy and KL examples](examples/Models/Exponential-cones/).
 
@@ -574,6 +575,71 @@ The constraints `P.PosSemidef` and `P.PosDef` express membership in
 $`\mathbf{S}_+^n` and $`\mathbf{S}_{++}^n`. Both sets are convex; see the
 [matrix constraint API](api/Morew/Conic/PSD.html).
 
+:::table (tag := "functions-matrix-support") +header
+*
+  * Lean expression
+  * Conic representation
+  * NLP support
+  * Checked example
+*
+  * `Fn.lambdaMax A`
+  * [Epigraph](api/Morew/Conic/PSD/Repr.html#Morew.Conic.Spectral.lambdaMaxEpigraph), `A.IsSymm`, $`n>0`
+  * No built-in rule
+  * [Largest eigenvalue](examples/Models/Eigenvalues-and-matrix-norms/)
+*
+  * `Fn.lambdaMin A`
+  * [Hypograph](api/Morew/Conic/PSD/Repr.html#Morew.Conic.Spectral.lambdaMinHypograph), `A.IsSymm`, $`n>0`
+  * No built-in rule
+  * [Spectral bounds](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/Spectral.lean)
+*
+  * `‖A‖` with `Matrix.Norms.L2Operator`
+  * [Epigraph](api/Morew/Conic/PSD/Repr.html#Morew.Conic.Spectral.spectralNormEpigraph)
+  * No built-in rule
+  * [Operator norm](examples/Models/Eigenvalues-and-matrix-norms/)
+*
+  * `Fn.normNuc A`
+  * [Epigraph](api/Morew/Conic/PSD/Repr.html#Morew.Conic.Spectral.normNucEpigraph)
+  * No built-in rule
+  * [Nuclear norm](examples/Models/Eigenvalues-and-matrix-norms/)
+*
+  * `Fn.quadForm x Q`
+  * [Epigraph](api/Morew/Conic/SecondOrder/Repr.html#Morew.Conic.QuadForm.epigraph), fixed `Q`, `Q.PosSemidef`; also a `qconic` objective
+  * No built-in rule for the named expression
+  * [Quadratic forms](https://github.com/dxogrp/morew/blob/main/MorewTest/Reformulation/QuadForm.lean)
+*
+  * `Fn.matFrac x P`
+  * [Epigraph](api/Morew/Conic/PSD/Repr.html#Morew.Conic.MatrixFraction.epigraph), `P.PosDef`
+  * No built-in rule
+  * [Matrix fraction](examples/Models/Eigenvalues-and-matrix-norms/)
+*
+  * `Fn.logDet P`, `Real.log P.det`
+  * [Named](api/Morew/Conic/PSD/Repr.html#Morew.Conic.LogDet.hypograph) and [native](api/Morew/Conic/PSD/Repr.html#Morew.Conic.LogDet.nativeHypograph) hypographs, `P.PosDef`, $`n>0`
+  * No built-in rule
+  * [Log-determinant](examples/Models/Log-determinant-optimization/)
+*
+  * `P.PosSemidef`
+  * [PSD cone constraint](api/Morew/Conic/PSD.html#Morew.Conic.Cone.mem_psd)
+  * No built-in rule
+  * [Positive semidefinite matrices](examples/Models/Positive-semidefinite-matrices/)
+*
+  * `P.PosDef`
+  * [Direct constraint representation](api/Morew/Conic/PSD/Repr.html#Morew.Conic.posDefRepr)
+  * No built-in rule
+  * [Positive-definite domain](examples/Models/Log-determinant-optimization/)
+:::
+
+Matrix norm, quadratic-form, and matrix-fraction representations also allow
+empty dimensions. Native quadratic forms `x ⬝ᵥ (Q *ᵥ x)` and matrix fractions
+`x ⬝ᵥ (P⁻¹ *ᵥ x)` have registered epigraphs. When both native representations
+apply, automatic selection prefers the matrix-fraction representation;
+`using` can select the quadratic-form representation instead. The
+[selection checks](https://github.com/dxogrp/morew/blob/main/MorewTest/Conic/MatFracPriority.lean)
+cover both choices.
+
+The NLP recognizer does not expand the named matrix functions in this table
+into their mathematical definitions. For a polynomial model, write the supported
+scalar arithmetic and finite sums, as in [ridge regression](examples/Applications/Ridge-regression/).
+
 # Other smooth functions
 
 :::table (tag := "functions-smooth") +header
@@ -625,3 +691,31 @@ Smooth nonlinear formulations also support arithmetic and finite sums.
 Logarithms, square roots, and general real powers require positive arguments
 for smoothness; division requires a nonzero denominator. See the
 [smoothness API](api/Morew/NLP/Smooth.html) and [domain API](api/Morew/NLP/Domain.html).
+
+:::table (tag := "functions-smooth-support") +header
+*
+  * Lean expression
+  * Conic representation
+  * NLP support
+  * Checked example
+*
+  * `x⁻¹`
+  * No registered rule for this expression
+  * [Smooth for $`x\ne0`](api/Morew/NLP/Domain.html#Morew.NLP.Domain.inv)
+  * [Inferred domains](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Domain.lean)
+*
+  * `Real.sin x`, `Real.cos x`
+  * No registered rule
+  * Smooth [sine](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.sin) and [cosine](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.cos)
+  * [Smooth expressions](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Smooth.lean)
+*
+  * `Real.sinh x`, `Real.cosh x`
+  * No registered rule
+  * Smooth [hyperbolic sine](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.sinh) and [cosine](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.cosh)
+  * [Smooth expressions](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Smooth.lean)
+*
+  * `Real.tanh x`
+  * No registered rule
+  * [Smooth](api/Morew/NLP/Smooth.html#Morew.NLP.Smooth.tanh)
+  * [Smooth expressions](https://github.com/dxogrp/morew/blob/main/MorewTest/NLP/Smooth.lean)
+:::
