@@ -79,28 +79,15 @@ possibly depending on retained coordinates. Supply `range`, the source values
 covered by the map; `preimage`, a choice of new coordinate for each value in
 that range; and `rightInverse`, a proof that applying the map recovers the
 source coordinate. Applying the rule also requires proof that current source
-feasibility implies membership in `range`.
+feasibility implies membership in `range`. Registering a definition with
+`@[morew_substitute]` makes it available for automatic selection.
 
-Register the definition with `@[morew_substitute]` for automatic selection.
-Use `attribute [local morew_substitute] rule` within a section, or
-`attribute [scoped morew_substitute] rule` in a namespace and activate it with
-`open scoped Namespace` where needed.
-
-The clause `via rule` selects a coordinate parameterization explicitly, even
-when it is unregistered. The clause `using proof` instead supplies a
-`FeasibleSurjection` for the complete current problem.
-`CoordinateParameterization.toFeasibleSurjection` constructs this certificate
-from a parameterization, decompositions of the source and target decision
-spaces into retained and selected coordinates, and a range-coverage proof.
-
-The current `substitute` command preserves the selected coordinate's type.
-The mathematical structures allow different source and target coordinate types.
-
-The [custom substitution example](examples/Advanced/Custom-substitutions/)
-checks these selection methods and the recovery map for a translation that
-depends on a retained coordinate. The
-[parameterization API](api/Morew/Transform/Parameterization.html) lists the
-definitions.
+The clause `via rule` of the `substitute` command selects a coordinate
+parameterization explicitly. The clause `using proof` instead supplies a
+`FeasibleSurjection` certificate for the complete current rewriting step.
+`CoordinateParameterization.toFeasibleSurjection` allows constructing this
+certificate from a parameterization, decompositions of the source and target
+decision spaces into retained and selected coordinates, and a range-coverage proof.
 
 # Objective certificates
 %%%
