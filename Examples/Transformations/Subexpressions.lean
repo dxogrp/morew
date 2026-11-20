@@ -113,5 +113,49 @@ example (weight x t : ℝ) : weightedSplit.feasible ((weight, x), t) ↔
 example (z : FeasiblePoint weightedSplit) :
     (weightedSplit.equiv.backward.map z).val = z.val.1 := rfl
 
+/-!
+## An explicit constraint context
+
+For the budget `weight * |x| ≤ 10`, retain `0 ≤ weight` and introduce
+`|x| ≤ t`. The retained sign assumption and the new budget `weight * t ≤ 10`
+imply the original budget.
+-/
+
+def weightedConstraint :=
+  problem (weight x : ℝ)
+    minimize x
+    subject to
+      nonneg : 0 ≤ weight
+      budget : weight * |x| ≤ 10
+
+theorem weightedConstraintContext : ConstraintBoundContext
+    (fun p : ℝ × ℝ => 0 ≤ p.1) (fun p => p.1 * |p.2| ≤ 10)
+    (fun p => |p.2|) (fun p t => p.1 * t ≤ 10) .upper where
+  atValue _ := Iff.rfl
+  backward _ retained _ bound target :=
+    (mul_le_mul_of_nonneg_left bound retained).trans target
+
+/-!
+The context certificate justifies introducing the bound. The subsequent
+`Rewrite.absEpigraph` rule represents that bound by `x ≤ t` and `-x ≤ t`.
+The product `weight * t` remains nonlinear; all resulting expressions are smooth.
+-/
+
+reformulation weightedConstraintNLP : weightedConstraint := by
+  epigraph t at (|x|) in budget as abs_bound using weightedConstraintContext
+  nlp at abs_bound using Rewrite.absEpigraph
+  nlp
+
+#printp weightedConstraintNLP
+example : GlobalEquiv weightedConstraint weightedConstraintNLP := weightedConstraintNLP.equiv
+example : IsSmoothNLP weightedConstraintNLP := weightedConstraintNLP.isSmoothNLP
+example : weightedConstraintNLP.nlpForm.data.toProblem = weightedConstraintNLP :=
+  weightedConstraintNLP.nlpForm.represents
+example (weight x t : ℝ) : weightedConstraintNLP.objective ((weight, x), t) = x := rfl
+example (weight x t : ℝ) : weightedConstraintNLP.feasible ((weight, x), t) ↔
+    0 ≤ weight ∧ weight * t ≤ 10 ∧ x ≤ t ∧ -x ≤ t := Iff.rfl
+example (z : FeasiblePoint weightedConstraintNLP) :
+    (weightedConstraintNLP.equiv.backward.map z).val = z.val.1 := rfl
+
 end
 end Examples.Transformations.Subexpressions
