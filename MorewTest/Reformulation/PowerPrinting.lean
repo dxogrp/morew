@@ -118,7 +118,7 @@ info: -- Mathematical view
 problem (x : Fin 3 → ℝ) (t : ℝ) (inverse_aux : Fin 3 → ℝ)
   minimize t
   subject to
-    domain : (fun x => 1) ≤ x
+    domain : (fun _ => (1 : ℝ)) ≤ x
     inverse_conic_1 : inverse_aux[0] = x[0]
     inverse_conic_2 : ∀ j : ℕ, j < 3 - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
     inverse_conic_3 : (t, inverse_aux[3 - 1], 1) ∈ POW (1 / 4)
@@ -131,7 +131,7 @@ info: -- Mathematical view
 problem (x : Fin 1 → ℝ) (t : ℝ) (inverse_aux : Fin 1 → ℝ)
   minimize t
   subject to
-    domain : (fun x => 1) ≤ x
+    domain : (fun _ => (1 : ℝ)) ≤ x
     inverse_conic_1 : inverse_aux[0] = x[0]
     inverse_conic_2 : ∀ j : ℕ, j < 1 - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
     inverse_conic_3 : (t, inverse_aux[1 - 1], 1) ∈ POW (1 / 2)
@@ -151,7 +151,7 @@ info: -- Mathematical view
 problem (x : Fin n → ℝ) (t : ℝ) (inverse_aux : Fin n → ℝ)
   minimize t
   subject to
-    domain : (fun x => 1) ≤ x
+    domain : (fun _ => (1 : ℝ)) ≤ x
     inverse_conic_1 : inverse_aux[0] = x[0]
     inverse_conic_2 : ∀ j : ℕ, j < n - 1 ⇒ (inverse_aux[j], x[j + 1], inverse_aux[j + 1]) ∈ POW ((j + 1) / (j + 2))
     inverse_conic_3 : (t, inverse_aux[n - 1], 1) ∈ POW (1 / (n + 1))

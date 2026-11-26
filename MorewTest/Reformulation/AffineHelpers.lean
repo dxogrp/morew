@@ -52,7 +52,7 @@ example (x : ℝ) : minimumTarget.feasible x ↔
 /--
 info: problem (x : ℝ)
   let loss := cost 2 1 x
-  let penalty := Affine.HelperFixtures.residual 3 2 x
+  let penalty := residual 3 2 x
   minimize loss + penalty
   subject to
     cap : 10 - loss ∈ ℝ₊

@@ -287,7 +287,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       | _, _ => none
 
     let runner := globalEquivRunner
-    let (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+    let (sourceName, sourceTerm, sourceView, displayView, problemTypes, typed, sectionFVars,
         usedSourceParameterNames) ← runTermElabM fun sectionFVars => withRef inputTerm do
       let source ← elabTerm inputTerm none
       synthesizeSyntheticMVarsNoPostponing
@@ -315,6 +315,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
         template {} source false
       let sourceView ← withoutExporting <|
         problemViewFromExpression source template (instantiateBinderTypes := true)
+      let displayView ← withoutExporting <| sourceDisplayView source template
       let presentation ← typedPresentationFromExpression canonical sourceView
       let normalization ← checkedPointwiseNormalization sourceName source canonical #[]
       let accumulatedCertificate ← runner.reflexivity source
@@ -330,7 +331,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
         normalization
       }
       let sourceTerm ← exactExpressionSyntax source
-      pure (sourceName, sourceTerm, sourceView, problemTypes, typed, sectionFVars,
+      pure (sourceName, sourceTerm, sourceView, displayView, problemTypes, typed, sectionFVars,
         usedSourceParameterNames)
     let initialCertificateSyntax ← liftMacroM <|
       certificateReflTerm runner sourceTerm
@@ -338,6 +339,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
       typed
       sectionFVars
       view := sourceView
+      displayView? := some displayView
       semantic := sourceTerm
       semanticDomainType := problemTypes.domain
       semanticValueType := problemTypes.value
@@ -473,6 +475,7 @@ private def elabReformulationCore : CommandElab := fun stx => do
             emitTerminalArtifacts targetDeclName state appliedTarget artifact
         unless (← get).messages.hasErrors do
           refreshProblemView targetDeclName state.view (instantiateBinderTypes := true)
+            (sourceDisplay? := state.displayView?)
 
 /-- Elaborate steps and generate the target, certificates, and metadata in one transaction. -/
 @[command_elab reformulationCmd, command_elab appliedReformulationCmd]

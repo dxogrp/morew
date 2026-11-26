@@ -29,7 +29,7 @@ info: -- Mathematical view
 problem (x : Fin 3 → ℝ) (t : ℝ) (reciprocal_aux : Fin 3 → ℝ)
   minimize t
   subject to
-    domain : (fun x => 1) ≤ x
+    domain : (fun _ => (1 : ℝ)) ≤ x
     mean : 0 ≤ Fn.geoMean x
     reciprocal_conic_1 : reciprocal_aux[0] = x[0]
     reciprocal_conic_2 : ∀ j : ℕ, j < 3 - 1 ⇒

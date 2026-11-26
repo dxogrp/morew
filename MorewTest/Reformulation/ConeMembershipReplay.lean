@@ -106,7 +106,7 @@ example (x : ℝ) : continued.feasible x ↔ applied.feasible x := Iff.rfl
 
 /--
 info: problem (x y : ℝ)
-  minimize Zero.zero
+  minimize @Zero.zero ℝ inferInstance
   subject to
     equal : x - y ∈ ({0} : Set ℝ)
     upper : -x ∈ ℝ₊

@@ -244,7 +244,7 @@ info: problem (x y t : ℝ)
   subject to
     unusable : -1 ≤ y
     quotient_conic_1 : (t, y / 2, ![x]) ∈ RSOC 1
-    nested : Real.exp x ≤ 100 ∧ 0 ≤ y ∧ 1 / 3 ≤ y ∧ x ≤ 10
+    nested : Real.exp x ≤ 100 ∧ (0 ≤ y ∧ (1 / 3 ≤ y ∧ x ≤ 10))
 -/
 #guard_msgs in
 #printp nestedTarget
@@ -308,7 +308,7 @@ example : ¬ emptyTarget.HasFeasiblePoint := by
 
 /--
 info: problem (v : Fin 0 → ℝ) (y : ℝ)
-  minimize 0
+  minimize (0 : ℝ)
   subject to
     norm_conic_1 : (-1, v) ∈ SOC 0
     square_conic_1 : (-1, 1 / 2, fun i => v i) ∈ RSOC 0

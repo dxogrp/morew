@@ -306,7 +306,7 @@ example : ¬ emptyTarget.HasFeasiblePoint := by
 
 /--
 info: problem (v : Fin 0 → ℝ)
-  minimize 0
+  minimize (0 : ℝ)
   subject to
     bound_conic_1 : 0 ≤ -1
     bound_conic_2 : v ≤ fun x => -1

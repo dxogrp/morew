@@ -216,6 +216,8 @@ def commitSurfaceStep (state : ReformState)
     typed
     sectionFVars
     view := surface.view
+    displayView? := surface.displayView?.or <|
+      state.displayView?.map (retainDisplayCandidates surface.view)
     semantic := surface.semantic
     semanticDomainType := surface.semanticDomainType
     usedSourceParameterNames

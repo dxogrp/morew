@@ -103,8 +103,30 @@ private def closeBody (domain : Expr) (binders definitions : Array Expr)
     let components ← pointComponents point binders.size
     mkLambdaFVars #[point] (body.replaceFVars binders components)
 
+/-- Retain source syntax around the selected occurrence while replacing its typed children. -/
+private partial def replaceDisplayOccurrence (hint : DisplayTerm) (needle replacement : Expr)
+    (replacementSyntax : Syntax) (predicate : Bool) : TermElabM DisplayTerm := do
+  let .node expression source children := hint
+  if ← Morew.Elab.ObjectiveContext.sameExpression expression needle then
+    return .node replacement replacementSyntax #[]
+  let (expression, _) ← (replaceOccurrence expression needle replacement predicate).run 0
+  let children ← children.mapM fun (path, child) => do
+    return (path, ← replaceDisplayOccurrence child needle replacement replacementSyntax predicate)
+  return .node expression source children
+
+/-- Find the outermost source syntax corresponding to an already unique typed occurrence. -/
+private partial def selectedDisplayTerm? (hint : DisplayTerm) (needle : Expr) :
+    TermElabM (Option DisplayTerm) := do
+  if ← Morew.Elab.ObjectiveContext.sameExpression hint.expression needle then
+    return some hint
+  let .node _ _ children := hint
+  for (_, child) in children do
+    if let some selected ← selectedDisplayTerm? child needle then return some selected
+  return none
+
 private structure SelectedOccurrence where
   view : Morew.Syntax.ProblemView
+  displayView? : Option Morew.Syntax.ProblemView := none
   auxiliaryType : Expr
   selected : Expr
   context : Expr
@@ -139,6 +161,10 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
     if (← Morew.Elab.Expr.hasUnresolvedStrict body) ||
         (← Morew.Elab.Expr.hasUnresolvedStrict needle) || body.hasSorry || needle.hasSorry then
       throwErrorAt selector "occurrence selection contains unresolved metavariables"
+    let bodyDisplay? ← state.displayView?.bindM fun display => do
+      let source := row?.map (display.constraints[·]!.proposition) |>.getD display.objective
+      captureDisplayTerm source body (elaborate := fun source type =>
+        elabPresentationTerm ⟨source⟩ (binders ++ definitions) (some type))
     if (← isType needle) || (← isProof needle) then
       throwErrorAt selector "an occurrence bound requires a value, not a type or proof"
     let auxiliaryType ← zetaReduce (← inferType needle)
@@ -180,10 +206,33 @@ private def selectOccurrence (state : ReformState) (presentation : PresentationS
         view := { view with objective := replacementSyntax }
       view := { view with constraints := view.constraints.push {
         name := boundName, proposition } }
+      let displayView? ← state.displayView?.mapM fun display => do
+        let fallback expression := delabPresentationTerm expression names (replay := false)
+        let replacementSyntax ← match bodyDisplay? with
+          | some hint => do
+              let hint ← replaceDisplayOccurrence hint needle auxiliary boundTerm.raw row?.isSome
+              renderSourceDisplayTerm hint replaced names
+          | none => fallback replaced
+        let selectedDisplay? ← bodyDisplay?.bindM (selectedDisplayTerm? · needle)
+        let selectedSyntax ← match selectedDisplay? with
+          | some hint => renderSourceDisplayTerm hint needle names
+          | none => fallback needle
+        let selectedTerm : TSyntax `term := ⟨selectedSyntax⟩
+        let proposition ← match direction with
+          | .upper => `($selectedTerm ≤ $boundTerm)
+          | .lower => `($boundTerm ≤ $selectedTerm)
+        let mut display := { display with binders := view.binders }
+        if let some index := row? then
+          display := { display with constraints := display.constraints.modify index fun entry =>
+            { entry with proposition := replacementSyntax } }
+        else
+          display := { display with objective := replacementSyntax }
+        return { display with constraints := display.constraints.push {
+          name := boundName, proposition } }
       let selected ← closeBody presentation.domainType binders definitions needle
       let context ← closeBody presentation.domainType binders definitions
         (← mkLambdaFVars #[auxiliary] replaced)
-      return { view, auxiliaryType, selected, context }
+      return { view, displayView?, auxiliaryType, selected, context }
 
 private def byDefinitionalEquality (type : Expr) (iff : Bool) : MetaM Expr :=
   forallTelescopeReducing type fun binders conclusion => do
@@ -345,6 +394,7 @@ private def materializeOccurrenceBound (state : ReformState)
     let semantic ← exactExpressionSyntax target
     return {
       view := selected.view
+      displayView? := selected.displayView?
       semantic
       semanticDomainType := ← exactExpressionSyntax nextDomain
       primitiveCertificate := ← exactExpressionSyntax primitive

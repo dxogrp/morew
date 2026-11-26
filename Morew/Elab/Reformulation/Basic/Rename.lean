@@ -32,6 +32,10 @@ private def materializeRenameConstraint (state : ReformState) (index : Nat)
     certificateReflTerm state.runner state.semantic
   return {
     view
+    displayView? := state.displayView?.map fun display => {
+      display with
+      constraints := display.constraints.modify index fun constraint =>
+        { constraint with name := view.constraints[index]!.name } }
     semantic := state.semantic
     semanticDomainType := state.semanticDomainType
     primitiveCertificate

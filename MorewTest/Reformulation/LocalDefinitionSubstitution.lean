@@ -179,7 +179,7 @@ example (u : ℝ) : fixedSubtypeTarget.feasible u := by
 /--
 info: problem (u : ℝ)
   let certified : { y // Real.log (Real.exp y) = y } := ⟨Real.exp u, ⋯⟩
-  minimize Real.log (↑certified : ℝ)
+  minimize Real.log certified.val
 -/
 #guard_msgs in
 #printp fixedSubtypeTarget
