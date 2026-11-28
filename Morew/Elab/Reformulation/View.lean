@@ -1120,21 +1120,6 @@ def refreshProblemView (targetName : Name)
             { compact, detailed, mathematicalRows : Morew.Syntax.ProblemPrintPresentation }))
   Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)
 
-/-- Rebuild stale displays without changing registered reconstruction or presentation metadata. -/
-@[morew_problem_print_refresher presentation]
-def problemPrintRefresher : Morew.ProblemPrintRefresher where
-  refresh targetName template := do
-    let saved ← get
-    try
-      refreshProblemView targetName template (instantiateBinderTypes := true)
-        (sourceDisplay? := some template)
-      let some presentation :=
-          Morew.Syntax.getProblemPrintPresentation? (← getEnv) targetName
-        | throwError "cannot refresh problem presentation `{privateToUserName targetName}`"
-      return presentation
-    finally
-      set saved
-
 /-- Replace section variables in the stored problem description with those from the current context. -/
 def withTypedPresentation (state : ReformState)
     (action : Morew.Elab.Reformulation.PresentationState → TermElabM α) :

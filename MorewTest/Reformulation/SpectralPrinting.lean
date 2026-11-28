@@ -7,7 +7,6 @@ module
 
 import MorewTest.Reformulation.MatrixFraction
 import MorewTest.Reformulation.Spectral
-import MorewTest.Syntax.PrintContextSource
 
 /-! Stable source spelling, scalar rows, block dimensions, and auxiliary order. -/
 
@@ -34,13 +33,6 @@ info: problem (A : SymmetricMatrix n) (t : ℝ)
 #guard_msgs in
 #printp largestTarget
 
--- The producer's operator-norm scope is closed here. Printing must still select
--- that norm instead of the consumer's default matrix norm.
-run_cmd do
-  for proofs in #[false, true] do
-    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``normSource proofs
-
-open scoped Matrix.Norms.L2Operator in
 /--
 info: problem (A : Matrix (Fin m) (Fin n) ℝ) (t : ℝ)
   minimize t

@@ -8,7 +8,6 @@ module
 import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 import MorewTest.ImportCompatibility.ProblemPresentation.Registered
 import Morew.Syntax.Printer
-import MorewTest.Syntax.PrintContextSource
 
 /-!
 # Presentations across compiled module boundaries
@@ -29,10 +28,10 @@ def value (x : Nat) := x + 100
 def within (x y : Nat) : Prop := y < x
 
 /--
-info: problem (x y : MorewTest.ImportCompatibility.ProblemPresentation.Defined.Source.Coordinate)
-  minimize MorewTest.ImportCompatibility.ProblemPresentation.Defined.Source.value x + y
+info: problem (x y : Coordinate)
+  minimize value x + y
   subject to
-    lower : MorewTest.ImportCompatibility.ProblemPresentation.Defined.Source.within x y
+    lower : within x y
     positive : 0 < y
 -/
 #guard_msgs in
@@ -40,15 +39,10 @@ info: problem (x y : MorewTest.ImportCompatibility.ProblemPresentation.Defined.S
 
 /--
 info: problem (n : Nat)
-  maximize MorewTest.ImportCompatibility.ProblemPresentation.Defined.Source.value n
+  maximize value n
 -/
 #guard_msgs in
 #printp Defined.maximum
-
-run_cmd do
-  for declaration in #[``Defined.minimum, ``Defined.maximum] do
-    for proofs in #[false, true] do
-      discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted declaration proofs
 
 /--
 info: problem (z : Nat)

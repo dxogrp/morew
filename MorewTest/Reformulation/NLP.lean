@@ -198,7 +198,7 @@ reformulation target : source := by
 example : GlobalEquiv source target := target.equiv
 
 /--
-info: problem (budget_aux : ℝ) (v budget_aux_2 : Fin (1 : ℕ) → ℝ)
+info: problem (budget_aux : ℝ) (v budget_aux_2 : Fin 1 → ℝ)
   let budget_aux_1 := budget_aux + 1
   let cap_nlp_1 := budget_aux ^ 2
   minimize cap_nlp_1
@@ -210,7 +210,7 @@ info: problem (budget_aux : ℝ) (v budget_aux_2 : Fin (1 : ℕ) → ℝ)
     cap_nlp_1 : budget_aux ≤ 5
     cap_nlp_2 : -budget_aux ≤ 5
     «cap value_nlp_1» : budget_aux ≤ 2
-    «cap value_nlp_2» : (0 : ℝ) ≤ (2 : ℝ)
+    «cap value_nlp_2» : 0 ≤ 2
 -/
 #guard_msgs in
 #printp target

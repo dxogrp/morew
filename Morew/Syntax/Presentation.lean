@@ -101,9 +101,6 @@ private structure RegisteredProblemView where
   view : ProblemView
   displayView : ProblemView
   printPresentation? : Option ProblemPrintPresentation := none
-  fallbackView? : Option ProblemView := none
-  checkedView? : Option ProblemView := none
-  checkedTerm? : Option Lean.Syntax := none
 
 private initialize problemViewExtension :
     SimplePersistentEnvExtension (Name × RegisteredProblemView) (NameMap RegisteredProblemView) ←
@@ -121,13 +118,8 @@ private initialize problemViewExtension :
 reconstruction syntax. -/
 def addProblemView (env : Environment) (declName : Name)
     (view : ProblemView) (displayView? : Option ProblemView := none)
-    (printPresentation? : Option ProblemPrintPresentation := none)
-    (fallbackView? : Option ProblemView := none)
-    (checkedView? : Option ProblemView := none)
-    (checkedTerm? : Option Lean.Syntax := none) : Environment :=
-  problemViewExtension.addEntry env
-    (declName, ⟨view, displayView?.getD view, printPresentation?, fallbackView?, checkedView?,
-      checkedTerm?⟩)
+    (printPresentation? : Option ProblemPrintPresentation := none) : Environment :=
+  problemViewExtension.addEntry env (declName, ⟨view, displayView?.getD view, printPresentation?⟩)
 
 /-- Look up the syntax view registered for reconstructing a problem.
 Refreshed reformulation targets retain explicit instances in this view. -/
@@ -143,28 +135,11 @@ def getProblemPrintPresentation? (env : Environment) (declName : Name) :
     Option ProblemPrintPresentation :=
   ((problemViewExtension.getState env).find? declName).bind (·.printPresentation?)
 
-/-- Source syntax with local notation expanded while its declarations are available. -/
-def getProblemFallbackView? (env : Environment) (declName : Name) : Option ProblemView :=
-  ((problemViewExtension.getState env).find? declName).bind (·.fallbackView?)
-
-/-- Checked source fields with explicit instances, including for imported opaque problems. -/
-def getProblemCheckedView? (env : Environment) (declName : Name) : Option ProblemView :=
-  ((problemViewExtension.getState env).find? declName).bind (·.checkedView?)
-
-/-- The whole checked source term, independently of field-to-source matching. -/
-def getProblemCheckedTerm? (env : Environment) (declName : Name) : Option Lean.Syntax :=
-  ((problemViewExtension.getState env).find? declName).bind (·.checkedTerm?)
-
 /-- Register presentation metadata in any elaborator with environment access. -/
 def registerProblemView [MonadEnv m] (declName : Name)
     (view : ProblemView) (displayView? : Option ProblemView := none)
-    (printPresentation? : Option ProblemPrintPresentation := none)
-    (fallbackView? : Option ProblemView := none)
-    (checkedView? : Option ProblemView := none)
-    (checkedTerm? : Option Lean.Syntax := none) : m Unit :=
-  modifyEnv fun env =>
-    addProblemView env declName view displayView? printPresentation? fallbackView? checkedView?
-      checkedTerm?
+    (printPresentation? : Option ProblemPrintPresentation := none) : m Unit :=
+  modifyEnv fun env => addProblemView env declName view displayView? printPresentation?
 
 /-- Replace an identifier, comparing names without macro scopes.
 The caller ensures freshness and absence of shadowing. -/

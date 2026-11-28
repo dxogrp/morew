@@ -7,7 +7,6 @@ module
 
 import Morew.Reformulation.Conic
 import MorewTest.Reformulation.EuclideanPrintingConic
-import MorewTest.Syntax.PrintContextSource
 
 /-! # Euclidean conic coordinate printing after import and continued reformulation. -/
 
@@ -42,11 +41,10 @@ local instance (priority := high) :
 example (x : EuclideanSpace ℝ (Fin 2)) : x 0 = x.ofLp 0 + 11 := rfl
 
 run_cmd do
-  -- Printed output and both reconstruction views retain the canonical coordinates
-  -- despite the consumer's changed function coercion.
-  for declaration in #[``target, ``continued] do
-    for proofs in #[false, true] do
-      discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted declaration proofs
+  -- Producer print syntax remains readable; both reconstruction views retain the
+  -- canonical coordinate function despite the consumer's function coercion.
+  checkReadable ``target
+  checkReadable ``continued
   replayStored ``target `importedExactReplay `importedDisplayReplay
   replayStored ``continued `continuedExactReplay `continuedDisplayReplay
 
@@ -64,7 +62,6 @@ run_cmd do
     unless output.contains "balance : x.ofLp 0 + x.ofLp 1 - 1" &&
         output.contains "hypograph_t_conic_1 : (-t, x.ofLp) ∈ SOC 2" do
       Lean.throwError "imported conic printing ignored a conflicting function coercion: {output}"
-    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``guarded proofs
 
 example : guarded = continued := rfl
 example : IsConic guarded := guarded.isConic

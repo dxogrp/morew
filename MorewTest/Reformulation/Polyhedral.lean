@@ -305,10 +305,10 @@ example : ¬ emptyTarget.HasFeasiblePoint := by
   norm_num at h
 
 /--
-info: problem (v : Fin (0 : ℕ) → ℝ)
+info: problem (v : Fin 0 → ℝ)
   minimize (0 : ℝ)
   subject to
-    bound_conic_1 : (0 : ℝ) ≤ (-1 : ℝ)
+    bound_conic_1 : 0 ≤ -1
     bound_conic_2 : v ≤ fun x => -1
     bound_conic_3 : -v ≤ fun x => -1
 -/
@@ -429,7 +429,7 @@ reformulation target : source := by
 example : GlobalEquiv source target := target.equiv
 
 /--
-info: problem (budget_aux : ℝ) (v budget_aux_1 : Fin (1 : ℕ) → ℝ)
+info: problem (budget_aux : ℝ) (v budget_aux_1 : Fin 1 → ℝ)
   minimize budget_aux
   subject to
     budget_conic_1 : budget_aux ≤ 10
@@ -439,7 +439,7 @@ info: problem (budget_aux : ℝ) (v budget_aux_1 : Fin (1 : ℕ) → ℝ)
     cap_conic_1 : budget_aux ≤ 5
     cap_conic_2 : -budget_aux ≤ 5
     «cap value_conic_1» : budget_aux ≤ 2
-    «cap value_conic_2» : (0 : ℝ) ≤ (2 : ℝ)
+    «cap value_conic_2» : 0 ≤ 2
 -/
 #guard_msgs in
 #printp target

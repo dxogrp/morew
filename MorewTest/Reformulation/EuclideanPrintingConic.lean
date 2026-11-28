@@ -7,7 +7,6 @@ module
 
 public import Morew.Reformulation.Conic
 public import MorewTest.Reformulation.EuclideanPrintingSupport
-import MorewTest.Syntax.PrintContextSource
 
 /-!
 # Euclidean coordinates in generated conic problem presentations
@@ -80,18 +79,17 @@ run_cmd replayStored ``target `exactReplay `displayReplay
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
 
--- Both cached and new displays must avoid the caller's conflicting coercion;
--- their stored reconstruction metadata remains unchanged.
+-- New printed representations cannot use coordinate shorthand with the caller's
+-- conflicting coercion; the previously stored representation remains unchanged.
 reformulation guarded : target := by conic
 
 run_cmd do
-  for declaration in #[``target, ``guarded] do
-    for proofs in #[false, true] do
-      let output ← printed declaration proofs
-      unless output.contains "balance : x.ofLp 0 + x.ofLp 1 - 1" &&
-          output.contains "hypograph_t_conic_1 : (-t, x.ofLp) ∈ SOC 2" do
-        throwError "Euclidean conic printing ignored a conflicting function coercion: {output}"
-      discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted declaration proofs
+  checkReadable ``target
+  for proofs in #[false, true] do
+    let output ← printed ``guarded proofs
+    unless output.contains "balance : x.ofLp 0 + x.ofLp 1 - 1" &&
+        output.contains "hypograph_t_conic_1 : (-t, x.ofLp) ∈ SOC 2" do
+      throwError "Euclidean conic printing ignored a conflicting function coercion: {output}"
 
 example : guarded = target := rfl
 example : IsConic guarded := guarded.isConic
