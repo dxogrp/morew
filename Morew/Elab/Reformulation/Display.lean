@@ -90,9 +90,18 @@ private def checkedDisplayExpression (source : Syntax) (expected : Expr)
 
 private structure DisplaySourceInfo where
   source : Syntax
-  expression : Expr
+  expression? : Option Expr
+
+private def displayAliasKey : Name := `morew.displayAlias
+
+/-- Introduce a marked alias whose source information can recover the original binding. -/
+def withDisplayAlias (name : Name) (value : Expr) (action : Expr → TermElabM α) :
+    TermElabM α := do
+  withLetDecl name (← inferType value)
+    (mkMData (KVMap.empty.setBool displayAliasKey true) value) action
 
 -- Presentation elaboration may introduce hygienic aliases for existing model bindings.
+-- Ordinary lexical lets must retain their own binding identities.
 private def restoreDisplayAliases (expression : Expr) (sourceContext context : LocalContext) :
     Expr :=
   expression.replace fun value => do
@@ -100,7 +109,8 @@ private def restoreDisplayAliases (expression : Expr) (sourceContext context : L
     if (context.find? id).isSome then none
     else do
       let declaration ← sourceContext.find? id
-      let replacement ← declaration.value?
+      let .mdata data replacement ← declaration.value? | none
+      guard (data.getBool displayAliasKey false)
       let .fvar original := replacement | none
       guard (context.find? original).isSome
       return replacement
@@ -113,15 +123,17 @@ private partial def collectDisplaySourceInfo (tree : InfoTree)
   | .node info children =>
       let mut result := result
       if let .ofTermInfo info := info then
-        unless info.isBinder do
-          let expression ← instantiateMVars info.expr
-          let expression := restoreDisplayAliases expression info.lctx context
-          let unavailable := expression.find? fun
-            | .fvar id => (context.find? id).isNone
-            | .const name _ => !originalEnv.contains name
-            | _ => false
-          if completeDisplayExpression expression && unavailable.isNone then
-            result := result.push { source := info.stx, expression }
+        let expression ← instantiateMVars info.expr
+        let expression := restoreDisplayAliases expression info.lctx context
+        let unavailable := expression.find? fun
+          | .fvar id => (context.find? id).isNone
+          | .const name _ => !originalEnv.contains name
+          | _ => false
+        let expression? := if !info.isBinder &&
+            completeDisplayExpression expression && unavailable.isNone then some expression else none
+        -- A macro may reuse the same syntax in distinct binding contexts. Keep rejected
+        -- occurrences so an available expression cannot stand in for an unavailable one.
+        result := result.push { source := info.stx, expression? }
       for child in children do
         result ← collectDisplaySourceInfo child originalEnv context result
       return result
@@ -132,10 +144,11 @@ private def uniqueDisplayExpression? (source : Syntax)
   let mut found := none
   for info in infos do
     if info.source.eqWithInfo source then
+      let some expression := info.expression? | return none
       match found with
-      | none => found := some info.expression
+      | none => found := some expression
       | some previous =>
-          if previous != info.expression then return none
+          if previous != expression then return none
   return found
 
 private partial def displayTemplate (source : Syntax) (expression : Expr)

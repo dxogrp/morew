@@ -661,7 +661,7 @@ partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
         synthesizeSyntheticMVarsNoPostponing
         return (← instantiateMVars expression).replaceFVars aliases values
     | (name, value) :: remaining =>
-        withLetDecl name (← inferType value) value fun temporary =>
+        withDisplayAlias name value fun temporary =>
           elaborate remaining (aliases.push temporary) (values.push value)
   elaborate (collect term.raw {}).toList #[] #[]
 

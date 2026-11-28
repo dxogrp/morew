@@ -251,6 +251,92 @@ run_cmd do
       unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
         Lean.throwError "the displayed lambda captured the substituted decision variable"
 
+-- Lexical lets must not be mistaken for aliases of the problem's decision bindings.
+def innerLet :=
+  problem (x : ℝ)
+    minimize let y := x; exp y + y
+
+def innerLetCoverage : FeasibleSurjection innerLet (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+reformulation innerLetShifted : innerLet := by
+  substitute x := u + 1 using innerLetCoverage
+
+example : GlobalEquiv innerLet innerLetShifted := innerLetShifted.equiv
+example (u : ℝ) : innerLetShifted.objective u = Real.exp (u + 1) + (u + 1) := rfl
+
+def nestedLets :=
+  problem (x : ℝ)
+    minimize let y := x; let z := y; exp z + y
+
+def nestedLetsCoverage : FeasibleSurjection nestedLets (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+reformulation nestedLetsShifted : nestedLets := by
+  substitute x := u + 1 using nestedLetsCoverage
+
+example : GlobalEquiv nestedLets nestedLetsShifted := nestedLetsShifted.equiv
+example (u : ℝ) : nestedLetsShifted.objective u = Real.exp (u + 1) + (u + 1) := rfl
+
+-- Reusing one syntax object for distinct bindings must not merge their identities.
+macro "aliasProblem" : term => do
+  let x := Lean.mkIdent `x
+  `(problem ($x : ℝ) minimize let $x := $x; exp $x + $x)
+
+def macroLet := aliasProblem
+
+def macroLetCoverage : FeasibleSurjection macroLet (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+reformulation macroLetShifted : macroLet := by
+  substitute x := u + 1 using macroLetCoverage
+
+example : GlobalEquiv macroLet macroLetShifted := macroLetShifted.equiv
+example (u : ℝ) : macroLetShifted.objective u = Real.exp (u + 1) + (u + 1) := rfl
+
+run_cmd do
+  for (target, names) in #[(``innerLetShifted, #[`y]), (``nestedLetsShifted, #[`y, `z]),
+      (``macroLetShifted, #[`x])] do
+    let some presentation := Syntax.getProblemPrintPresentation? (← Lean.getEnv) target
+      | Lean.throwError "the substitution lost its print presentation"
+    for view in #[presentation.compact, presentation.detailed] do
+      Lean.Elab.Command.liftTermElabM do
+        Lean.Meta.withLocalDeclD view.binders[0]!.name (Lean.mkConst ``Real) fun _ => do
+          let objective ← Lean.Elab.Term.elabTerm view.objective (some (Lean.mkConst ``Real))
+          Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+          let mut body ← Lean.instantiateMVars objective
+          for name in names do
+            let .letE actual _ _ rest _ := body.consumeMData
+              | Lean.throwError "the displayed objective lost a lexical binding"
+            unless actual.eraseMacroScopes == name && rest.hasLooseBVar 0 do
+              Lean.throwError "the displayed objective lost the name or use of a lexical binding"
+            body := rest
+      let termSyntax ← Lean.Elab.liftMacroM view.toTermSyntax
+      let termSyntax : Lean.TSyntax `term := ⟨termSyntax.raw.rewriteBottomUp fun node =>
+        if node.isIdent then Lean.mkIdent node.getId.eraseMacroScopes else node⟩
+      let printed ← Lean.Elab.Command.liftCoreM <| Lean.PrettyPrinter.ppTerm termSyntax
+      let term ← match Lean.Parser.runParserCategory (← Lean.getEnv) `term printed.pretty with
+        | .ok term => pure term
+        | .error message => Lean.throwError m!"the displayed problem does not parse: {message}\n{printed}"
+      Lean.Elab.Command.liftTermElabM do
+        let expected := Lean.mkConst target
+        let actual ← Lean.Elab.Term.elabTerm term (some (← Lean.Meta.inferType expected))
+        Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+        unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+          Lean.throwError "the displayed lexical bindings changed the substituted objective"
+    let some exact := Syntax.getProblemView? (← Lean.getEnv) target
+      | Lean.throwError "the substitution lost its exact presentation"
+    let term ← Lean.Elab.liftMacroM exact.toTermSyntax
+    Lean.Elab.Command.liftTermElabM do
+      let expected := Lean.mkConst target
+      let actual ← Lean.Elab.Term.elabTerm term (some (← Lean.Meta.inferType expected))
+      Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+      unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+        Lean.throwError "the exact presentation changed the substituted objective"
+
 -- Reuse notation other than exponential names, including a local macro.
 section
 
