@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import Morew.Reformulation.Basic
+import MorewTest.Syntax.PrintContextSource
 
 /-!
 # Substitution elaboration contexts
@@ -345,14 +346,10 @@ example : GlobalEquiv source target := target.equiv
 example (u t : Nat) :
     target.feasible (u, t) ↔ Nat.add u 1 ≤ t := Iff.rfl
 
-/--
-info: problem (u t : ℕ)
-  minimize t
-  subject to
-    objective_bound : u + 1 ≤ t
--/
-#guard_msgs in
-#printp target
+-- Visible output must retain the source operation under the new local instance.
+run_cmd do
+  for proofs in #[false, true] do
+    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``target proofs
 
 end SubstitutionSourceInstances
 
@@ -375,14 +372,9 @@ example : GlobalEquiv source target := target.equiv
 example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
 
-/--
-info: problem (x t : ℕ)
-  minimize t
-  subject to
-    objective_bound : x + 1 ≤ t
--/
-#guard_msgs in
-#printp target
+run_cmd do
+  for proofs in #[false, true] do
+    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``target proofs
 
 end ObjectiveBoundSourceInstances
 

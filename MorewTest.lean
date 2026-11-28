@@ -343,6 +343,8 @@ public import MorewTest.Surface.LocalDefinitions
 public import MorewTest.Surface.NameResolution
 public import MorewTest.Surface.Reformulation
 public import MorewTest.Syntax.PresentationValidation
+public import MorewTest.Syntax.PrintContext
+public import MorewTest.Syntax.PrintContextSource
 public import MorewTest.Syntax.Printing
 public import MorewTest.Transform
 public import MorewTest.Transform.Parameterization

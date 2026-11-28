@@ -7,6 +7,7 @@ module
 
 import Morew.Reformulation.NLP
 import MorewTest.Reformulation.EuclideanPrintingNLP
+import MorewTest.Syntax.PrintContextSource
 
 /-! # Euclidean NLP coordinate printing after import and continued reformulation. -/
 
@@ -39,10 +40,11 @@ local instance (priority := high) :
 example (x : EuclideanSpace ℝ (Fin 2)) : x 0 = x.ofLp 0 + 11 := rfl
 
 run_cmd do
-  -- Stored print syntax keeps the producer's notation, while both reconstruction
-  -- views must retain the checked coordinate function under consumer instances.
-  checkReadable ``target
-  checkReadable ``continued
+  -- Printed output and both reconstruction views retain the canonical coordinates
+  -- despite the consumer's changed function coercion.
+  for declaration in #[``target, ``continued] do
+    for proofs in #[false, true] do
+      discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted declaration proofs
   replayStored ``target `importedExactReplay `importedDisplayReplay
   replayStored ``continued `continuedExactReplay `continuedDisplayReplay
 

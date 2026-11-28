@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import Morew.Reformulation.Basic
+import MorewTest.Syntax.PrintContextSource
 
 /-!
 # Problem elaboration contexts
@@ -39,14 +40,10 @@ example : GlobalEquiv source target := target.equiv
 example (x t : Nat) :
     target.feasible (x, t) ↔ Nat.add x 1 ≤ t := Iff.rfl
 
-/--
-info: problem (x t : ℕ)
-  minimize t
-  subject to
-    epigraph_t : x + 1 ≤ t
--/
-#guard_msgs in
-#printp target
+-- Re-elaborating visible output must select the original addition instance.
+run_cmd do
+  for proofs in #[false, true] do
+    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``target proofs
 
 def identityCoverage : FeasibleSurjection source (fun u : Nat => u) where
   preimage point := point.1
@@ -223,14 +220,10 @@ reformulation target : source := by
 example (u : Fin 2) (t : Nat) :
     target.feasible (u, t) ↔ u.val ≤ t := Iff.rfl
 
-/--
-info: problem (u : Fin (1 + 1)) (t : ℕ)
-  minimize t
-  subject to
-    epigraph_t : (↑u : ℕ) ≤ t
--/
-#guard_msgs in
-#printp target
+-- The printed binder type must retain the original addition instance as well.
+run_cmd do
+  for proofs in #[false, true] do
+    discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted ``target proofs
 
 reformulation chained : target := by
   epigraph s

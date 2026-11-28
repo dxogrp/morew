@@ -7,6 +7,7 @@ module
 
 public import Morew.Reformulation.NLP
 public import MorewTest.Reformulation.EuclideanPrintingSupport
+public import MorewTest.Syntax.PrintContextSource
 
 /-!
 # Euclidean coordinates in generated NLP problem presentations
@@ -89,16 +90,17 @@ run_cmd replayStored ``target `exactReplay `displayReplay
 example : exactReplay = target := rfl
 example : displayReplay = target := rfl
 
--- The new printed representation cannot use coordinate notation with the
--- currently selected, noncanonical function coercion.
+-- Both cached and new displays must avoid the caller's conflicting coercion;
+-- their stored reconstruction metadata remains unchanged.
 reformulation guarded : target := by nlp
 
 run_cmd do
-  checkReadable ``target
-  for proofs in #[false, true] do
-    let output ← printed ``guarded proofs
-    unless output.contains "x.ofLp 0" && output.contains "x.ofLp i" do
-      throwError "Euclidean printing ignored a conflicting function coercion: {output}"
+  for declaration in #[``target, ``guarded] do
+    for proofs in #[false, true] do
+      let output ← printed declaration proofs
+      unless output.contains "x.ofLp 0" && output.contains "x.ofLp i" do
+        throwError "Euclidean printing ignored a conflicting function coercion: {output}"
+      discard <| MorewTest.Syntax.PrintContextSupport.checkPrinted declaration proofs
 
 example : guarded = target := rfl
 

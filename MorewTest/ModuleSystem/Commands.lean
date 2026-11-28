@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 module
 
 import MorewTest.ModuleSystem.Defined
+meta import Lean.Elab.GuardMsgs
 
 /-! Native import visibility, exposed computational certificates, and hygienic command names. -/
 
@@ -58,12 +59,54 @@ info: problem (x : Nat)
 #guard_msgs in
 #printp printable
 
-/--
-info: problem (x : ℝ)
-  minimize ‖x‖
--/
-#guard_msgs in
-#printp opaqueNorm
+private meta def checkOpaquePrinted (declaration : Lean.Name)
+    (expected : Lean.TSyntax `term) : Lean.Elab.Command.CommandElabM Unit := do
+  for proofs in #[false, true] do
+    let saved ← get
+    modify fun state => { state with messages := {}, snapshotTasks := #[] }
+    let messages ← try
+      let command ← if proofs then
+        `(set_option pp.proofs true in #printp $(Lean.mkIdent declaration))
+        else `(set_option pp.proofs false in #printp $(Lean.mkIdent declaration))
+      Lean.Elab.Tactic.GuardMsgs.runAndCollectMessages command
+    finally
+      modify fun state => { state with
+        messages := saved.messages, snapshotTasks := saved.snapshotTasks }
+    let [message] := messages.toList.filter (!·.isSilent)
+      | Lean.throwError "expected a single printed problem"
+    unless message.severity == .information && !message.isTrace do
+      Lean.throwError m!"unexpected print diagnostic: {message.data}"
+    let printed ← message.data.toString
+    let .ok visible := Lean.Parser.runParserCategory (← Lean.getEnv) `term printed
+      | Lean.throwError "printed opaque problem does not parse"
+    Lean.Elab.Command.liftTermElabM do
+      let expected ← Lean.Elab.Term.elabTerm expected none
+      let actual ← Lean.Elab.Term.elabTermEnsuringType visible (← Lean.Meta.inferType expected)
+      Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+      let actual ← Lean.instantiateMVars actual
+      if actual.hasMVar || actual.hasLevelMVar || actual.hasSorry then
+        Lean.throwError "printed opaque problem contains unresolved terms"
+      unless ← Lean.Meta.isDefEq actual expected do
+        Lean.throwError m!"printing changed an opaque problem's meaning:\n{printed}"
+
+-- An inaccessible source body still retains its original checked local instance.
+run_cmd checkOpaquePrinted ``opaqueNorm (← `(problem (x : ℝ) minimize (7 : ℝ)))
+
+section
+
+local instance : HAdd Nat Nat Nat := ⟨fun _ _ => 0⟩
+local instance : LE ℝ := ⟨fun _ _ => True⟩
+
+-- The independently checked anchor must not be reinterpreted by ambient instances.
+run_cmd do
+  checkOpaquePrinted ``printable
+    (← `(problem (x : Nat) minimize Nat.add x 1 subject to upper : x ≤ 7))
+
+run_cmd do
+  checkOpaquePrinted ``opaqueSource
+    (← `(problem (x : ℝ) minimize x subject to lower : @LE.le ℝ Real.instLE 0 x))
+
+end
 
 example : GlobalEquiv opaqueSource opaqueTarget := opaqueCertificate
 example : Conic.Form opaqueTarget := opaqueTarget.conicForm
