@@ -956,20 +956,37 @@ def sourceDisplayView (source : Expr) (template : Morew.Syntax.ProblemView) :
   let hints ← IO.mkRef ({} : Std.HashMap DisplayField DisplayTerm)
   let info ← getConstInfo declaration.constName!
   let type := info.type.instantiateLevelParams info.levelParams declaration.constLevels!
-  withLCtx {} {} do
-    forallTelescopeReducing type fun parameters _ => do
-      let formal := mkAppN declaration parameters
-      let renderer : DisplayRenderer := fun field expression names => do
-        if let some candidate := (field.syntax? display).filter (!·.isMissing) then
-          unless ← sourceDisplayRootAllowed expression do
-            return ← delabPresentationTerm expression names false
-          let bindings := names.map fun (id, _) => mkFVar id
-          if let some hint ← captureDisplayTerm candidate expression
-              (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type)) then
-            hints.modify (·.insert field (hint.abstract (parameters ++ bindings)))
-        delabPresentationTerm expression names false
-      discard <| problemViewWithRowsFromExpression (fun _ _ => pure ()) formal template
-        (forRegistration := true) (renderer? := some renderer)
+  -- A specialized source can reduce to a problem even when its formal parameters
+  -- leave a conditional or match stuck. Hint recovery must not reject that source.
+  let saved ← Term.saveState
+  let recovered ← try
+    withoutErrToSorry do
+      modifyThe Core.State fun state => { state with messages := {} }
+      withLCtx {} {} do
+        forallTelescopeReducing type fun parameters _ => do
+          let formal := mkAppN declaration parameters
+          let renderer : DisplayRenderer := fun field expression names => do
+            if let some candidate := (field.syntax? display).filter (!·.isMissing) then
+              unless ← sourceDisplayRootAllowed expression do
+                return ← delabPresentationTerm expression names false
+              let bindings := names.map fun (id, _) => mkFVar id
+              if let some hint ← captureDisplayTerm candidate expression
+                  (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type)) then
+                hints.modify (·.insert field (hint.abstract (parameters ++ bindings)))
+            delabPresentationTerm expression names false
+          discard <| problemViewWithRowsFromExpression (fun _ _ => pure ()) formal template
+            (forRegistration := true) (renderer? := some renderer)
+      pure !(← getThe Core.State).messages.hasErrors
+  catch exception =>
+    if exception.isInterrupt || exception.isMaxRecDepth || exception.isMaxHeartbeat then
+      throw exception
+    pure false
+  finally
+    saved.restore (restoreInfo := true)
+    setEnv saved.meta.core.env
+  unless recovered do
+    return ← problemViewFromExpression source template (instantiateBinderTypes := true)
+      (forRegistration := true)
   let hints ← hints.get
   let renderer : DisplayRenderer := fun field expression names => do
     match hints[field]? with

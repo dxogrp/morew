@@ -89,5 +89,41 @@ run_cmd do
       unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
         Lean.throwError "the displayed problem reused unavailable local notation"
 
+-- Formal hint recovery is optional for applied conditional sources after import too.
+reformulation conditionalExponential : (ConditionalSources.source true) := by
+  epigraph t
+
+reformulation conditionalQuadratic : (ConditionalSources.source false) := by
+  epigraph t
+
+example : GlobalEquiv (ConditionalSources.source true) conditionalExponential :=
+  conditionalExponential.equiv
+example : GlobalEquiv (ConditionalSources.source false) conditionalQuadratic :=
+  conditionalQuadratic.equiv
+example (x t : ℝ) : conditionalExponential.feasible (x, t) ↔
+    0 ≤ x ∧ Real.exp x ≤ t := Iff.rfl
+example (x t : ℝ) : conditionalQuadratic.feasible (x, t) ↔
+    0 ≤ x ∧ x ^ 2 ≤ t := Iff.rfl
+
+/--
+info: problem (x t : ℝ)
+  minimize t
+  subject to
+    lower : 0 ≤ x
+    epigraph_t : rexp x ≤ t
+-/
+#guard_msgs in
+#printp conditionalExponential
+
+/--
+info: problem (x t : ℝ)
+  minimize t
+  subject to
+    lower : 0 ≤ x
+    epigraph_t : x ^ 2 ≤ t
+-/
+#guard_msgs in
+#printp conditionalQuadratic
+
 end
 end MorewTest.ImportCompatibility.SourceNotation

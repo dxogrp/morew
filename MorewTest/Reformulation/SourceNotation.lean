@@ -662,5 +662,37 @@ example (x t : ℝ) : replayed.feasible (x, t) ↔ sourceAdd x 1 ≤ t := Iff.rf
 
 end ChangedInstance
 
+namespace ConditionalSources
+
+-- Concrete arguments can expose a problem whose formal body is still a conditional.
+def source (flag : Bool) :=
+  if flag then
+    problem (x : ℝ) minimize exp x subject to lower : 0 ≤ x
+  else
+    problem (x : ℝ) minimize x ^ 2 subject to lower : 0 ≤ x
+
+reformulation exponential : (source true) := by
+  epigraph t
+
+reformulation quadratic : (source false) := by
+  epigraph t
+
+example : GlobalEquiv (source true) exponential := exponential.equiv
+example : GlobalEquiv (source false) quadratic := quadratic.equiv
+example (x t : ℝ) : exponential.feasible (x, t) ↔
+    0 ≤ x ∧ Real.exp x ≤ t := Iff.rfl
+example (x t : ℝ) : quadratic.feasible (x, t) ↔
+    0 ≤ x ∧ x ^ 2 ≤ t := Iff.rfl
+
+run_cmd do
+  for (declaration, bound) in #[(``exponential, "rexp x ≤ t"), (``quadratic, "x ^ 2 ≤ t")] do
+    for proofs in #[false, true] do
+      let printed ← MorewTest.Reformulation.PrintDetails.printed declaration proofs
+      unless printed == "problem (x t : ℝ) minimize t subject to lower : 0 ≤ x epigraph_t : " ++
+          bound do
+        Lean.throwError m!"specialized source fallback changed the displayed problem: {printed}"
+
+end ConditionalSources
+
 end
 end MorewTest.Reformulation.SourceNotation
