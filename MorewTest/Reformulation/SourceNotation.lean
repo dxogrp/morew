@@ -546,12 +546,108 @@ run_cmd do
     if printed.contains "hiddenCast%" || printed.contains "hiddenIndex%" then
       Lean.throwError m!"a macro hid unsupported casts or proof details from rendering: {printed}"
 
+-- Replacing a proof by an omission must not change a syntax-sensitive macro's expansion.
+macro "proofShapeIndex%(" value:term "," vector:term "," index:term ")" : term =>
+  match index with
+  | `(⟨$_, $proof⟩) =>
+    if proof.raw.isIdent then `($value + $vector $index) else `((0 : ℝ))
+  | _ => `($value + $vector $index)
+
+elab "elabProofShapeIndex%(" value:term "," vector:term "," index:term ")" : term <= expected => do
+  let expanded ← match index with
+    | `(⟨$_, $proof⟩) =>
+      if proof.raw.isIdent then `($value + $vector $index) else `((0 : ℝ))
+    | _ => `($value + $vector $index)
+  Lean.Elab.Term.elabTerm expanded expected
+
+elab "proofShapeExact " value:term "," vector:term "," index:term : tactic => do
+  let expanded ← match index with
+    | `(⟨$_, $proof⟩) =>
+      if proof.raw.isIdent then `($value + $vector $index) else `((0 : ℝ))
+    | _ => `($value + $vector $index)
+  Lean.Elab.Tactic.evalTactic (← `(tactic| exact $expanded))
+
+def proofShapeSource :=
+  problem (x : ℝ) (v : Fin 2 → ℝ)
+    let cost := proofShapeIndex%(exp x, v, ⟨0, sourceIndexBound⟩)
+    minimize cost
+
+reformulation proofShapeEpigraph : proofShapeSource := by
+  epigraph t
+
+example : GlobalEquiv proofShapeSource proofShapeEpigraph := proofShapeEpigraph.equiv
+example (x t : ℝ) (v : Fin 2 → ℝ) : proofShapeEpigraph.feasible ((x, v), t) ↔
+    Real.exp x + v ⟨0, sourceIndexBound⟩ ≤ t := Iff.rfl
+
+def elabProofShapeSource :=
+  problem (x : ℝ) (v : Fin 2 → ℝ)
+    let cost := elabProofShapeIndex%(exp x, v, ⟨0, sourceIndexBound⟩)
+    minimize cost
+
+reformulation elabProofShapeEpigraph : elabProofShapeSource := by
+  epigraph t
+
+example : GlobalEquiv elabProofShapeSource elabProofShapeEpigraph := elabProofShapeEpigraph.equiv
+example (x t : ℝ) (v : Fin 2 → ℝ) : elabProofShapeEpigraph.feasible ((x, v), t) ↔
+    Real.exp x + v ⟨0, sourceIndexBound⟩ ≤ t := Iff.rfl
+
+def tacticProofShapeSource :=
+  problem (x : ℝ) (v : Fin 2 → ℝ)
+    let cost : ℝ := by proofShapeExact exp x, v, ⟨0, sourceIndexBound⟩
+    minimize cost
+
+reformulation tacticProofShapeEpigraph : tacticProofShapeSource := by
+  epigraph t
+
+example : GlobalEquiv tacticProofShapeSource tacticProofShapeEpigraph :=
+  tacticProofShapeEpigraph.equiv
+example (x t : ℝ) (v : Fin 2 → ℝ) : tacticProofShapeEpigraph.feasible ((x, v), t) ↔
+    Real.exp x + v ⟨0, sourceIndexBound⟩ ≤ t := Iff.rfl
+
+run_cmd do
+  MorewTest.Reformulation.PrintDetails.checkDetails ``proofShapeEpigraph "sourceIndexBound"
+    #["let cost"]
+  let printed ← MorewTest.Reformulation.PrintDetails.printed ``proofShapeEpigraph false
+  let source ← match Lean.Parser.runParserCategory (← Lean.getEnv) `term printed with
+    | .ok source => pure source
+    | .error message => Lean.throwError m!"the compact macro display does not parse: {message}"
+  -- Expand first: restoring the proof beforehand could hide a changed macro branch.
+  let expanded ← Lean.Elab.liftMacroM <| Lean.expandMacros source
+  let restored : Lean.TSyntax `term := ⟨expanded.rewriteBottomUp fun node =>
+    if node.isOfKind ``Lean.Parser.Term.omission then Lean.mkCIdent ``sourceIndexBound else node⟩
+  Lean.Elab.Command.liftTermElabM do
+    let expected := Lean.mkConst ``proofShapeEpigraph
+    let actual ← Lean.Elab.Term.elabTerm restored (some (← Lean.Meta.inferType expected))
+    Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+    unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+      Lean.throwError "compact proof rendering changed the source macro's meaning"
+
+run_cmd do
+  for (declaration, elaborator) in #[(``elabProofShapeEpigraph, "elabProofShapeIndex%"),
+      (``tacticProofShapeEpigraph, "proofShapeExact")] do
+    MorewTest.Reformulation.PrintDetails.checkDetails declaration "sourceIndexBound" #["let cost"]
+    let printed ← MorewTest.Reformulation.PrintDetails.printed declaration false
+    if printed.contains elaborator then
+      Lean.throwError "compact proof rendering retained a syntax-sensitive source elaborator"
+    let source ← match Lean.Parser.runParserCategory (← Lean.getEnv) `term printed with
+      | .ok source => pure source
+      | .error message => Lean.throwError m!"the compact elaborator display does not parse: {message}"
+    let restored : Lean.TSyntax `term := ⟨source.rewriteBottomUp fun node =>
+      if node.isOfKind ``Lean.Parser.Term.omission then Lean.mkCIdent ``sourceIndexBound else node⟩
+    Lean.Elab.Command.liftTermElabM do
+      let expected := Lean.mkConst declaration
+      let actual ← Lean.Elab.Term.elabTerm restored (some (← Lean.Meta.inferType expected))
+      Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+      unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+        Lean.throwError "compact proof rendering changed the source elaborator's meaning"
+
 -- Replay the exact metadata and the visible displays under their formal parameters.
 -- Compact finite-index proofs are intentionally omitted, so only their detailed view replays.
 run_cmd do
   for (declaration, compactReplay) in #[(``castEpigraph, true), (``castShifted, true),
       (``nestedCastShifted, true), (``lambdaCastShifted, true), (``proofCone, false),
-      (``lambdaProofShifted, false), (``hiddenEpigraph, false)] do
+      (``lambdaProofShifted, false), (``hiddenEpigraph, false), (``proofShapeEpigraph, false),
+      (``elabProofShapeEpigraph, false), (``tacticProofShapeEpigraph, false)] do
     let some exact := Syntax.getProblemView? (← Lean.getEnv) declaration
       | Lean.throwError "mixed-field rendering lost exact replay metadata"
     let some presentation := Syntax.getProblemPrintPresentation? (← Lean.getEnv) declaration

@@ -206,6 +206,12 @@ private partial def cleanDisplaySyntax : Syntax → Syntax
   | .atom _ value => .atom .none value
   | .missing => .missing
 
+private def parseVisibleDisplaySyntax (source : Syntax) : TermElabM Syntax := do
+  let formatted ← PrettyPrinter.ppTerm ⟨← visibleDisplaySyntax source⟩
+  match Parser.runParserCategory (← getEnv) `term formatted.pretty with
+  | .ok visible => return visible
+  | .error message => throwError "presentation is not readable syntax: {message}"
+
 /-- Reuse source spelling only after checking its stored and visible meanings.
 Remove source positions, comments, and whitespace from the accepted syntax. -/
 def checkedDisplaySyntax (source : Syntax) (expected : Expr)
@@ -214,10 +220,7 @@ def checkedDisplaySyntax (source : Syntax) (expected : Expr)
   let source := cleanDisplaySyntax source
   displayProbe do
     discard <| checkedDisplayExpression source expected elaborate
-    let formatted ← PrettyPrinter.ppTerm ⟨← visibleDisplaySyntax source⟩
-    let visible ← match Parser.runParserCategory (← getEnv) `term formatted.pretty with
-      | .ok visible => pure visible
-      | .error message => throwError "presentation is not readable syntax: {message}"
+    let visible ← parseVisibleDisplaySyntax source
     discard <| checkedDisplayExpression visible expected elaborate
     return source
 
@@ -268,10 +271,11 @@ private partial def replaceDisplaySlots (expression : Expr)
 
 private def checkedDisplayShell (hint : DisplayTerm) (expected : Expr)
     (allow : Expr → Expr → Array Expr → TermElabM Bool)
-    (elaborate : Syntax → Expr → TermElabM Expr) : TermElabM Bool := do
+    (elaborate : Syntax → Expr → TermElabM Expr) :
+    TermElabM (Option (Syntax × Array Name)) := do
   let accepted ← displayProbe do
     let .node _ source children := hint
-    if children.isEmpty then return false
+    if children.isEmpty then return none
     let mut declarations : Array (Name × (Array Expr → TermElabM Expr)) := #[]
     let mut index := 0
     for (_, child) in children do
@@ -291,20 +295,68 @@ private def checkedDisplayShell (hint : DisplayTerm) (expected : Expr)
       let expression ← elaborate shell (← inferType expected)
       synthesizeSyntheticMVarsNoPostponing
       let expression ← instantiateMVars expression
-      unless completeDisplayExpression expression do return false
+      unless completeDisplayExpression expression do return none
       -- Filled slots can contain new free names after substitution. Leave lexical
       -- scopes to the ordinary renderer rather than capturing those names on insertion.
-      if displaySlotUnderBinder expression slots then return false
+      if displaySlotUnderBinder expression slots then return none
       unless ← isDefEq (expression.replaceFVars slots (children.map (·.2.expression))) expected do
-        return false
+        return none
       -- Definitional equality alone can hide generated representations (for example,
       -- cone membership behind its defining predicate). Check the target's remaining
       -- operations too; only explicit source slots may delegate them to the renderer.
       let remaining := (replaceDisplaySlots expected children slots).run'
         (Array.replicate children.size false)
-      unless ← allow expected remaining slots do return false
-      unless ← allow expected expression slots do return false
-      return (← checkedDisplaySyntax shell expression elaborate).isSome
+      unless ← allow expected remaining slots do return none
+      unless ← allow expected expression slots do return none
+      let some checked ← checkedDisplaySyntax shell expression elaborate | return none
+      return some (checked, declarations.map (·.1))
+  return accepted.join
+
+-- Separate expansions receive fresh scopes for resolved global references. Keep local
+-- scopes and all resolutions intact when comparing the resulting syntax.
+private def comparableDisplayExpansion (source : Syntax) : Syntax :=
+  (cleanDisplaySyntax source).rewriteBottomUp fun
+    | .ident info raw name resolved =>
+        let name := if resolved.any (fun | .decl .. => true | _ => false) then
+            name.eraseMacroScopes else name
+        .ident info raw name resolved
+    | node => node
+
+-- Macro expansion cannot inspect a custom term elaborator. Such an elaborator may
+-- branch on an omitted proof's syntax even when the surrounding syntax is unchanged.
+private partial def standardDisplayOmissionShell (source : Syntax) : CoreM Bool := do
+  if (source.find? (·.isOfKind ``Lean.Parser.Term.omission)).isNone then return true
+  -- These core elaborators can delegate to user-defined tactic or do-element elaborators.
+  if source.isOfKind ``Lean.Parser.Term.byTactic || source.isOfKind ``Lean.Parser.Term.do then
+    return false
+  let environment ← getEnv
+  if (termElabAttribute.getEntries environment source.getKind).any (fun entry =>
+      match environment.getModuleIdxFor? entry.declName with
+      | some index => !(`Lean.Elab).isPrefixOf environment.header.modules[index.toNat]!.module
+      | none => true) then
+    return false
+  source.getArgs.allM standardDisplayOmissionShell
+
+-- A macro may inspect its arguments' syntax. Check its expansion after filling slots,
+-- even when omitted proofs prevent ordinary elaboration of the completed term.
+private def checkedFilledDisplayShell (shell : Syntax) (names : Array Name)
+    (replacements : Array Syntax) (filled : Syntax) : TermElabM Bool := do
+  let accepted ← displayProbe do
+    let check shell replacements filled := do
+      let expanded ← liftMacroM <| expandMacros shell
+      let substituted := expanded.rewriteBottomUp fun node =>
+        if node.isIdent then
+          match names.idxOf? node.getId with
+          | some index => replacements[index]!
+          | none => node
+        else node
+      let expected ← liftMacroM <| expandMacros substituted
+      let actual ← liftMacroM <| expandMacros filled
+      unless ← standardDisplayOmissionShell actual do return false
+      return comparableDisplayExpansion expected == comparableDisplayExpansion actual
+    unless ← check shell replacements filled do return false
+    check (← parseVisibleDisplaySyntax shell)
+      (← replacements.mapM parseVisibleDisplaySyntax) (← parseVisibleDisplaySyntax filled)
   return accepted == some true
 
 /-- Fill transported source slots and use their notation only when both the stored syntax
@@ -323,15 +375,20 @@ partial def renderDisplayTerm (hint : DisplayTerm) (expected : Expr)
   -- Unchanged fields need one check, rather than re-elaborating every subtree.
   if allowed then
     if let some accepted ← checkedDisplaySyntax source expected elaborate then return accepted
-  let shellAllowed ← if allowed then pure false
+  let shell? ← if allowed then pure none
     else checkedDisplayShell hint expected allowShell elaborate
-  unless allowed || shellAllowed do return ← fallback expected
+  unless allowed || shell?.isSome do return ← fallback expected
   let mut source := source
+  let mut replacements := #[]
   for (path, child) in children do
     let replacement ← renderDisplayTerm child child.expression fallback allow elaborate allowShell
+    replacements := replacements.push replacement
     source := setDisplaySyntax source path.toList replacement
-  if shellAllowed && (source.find? (·.isOfKind ``Lean.Parser.Term.omission)).isSome then
-    return cleanDisplaySyntax source
+  if let some (shell, names) := shell? then
+    if (source.find? (·.isOfKind ``Lean.Parser.Term.omission)).isSome then
+      if ← checkedFilledDisplayShell shell names replacements source then
+        return cleanDisplaySyntax source
+      return ← fallback expected
   if let some accepted ← checkedDisplaySyntax source expected elaborate then return accepted
   fallback expected
 
