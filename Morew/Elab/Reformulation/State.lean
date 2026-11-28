@@ -164,6 +164,8 @@ structure ReformState where
   sectionFVars : Array Expr
   /-- Current presentation retaining source binding structure. -/
   view : Morew.Syntax.ProblemView
+  /-- Optional source notation candidates, used only when constructing displays. -/
+  displayView? : Option Morew.Syntax.ProblemView := none
   /-- Syntax describing the current natural semantic problem. -/
   semantic : TSyntax `term
   /-- Stable syntax for the semantic decision domain. -/
@@ -202,6 +204,8 @@ Certificate-only dependencies do not reserve names. -/
 structure SurfaceStepResult where
   /-- Proposed presentation retaining source binding structure. -/
   view : Morew.Syntax.ProblemView
+  /-- Source notation transported by a structural edit, independently of exact syntax. -/
+  displayView? : Option Morew.Syntax.ProblemView := none
   /-- Syntax describing the step's natural semantic problem. -/
   semantic : TSyntax `term
   /-- Stable syntax for the proposed decision domain. -/

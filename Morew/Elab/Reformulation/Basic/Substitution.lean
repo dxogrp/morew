@@ -174,7 +174,7 @@ private def expandReplacementDefinitions (state : ReformState) (binderIndex : Na
 Rebuild sequential definitions so later dependent types and bodies use substituted bindings. -/
 private def substitutePresentation (state : ReformState) (binderIndex : Nat)
     (newName : Name) (replacement : TSyntax `term) :
-    CommandElabM Morew.Syntax.ProblemView :=
+    CommandElabM (Morew.Syntax.ProblemView × Option Morew.Syntax.ProblemView) :=
   withTypedPresentation state fun presentation =>
     withPresentationBinders presentation fun binderTypes binders =>
       withViewDefinitions state.view fun definitions => do
@@ -186,6 +186,23 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
         let objective ← elaborate state.view.objective presentation.valueType
         let constraints ← state.view.constraints.mapM fun constraint =>
           elaborate constraint.proposition (mkSort Level.zero)
+        let capture (source : Lean.Syntax) (expression : Expr) :=
+          captureDisplayTerm source expression (elaborate := fun source type =>
+            elabPresentationTerm ⟨source⟩ (binders ++ definitions) (some type))
+        let objectiveDisplay? ← state.displayView?.bindM fun display =>
+          capture display.objective objective
+        let constraintDisplays ← state.view.constraints.mapIdxM fun index constraint =>
+          match state.displayView?.bind (fun display =>
+              display.constraints.find? (sameVisibleName ·.name constraint.name)) with
+          | some display => capture display.proposition constraints[index]!
+          | none => pure none
+        let definitionDisplays ← state.view.definitions.mapIdxM fun index definition => do
+          let some display := state.displayView?.bind (fun display =>
+              display.definitions.find? (sameVisibleName ·.name definition.name))
+            | return none
+          let some value := (← definitions[index]!.fvarId!.getDecl).value?
+            | return none
+          capture display.value value
         withLocalDeclD newName binderTypes[binderIndex]! fun candidate => do
           let replacement ← elaborate replacement binderTypes[binderIndex]!
           let names := binders.mapIdx fun index binder =>
@@ -194,21 +211,36 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
           let rec visit (remaining : List (Morew.Syntax.DefinitionView × Expr))
               (oldBindings newBindings : Array Expr)
               (names : Array (FVarId × Name))
-              (rewritten : Array Morew.Syntax.DefinitionView) :
-              TermElabM Morew.Syntax.ProblemView := do
+              (rewritten displayed : Array Morew.Syntax.DefinitionView) :
+              TermElabM (Morew.Syntax.ProblemView × Option Morew.Syntax.ProblemView) := do
             let substExpr (expression : Expr) := expression.replaceFVars oldBindings newBindings
+            let display (hint? : Option DisplayTerm) (expression : Expr) := do
+              let fallback expression := delabPresentationTerm expression names (replay := false)
+              let some hint := hint? | fallback expression
+              renderSourceDisplayTerm (hint.replaceFVars oldBindings newBindings) expression names
             match remaining with
             | [] =>
-                let objective ← delabPresentationTerm (substExpr objective) names
-                let constraints ← state.view.constraints.mapIdxM fun index constraint => do
+                let objectiveExpr := substExpr objective
+                let objective ← delabPresentationTerm objectiveExpr names
+                let constraintSyntax ← state.view.constraints.mapIdxM fun index constraint => do
                   return { constraint with
                     proposition := ← delabPresentationTerm (substExpr constraints[index]!) names }
                 let oldBinder := state.view.binders[binderIndex]!
-                return { state.view with
+                let view := { state.view with
                   binders := state.view.binders.set! binderIndex { oldBinder with name := newName }
                   definitions := rewritten
                   objective
-                  constraints }
+                  constraints := constraintSyntax }
+                let displayView? ← state.displayView?.mapM fun _ => do
+                  let constraints ← view.constraints.mapIdxM fun index constraint => do
+                    return { constraint with
+                      proposition := ← display constraintDisplays[index]!
+                        (substExpr constraints[index]!) }
+                  return { view with
+                    definitions := displayed
+                    objective := ← display objectiveDisplay? objectiveExpr
+                    constraints }
+                return (view, displayView?)
             | (view, original) :: remaining =>
                 let declaration ← original.fvarId!.getDecl
                 let some value := declaration.value?
@@ -220,11 +252,14 @@ private def substitutePresentation (state : ReformState) (binderIndex : Nat)
                   value := ← delabPresentationTerm value names
                   typeSyntax? := view.typeSyntax?.map fun _ => typeSyntax
                   inferredTypeSyntax? := some typeSyntax }
+                let displayedView := { view with
+                  value := ← display definitionDisplays[rewritten.size]! value }
                 withLetDecl view.name type value fun binding =>
                   visit remaining (oldBindings.push original) (newBindings.push binding)
                     (names.push (binding.fvarId!, view.name)) (rewritten.push view)
+                    (displayed.push displayedView)
           visit (state.view.definitions.zip definitions).toList
-            #[binders[binderIndex]!] #[replacement] names #[]
+            #[binders[binderIndex]!] #[replacement] names #[] #[]
 
 private def constraintIsTypedTrue (state : ReformState)
     (index : Nat) : CommandElabM Bool :=
@@ -460,7 +495,8 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
         parameterizationCertificate state replacementRef oldName scopedNewName binderIndex
           replacement mapTerm selectedRule?
 
-  let substitutedView ← substitutePresentation state binderIndex scopedNewName replacement
+  let (substitutedView, substitutedDisplay?) ←
+    substitutePresentation state binderIndex scopedNewName replacement
   let substitutedObjective := substitutedView.objective
   let objective ← liftMacroM <| simplifyExpLog substitutedObjective
   let preserveDefinitions ← preserveDefinitionExpressions state binderIndex
@@ -520,6 +556,17 @@ private def materializeSubstitution (state : ReformState) (_step : Lean.Syntax)
     liftCertificateEquiv state.runner primitiveEquiv
   pure {
     view := newView
+    displayView? := substitutedDisplay?.map fun display => {
+      newView with
+      definitions := newView.definitions.map fun definition =>
+        match display.definitions.find? (sameVisibleName ·.name definition.name) with
+        | some candidate => { definition with value := candidate.value }
+        | none => definition
+      objective := display.objective
+      constraints := newView.constraints.map fun constraint =>
+        match display.constraints.find? (sameVisibleName ·.name constraint.name) with
+        | some candidate => { constraint with proposition := candidate.proposition }
+        | none => constraint }
     semantic := nextSemantic
     semanticDomainType := state.semanticDomainType
     primitiveCertificate := primitive

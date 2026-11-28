@@ -105,6 +105,7 @@ public import MorewTest.ImportCompatibility.ProblemPresentation.Defined
 public import MorewTest.ImportCompatibility.ProblemPresentation.Registered
 public import MorewTest.ImportCompatibility.SecondOrder
 public import MorewTest.ImportCompatibility.SecondOrder.Defined
+public import MorewTest.ImportCompatibility.SourceNotation
 public import MorewTest.ImportCompatibility.Spectral
 public import MorewTest.ImportCompatibility.Substitution
 public import MorewTest.ImportCompatibility.TerminalConic
@@ -281,6 +282,7 @@ public import MorewTest.Reformulation.SecondOrderCustom.Fixtures
 public import MorewTest.Reformulation.SecondOrderFailures
 public import MorewTest.Reformulation.SingletonReplay
 public import MorewTest.Reformulation.SmoothHelpers
+public import MorewTest.Reformulation.SourceNotation
 public import MorewTest.Reformulation.Spectral
 public import MorewTest.Reformulation.Spectral.Defined
 public import MorewTest.Reformulation.SpectralFailures

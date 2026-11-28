@@ -121,7 +121,7 @@ example : negativeAliasTarget.conicForm.data.toProblem = negativeAliasTarget :=
 info: problem (x y : ℝ)
   let first := -x
   let second := -x
-  let origin := 0
+  let origin := (0 : ℝ)
   minimize y
   subject to
     lower : y - first ∈ ℝ₊
@@ -149,7 +149,7 @@ example : zeroAliasTarget.conicForm.data.toProblem = zeroAliasTarget :=
 
 /--
 info: problem (x : ℝ)
-  let z := 0
+  let z := (0 : ℝ)
   minimize x
   subject to
     upper : z - x ∈ ℝ₊

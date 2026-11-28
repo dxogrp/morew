@@ -35,7 +35,7 @@ example (x t : ℝ) : duplicatedLift.feasible (x, t) ↔ x ^ 2 ≤ t := Iff.rfl
 /--
 info: problem (x t : ℝ)
   let loss := x ^ 2
-  minimize (fun y => y + y) t
+  minimize (fun y : ℝ => y + y) t
   subject to
     epigraph_t : loss ≤ t
 -/

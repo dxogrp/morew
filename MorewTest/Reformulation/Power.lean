@@ -462,7 +462,7 @@ info: problem (x t : ℝ)
 /--
 info: problem (x t : ℝ)
   let base := x + offset
-  let power := base.rpow PowerSource.exponent
+  let power := Real.rpow base PowerSource.exponent
   minimize t
   subject to
     before : 0 ≤ base

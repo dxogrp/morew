@@ -575,9 +575,9 @@ end
 info: problem (v : Fin data → ℝ) (w : Fin data_1 → ℝ) (t : ℝ)
   minimize t
   subject to
-    left : ∀ (i : Fin data), v i ≤ 0
-    right : ∀ (i : Fin data_1), w i ≤ 0
-    epigraph_t : 0 ≤ t
+    left : ∀ i, v i ≤ 0
+    right : ∀ i, w i ≤ 0
+    epigraph_t : (0 : ℝ) ≤ t
 -/
 #guard_msgs in
 #printp target

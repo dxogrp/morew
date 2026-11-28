@@ -143,9 +143,9 @@ example : (target.nlpForm 0 m).data.rowCount = 0 := rfl
 
 /--
 info: problem (x : Index n → NestedIndex m → ℝ)
-  minimize 0
+  minimize (0 : ℝ)
   subject to
-    upper : ∀ (i : Index n) (j : NestedIndex m), x i j ≤ 1
+    upper : ∀ i : Index n, ∀ j : NestedIndex m, x i j ≤ 1
 -/
 #guard_msgs in
 #printp target

@@ -7,6 +7,7 @@ module
 
 public meta import Qq
 public import Morew.Elab.Reformulation.State
+public import Morew.Elab.Reformulation.Display
 public import Mathlib.Analysis.Normed.Lp.WithLp
 public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public meta import Lean.Meta.Tactic.Simp.Main
@@ -660,9 +661,118 @@ partial def elabPresentationTerm (term : TSyntax `term) (bindings : Array Expr)
         synthesizeSyntheticMVarsNoPostponing
         return (← instantiateMVars expression).replaceFVars aliases values
     | (name, value) :: remaining =>
-        withLetDecl name (← inferType value) value fun temporary =>
+        withDisplayAlias name value fun temporary =>
           elaborate remaining (aliases.push temporary) (values.push value)
   elaborate (collect term.raw {}).toList #[] #[]
+
+/-- Carry notation candidates for retained fields; rendering checks them against the new problem. -/
+def retainDisplayCandidates (view previous : Morew.Syntax.ProblemView) :
+    Morew.Syntax.ProblemView :=
+  { view with
+    definitions := view.definitions.map fun definition =>
+      match previous.definitions.find? (fun old => sameVisibleName old.name definition.name) with
+      | some old => { definition with value := old.value }
+      | none => { definition with value := .missing }
+    objective := previous.objective
+    constraints := view.constraints.map fun constraint =>
+      match previous.constraints.find? (fun old => sameVisibleName old.name constraint.name) with
+      | some old => { constraint with proposition := old.proposition }
+      | none => { constraint with proposition := .missing } }
+
+/-- Leave proof details, coercions, and representation-specific roots to their renderers. -/
+def sourceDisplayRootAllowed (expression : Expr) : TermElabM Bool := do
+  let expression := expression.consumeMData
+  let environment ← getEnv
+  let hooks ← viewHooks
+  if let .const name _ := expression.getAppFn then
+    if isCoeDecl environment name || name == ``Fin.mk || name == ``WithLp.ofLp ||
+        name == ``Membership.mem ||
+        name == ``Nat.cast || name == ``Int.cast ||
+        (`Morew.Conic).isPrefixOf name || (`Morew.NLP).isPrefixOf name then
+      return false
+  if (← isProof expression) || (← hooks.prepareReadable expression).isSome then return false
+  if let .letE _ type _ _ _ := expression then
+    if ← isProp type then return false
+  return true
+
+/-- Check all visible parts of an expression, treating validated template slots as opaque. -/
+partial def sourceDisplayAllowed (expression : Expr) (slots : Array Expr := #[]) :
+    TermElabM Bool := do
+  let expression := expression.consumeMData
+  if expression.isFVar && slots.contains expression then return true
+  unless ← sourceDisplayRootAllowed expression do return false
+  match expression with
+  | .app .. =>
+      let function := expression.getAppFn
+      let arguments := expression.getAppArgs
+      let info ← getFunInfoNArgs function arguments.size
+      unless ← sourceDisplayAllowed function slots do return false
+      for argument in arguments, parameter in info.paramInfo do
+        -- Hidden instance evidence (including numeral proofs) does not select proof display.
+        unless parameter.isInstance do
+          unless ← sourceDisplayAllowed argument slots do return false
+      return true
+  | .lam name type body binderInfo | .forallE name type body binderInfo =>
+      unless ← sourceDisplayAllowed type slots do return false
+      withLocalDecl name binderInfo type fun binding =>
+        sourceDisplayAllowed (body.instantiate1 binding) slots
+  | .letE name type value body _ =>
+      unless (← sourceDisplayAllowed type slots) && (← sourceDisplayAllowed value slots) do return false
+      withLetDecl name type value fun binding =>
+        sourceDisplayAllowed (body.instantiate1 binding) slots
+  | .proj _ _ value => sourceDisplayAllowed value slots
+  | _ => return true
+
+/-- Render a transported source template in the final model-binding context. -/
+def renderSourceDisplayTerm (hint : DisplayTerm) (expression : Expr)
+    (names : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
+  unless ← sourceDisplayRootAllowed expression do
+    return ← delabPresentationTerm expression names false
+  let bindings := names.map fun (id, _) => mkFVar id
+  withLCtx' (names.foldl (fun context (id, name) =>
+      context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
+    renderDisplayTerm hint expression (fun value => delabPresentationTerm value names false)
+      (fun value => sourceDisplayAllowed value)
+      (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type))
+      (fun original shell slots => do
+        unless ← sourceDisplayRootAllowed original do return false
+        sourceDisplayAllowed shell slots)
+
+/-- Check source notation without changing the typed expression used for reconstruction. -/
+def sourceDisplayTerm (candidate : Lean.Syntax) (expression : Expr)
+    (names : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
+  if candidate.isMissing || !(← sourceDisplayRootAllowed expression) then
+    return ← delabPresentationTerm expression names false
+  let bindings := names.map fun (id, _) => mkFVar id
+  let elaborate stx type := elabPresentationTerm ⟨stx⟩ bindings (some type)
+  if ← sourceDisplayAllowed expression then
+    let accepted? ← withLCtx' (names.foldl (fun context (id, name) =>
+        context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
+      checkedDisplaySyntax candidate expression elaborate
+    if let some accepted := accepted? then return accepted
+  let hint? ← captureDisplayTerm candidate expression
+    elaborate
+  match hint? with
+  | some hint => renderSourceDisplayTerm hint expression names
+  | none => delabPresentationTerm expression names false
+
+private inductive DisplayField where
+  | definition (name : Name)
+  | objective
+  | constraint (name : Name)
+  deriving BEq, Hashable
+
+private def DisplayField.syntax? (field : DisplayField) (view : Morew.Syntax.ProblemView) :
+    Option Lean.Syntax :=
+  match field with
+  | .definition name =>
+      (view.definitions.find? (fun entry => sameVisibleName entry.name name)).map (·.value)
+  | .objective => some view.objective
+  | .constraint name =>
+      (view.constraints.find? (fun entry => sameVisibleName entry.name name)).map (·.proposition)
+
+private abbrev DisplayRenderer :=
+  DisplayField → Expr → Array (FVarId × Name) → TermElabM Lean.Syntax
 
 /-- Recognize projections of the synthetic decision point only. -/
 private partial def decisionProjection? (point : Expr) (count : Nat)
@@ -720,7 +830,8 @@ private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.Probl
     (objective feasible : Expr) (names : Array (FVarId × Name))
     (replay : Bool) (parameterInstances : Std.HashMap FVarId Lean.Syntax)
     (action : Array Morew.Syntax.DefinitionView → Expr → Expr →
-      Array (FVarId × Name) → TermElabM α) :
+      Array (FVarId × Name) → TermElabM α)
+    (renderer? : Option DisplayRenderer := none) :
     TermElabM α := do
   let rec visit (remaining : List Morew.Syntax.DefinitionView)
       (definitions : Array Morew.Syntax.DefinitionView)
@@ -735,7 +846,9 @@ private def withModelDefinitionBodies {α : Type} (template : Morew.Syntax.Probl
     unless (← isDefEq type feasibleType) && (← isDefEq value feasibleValue) do
       throwError "problem objective and feasibility disagree on a model-local definition"
     let definition := { definition with
-      value := ← delabPresentationTerm value names replay parameterInstances
+      value := ← match renderer? with
+        | some render => render (.definition definition.name) value names
+        | none => delabPresentationTerm value names replay parameterInstances
       typeSyntax? := ← definition.typeSyntax?.mapM fun _ =>
         delabPresentationTerm type names replay parameterInstances
       inferredTypeSyntax? := some (← delabPresentationTerm type names replay parameterInstances) }
@@ -750,7 +863,8 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
     (inspectRows : Array Expr → Array (FVarId × Name) → TermElabM α) (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
     (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
-    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {})
+    (renderer? : Option DisplayRenderer := none) :
     TermElabM (Morew.Syntax.ProblemView × α) := do
   let targetType ← whnf (← inferType target)
   unless targetType.getAppFn.isConstOf ``Morew.Problem &&
@@ -790,10 +904,14 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
       let feasibleBody ← if recoverDefinitions then pure feasibleBody else
         dsimpPreservingProofLets feasibleBody
       let constraints ← splitConstraintBody feasibleBody template.constraints.size
-      let objectiveSyntax ← delabPresentationTerm objectiveBody binderNames
-        (!forRegistration) parameterInstances
-      let constraintSyntax ← constraints.mapM fun proposition =>
-        delabPresentationTerm proposition binderNames (!forRegistration) parameterInstances
+      let objectiveSyntax ← match renderer? with
+        | some render => render .objective objectiveBody binderNames
+        | none => delabPresentationTerm objectiveBody binderNames (!forRegistration) parameterInstances
+      let constraintSyntax ← constraints.mapIdxM fun index proposition =>
+        match renderer? with
+        | some render => render (.constraint template.constraints[index]!.name)
+            proposition binderNames
+        | none => delabPresentationTerm proposition binderNames (!forRegistration) parameterInstances
       let view := {
         template with
         binders := displayedBinders
@@ -807,7 +925,7 @@ private def problemViewWithRowsFromExpression {α : Type} [Inhabited α]
       let objectiveBody ← openPresentationBody objective domain binders
       let feasibleBody ← openPresentationBody feasible domain binders
       withModelDefinitionBodies template objectiveBody feasibleBody
-        binderNames (!forRegistration) parameterInstances render
+        binderNames (!forRegistration) parameterInstances render renderer?
     else
       render template.definitions (mkApp objective point) (mkApp feasible point) binderNames
 
@@ -816,10 +934,69 @@ retain existing bare-name source spelling. -/
 def problemViewFromExpression (target : Expr)
     (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
     (recoverDefinitions : Bool := true) (forRegistration : Bool := false)
-    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {}) :
+    (parameterInstances : Std.HashMap FVarId Lean.Syntax := {})
+    (sourceDisplay? : Option Morew.Syntax.ProblemView := none) :
     TermElabM Morew.Syntax.ProblemView := do
+  let renderer? := sourceDisplay?.filter (fun _ => forRegistration) |>.map fun display =>
+    fun field expression names =>
+      match field.syntax? display with
+      | some candidate => sourceDisplayTerm candidate expression names
+      | none => delabPresentationTerm expression names false
   return (← problemViewWithRowsFromExpression (fun _ _ => pure ()) target template
-    instantiateBinderTypes recoverDefinitions forRegistration parameterInstances).1
+    instantiateBinderTypes recoverDefinitions forRegistration parameterInstances renderer?).1
+
+/-- Recover source notation in its formal parameter context before specializing an applied source. -/
+def sourceDisplayView (source : Expr) (template : Morew.Syntax.ProblemView) :
+    TermElabM Morew.Syntax.ProblemView := do
+  let source := source.consumeMData
+  let declaration := source.getAppFn
+  let some display := Morew.Syntax.getProblemDisplayView? (← getEnv) declaration.constName!
+    | return ← problemViewFromExpression source template (instantiateBinderTypes := true)
+        (forRegistration := true)
+  let hints ← IO.mkRef ({} : Std.HashMap DisplayField DisplayTerm)
+  let info ← getConstInfo declaration.constName!
+  let type := info.type.instantiateLevelParams info.levelParams declaration.constLevels!
+  -- A specialized source can reduce to a problem even when its formal parameters
+  -- leave a conditional or match stuck. Hint recovery must not reject that source.
+  let saved ← Term.saveState
+  let recovered ← try
+    withoutErrToSorry do
+      modifyThe Core.State fun state => { state with messages := {} }
+      withLCtx {} {} do
+        forallTelescopeReducing type fun parameters _ => do
+          let formal := mkAppN declaration parameters
+          let renderer : DisplayRenderer := fun field expression names => do
+            if let some candidate := (field.syntax? display).filter (!·.isMissing) then
+              unless ← sourceDisplayRootAllowed expression do
+                return ← delabPresentationTerm expression names false
+              let bindings := names.map fun (id, _) => mkFVar id
+              if let some hint ← captureDisplayTerm candidate expression
+                  (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type)) then
+                hints.modify (·.insert field (hint.abstract (parameters ++ bindings)))
+            delabPresentationTerm expression names false
+          discard <| problemViewWithRowsFromExpression (fun _ _ => pure ()) formal template
+            (forRegistration := true) (renderer? := some renderer)
+      pure !(← getThe Core.State).messages.hasErrors
+  catch exception =>
+    if exception.isInterrupt || exception.isMaxRecDepth || exception.isMaxHeartbeat then
+      throw exception
+    pure false
+  finally
+    saved.restore (restoreInfo := true)
+    setEnv saved.meta.core.env
+  unless recovered do
+    return ← problemViewFromExpression source template (instantiateBinderTypes := true)
+      (forRegistration := true)
+  let hints ← hints.get
+  let renderer : DisplayRenderer := fun field expression names => do
+    match hints[field]? with
+    | some hint =>
+        let bindings := names.map fun (id, _) => mkFVar id
+        renderSourceDisplayTerm (hint.instantiate (source.getAppArgs ++ bindings)) expression names
+    | none => delabPresentationTerm expression names false
+  return (← problemViewWithRowsFromExpression (fun _ _ => pure ()) source template
+    (instantiateBinderTypes := true) (forRegistration := true)
+    (renderer? := some renderer)).1
 
 /-- Recover a typed presentation from a checked problem expression. -/
 def typedPresentationFromExpression (target : Expr)
@@ -856,7 +1033,8 @@ def typedPresentationFromExpression (target : Expr)
 /-- Register syntax for reconstruction and display from the same generated
 declaration and ordered parameters. -/
 def refreshProblemView (targetName : Name)
-    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false) :
+    (template : Morew.Syntax.ProblemView) (instantiateBinderTypes : Bool := false)
+    (sourceDisplay? : Option Morew.Syntax.ProblemView := none) :
     CommandElabM Unit := do
   let hooks ← liftCoreM viewHooks
   let (refreshed, displayed, printed) ← runTermElabM fun _ => do
@@ -937,7 +1115,7 @@ def refreshProblemView (targetName : Name)
           let replay ← problemViewFromExpression target replayTemplate (instantiateBinderTypes := true)
             (parameterInstances := parameterInstances)
           let display ← problemViewFromExpression target template instantiateBinderTypes
-            (forRegistration := true)
+            (forRegistration := true) (sourceDisplay? := sourceDisplay?)
           let (compact, mathematicalRows) ← withOptions (fun options =>
               (hooks.options .compact options).setBool `pp.proofs false
                 |>.set `pp.proofs.threshold (0 : Nat) |>.setBool compactIndexProofsOption true
@@ -946,11 +1124,15 @@ def refreshProblemView (targetName : Name)
               hooks.mathematicalRows rows (fun expression =>
                 delabPresentationTerm expression names false)) target template instantiateBinderTypes
               (forRegistration := true)
+              (renderer? := sourceDisplay?.map fun display => fun field expression names =>
+                match field.syntax? display with
+                | some candidate => sourceDisplayTerm candidate expression names
+                | none => delabPresentationTerm expression names false)
           let detailed ← withOptions (fun options =>
               (hooks.options .detailed options).setBool `pp.proofs true
                 |>.setBool coordinateNotationOption true) do
               problemViewFromExpression target template instantiateBinderTypes
-                (forRegistration := true)
+                (forRegistration := true) (sourceDisplay? := sourceDisplay?)
           pure (replay, display,
             { compact, detailed, mathematicalRows : Morew.Syntax.ProblemPrintPresentation }))
   Morew.Syntax.registerProblemView targetName refreshed (some displayed) (some printed)

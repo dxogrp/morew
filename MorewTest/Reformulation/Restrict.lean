@@ -375,7 +375,7 @@ example (x : α) : (anonymousInstance (α := α)).feasible x ↔ x = x ∧ x + 0
 
 /--
 info: problem (x : α)
-  minimize 0
+  minimize (0 : ℝ)
   subject to
     self : x = x
     zero_identity : x + 0 = x

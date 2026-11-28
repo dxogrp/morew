@@ -84,6 +84,7 @@ public import Morew.Elab.Reformulation.Cone.Rewrite
 public import Morew.Elab.Reformulation.Cone.Terminal
 public import Morew.Elab.Reformulation.Cone.View
 public import Morew.Elab.Reformulation.Conic.Terminal
+public import Morew.Elab.Reformulation.Display
 public import Morew.Elab.Reformulation.NLP.Rewrite
 public import Morew.Elab.Reformulation.NLP.Terminal
 public import Morew.Elab.Reformulation.Names

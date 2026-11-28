@@ -45,9 +45,9 @@ example : (target.nlpForm m 0).data.rowCount = 0 := by
 
 /--
 info: problem (v : Fin m → Fin n → ℝ)
-  minimize ∑ i, ∑ j, v i j ^ 2
+  minimize ∑ i, ∑ j, (v i j) ^ 2
   subject to
-    nested : ∀ (i : Fin m) (j : Fin n), v i j ≥ 0 ∧ v i j ≤ 2
+    nested : ∀ i : Fin m, ∀ j : Fin n, v i j ≥ 0 ∧ v i j ≤ 2
 -/
 #guard_msgs in
 #printp target

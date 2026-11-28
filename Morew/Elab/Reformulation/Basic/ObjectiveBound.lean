@@ -73,6 +73,15 @@ private def materializeObjectiveBound (state : ReformState)
     objective := boundName
     constraints := state.view.constraints.push constraint
   }
+  let displayView? ← state.displayView?.mapM fun display => do
+    let oldObjective : TSyntax `term := ⟨display.objective⟩
+    let proposition ← liftMacroM <| match expectedSense with
+      | .minimize => `($oldObjective ≤ $boundName)
+      | .maximize => `($boundName ≤ $oldObjective)
+    return { display with
+      binders := newView.binders
+      objective := boundName
+      constraints := display.constraints.push { constraint with proposition } }
 
   let primitive ← liftMacroM <|
     liftCertificateEquiv state.runner primitiveEquiv
@@ -88,6 +97,7 @@ private def materializeObjectiveBound (state : ReformState)
     exactExpressionSyntax canonical
   pure {
     view := newView
+    displayView?
     semantic := nextSemantic
     semanticDomainType := nextDomainType
     primitiveCertificate := primitive

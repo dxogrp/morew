@@ -36,7 +36,7 @@ example (x a b : ℝ) : chained.feasible ((x, a), b) ↔
 info: problem (x a b : ℝ)
   minimize b + |x|
   subject to
-    epigraph_a : x ^ 2 ≤ a
+    epigraph_a : (x ^ 2) ≤ a
     epigraph_b : Real.exp a ≤ b
 -/
 #guard_msgs in
