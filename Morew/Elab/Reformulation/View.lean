@@ -679,8 +679,8 @@ def retainDisplayCandidates (view previous : Morew.Syntax.ProblemView) :
       | some old => { constraint with proposition := old.proposition }
       | none => { constraint with proposition := .missing } }
 
-/-- Leave proof details, coercions, and representation-specific notation to their renderers. -/
-partial def sourceDisplayAllowed (expression : Expr) : TermElabM Bool := do
+/-- Leave proof details, coercions, and representation-specific roots to their renderers. -/
+def sourceDisplayRootAllowed (expression : Expr) : TermElabM Bool := do
   let expression := expression.consumeMData
   let environment ← getEnv
   let hooks ← viewHooks
@@ -691,48 +691,65 @@ partial def sourceDisplayAllowed (expression : Expr) : TermElabM Bool := do
         (`Morew.Conic).isPrefixOf name || (`Morew.NLP).isPrefixOf name then
       return false
   if (← isProof expression) || (← hooks.prepareReadable expression).isSome then return false
+  if let .letE _ type _ _ _ := expression then
+    if ← isProp type then return false
+  return true
+
+/-- Check all visible parts of an expression, treating validated template slots as opaque. -/
+partial def sourceDisplayAllowed (expression : Expr) (slots : Array Expr := #[]) :
+    TermElabM Bool := do
+  let expression := expression.consumeMData
+  if expression.isFVar && slots.contains expression then return true
+  unless ← sourceDisplayRootAllowed expression do return false
   match expression with
   | .app .. =>
       let function := expression.getAppFn
       let arguments := expression.getAppArgs
       let info ← getFunInfoNArgs function arguments.size
-      unless ← sourceDisplayAllowed function do return false
+      unless ← sourceDisplayAllowed function slots do return false
       for argument in arguments, parameter in info.paramInfo do
         -- Hidden instance evidence (including numeral proofs) does not select proof display.
         unless parameter.isInstance do
-          unless ← sourceDisplayAllowed argument do return false
+          unless ← sourceDisplayAllowed argument slots do return false
       return true
   | .lam name type body binderInfo | .forallE name type body binderInfo =>
-      unless ← sourceDisplayAllowed type do return false
+      unless ← sourceDisplayAllowed type slots do return false
       withLocalDecl name binderInfo type fun binding =>
-        sourceDisplayAllowed (body.instantiate1 binding)
+        sourceDisplayAllowed (body.instantiate1 binding) slots
   | .letE name type value body _ =>
-      unless (← sourceDisplayAllowed type) && (← sourceDisplayAllowed value) do return false
-      withLetDecl name type value fun binding => sourceDisplayAllowed (body.instantiate1 binding)
-  | .proj _ _ value => sourceDisplayAllowed value
+      unless (← sourceDisplayAllowed type slots) && (← sourceDisplayAllowed value slots) do return false
+      withLetDecl name type value fun binding =>
+        sourceDisplayAllowed (body.instantiate1 binding) slots
+  | .proj _ _ value => sourceDisplayAllowed value slots
   | _ => return true
 
 /-- Render a transported source template in the final model-binding context. -/
 def renderSourceDisplayTerm (hint : DisplayTerm) (expression : Expr)
     (names : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
+  unless ← sourceDisplayRootAllowed expression do
+    return ← delabPresentationTerm expression names false
   let bindings := names.map fun (id, _) => mkFVar id
   withLCtx' (names.foldl (fun context (id, name) =>
       context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
     renderDisplayTerm hint expression (fun value => delabPresentationTerm value names false)
-      sourceDisplayAllowed
+      (fun value => sourceDisplayAllowed value)
       (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type))
+      (fun original shell slots => do
+        unless ← sourceDisplayRootAllowed original do return false
+        sourceDisplayAllowed shell slots)
 
 /-- Check source notation without changing the typed expression used for reconstruction. -/
 def sourceDisplayTerm (candidate : Lean.Syntax) (expression : Expr)
     (names : Array (FVarId × Name)) : TermElabM Lean.Syntax := do
-  if candidate.isMissing || !(← sourceDisplayAllowed expression) then
+  if candidate.isMissing || !(← sourceDisplayRootAllowed expression) then
     return ← delabPresentationTerm expression names false
   let bindings := names.map fun (id, _) => mkFVar id
   let elaborate stx type := elabPresentationTerm ⟨stx⟩ bindings (some type)
-  let accepted? ← withLCtx' (names.foldl (fun context (id, name) =>
-      context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
-    checkedDisplaySyntax candidate expression elaborate
-  if let some accepted := accepted? then return accepted
+  if ← sourceDisplayAllowed expression then
+    let accepted? ← withLCtx' (names.foldl (fun context (id, name) =>
+        context.setUserName id name.eraseMacroScopes) (← getLCtx)) do
+      checkedDisplaySyntax candidate expression elaborate
+    if let some accepted := accepted? then return accepted
   let hint? ← captureDisplayTerm candidate expression
     elaborate
   match hint? with
@@ -944,11 +961,12 @@ def sourceDisplayView (source : Expr) (template : Morew.Syntax.ProblemView) :
       let formal := mkAppN declaration parameters
       let renderer : DisplayRenderer := fun field expression names => do
         if let some candidate := (field.syntax? display).filter (!·.isMissing) then
-          if ← sourceDisplayAllowed expression then
-            let bindings := names.map fun (id, _) => mkFVar id
-            if let some hint ← captureDisplayTerm candidate expression
-                (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type)) then
-              hints.modify (·.insert field (hint.abstract (parameters ++ bindings)))
+          unless ← sourceDisplayRootAllowed expression do
+            return ← delabPresentationTerm expression names false
+          let bindings := names.map fun (id, _) => mkFVar id
+          if let some hint ← captureDisplayTerm candidate expression
+              (fun stx type => elabPresentationTerm ⟨stx⟩ bindings (some type)) then
+            hints.modify (·.insert field (hint.abstract (parameters ++ bindings)))
         delabPresentationTerm expression names false
       discard <| problemViewWithRowsFromExpression (fun _ _ => pure ()) formal template
         (forRegistration := true) (renderer? := some renderer)

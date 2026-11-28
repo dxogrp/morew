@@ -221,23 +221,117 @@ def checkedDisplaySyntax (source : Syntax) (expected : Expr)
     discard <| checkedDisplayExpression visible expected elaborate
     return source
 
+-- Validate the surrounding syntax independently of the rendering policy for its slots.
+-- In particular, compact proof syntax need not elaborate after the slots are filled.
+private partial def displaySlotUnderBinder (expression : Expr) (slots : Array Expr)
+    (underBinder : Bool := false) : Bool :=
+  match expression with
+  | .fvar _ => underBinder && slots.contains expression
+  | .app function argument =>
+      displaySlotUnderBinder function slots underBinder ||
+        displaySlotUnderBinder argument slots underBinder
+  | .lam _ type body _ | .forallE _ type body _ =>
+      displaySlotUnderBinder type slots underBinder || displaySlotUnderBinder body slots true
+  | .letE _ type value body _ =>
+      displaySlotUnderBinder type slots underBinder ||
+        displaySlotUnderBinder value slots underBinder || displaySlotUnderBinder body slots true
+  | .mdata _ value | .proj _ _ value => displaySlotUnderBinder value slots underBinder
+  | _ => false
+
+-- Each source slot covers at most one target occurrence, even when target values repeat.
+-- This traversal deliberately does not cache structurally equal subexpressions.
+private partial def replaceDisplaySlots (expression : Expr)
+    (children : Array (Array Nat × DisplayTerm)) (slots : Array Expr) :
+    StateM (Array Bool) Expr := do
+  for index in [:children.size] do
+    if !(← get)[index]! &&
+        children[index]!.2.expression.consumeMData == expression.consumeMData then
+      modify (·.set! index true)
+      return slots[index]!
+  match expression with
+  | .app function argument =>
+      return .app (← replaceDisplaySlots function children slots)
+        (← replaceDisplaySlots argument children slots)
+  | .lam name type body info =>
+      return .lam name (← replaceDisplaySlots type children slots)
+        (← replaceDisplaySlots body children slots) info
+  | .forallE name type body info =>
+      return .forallE name (← replaceDisplaySlots type children slots)
+        (← replaceDisplaySlots body children slots) info
+  | .letE name type value body nondep =>
+      return .letE name (← replaceDisplaySlots type children slots)
+        (← replaceDisplaySlots value children slots)
+        (← replaceDisplaySlots body children slots) nondep
+  | .mdata data value => return .mdata data (← replaceDisplaySlots value children slots)
+  | .proj type index value => return .proj type index (← replaceDisplaySlots value children slots)
+  | _ => return expression
+
+private def checkedDisplayShell (hint : DisplayTerm) (expected : Expr)
+    (allow : Expr → Expr → Array Expr → TermElabM Bool)
+    (elaborate : Syntax → Expr → TermElabM Expr) : TermElabM Bool := do
+  let accepted ← displayProbe do
+    let .node _ source children := hint
+    if children.isEmpty then return false
+    let mut declarations : Array (Name × (Array Expr → TermElabM Expr)) := #[]
+    let mut index := 0
+    for (_, child) in children do
+      let mut name := (`morew_display_slot).appendIndexAfter index
+      while (← getLCtx).usesUserName name || (source.find? fun node =>
+          node.isIdent && node.getId.eraseMacroScopes == name).isSome do
+        index := index + 1
+        name := (`morew_display_slot).appendIndexAfter index
+      index := index + 1
+      declarations := declarations.push
+        (name, fun _ => do return ← inferType child.expression)
+    withLocalDeclsD declarations fun slots => do
+      let mut shell := source
+      for (path, _) in children, slot in slots do
+        let name := (← slot.fvarId!.getDecl).userName
+        shell := setDisplaySyntax shell path.toList (mkIdent name)
+      let expression ← elaborate shell (← inferType expected)
+      synthesizeSyntheticMVarsNoPostponing
+      let expression ← instantiateMVars expression
+      unless completeDisplayExpression expression do return false
+      -- Filled slots can contain new free names after substitution. Leave lexical
+      -- scopes to the ordinary renderer rather than capturing those names on insertion.
+      if displaySlotUnderBinder expression slots then return false
+      unless ← isDefEq (expression.replaceFVars slots (children.map (·.2.expression))) expected do
+        return false
+      -- Definitional equality alone can hide generated representations (for example,
+      -- cone membership behind its defining predicate). Check the target's remaining
+      -- operations too; only explicit source slots may delegate them to the renderer.
+      let remaining := (replaceDisplaySlots expected children slots).run'
+        (Array.replicate children.size false)
+      unless ← allow expected remaining slots do return false
+      unless ← allow expected expression slots do return false
+      return (← checkedDisplaySyntax shell expression elaborate).isSome
+  return accepted == some true
+
 /-- Fill transported source slots and use their notation only when both the stored syntax
-and its visible spelling denote the checked target. The caller controls display-policy exclusions. -/
+and its visible spelling denote the checked target. The caller may allow a checked surrounding
+expression whose unsupported slots are reconstructed by the ordinary renderer. -/
 partial def renderDisplayTerm (hint : DisplayTerm) (expected : Expr)
     (fallback : Expr → TermElabM Syntax)
     (allow : Expr → TermElabM Bool := fun _ => pure true)
-    (elaborate : Syntax → Expr → TermElabM Expr := defaultDisplayElaborate) :
+    (elaborate : Syntax → Expr → TermElabM Expr := defaultDisplayElaborate)
+    (allowShell : Expr → Expr → Array Expr → TermElabM Bool := fun _ _ _ => pure false) :
     TermElabM Syntax := do
-  unless ← allow expected do return ← fallback expected
+  let allowed ← allow expected
   let same ← displayProbe <| isDefEq hint.expression expected
   unless same == some true do return ← fallback expected
   let .node _ source children := hint
   -- Unchanged fields need one check, rather than re-elaborating every subtree.
-  if let some accepted ← checkedDisplaySyntax source expected elaborate then return accepted
+  if allowed then
+    if let some accepted ← checkedDisplaySyntax source expected elaborate then return accepted
+  let shellAllowed ← if allowed then pure false
+    else checkedDisplayShell hint expected allowShell elaborate
+  unless allowed || shellAllowed do return ← fallback expected
   let mut source := source
   for (path, child) in children do
-    let replacement ← renderDisplayTerm child child.expression fallback allow elaborate
+    let replacement ← renderDisplayTerm child child.expression fallback allow elaborate allowShell
     source := setDisplaySyntax source path.toList replacement
+  if shellAllowed && (source.find? (·.isOfKind ``Lean.Parser.Term.omission)).isSome then
+    return cleanDisplaySyntax source
   if let some accepted ← checkedDisplaySyntax source expected elaborate then return accepted
   fallback expected
 

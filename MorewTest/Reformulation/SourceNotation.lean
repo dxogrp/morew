@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 module
 
-public import Morew.Reformulation.Basic
+public import Morew.Reformulation.Conic
+import MorewTest.Reformulation.PrintSupport
 
 /-!
 # Source notation through reformulations
@@ -392,6 +393,244 @@ run_cmd do
         Lean.throwError "the displayed exponential was captured by the consumer namespace"
 
 end Shadowing
+
+namespace MixedFields
+
+open Morew.Conic
+
+-- A cast in one subexpression must not discard notation in its siblings.
+def castSource (n : ℕ) :=
+  problem (x : ℝ)
+    let cost := exp x + (n : ℝ)
+    minimize cost + exp x
+    subject to cap : exp x + (n : ℝ) ≤ 100
+
+def castCoverage (n : ℕ) : FeasibleSurjection (castSource n) (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+def nestedCastSource (n : ℕ) :=
+  problem (x : ℝ)
+    minimize let y := x; exp y + (n : ℝ) + y
+
+def nestedCastCoverage (n : ℕ) :
+    FeasibleSurjection (nestedCastSource n) (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+def lambdaCastSource (n : ℕ) :=
+  problem (x : ℝ)
+    minimize (fun u : ℝ => exp x + (n : ℝ) + u) 1
+
+def lambdaCastCoverage (n : ℕ) :
+    FeasibleSurjection (lambdaCastSource n) (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+section
+
+variable (n : ℕ)
+
+reformulation castEpigraph : (castSource n) := by
+  epigraph t
+
+reformulation castShifted : (castSource n) := by
+  substitute x := u + 1 using castCoverage n
+
+reformulation nestedCastShifted : (nestedCastSource n) := by
+  substitute x := u + 1 using nestedCastCoverage n
+
+reformulation lambdaCastShifted : (lambdaCastSource n) := by
+  substitute x := u + 1 using lambdaCastCoverage n
+
+example : GlobalEquiv (castSource n) (castEpigraph n) := castEpigraph.equiv n
+example : GlobalEquiv (castSource n) (castShifted n) := castShifted.equiv n
+example : GlobalEquiv (nestedCastSource n) (nestedCastShifted n) := nestedCastShifted.equiv n
+example : GlobalEquiv (lambdaCastSource n) (lambdaCastShifted n) := lambdaCastShifted.equiv n
+example (x t : ℝ) : (castEpigraph n).feasible (x, t) ↔
+    Real.exp x + (n : ℝ) ≤ 100 ∧ Real.exp x + (n : ℝ) + Real.exp x ≤ t := Iff.rfl
+example (u : ℝ) : (castShifted n).objective u =
+    Real.exp (u + 1) + (n : ℝ) + Real.exp (u + 1) := rfl
+example (u : ℝ) : (nestedCastShifted n).objective u =
+    Real.exp (u + 1) + (n : ℝ) + (u + 1) := rfl
+example (u : ℝ) : (lambdaCastShifted n).objective u =
+    Real.exp (u + 1) + (n : ℝ) + 1 := rfl
+
+end
+
+run_cmd do
+  for (declaration, argument) in #[(``castEpigraph, "x"), (``castShifted, "(u + 1)")] do
+    for proofs in #[false, true] do
+      let printed ← MorewTest.Reformulation.PrintDetails.printed declaration proofs
+      for fragment in #[s!"let cost := exp {argument}", s!"cap : exp {argument}"] do
+        unless printed.contains fragment do
+          Lean.throwError m!"a cast discarded neighboring source notation: {printed}"
+      if printed.contains "rexp" then
+        Lean.throwError m!"a cast changed an unrelated exponential spelling: {printed}"
+
+theorem sourceIndexBound : 0 < 2 := by decide
+
+def proofSource :=
+  problem (x t : ℝ) (v : Fin 2 → ℝ)
+    let cost := exp x + v ⟨0, sourceIndexBound⟩
+    minimize cost
+    subject to curve : exp x ≤ t
+
+reformulation proofCone : proofSource := by
+  conic at curve
+
+example : GlobalEquiv proofSource proofCone := proofCone.equiv
+example (x t : ℝ) (v : Fin 2 → ℝ) :
+    proofCone.objective ((x, t), v) = Real.exp x + v ⟨0, sourceIndexBound⟩ := rfl
+example (x t : ℝ) (v : Fin 2 → ℝ) :
+    proofCone.feasible ((x, t), v) ↔ (x, 1, t) ∈ EXP := Iff.rfl
+
+run_cmd do
+  MorewTest.Reformulation.PrintDetails.checkDetails ``proofCone "sourceIndexBound"
+    #["let cost := exp x", "curve_conic_1 : (x, 1, t) ∈ EXP"]
+
+-- Partial rendering must not capture the new decision variable beneath a source lambda.
+def lambdaProofSource (v : Fin 2 → ℝ) :=
+  problem (x : ℝ)
+    minimize (fun u : ℝ => exp x + v ⟨0, sourceIndexBound⟩ + u) 1
+
+def lambdaProofCoverage (v : Fin 2 → ℝ) :
+    FeasibleSurjection (lambdaProofSource v) (fun u : ℝ => u + 1) where
+  preimage point := point.1 - 1
+  rightInverse _ := sub_add_cancel _ _
+
+section
+
+variable (v : Fin 2 → ℝ)
+
+reformulation lambdaProofShifted : (lambdaProofSource v) := by
+  substitute x := u + 1 using lambdaProofCoverage v
+
+example : GlobalEquiv (lambdaProofSource v) (lambdaProofShifted v) := lambdaProofShifted.equiv v
+example (u : ℝ) : (lambdaProofShifted v).objective u =
+    Real.exp (u + 1) + v ⟨0, sourceIndexBound⟩ + 1 := rfl
+
+end
+
+-- A visible term slot does not justify preserving unsupported operations hidden by a macro.
+macro "hiddenCast%(" value:term "," count:term ")" : term =>
+  `($value + ($count : ℝ))
+
+macro "hiddenIndex%(" value:term "," vector:term ")" : term =>
+  `($value + $vector ⟨0, sourceIndexBound⟩)
+
+def hiddenSource (n : ℕ) :=
+  problem (x : ℝ) (v : Fin 2 → ℝ)
+    let shifted := hiddenCast%(exp x, n)
+    let cost := hiddenIndex%(exp x, v)
+    minimize shifted + cost
+
+section
+
+variable (n : ℕ)
+
+reformulation hiddenEpigraph : (hiddenSource n) := by
+  epigraph t
+
+example : GlobalEquiv (hiddenSource n) (hiddenEpigraph n) := hiddenEpigraph.equiv n
+example (x t : ℝ) (v : Fin 2 → ℝ) : (hiddenEpigraph n).feasible ((x, v), t) ↔
+    Real.exp x + (n : ℝ) + (Real.exp x + v ⟨0, sourceIndexBound⟩) ≤ t := Iff.rfl
+
+end
+
+run_cmd do
+  MorewTest.Reformulation.PrintDetails.checkDetails ``hiddenEpigraph "sourceIndexBound"
+    #["let shifted", "let cost"]
+  for proofs in #[false, true] do
+    let printed ← MorewTest.Reformulation.PrintDetails.printed ``hiddenEpigraph proofs
+    if printed.contains "hiddenCast%" || printed.contains "hiddenIndex%" then
+      Lean.throwError m!"a macro hid unsupported casts or proof details from rendering: {printed}"
+
+-- Replay the exact metadata and the visible displays under their formal parameters.
+-- Compact finite-index proofs are intentionally omitted, so only their detailed view replays.
+run_cmd do
+  for (declaration, compactReplay) in #[(``castEpigraph, true), (``castShifted, true),
+      (``nestedCastShifted, true), (``lambdaCastShifted, true), (``proofCone, false),
+      (``lambdaProofShifted, false), (``hiddenEpigraph, false)] do
+    let some exact := Syntax.getProblemView? (← Lean.getEnv) declaration
+      | Lean.throwError "mixed-field rendering lost exact replay metadata"
+    let some presentation := Syntax.getProblemPrintPresentation? (← Lean.getEnv) declaration
+      | Lean.throwError "mixed-field rendering lost its print presentation"
+    let exactTerm ← Lean.Elab.liftMacroM exact.toTermSyntax
+    Lean.Elab.Command.liftTermElabM do
+      let info ← Lean.getConstInfo declaration
+      Lean.Meta.forallTelescopeReducing info.type fun parameters _ => do
+        let expected := Lean.mkAppN (Lean.mkConst declaration) parameters
+        let actual ← Lean.Elab.Term.elabTerm exactTerm (some (← Lean.Meta.inferType expected))
+        Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+        unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+          Lean.throwError "mixed-field rendering changed exact replay"
+    let views := if compactReplay then #[(presentation.compact, false), (presentation.detailed, true)]
+      else #[(presentation.detailed, true)]
+    for (view, proofs) in views do
+      let messages ← MorewTest.Diagnostics.withSavedDiagnostics do
+        let command ← if proofs then
+          `(set_option pp.proofs true in #printp $(Lean.mkIdent declaration))
+          else `(set_option pp.proofs false in #printp $(Lean.mkIdent declaration))
+        Lean.Elab.Tactic.GuardMsgs.runAndCollectMessages command
+      let visible := messages.toList.filter (!·.isSilent)
+      let [message] := visible
+        | Lean.throwError "expected one mixed-field print presentation"
+      unless message.severity == .information && !message.isTrace do
+        Lean.throwError m!"mixed-field printing produced an unexpected diagnostic: {message.data}"
+      let printed ← message.data.toString
+      let term ← match Lean.Parser.runParserCategory (← Lean.getEnv) `term printed with
+        | .ok term => pure term
+        | .error message =>
+            Lean.throwError m!"the mixed-field display for {declaration} does not parse: {message}\n{printed}"
+      Lean.Elab.Command.liftTermElabM do
+        let info ← Lean.getConstInfo declaration
+        Lean.Meta.forallTelescopeReducing info.type fun parameters _ => do
+          let expected := Lean.mkAppN (Lean.mkConst declaration) parameters
+          let actual ← Lean.Elab.Term.elabTerm term (some (← Lean.Meta.inferType expected))
+          Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+          unless ← Lean.Meta.isDefEq (← Lean.instantiateMVars actual) expected do
+            Lean.throwError "mixed-field rendering changed the displayed problem"
+          if declaration == ``nestedCastShifted then
+            Lean.Meta.withLocalDeclD view.binders[0]!.name (Lean.mkConst ``Real) fun _ => do
+              let objective ← Lean.Elab.Term.elabTerm view.objective (some (Lean.mkConst ``Real))
+              Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+              let .letE name _ _ body _ := (← Lean.instantiateMVars objective).consumeMData
+                | Lean.throwError "mixed-field fallback lost its lexical binding"
+              unless name.eraseMacroScopes == `y && body.hasLooseBVar 0 do
+                Lean.throwError "mixed-field fallback lost the lexical binding's name or use"
+
+-- Equal target predicates still require separate source occurrences to cover their rendering.
+def repeatedMembershipSource :=
+  problem (x : ℝ)
+    minimize x
+    subject to group : x ∈ Cone.nonnegScalar.carrier ∧ 0 ≤ x
+
+reformulation repeatedMembershipTarget : repeatedMembershipSource := by
+  conic
+
+example : GlobalEquiv repeatedMembershipSource repeatedMembershipTarget :=
+  repeatedMembershipTarget.equiv
+example : repeatedMembershipTarget.conicForm.data.rowCount = 2 := rfl
+
+run_cmd Lean.Elab.Command.liftTermElabM do
+  Lean.Meta.withLocalDeclD `x (Lean.mkConst ``Real) fun x => do
+    let name := Lean.mkIdent `x
+    let source ← `($name ∈ Cone.nonnegScalar.carrier ∧ 0 ≤ $name)
+    let expectedSyntax ←
+      `($name ∈ Cone.nonnegScalar.carrier ∧ $name ∈ Cone.nonnegScalar.carrier)
+    let expected ← Lean.Elab.Term.elabTermEnsuringType expectedSyntax (Lean.mkSort .zero)
+    Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+    let expected ← Lean.instantiateMVars expected
+    let displayed ← Morew.Elab.Reformulation.sourceDisplayTerm source expected #[(x.fvarId!, `x)]
+    let actual ← Lean.Elab.Term.elabTermEnsuringType displayed (Lean.mkSort .zero)
+    Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+    let actual ← Lean.instantiateMVars actual
+    unless (← Lean.Meta.isDefEq actual expected) && actual.isAppOfArity ``And 2 &&
+        actual.getAppArgs.all (·.isAppOfArity ``Membership.mem 5) do
+      Lean.throwError "one source slot hid a distinct generated membership occurrence"
+
+end MixedFields
 
 namespace ChangedInstance
 
